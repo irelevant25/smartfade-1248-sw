@@ -1,0 +1,14 @@
+S P E C I F I C A T I O N S
+MECHANICAL - SMARTFADE 1248
+12 channels in two-scene mode / 48 channels in Normal mode
+512 DMX Outputs
+512 DMX Inputs
+288 memories in Normal mode
+Cross fader pair for cue stacks or sequences
+Manual, timed or rate-override playback in all modes
+199 step cue stack
+4 Sequence faders x 12 pages
+24 step sequences
+SD card slot for show backup
+LCD menu for configuration and preview
+English, French, German and Spanish language support

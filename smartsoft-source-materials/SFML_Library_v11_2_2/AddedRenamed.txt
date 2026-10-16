@@ -1,0 +1,511 @@
+Fixtures Added between v11.2.2 and v10.7.0
+Abstract - MadScan
+Acme - Thn+LghtPck108 4ch
+American DJ - 12P Hex Ch06
+American DJ - 12P Hex Ch07
+American DJ - 12P Hex Ch08
+American DJ - 12P Hex Ch12
+American DJ - Accu Fog 1000 5 ch
+American DJ - Accu Fog 1000 7 ch
+American DJ - Dotz Flood 2 ch
+American DJ - Dotz Flood 3 ch
+American DJ - Dotz Flood 4 ch
+American DJ - Dotz Flood 6 ch
+American DJ - Dotz Flood 9 ch B
+American DJ - Flat Par TW12 Ch02
+American DJ - Flat Par TW12 Ch03
+American DJ - Flat Par TW12 Ch04
+American DJ - Flat Par TW12 Ch05
+American DJ - Flat Par TW12 Ch08
+American DJ - Flat Par TW12 Ch09
+American DJ - InnoColorBeamZ19
+American DJ - InnoPocketWash11ch
+American DJ - InnoPocketWash9ch
+American DJ - MicroWashWWCW3ch
+American DJ - MicroWashWWCW5ch
+American DJ - PinSpotLEDQuadDMX
+American DJ - SpherionTriLED3ch
+American DJ - SweeperBeamLED6ch
+American DJ - Ultra Bar 6 Ch.03
+American DJ - Ultra Bar 6 Ch.05
+American DJ - Ultra Bar 6 Ch.06
+American DJ - Ultra Bar 6 Ch.07
+American DJ - Ultra Bar 6 Ch.08
+American DJ - UV COB Cannon 2 ch
+American DJ - UV COB Cannon 3 ch
+American DJ - ViziScanLEDPro
+American DJ - ViziScanLEDProFine
+Antari - HZ-500 Hazer
+Antari - X-310Pro
+Antari - Z 350 Faser
+Arri - L5-C P.001
+Arri - L5-C P.002
+Arri - L5-C P.003
+Arri - L5-C P.004
+Arri - L5-C P.005
+Arri - L5-C P.006
+Arri - L5-C P.007
+Arri - L5-C P.008
+Arri - L5-C P.009
+Arri - L5-C P.010
+Arri - L5-C P.011
+Arri - L5-C P.012
+Arri - L5-C P.013
+Arri - L5-C P.014
+Arri - L5-C P.015
+Blizzard Lighting - Blockhead 16 ch
+Blizzard Lighting - Cobzilla 3 ch
+Blizzard Lighting - Cobzilla 5 ch
+Blizzard Lighting - EM Pulse ch 1
+Blizzard Lighting - EM Pulse ch 3
+Blizzard Lighting - EM Pulse ch 4
+Blizzard Lighting - G70 Reduced
+Blizzard Lighting - G70 Std
+Blizzard Lighting - Hotbox5RGBAW10ch
+Blizzard Lighting - Hotbox5RGBAW4ch
+Blizzard Lighting - Hotbox5RGBAW5ch
+Blizzard Lighting - Hotbox5RGBAW9ch
+Blizzard Lighting - Hotbox5RGBVW10ch
+Blizzard Lighting - Hotbox5RGBVW4ch
+Blizzard Lighting - Hotbox5RGBVW5ch
+Blizzard Lighting - Hotbox5RGBVW9ch
+Blizzard Lighting - LB Hex CH-0
+Blizzard Lighting - LB Hex CH-1
+Blizzard Lighting - Mezmerizor 4FX
+Blizzard Lighting - Motif Fresco 3 ch
+Blizzard Lighting - Motif Fresco 5 ch
+Blizzard Lighting - Motif Fresco 7 ch
+Blizzard Lighting - Pixel Storm nod1
+Blizzard Lighting - Pixel Storm nod2
+Blizzard Lighting - Puck Pro Zoom EXA
+Blizzard Lighting - RockliteRGBAW10ch
+Blizzard Lighting - RockliteRGBAW4ch
+Blizzard Lighting - RockliteRGBAW5ch
+Blizzard Lighting - RockliteRGBAW9ch
+Blizzard Lighting - Rokbox EXA 10 ch
+Blizzard Lighting - Rokbox EXA 11 ch
+Blizzard Lighting - Rokbox EXA 3 ch
+Blizzard Lighting - Rokbox EXA 6 ch
+Blizzard Lighting - Rokbox EXA 8 ch
+Blizzard Lighting - Skybar EXA 11 ch
+Blizzard Lighting - Skybar EXA 6 ch
+Blizzard Lighting - Skybar EXA 7 ch
+Blizzard Lighting - Skybar EXA 8 ch
+Blizzard Lighting - Snowblind
+Blizzard Lighting - Stiletto Z19 Short
+Blizzard Lighting - Torrent Streak 16b
+Blizzard Lighting - Torrent Streak 8b
+Blizzard Lighting - Torrent Streak Vec
+Blizzard Lighting - TorrentStreakDesig
+Briteq - StageBeamerRGBARC1
+Briteq - StageBeamerRGBHSV
+Briteq - StageBeamerRGBTour
+Briteq - StageBeamrRGBARC1D
+Briteq - StageBeamrRGBARC1S
+Chauvet - Clrado1QdZmTorAR1D
+Chauvet - Clrado1QdZmTorAR2D
+Chauvet - Clrado1QdZmTorAR2S
+Chauvet - Clrado1QdZmTorAR2Z
+Chauvet - Clrado1QdZmTorARC1
+Chauvet - Clrado1QdZmTorARC2
+Chauvet - Clrado1QdZmTorC1Q
+Chauvet - Clrado1QdZmTorFULL
+Chauvet - Clrado1QdZmTorHSV
+Chauvet - Clrado1QdZmTorSTDY
+Chauvet - Clrado1QdZmTorTOUR
+Chauvet - Clrado1QdZmTorTR16
+Chauvet - ClrbandHex9IRC 11c
+Chauvet - ClrbandHex9IRC 6c
+Chauvet - ClrbandHex9IRC 9c
+Chauvet - ClrdashParHex7 12c
+Chauvet - ClrdashParHex7 13c
+Chauvet - ClrdashParHex7 6c
+Chauvet - ClrdashParHex7 8c
+Chauvet - ClrdashParHex7 HSI
+Chauvet - ClrdashParHex7 HSV
+Chauvet - Colorband3IRC3ch
+Chauvet - Colorband3IRC6ch
+Chauvet - Colorband3IRC8ch
+Chauvet - FreedmParQuad4 10c
+Chauvet - FreedmParQuad4 4ch
+Chauvet - FreedmParQuad4 6ch
+Chauvet - FreedomParHex412ch
+Chauvet - FreedomParHex46ch
+Chauvet - FreedomParHex48ch
+Chauvet - IntdtrWsZm250IR14c
+Chauvet - IntdtrWsZm250IRC7c
+Chauvet - IntmdatorFX350 15c
+Chauvet - IntmdatorFX350 7c
+Chauvet - IntmdtrSnLED200 5c
+Chauvet - IntmdtrSnLED200 8c
+Chauvet - IntmdtrSpt355 15c
+Chauvet - IntmdtrSpt355 9c
+Chauvet - Next NXT-1 10 ch
+Chauvet - Next NXT-1 13 ch
+Chauvet - Next NXT-1 23 ch
+Chauvet - Next NXT-1 9 ch
+Chauvet - RogueR1Wash14ch
+Chauvet - RogueR1Wash15ch
+Chauvet - RogueR1Wash19ch
+Chauvet - RogueR1Wash21ch
+Chauvet - RogueR2Wash15ch
+Chauvet - RogueR2Wash17ch
+Chauvet - RogueR2Wash22ch
+Chauvet - RogueRH1Hybrid20ch
+Chauvet - RogueRH1Hybrid25ch
+Chauvet - Scorpion Dual
+Chauvet - ScorpionStormFXRGB
+Chauvet - Shocker90IRC2ch
+Chauvet - Shocker90IRC5ch
+Chroma Q - Color One 100 HSI
+Chroma Q - Color One 100 RGB
+Chroma Q - Color One 100 RGBA
+Chroma Q - ColorOne100MLEDRGB
+Chroma Q - ColorOne100RGBAI
+Clay Paky - ShowBatten100Std
+Clay Paky - Stormy CC Ext
+Clay Paky - Stormy CC Std
+Clay Paky - Stormy Ext
+Clay Paky - Stormy Std
+Clay Paky - SuperSharpyStd
+Clay Paky - SuperSharpyStdLamp
+Clay Paky - SuperSharpyVec
+Clay Paky - SuperSharpyVecLamp
+Coef - MP 700 Wash
+Color Kinetics - iW Blast 12 2 ch
+Color Kinetics - iW Blast 12 3 ch
+ColorVerge - ChromeZoom324Adv
+ColorVerge - ChromeZoom324Basic
+ColorVerge - RoadDogTour1624ch
+ColorVerge - RoadDogTour1626ch
+ColorVerge - RoadDogTour1629ch
+CreativeLightingFi - Conan Std
+DIALighting - IW19-10ZoomNormal
+DIALighting - Pro 5R Spot 16 ch
+DIALighting - Pro 5R Spot 17 ch
+DIALighting - Pro 5R Spot 25 ch
+DIALighting - Pro280SpotBeam16ch
+DIALighting - Pro280SpotBeam17ch
+DIALighting - Pro280SpotBeam25ch
+DTS - Profilo LED 150
+DTS - Scena LED 150
+DTS - ScenaCmpctLED50 2c
+DTS - ScenaCmpctLED50 3c
+Elation - ClrChrs24 DA 3ch
+Elation - ClrChrs24 DA+ 5ch
+Elation - ClrChrs24 fxHSI 9c
+Elation - ClrChrs24 fxHSI11c
+Elation - ClrChrs24 HSI 3ch
+Elation - ClrChrs24 HSI+ 4ch
+Elation - ClrChrs24 RGBA 4ch
+Elation - ClrChrs24 RGBA+ 6c
+Elation - ClrChrs24 sRGBI 5c
+Elation - ClrChrs24 sRGBI 9c
+Elation - ClrChrs24 sRGBI10c
+Elation - Cuepix Batten 3 ch
+Elation - Cuepix Batten 4 ch
+Elation - Cuepix Batten 6 ch
+Elation - Cuepix Batten 9 ch
+Elation - CuepixBatten6Hch
+Elation - LuminaStrip7ch-8b
+Elation - LuminaStrip8ch-16b
+Elation - OptiTriWhiteII4ch
+Elation - OptiTriWhiteII8ch
+Elation - Platinum SBX Basic
+Elation - Platinum SBX Ext
+Elation - Platinum SBX Std
+Elation - PlatinumProfLED Ba
+Elation - PlatinumProfLED Ex
+Elation - PlatinumProfLED St
+Elation - PltinmWsh16RPro Ba
+Elation - PltinmWsh16RPro Ex
+Elation - PltinmWsh16RPro St
+Elation - SaturaSpotCMYProBa
+Elation - SaturaSpotCMYProEx
+Elation - SaturaSpotCMYProSt
+Elation - SaturaSpotLEDProBa
+Elation - SaturaSpotLEDProEx
+Elation - SaturaSpotLEDProSt
+Elation - SixBar 1000 11 ch
+Elation - SixBar 1000 13 ch
+Elation - SixBar 1000 6 ch
+Elation - SixBar 1000 7 ch
+Elation - Sixpar 300 IP 6 ch
+Elation - Sixpar 300 IP 7 ch
+Elation - Sixpar 300 IP 8 ch
+Elation - Sixpar300IP12ch
+ETC - S4LEDS2DHD HSI
+ETC - S4LEDS2DHD HSI-F
+ETC - S4LEDS2DHD HSI-S
+ETC - S4LEDS2DHD HSI-SF
+ETC - S4LEDS2DHD HSIC
+ETC - S4LEDS2DHD HSIC-F
+ETC - S4LEDS2DHD HSIC-S
+ETC - S4LEDS2DHD HSIC-SF
+ETC - S4LEDS2DHD QSImp
+ETC - S4LEDS2DHD QSStud
+ETC - S4LEDS2DHD QSXTArc
+ETC - S4LEDS2DHD RGB
+ETC - S4LEDS2DHD RGB-F
+ETC - S4LEDS2DHD RGB-S
+ETC - S4LEDS2DHD RGB-SF
+ETC - S4LEDS2DHD Stud
+ETC - S4LEDS2DHD Stud-F
+ETC - S4LEDS2DHD Stud-S
+ETC - S4LEDS2DHD Stud-SF
+ETC - S4LEDS2THD HSI
+ETC - S4LEDS2THD HSI-F
+ETC - S4LEDS2THD HSI-S
+ETC - S4LEDS2THD HSI-SF
+ETC - S4LEDS2THD HSIC
+ETC - S4LEDS2THD HSIC-F
+ETC - S4LEDS2THD HSIC-S
+ETC - S4LEDS2THD HSIC-SF
+ETC - S4LEDS2THD QSImp
+ETC - S4LEDS2THD QSStud
+ETC - S4LEDS2THD QSXTArc
+ETC - S4LEDS2THD RGB
+ETC - S4LEDS2THD RGB-F
+ETC - S4LEDS2THD RGB-S
+ETC - S4LEDS2THD RGB-SF
+ETC - S4LEDS2THD Stud
+ETC - S4LEDS2THD Stud-F
+ETC - S4LEDS2THD Stud-S
+ETC - S4LEDS2THD Stud-SF
+Eurolite - LEDPix-16QCLBar4ch
+Eurolite - LEDPix-16QCLBar6ch
+Eurolite - LEDPix-16QCLBar7ch
+Expolite - AkkuLED AR1.D
+Expolite - AkkuLED AR1.S
+Expolite - AkkuLED ARC.1
+Expolite - AkkuLED HSV
+Expolite - StudioParII18x3W
+Expolite - TourSpot 60
+Futurelight - DMH-40
+Futurelight - PLB-130 Ext1
+Futurelight - PLB-130 Ext2
+Futurelight - PLB-130 Std
+Generic - LED - CwWwI 16b
+Generic - LED - CwWwI 8b
+Generic - LED - H2SI
+Generic - LED - H2SIC
+Generic - LED - HSIC
+Generic - LED - ICwWw 16b
+Generic - LED - ICwWw 8b
+Generic - LED - IRGB 16b
+Generic - LED - IRGB 8b
+Generic - LED - IRGBA 16b
+Generic - LED - IRGBA 8b
+Generic - LED - IRGBAW 16b
+Generic - LED - IRGBAW 8b
+Generic - LED - IRGBAWS
+Generic - LED - IRGBAWUv 16b
+Generic - LED - IRGBAWUv 8b
+Generic - LED - IRGBAWUvS
+Generic - LED - IRGBW 16b
+Generic - LED - IRGBW 8b
+Generic - LED - IRGBWA 16b
+Generic - LED - IRGBWA 8b
+Generic - LED - IRGBWAS
+Generic - LED - ISRGBAWUv
+Generic - LED - ISRGBWA
+Generic - LED - IWwCw 16b
+Generic - LED - IWwCw 8b
+Generic - LED - RGBA 16b
+Generic - LED - RGBAW 16b
+Generic - LED - RGBAWUv 16b
+Generic - LED - RGBAWUv 8b
+Generic - LED - RGBAWUvI 16b
+Generic - LED - RGBAWUvI 8b
+Generic - LED - RGBWAI 16b
+Generic - LED - RGBWAI 8b
+Generic - LED - RGBWI 16b
+Generic - LED - RGBWI 8b
+Generic - LED - WwCwI 16b
+Generic - LED - WwCwI 8b
+Geni - ColorBlasterCB-250
+GLP - ImpressionX4Bar10C
+GLP - ImpressionX4Bar20C
+GLP - ImpressionX4XL Cmp
+GLP - ScnXKapgUni-Con M1
+GLP - ScnXKapgUni-Con M2
+GLP - ScnXKapgUni-Con M3
+GLP - ScnXKapgUni-Con M4
+GLP - ScnXKapgUni-Con M5
+GLP - ScnXKapgUni-Con M6
+High End Systems - SolaSpot Pro 1500
+High End Systems - SolaWash 37 Std
+High End Systems - SolaWash37Reduced
+JB Lighting - VaryscanP8M1-16b
+JB Lighting - VaryscanP8M1-8b
+JB Lighting - VaryscanP8M2-16b
+JB Lighting - VaryscanP8M2-8b
+JB Lighting - VaryscanP8M3-16b
+JB Lighting - VaryscanP8M3-8b
+Kam - LaserscanHyper3D
+Kam - LaserscanHyper3DIL
+Lanta Lighting - Aurora1000v2d.P1
+Lanta Lighting - Aurora1000v2d.P2
+Lanta Lighting - NeptuneWash1813ch
+Lanta Lighting - NeptuneWash185ch
+Light Emotion - AnimaterGBB
+LightSky - F230 Beam
+LightSky - Max 3000
+Martin - Mac 250 Beam 16b
+Martin - Mac 250 Entour 16b
+Martin - Mac 250 Wash 16b
+Martin - Mac250Beam16bExt
+Martin - Mac250Entour16bExt
+Martin - Mac250Krypton16b
+Martin - Mac250Krypton16bEx
+Martin - Mac250Wash16bExt
+Martin - MacAuraXBStd-RAW
+Martin - MacAuraXBStd-RGB
+Martin - MacQuantumProf Bas
+Martin - MacQuantumWashBas
+Martin - Rush MH 5 Profile
+mbT Lighting - LEDWPAR64
+Megalite - Vazt LED P100 MA
+Megalite - Vazt LED P100 MH
+Megalite - Vazt LED P100 MP
+Monoprice - 3ClrLEDBrLight 3c
+Monoprice - 3ClrLEDBrLight 6c
+Monoprice - 4ColorLEDPinspot
+Monoprice - BlcklghtUVLEDLB 2c
+Monoprice - BlcklghtUVLEDLB 3c
+Monoprice - Pr575StglghtRGBW3c
+Monoprice - Pr575StglghtRGBW4c
+Monoprice - Pr575StglghtRGBW5c
+Monoprice - Pr575StglghtRGBW8c
+Monoprice - Pr575StglghtRGBW9c
+Monoprice - PrStglghtRGBAWU10c
+Monoprice - PrStglghtRGBAWU11c
+Monoprice - PrStglghtRGBAWU3c
+Monoprice - PrStglghtRGBAWU6c
+Monoprice - PrStglghtRGBAWU8c
+NJD Electronics - LEDIPDMXBar2ch
+NJD Electronics - LEDIPDMXBar3ch
+NJD Electronics - LEDIPDMXBar4ch
+NJD Electronics - LEDIPDMXBar7ch
+Ocean Optics - SeaChangerWshT DM
+Ocean Optics - SeaChangerWshT XG
+Osram - KreiosPar108WArc1
+Osram - KreiosPar108WArc1d
+Osram - KreiosPar108WArc1S
+Osram - KreiosPar108WHSV
+Osram - KreiosPar108WStag
+Osram - KreiosPar144WArc1
+Osram - KreiosPar144WArc1d
+Osram - KreiosPar144WArc1S
+Osram - KreiosPar144WArc2
+Osram - KreiosPar144WArc2d
+Osram - KreiosPar144WArc2S
+Osram - KreiosPar144WHSV
+Osram - KreiosPar144WStag
+Osram - KreiosPar162WArc1
+Osram - KreiosPar162WArc1d
+Osram - KreiosPar162WArc1S
+Osram - KreiosPar162WArc2
+Osram - KreiosPar162WArc2d
+Osram - KreiosPar162WArc2S
+Osram - KreiosPar162WHSV
+Osram - KreiosPar162WStag
+Outsight - CrmsrcDoppioD 16b
+Outsight - CrmsrcDoppioD 16bE
+Outsight - CrmsrcDoppioD 8b
+Outsight - CrmsrcDoppioD 8bE
+PR Lighting - XLED 250 Spot Std
+PR Lighting - XLED250SpotShort
+PR Lighting - XR 330 Spot Ext
+PR Lighting - XR 330 Spot Short
+PR Lighting - XR 330 Spot Std
+PR Lighting - XRLED 700 Spot Ext
+PR Lighting - XRLED 700 Spot Std
+PR Lighting - XRLED700SpotShort
+Prism Projection - RvlPrfJrEC CVC16b
+Prism Projection - RvlPrfJrEC CVC8b
+Prism Projection - RvlPrfJrEC VC16b
+Prism Projection - RvlPrfJrEC VC8b
+Prolight - EquinoxFsn150 10c
+Prolight - EquinoxFsn150 4c
+Prolight - EquinoxFsn150 7c
+Prolights - Lumipix 16H 12 ch
+Prolights - Lumipix 16H 6 ch
+Prolights - Lumipix 16H 8 ch
+Prolights - Lumipix 16H HSI
+Prolights - Lumipix 16H HSV
+Prolights - Ruby Basic-16bit
+Prolights - Ruby Basic-8bit
+Prolights - Ruby Ext
+Prolights - Ruby Std
+Red Lighting - Classe LWZ 60
+Robe - Robin CycFX 4 M1
+Robe - Robin CycFX 4 M2
+Robe - Robin1000LEDBeamM2
+Robe - Robin1000LEDBeamM3
+Robe - Robin1000LEDBeamM4
+Robe - RobinMiniPointeM1
+Robe - RobinMiniPointeM2
+Robe - RobinMiniPointeM3
+Show Technology - LEDPixPadTri163ch
+Show Technology - LEDPixPadTri165ch
+Show Technology - LEDPixPadTri167ch
+Showline - SLBar620 SRGBW8b1G
+Showline - SLBar620HSIC 1Grp
+Showline - SLBar620RGBW16b1Gr
+Showline - SLBar620RGBW8b1Grp
+Showline - SLeStrip10RGBW16b
+Showline - SLeStrip10RGBW8b
+Showline - SLPar155ZmRGBW 16b
+Showline - SLPar155ZmRGBW 8bE
+Showline - SLPar155ZmRGBW 8bS
+Showline - SLPar155ZmRGBWHSIC
+Showtec - ClubClrWsh575MK2
+Showtec - CmleonSpt18-2SW 2c
+Showtec - CmleonSpt18-2SW 4c
+Showtec - CmpctPr18TriMk2 3c
+Showtec - CmpctPr18TriMk2 4c
+Showtec - CmpctPr18TriMk2 6c
+Showtec - CmpctPr19SCn 3c
+Showtec - CmpctPr19SCn 6c
+Showtec - Mtrx5x5Blindrv2 4c
+Showtec - PixelBar18Q4Tour3c
+Showtec - PixelBar18Q4Tour6c
+Showtec - PixelSquare16COB2c
+Showtec - PixelSquare16COB3c
+Showtec - PixelSquare16COB5c
+Showtec - XS-6 Basic
+Spark Lighting - SPG Beam 200 16 ch
+Spark Lighting - SPG Beam 200 20 ch
+Stage Ape Lighting - Hawk Adv
+Stage Ape Lighting - Hawk Basic
+Stage Ape Lighting - Heron
+StairVille - AF-180 LED Fogger
+StairVille - DJ Lase 40G MkIII
+StairVille - LEDBar240RGB2ch
+StairVille - LEDBar240RGB3ch
+StairVille - LEDBar240RGB5ch
+StairVille - MH 100 Beam 14 ch
+StairVille - MH 100 Beam 9 ch
+StairVille - MH-x200ProSpot Adv
+StairVille - MH-x200ProSpot Bas
+StairVille - MH-X25 Adv
+StairVille - MH-X25 Basic
+StairVille - Par56Pro24x3W 3c-S
+StairVille - Par56Pro24x3W 5c-S
+Starway - SlmKolor1810UHD 2c
+Starway - SlmKolor1810UHD 3c
+Starway - SlmKolor1810UHD 4c
+Starway - SlmKolor1810UHD 5c
+Starway - SlmKolor1810UHD 6c
+Starway - SlmKolor1810UHD 7c
+Starway - SlmKolor1810UHD 8c
+Starway - SlmKolor1810UHD 9c
+Terbly - OK7Q Basic
+Terbly - OK7Q Std
+UltratecSpecialEff - Radiance Hazer
+Varytec - Trident R10 Ext
+Varytec - Trident R10 Std
+Varytec - TridentR10Simplify
+Vello - Noble Gene280 Ext
+Vello - Noble Gene280 Std

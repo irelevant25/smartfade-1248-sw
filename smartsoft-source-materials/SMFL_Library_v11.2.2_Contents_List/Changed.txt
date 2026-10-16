@@ -1,0 +1,25 @@
+Fixture Changes between v11.2.2 and v10.7.0
+Robe RobinMMXWashBeamM1 - Personality Changes:
+  Default Value for Slot 45 (Shutter/Barndoor orientation) DMX 24 changed from 0 to 127
+  DMX 25 moved from Slot 38 (Shutter cut 1b) to 42 (Shutter cut 3b)
+  DMX 26 moved from Slot 40 (Shutter cut 2b) to 38 (Shutter cut 1b)
+  DMX 27 moved from Slot 42 (Shutter cut 3b) to 44 (Shutter cut W turn)
+  DMX 28 moved from Slot 44 (Shutter cut W turn) to 40 (Shutter cut 2b)
+  Default Value for Slot 48 (Macro3) DMX 30 changed from 0 to 255
+
+Robe RobinMMXWashBeamM2 - Personality Changes:
+  Default Value for Slot 45 (Shutter/Barndoor orientation) DMX 20 changed from 0 to 127
+  DMX 21 moved from Slot 38 (Shutter cut 1b) to 42 (Shutter cut 3b)
+  DMX 22 moved from Slot 40 (Shutter cut 2b) to 38 (Shutter cut 1b)
+  DMX 23 moved from Slot 42 (Shutter cut 3b) to 44 (Shutter cut W turn)
+  DMX 24 moved from Slot 44 (Shutter cut W turn) to 40 (Shutter cut 2b)
+  Default Value for Slot 48 (Macro3) DMX 26 changed from 0 to 255
+
+Robe RobinMMXWashBeamM3 - Personality Changes:
+  Default Value for Slot 45 (Shutter/Barndoor orientation) DMX 18 changed from 0 to 127
+  DMX 19 moved from Slot 38 (Shutter cut 1b) to 42 (Shutter cut 3b)
+  DMX 20 moved from Slot 40 (Shutter cut 2b) to 38 (Shutter cut 1b)
+  DMX 21 moved from Slot 42 (Shutter cut 3b) to 44 (Shutter cut W turn)
+  DMX 22 moved from Slot 44 (Shutter cut W turn) to 40 (Shutter cut 2b)
+  Default Value for Slot 48 (Macro3) DMX 24 changed from 0 to 255
+

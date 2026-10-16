@@ -1,0 +1,2974 @@
+SmartFace 1248 Control Software — Project Brief
+You are working on a software project whose goal is to build a modern replacement/alternative control application for a SmartFace 1248 lighting console.
+
+The existing application used with the console is SmartSoft. The goal is NOT necessarily to clone SmartSoft's UI. The goal is to build our own software that can communicate with and control the physical SmartFace 1248 in a reliable way.
+
+The project should be designed so that the hardware communication/protocol layer is completely separated from the UI and application logic.
+
+1. Primary Goal
+Build a desktop application that allows a user to control and monitor a SmartFace 1248 from a PC.
+
+Conceptually:
+
+┌──────────────────────────────────────────┐
+│              Angular UI                  │
+│                                          │
+│ Channels / Faders / Cues / Memories      │
+│ Patch / Playback / Configuration         │
+└────────────────────┬─────────────────────┘
+                     │
+                     │ SignalR / HTTP
+                     ▼
+┌──────────────────────────────────────────┐
+│              .NET Application             │
+│                                          │
+│ Application state                        │
+│ Command processing                       │
+│ Cue engine                               │
+│ Device state                             │
+│ SmartFace protocol                       │
+│ Communication abstraction                │
+└────────────────────┬─────────────────────┘
+                     │
+                     │ Serial / MIDI / USB /
+                     │ Ethernet / whatever
+                     │ the SmartFace actually uses
+                     ▼
+┌──────────────────────────────────────────┐
+│           SmartFace 1248                 │
+└──────────────────────────────────────────┘
+
+The exact physical communication protocol is currently UNKNOWN.
+
+Do not invent or assume the SmartFace protocol.
+
+Protocol discovery/reverse engineering is an explicit part of the project.
+
+2. Technology Stack
+Use the following stack unless there is a strong technical reason to propose an alternative.
+
+Frontend
+Angular
+
+TypeScript
+
+Modern Angular architecture
+
+Standalone components
+
+RxJS where appropriate
+
+Strict TypeScript configuration
+
+SCSS or another maintainable styling approach
+
+Responsive desktop-oriented UI
+
+Component-driven architecture
+
+The application is primarily a desktop control interface, not a mobile website.
+
+The UI should be optimized for:
+
+mouse
+
+keyboard
+
+keyboard shortcuts
+
+potentially touchscreen
+
+potentially MIDI controllers later
+
+Avoid designing the UI as if it were a generic CRUD web application.
+
+This is a real-time control interface.
+
+3. Backend
+Use:
+
+C#
+
+modern .NET
+
+ASP.NET Core
+
+SignalR for realtime communication with Angular
+
+REST/HTTP for operations where realtime communication is unnecessary
+
+async/await
+
+dependency injection
+
+structured logging
+
+configuration via standard .NET configuration mechanisms
+
+xUnit for tests
+
+The backend should be capable of running as a long-lived process responsible for communicating with the SmartFace.
+
+4. Desktop Architecture
+The long-term goal is to package this as a Windows desktop application.
+
+The preferred architecture is:
+
+Desktop shell
+    │
+    ├── Angular frontend
+    │
+    └── .NET backend
+            │
+            └── SmartFace hardware
+
+Do not tightly couple the Angular frontend to Windows-specific functionality.
+
+The .NET backend should own all hardware communication.
+
+Potential desktop technologies such as WebView2 or Tauri can be evaluated later.
+
+For the initial implementation, prioritize a clean architecture and easy development/debugging.
+
+5. Critical Architectural Principle
+The most important architectural requirement is:
+
+The UI must NOT know how the SmartFace communicates.
+For example, Angular should never contain code like:
+
+serialPort.write(...)
+
+or:
+
+midi.send(...)
+
+or SmartFace-specific binary protocol code.
+
+Instead:
+
+Angular
+   │
+   │ "Set channel 12 to 75%"
+   ▼
+Application API
+   │
+   ▼
+SmartFace application layer
+   │
+   ▼
+SmartFace protocol
+   │
+   ▼
+Communication transport
+   │
+   ▼
+Hardware
+
+The frontend should deal with domain concepts.
+
+Examples:
+
+setChannelLevel(channel: number, level: number)
+recordCue(cueNumber: number)
+executeCue(cueNumber: number)
+setGrandMaster(level: number)
+
+It should NOT deal with:
+
+0x01 0x7F 0x0C 0x4B ...
+
+Those details belong in the protocol layer.
+
+6. Proposed Solution Structure
+Start with a repository structure similar to:
+
+smartface-control/
+│
+├── README.md
+├── CLAUDE.md
+├── docs/
+│   ├── architecture.md
+│   ├── protocol/
+│   │   ├── README.md
+│   │   ├── known-facts.md
+│   │   ├── hypotheses.md
+│   │   ├── captures/
+│   │   └── reverse-engineering.md
+│   └── hardware/
+│       └── smartface-1248.md
+│
+├── src/
+│   ├── frontend/
+│   │   └── smartface-ui/
+│   │
+│   └── backend/
+│       ├── SmartFace.Api/
+│       ├── SmartFace.Application/
+│       ├── SmartFace.Domain/
+│       ├── SmartFace.Protocol/
+│       ├── SmartFace.Communication/
+│       └── SmartFace.Infrastructure/
+│
+├── tests/
+│   ├── SmartFace.Domain.Tests/
+│   ├── SmartFace.Protocol.Tests/
+│   ├── SmartFace.Application.Tests/
+│   └── SmartFace.Communication.Tests/
+│
+└── tools/
+    └── protocol-analyzer/
+
+You may modify this structure if you have a demonstrably better architecture, but explain the reason first.
+
+7. Backend Responsibilities
+SmartFace.Domain
+Contains pure domain models.
+
+Examples:
+
+Channel
+ChannelLevel
+Cue
+CueStep
+Submaster
+GrandMaster
+Playback
+Patch
+Memory
+ConsoleState
+DeviceState
+
+These classes must NOT depend on:
+
+ASP.NET
+
+SignalR
+
+serial ports
+
+MIDI
+
+Windows APIs
+
+Angular
+
+database implementation
+
+The domain should be testable independently.
+
+8. SmartFace.Application
+Contains use cases and application logic.
+
+Examples:
+
+SetChannelLevel
+GetChannelState
+RecordCue
+UpdateCue
+ExecuteCue
+ReleaseCue
+SetGrandMaster
+LoadMemory
+SaveMemory
+RequestConsoleState
+ConnectToConsole
+DisconnectFromConsole
+
+Define interfaces for the infrastructure.
+
+For example:
+
+public interface ISmartFaceClient
+{
+    Task ConnectAsync(CancellationToken cancellationToken);
+    Task DisconnectAsync(CancellationToken cancellationToken);
+
+    Task SetChannelLevelAsync(
+        int channel,
+        double level,
+        CancellationToken cancellationToken);
+
+    Task ExecuteCueAsync(
+        int cueNumber,
+        CancellationToken cancellationToken);
+
+    Task<ConsoleState> GetStateAsync(
+        CancellationToken cancellationToken);
+}
+
+The exact API should be refined as we learn what the SmartFace actually supports.
+
+Do not pretend the hardware supports functionality that has not been verified.
+
+9. SmartFace.Protocol
+This is one of the most important projects.
+
+It must contain ONLY SmartFace protocol logic.
+
+Responsibilities may include:
+
+packet encoding
+
+packet decoding
+
+command definitions
+
+checksums
+
+framing
+
+message parsing
+
+protocol state
+
+validation
+
+serialization/deserialization
+
+protocol constants
+
+For example:
+
+public interface ISmartFaceProtocol
+{
+    byte[] EncodeCommand(SmartFaceCommand command);
+
+    ProtocolParseResult ParseIncomingData(
+        ReadOnlySpan<byte> data);
+}
+
+However, do not implement fake protocol commands.
+
+Until a command is verified, mark it explicitly as:
+
+UNKNOWN
+UNVERIFIED
+HYPOTHESIS
+
+10. SmartFace.Communication
+This layer handles the physical transport.
+
+Create an abstraction such as:
+
+public interface IDeviceTransport
+{
+    Task OpenAsync(CancellationToken cancellationToken);
+    Task CloseAsync(CancellationToken cancellationToken);
+
+    Task SendAsync(
+        ReadOnlyMemory<byte> data,
+        CancellationToken cancellationToken);
+
+    event EventHandler<DeviceDataReceivedEventArgs> DataReceived;
+}
+
+Possible implementations:
+
+SerialTransport
+MidiTransport
+TcpTransport
+UdpTransport
+MockTransport
+ReplayTransport
+
+Only implement transports that are actually required.
+
+The architecture should allow adding another transport later without changing the protocol or UI.
+
+11. Mock Transport
+Create a mock transport early.
+
+This is extremely important.
+
+The UI and application logic must be testable without having a SmartFace connected.
+
+For example:
+
+Angular
+   ↓
+.NET
+   ↓
+Mock SmartFace
+
+The mock should be able to simulate:
+
+connection
+
+channel changes
+
+console state
+
+cues
+
+responses
+
+errors
+
+disconnection
+
+This will allow development when the physical console is unavailable.
+
+12. Protocol Reverse Engineering
+This is a major part of the project.
+
+The existing SmartSoft application is known to communicate with the SmartFace.
+
+We need to determine HOW.
+
+Potential transports may include:
+
+RS-232
+
+USB
+
+MIDI
+
+Ethernet
+
+proprietary serial communication
+
+another interface
+
+Do NOT assume any of these is correct.
+
+First establish facts.
+
+13. Evidence Rules
+Maintain a strict distinction between:
+
+Confirmed
+Something directly verified through:
+
+official documentation
+
+hardware documentation
+
+packet capture
+
+direct experiment
+
+observed behavior
+
+reproducible test
+
+Probable
+Strongly supported by evidence but not yet confirmed.
+
+Hypothesis
+A theory that still needs testing.
+
+Never present a hypothesis as a fact.
+
+Document protocol discoveries in:
+
+docs/protocol/
+
+14. Protocol Research Workflow
+Before implementing the protocol, investigate:
+
+SmartFace 1248 hardware documentation
+
+SmartSoft documentation
+
+SmartSoft installation/configuration information
+
+Physical connectors
+
+Communication settings
+
+Existing Windows device interfaces
+
+Driver requirements
+
+Serial/MIDI/network devices exposed by Windows
+
+SmartSoft configuration files
+
+SmartSoft logs, if available
+
+Any publicly available manuals or technical documentation
+
+Existing open-source implementations, if any exist
+
+Do not fabricate information if documentation cannot be found.
+
+If web research is necessary, use authoritative sources wherever possible.
+
+15. SmartSoft Reverse Engineering
+If we eventually perform packet capture/reverse engineering, build tooling around it rather than manually inspecting everything.
+
+Potential tools:
+
+protocol-analyzer
+packet recorder
+packet viewer
+hex dump
+message decoder
+message replay
+comparison tool
+
+A useful workflow would be:
+
+SmartSoft
+   │
+   ▼
+Communication capture
+   │
+   ▼
+Raw capture file
+   │
+   ├── timestamp
+   ├── direction
+   ├── bytes
+   └── transport information
+
+Then:
+
+capture
+   ↓
+decoder
+   ↓
+human-readable commands
+
+16. Capture Format
+Create a replayable capture format.
+
+For example:
+
+{
+  "timestamp": "2026-09-17T10:30:00.123Z",
+  "direction": "outgoing",
+  "transport": "serial",
+  "data": "01020A7F..."
+}
+
+The exact format can be changed if you have a better proposal.
+
+The important thing is that captures must be:
+
+deterministic
+
+replayable
+
+version controlled where appropriate
+
+easy to inspect
+
+usable by automated tests
+
+17. Golden Protocol Tests
+Once protocol behavior is discovered, create golden tests.
+
+For example:
+
+[Fact]
+public void Encode_SetChannelLevel_ProducesExpectedPacket()
+{
+    var command = new SetChannelLevelCommand(
+        channel: 12,
+        level: 75);
+
+    var bytes = protocol.Encode(command);
+
+    bytes.Should().Equal(
+        /* verified bytes */
+    );
+}
+
+Do NOT insert guessed byte sequences.
+
+Every golden packet must have a documented source/capture.
+
+18. State Management
+The system needs a clear model of state.
+
+At minimum consider:
+
+ConsoleConnectionState
+ConsoleState
+ChannelState
+CueState
+PlaybackState
+PatchState
+GrandMasterState
+
+Separate:
+
+Desired state
+What the application wants the console to do.
+
+from:
+
+Actual state
+What we know the physical console is currently doing.
+
+This distinction becomes important if communication fails.
+
+Example:
+
+Desired channel 12 = 75%
+
+Actual channel 12 = unknown
+
+Do not silently assume that the command succeeded.
+
+19. Reliability
+This is hardware-control software.
+
+Reliability is more important than cleverness.
+
+Implement:
+
+connection status
+
+timeout handling
+
+retries where appropriate
+
+reconnect handling
+
+command acknowledgement where supported
+
+protocol validation
+
+malformed packet handling
+
+transport errors
+
+cancellation
+
+logging
+
+safe shutdown
+
+Never endlessly retry commands that could have unsafe side effects without understanding their semantics.
+
+20. Logging
+Create structured logs.
+
+At minimum:
+
+INFO
+DEBUG
+TRACE
+WARNING
+ERROR
+
+For protocol debugging, TRACE should be capable of showing:
+
+TX  12:30:01.123  01 02 0A 7F ...
+RX  12:30:01.140  01 03 0A 7F ...
+
+But avoid logging sensitive information if any is introduced later.
+
+The logging system should be configurable.
+
+21. SignalR API
+Use SignalR for realtime state updates.
+
+Conceptually:
+
+Angular
+   │
+   │ SignalR
+   ▼
+SmartFace Hub
+
+Events could eventually look like:
+
+connectionStateChanged
+channelStateChanged
+cueStateChanged
+consoleStateChanged
+errorOccurred
+
+Commands:
+
+setChannelLevel
+executeCue
+recordCue
+releasePlayback
+setGrandMaster
+
+Do not finalize the API until the underlying hardware capabilities are known.
+
+22. Frontend Architecture
+Angular should use domain-oriented services.
+
+For example:
+
+SmartFaceConnectionService
+SmartFaceChannelService
+SmartFaceCueService
+SmartFacePlaybackService
+SmartFaceStateService
+
+Avoid putting business logic directly into components.
+
+Components should primarily:
+
+render state
+
+capture user interaction
+
+call application services
+
+react to state changes
+
+23. UI Design
+The UI should eventually resemble a professional lighting control interface rather than a standard web dashboard.
+
+Potential sections:
+
+┌────────────────────────────────────────────────────────┐
+│ Connection: ● Connected        SmartFace 1248          │
+├────────────────────────────────────────────────────────┤
+│                                                        │
+│ Channels                                               │
+│                                                        │
+│  1       2       3       4       5       6       7    │
+│  ████    ████    ██      █████   ████    █       ███  │
+│  100     100     50      100     100     20      80   │
+│                                                        │
+├────────────────────────────────────────────────────────┤
+│                                                        │
+│ Cues                                                   │
+│                                                        │
+│ [1] [2] [3] [4] [5] [6] [7] [8] [9]                 │
+│                                                        │
+├────────────────────────────────────────────────────────┤
+│ GRAND MASTER     GO        STOP       BLACKOUT        │
+└────────────────────────────────────────────────────────┘
+
+However, DO NOT spend significant time polishing this UI before communication with the device has been proven.
+
+The initial UI can be intentionally simple.
+
+24. Performance Requirements
+This is a realtime control application.
+
+Avoid unnecessary:
+
+polling
+
+HTTP requests for every fader movement
+
+database writes for every UI event
+
+object allocations in high-frequency protocol paths
+
+excessive Angular change detection
+
+unnecessary serialization
+
+Fader movement may generate many events.
+
+Design for:
+
+User moves fader
+      ↓
+UI event
+      ↓
+command
+      ↓
+backend
+      ↓
+protocol
+      ↓
+hardware
+
+with appropriate throttling/debouncing ONLY if the actual hardware protocol requires it.
+
+Do not introduce arbitrary delays without evidence.
+
+25. Persistence
+Use SQLite initially unless there is a compelling reason not to.
+
+Potential persisted data:
+
+application settings
+
+device configuration
+
+patches
+
+cues
+
+memories
+
+user preferences
+
+UI configuration
+
+Do not store transient realtime hardware state unnecessarily.
+
+Separate:
+
+Application configuration
+
+from:
+
+Console state
+
+26. Safety
+The software controls physical lighting equipment.
+
+Therefore:
+
+Never invent commands.
+
+Never send unverified binary data to the real console.
+
+Provide a simulation/mock mode.
+
+Clearly distinguish simulation from real hardware.
+
+Make connection status obvious.
+
+Avoid automatic execution of potentially destructive commands.
+
+Require explicit user action for operations such as reset/clear if applicable.
+
+Implement safe disconnect behavior.
+
+During protocol development, default to MOCK mode.
+
+Only enable REAL HARDWARE mode deliberately.
+
+27. Development Phases
+Do not try to build everything simultaneously.
+
+Follow this order.
+
+Phase 0 — Discovery
+Determine:
+
+exact SmartFace 1248 model/version
+
+hardware interfaces
+
+how SmartSoft connects
+
+SmartSoft version
+
+available documentation
+
+operating system requirements
+
+communication transport
+
+Deliver:
+
+docs/hardware/smartface-1248.md
+docs/protocol/known-facts.md
+
+Phase 1 — Repository and architecture
+Create:
+
+Angular application
+
+.NET solution
+
+projects
+
+dependency injection
+
+logging
+
+configuration
+
+SignalR
+
+basic tests
+
+mock transport
+
+At this stage:
+
+Angular → .NET → Mock SmartFace
+
+must work.
+
+Phase 2 — Communication investigation
+Build tooling to investigate the real SmartFace communication.
+
+Do not modify the main application unnecessarily.
+
+Create:
+
+tools/protocol-analyzer
+
+and supporting documentation.
+
+Phase 3 — Minimal real hardware communication
+Once the protocol is sufficiently understood, implement ONE safe operation.
+
+For example:
+
+Connect
+↓
+Request known state
+↓
+Receive response
+↓
+Decode response
+
+Only after this works reliably should we attempt commands.
+
+Phase 4 — One control operation
+Implement one verified write operation.
+
+Example:
+
+Set one channel level
+
+Verify:
+
+command is generated correctly
+
+hardware receives it
+
+hardware behaves correctly
+
+response/acknowledgement is correctly interpreted
+
+state is updated
+
+failure is handled correctly
+
+Phase 5 — State synchronization
+Implement:
+
+device → backend → Angular
+
+and:
+
+Angular → backend → device
+
+with explicit state semantics.
+
+Phase 6 — Expand functionality
+Only after the foundation is reliable:
+
+channels
+
+faders
+
+cues
+
+memories
+
+submasters
+
+grand master
+
+playback
+
+patch
+
+configuration
+
+keyboard shortcuts
+
+MIDI
+
+automation
+
+28. Git Practices
+Use small, logical commits.
+
+Examples:
+
+feat: add SmartFace domain models
+feat: add mock device transport
+feat: add SignalR device hub
+test: add protocol packet decoder tests
+feat: implement verified channel command
+docs: document SmartFace packet framing
+
+Never commit speculative protocol implementations as if they were confirmed.
+
+29. CLAUDE.md
+Create a root CLAUDE.md containing project-specific instructions.
+
+It should explicitly state:
+
+This project controls physical SmartFace 1248 hardware.
+
+Never invent hardware protocol behavior.
+
+All protocol assumptions must be marked as assumptions.
+
+Prefer evidence from:
+1. direct hardware tests
+2. packet captures
+3. official documentation
+4. reproducible experiments
+5. other sources, clearly identified
+
+Also document:
+
+architecture
+
+commands to build
+
+commands to test
+
+how to run frontend
+
+how to run backend
+
+mock mode
+
+real hardware mode
+
+protocol documentation location
+
+30. Important Working Style
+Before implementing something substantial:
+
+Inspect the existing repository.
+
+Understand the current architecture.
+
+Check relevant documentation.
+
+Identify unknowns.
+
+State assumptions.
+
+Propose the smallest implementation.
+
+Implement it.
+
+Add tests.
+
+Update documentation.
+
+Do not blindly generate large amounts of code.
+
+Prefer incremental implementation.
+
+31. Do Not Overengineer
+This is important.
+
+The architecture should be clean, but don't introduce:
+
+microservices
+
+Kubernetes
+
+message brokers
+
+Redis
+
+distributed systems
+
+unnecessary event buses
+
+unnecessary abstractions
+
+cloud infrastructure
+
+This is fundamentally a local desktop application controlling one hardware device.
+
+Keep it simple.
+
+A single .NET process is perfectly acceptable.
+
+32. Initial Deliverable
+Start by analyzing the repository and determining what currently exists.
+
+Then produce:
+
+A. Architecture proposal
+Explain:
+
+Angular
+.NET
+Domain
+Application
+Protocol
+Communication
+Infrastructure
+
+and how data flows between them.
+
+B. Hardware/protocol discovery plan
+Explicitly identify:
+
+what we know
+
+what we don't know
+
+what needs verification
+
+what information you need from me
+
+C. Initial project structure
+Create the appropriate projects and folders.
+
+D. Development environment
+Provide commands for:
+
+install
+build
+test
+run backend
+run frontend
+run mock mode
+
+E. First vertical slice
+Implement:
+
+Angular
+   ↓
+SignalR
+   ↓
+.NET
+   ↓
+Mock SmartFace
+
+with a very simple UI showing:
+
+Connection status
+Channel 1
+Channel 2
+Channel 3
+Channel 4
+
+and allowing their simulated levels to be changed.
+
+The mock should generate state updates so that the complete realtime pipeline can be tested.
+
+33. Future Hardware Abstraction
+Design the system so that the following would be possible later:
+
+ISmartFaceDevice
+       │
+       ├── RealSmartFaceDevice
+       │        │
+       │        └── SmartFaceProtocol
+       │                │
+       │                └── Serial/MIDI/TCP/etc.
+       │
+       └── MockSmartFaceDevice
+
+The rest of the application should not care which implementation is being used.
+
+34. Most Important Rule
+The project must NEVER confuse:
+
+"I think the SmartFace works this way"
+
+with:
+
+"We have verified that the SmartFace works this way."
+
+For every protocol discovery, record evidence.
+
+Example:
+
+Command: Set channel level
+Status: VERIFIED
+
+Evidence:
+- capture file: captures/2026-09-17-channel-12-75pct.json
+- tested SmartFace: 1248
+- SmartSoft version: X.Y
+- transport: UNKNOWN/Serial/etc.
+- observed result: channel 12 changed to 75%
+
+This documentation will eventually become extremely valuable.
+
+35. Final Goal
+The final product should be a robust desktop application capable of:
+
+                 ┌───────────────────────┐
+                 │  SmartFace Control     │
+                 │                       │
+                 │  Channels             │
+                 │  Cues                 │
+                 │  Memories             │
+                 │  Playback             │
+                 │  Patch                │
+                 │  Grand Master         │
+                 │  Configuration        │
+                 └───────────┬───────────┘
+                             │
+                       .NET backend
+                             │
+                    SmartFace protocol
+                             │
+                    Hardware transport
+                             │
+                             ▼
+                    SmartFace 1248
+
+The software should be maintainable, testable, observable and safe.
+
+Most importantly, do not attempt to reverse-engineer or implement the entire SmartFace protocol at once.
+
+First prove the communication path.
+
+Then prove reading.
+
+Then prove one safe write operation.
+
+Then build upward from verified capabilities.
+
+Start by inspecting the repository and telling me what you find, what information is missing, and what you recommend doing first. Do not make large architectural changes until you have explained the plan.
+
+36. Source Materials Available in Repository
+I have added a directory containing all materials I have found related to the SmartFace 1248 and SmartSoft.
+
+The directory is:
+
+smartsoft-source-materials/
+
+Current contents:
+
+smartsoft-source-materials/
+│
+├── 7219L1002_SmartFade_1248_Spec_Sht_vE.pdf
+├── SFML_Library_v11_2_2/
+├── SmartFade1248_spec.rtf
+├── SmartFade_v1.5__MIDI_Spec.pdf
+├── SmartSoft 3.0.2.9.0.43b.exe
+├── SmartSoft_v3.0.1_User_Manual_revA.pdf
+├── SMFL_Library_v11.2.2_Contents_List/
+└── specifications.txt
+
+The SFML_Library_v11_2_2 directory contains:
+
+SFML_Library_v11_2_2/
+├── AddedRenamed.txt
+├── Changed.txt
+├── FullReference.html
+├── PERSLIB.bin
+└── README.txt
+
+The SMFL_Library_v11.2.2_Contents_List directory contains:
+
+SMFL_Library_v11.2.2_Contents_List/
+├── AddedRenamed.txt
+├── Changed.txt
+└── FullReference.html
+
+These files are extremely important to the project.
+
+37. Treat the Source Materials as a Research Dataset
+Before implementing significant protocol or hardware functionality, thoroughly inspect everything inside:
+
+smartsoft-source-materials/
+
+Do not merely look at filenames.
+
+Extract and analyze the contents.
+
+Create a research inventory documenting:
+
+File
+Type
+Purpose
+Relevant information
+Confidence
+Potential implementation relevance
+
+For example:
+
+SmartFade_v1.5__MIDI_Spec.pdf
+→ MIDI protocol documentation
+→ potentially directly relevant to communication
+→ high priority
+
+Do not assume that because a file mentions MIDI it necessarily describes the exact protocol SmartSoft uses in every configuration.
+
+Verify.
+
+38. Priority of Source Materials
+Use the following approximate priority when determining facts.
+
+Highest priority
+Directly observed communication with the actual SmartFace 1248
+
+Packet/MIDI/serial/network captures from SmartSoft communicating with the actual console
+
+Official SmartFace/SmartSoft protocol documentation
+
+Official SmartFace technical documentation
+
+High priority
+SmartFade_v1.5__MIDI_Spec.pdf
+
+SmartSoft_v3.0.1_User_Manual_revA.pdf
+
+7219L1002_SmartFade_1248_Spec_Sht_vE.pdf
+
+SmartFade1248_spec.rtf
+
+Potentially very valuable reverse-engineering material
+SmartSoft 3.0.2.9.0.43b.exe
+
+SFML_Library_v11_2_2
+
+PERSLIB.bin
+
+FullReference.html
+
+Changed.txt
+
+AddedRenamed.txt
+
+README.txt
+
+Supporting material
+specifications.txt
+
+SMFL_Library_v11.2.2_Contents_List
+
+This is not a claim about the accuracy of any individual file. It is simply a recommended research order.
+
+39. Inspect the SmartSoft Executable
+The file:
+
+smartsoft-source-materials/SmartSoft 3.0.2.9.0.43b.exe
+
+is particularly important.
+
+Before attempting to reproduce functionality, determine what type of executable this actually is.
+
+Investigate:
+
+PE metadata
+
+architecture (x86/x64)
+
+compiler/runtime indicators
+
+embedded resources
+
+strings
+
+DLL dependencies
+
+imported Windows APIs
+
+serial/COM APIs
+
+MIDI APIs
+
+WinMM APIs
+
+DirectMusic APIs
+
+network APIs
+
+USB APIs
+
+registry usage
+
+configuration files
+
+file formats
+
+protocol-related strings
+
+command names
+
+device names
+
+error messages
+
+version information
+
+embedded documentation
+
+resource files
+
+references to SFML
+
+references to MIDI
+
+references to SmartFace/SmartFade
+
+Do not assume that the executable can be fully decompiled.
+
+First identify its technology.
+
+Potential technologies could include:
+
+.NET
+Delphi
+C/C++
+Visual Basic
+MFC
+other native Windows technology
+
+Determine which one it actually uses.
+
+40. Executable Analysis Must Be Evidence-Based
+If the executable contains strings or functions that appear to indicate protocol behavior, treat them as clues until verified.
+
+For example:
+
+"COM1"
+"midiOut"
+"SmartFade"
+"Channel"
+"Cue"
+
+does NOT by itself prove exactly how the communication works.
+
+Document:
+
+Observation
+Interpretation
+Confidence
+How to verify
+
+Example:
+
+Observation:
+The executable imports a Windows MIDI API.
+
+Interpretation:
+SmartSoft may use Windows MIDI functionality.
+
+Confidence:
+High for API usage, unknown for exact SmartFace protocol.
+
+Verification:
+Compare executable behavior with the MIDI specification and capture
+actual MIDI messages while performing a known operation.
+
+41. Inspect the SFML Library
+The directory:
+
+smartsoft-source-materials/SFML_Library_v11_2_2/
+
+may be extremely valuable.
+
+Thoroughly inspect:
+
+README.txt
+AddedRenamed.txt
+Changed.txt
+FullReference.html
+PERSLIB.bin
+
+Determine what "SFML" stands for in this context and how it relates to:
+
+SmartFade
+
+SmartSoft
+
+console configuration
+
+personalities
+
+fixtures
+
+channels
+
+patches
+
+memories
+
+presets
+
+protocol
+
+device configuration
+
+Do not assume its purpose from the filename alone.
+
+42. Analyze PERSLIB.bin
+Treat:
+
+PERSLIB.bin
+
+as a potentially structured binary data file.
+
+Do not modify the original.
+
+Create a working copy if necessary.
+
+Determine:
+
+file size
+
+magic/header bytes
+
+repeated structures
+
+strings
+
+offsets
+
+tables
+
+checksums
+
+compression
+
+serialization format
+
+embedded metadata
+
+fixture/personality records
+
+version information
+
+Use binary inspection tools where appropriate.
+
+If a structure can be identified, document it before writing a parser.
+
+Potentially create:
+
+tools/perslib-analyzer/
+
+The analyzer should initially be read-only.
+
+Never overwrite the original source material.
+
+43. Analyze FullReference.html
+The files:
+
+SFML_Library_v11_2_2/FullReference.html
+
+SMFL_Library_v11.2.2_Contents_List/FullReference.html
+
+may contain documentation generated from the library.
+
+Search them systematically for:
+
+SmartFade
+SmartSoft
+1248
+MIDI
+channel
+cue
+memory
+submaster
+patch
+personality
+DMX
+console
+command
+control
+
+Also inspect the HTML structure for:
+
+API documentation
+
+object/class names
+
+constants
+
+enum values
+
+binary formats
+
+data structures
+
+configuration information
+
+Do not dismiss the HTML as merely documentation until it has been thoroughly searched.
+
+44. Analyze Changed.txt and AddedRenamed.txt
+The files:
+
+Changed.txt
+AddedRenamed.txt
+
+may reveal how SFML evolved between versions.
+
+Use them to identify:
+
+newly added functionality
+
+renamed structures
+
+changed fields
+
+protocol changes
+
+compatibility concerns
+
+fixture/personality changes
+
+version history
+
+If they contain technical details, cross-reference them with:
+
+FullReference.html
+README.txt
+PERSLIB.bin
+
+45. Read the MIDI Specification Carefully
+The file:
+
+SmartFade_v1.5__MIDI_Spec.pdf
+
+should be treated as a major source of information.
+
+Extract all documented:
+
+MIDI messages
+
+status bytes
+
+channel assignments
+
+controller numbers
+
+note mappings
+
+SysEx messages
+
+device IDs
+
+parameter ranges
+
+command formats
+
+responses
+
+acknowledgements
+
+error messages
+
+state synchronization mechanisms
+
+timing requirements
+
+version information
+
+Create a structured document:
+
+docs/protocol/midi-spec-analysis.md
+
+containing:
+
+Feature
+MIDI message
+Meaning
+Parameters
+Direction
+Documented range
+Verified?
+Evidence
+Notes
+
+For example:
+
+| Feature | Message | Direction | Verified |
+|---------|---------|-----------|----------|
+| ...     | ...     | ...       | No       |
+
+Do not mark anything as verified merely because it appears in the PDF.
+
+"Documented" and "verified against our physical console" are different statuses.
+
+46. Build a Protocol Knowledge Base
+Create:
+
+docs/protocol/
+├── README.md
+├── known-facts.md
+├── hypotheses.md
+├── midi-spec-analysis.md
+├── packet-format.md
+├── commands.md
+├── responses.md
+├── state-model.md
+├── reverse-engineering.md
+└── captures/
+
+Every discovered protocol element should eventually have a documented entry.
+
+Use statuses such as:
+
+DOCUMENTED
+OBSERVED
+VERIFIED
+INFERRED
+HYPOTHESIS
+UNKNOWN
+
+47. Create a Cross-Reference Matrix
+Create:
+
+docs/protocol/evidence-matrix.md
+
+with something similar to:
+
+| Feature | User Manual | MIDI Spec | Executable | SFML | Capture | Hardware Test | Status |
+|---------|-------------|-----------|------------|------|---------|---------------|--------|
+| Channel level | ? | ? | ? | ? | ? | ? | UNKNOWN |
+| Cue execution | ? | ? | ? | ? | ? | ? | UNKNOWN |
+| Grand master | ? | ? | ? | ? | ? | ? | UNKNOWN |
+| Memory | ? | ? | ? | ? | ? | ? | UNKNOWN |
+
+Populate this as research progresses.
+
+This should become one of the central documents of the project.
+
+48. Determine the Relationship Between SmartSoft and MIDI
+One of the first research questions should be:
+
+Does SmartSoft communicate with the SmartFace 1248 using the MIDI protocol documented in SmartFade_v1.5__MIDI_Spec.pdf?
+
+Do not assume the answer.
+
+Investigate:
+
+SmartSoft
+   ↓
+Windows MIDI subsystem?
+   ↓
+MIDI device/interface?
+   ↓
+SmartFace 1248
+
+versus other possible architectures.
+
+If the MIDI specification describes the actual SmartFace communication protocol, this could dramatically simplify the project.
+
+If SmartSoft uses another layer on top of MIDI, document that.
+
+If SmartSoft uses a different mechanism, document that.
+
+49. Determine Whether SmartSoft Is Required
+A major long-term goal is:
+
+Your software
+      ↓
+SmartFace 1248
+
+without:
+
+SmartSoft
+
+being required as an intermediary.
+
+However, do not assume this is possible until the communication path is understood.
+
+Investigate whether SmartSoft:
+
+communicates directly with the hardware
+
+depends on a separate driver
+
+uses MIDI
+
+uses a Windows MIDI device
+
+uses another vendor component
+
+uses SFML as a data/configuration library
+
+performs protocol translation
+
+performs device discovery
+
+maintains state that the hardware itself does not maintain
+
+50. Search the Executable for SFML References
+Determine whether the executable:
+
+SmartSoft 3.0.2.9.0.43b.exe
+
+references:
+
+SFML
+PERSLIB
+personality
+fixture
+library
+
+If external files/DLLs are expected, determine:
+
+filenames
+
+paths
+
+versions
+
+formats
+
+loading mechanisms
+
+This could reveal how SmartSoft uses the SFML library.
+
+51. Inspect Installer Behavior
+If the .exe is an installer rather than the application itself, determine:
+
+installer technology
+
+installed files
+
+installation directory
+
+DLLs
+
+configuration files
+
+registry entries
+
+shortcuts
+
+drivers
+
+runtime dependencies
+
+Do not install anything blindly on a production machine.
+
+If necessary, use an isolated VM.
+
+Document the results.
+
+52. Static Analysis vs Dynamic Analysis
+Use both approaches when appropriate.
+
+Static analysis
+Inspect:
+
+EXE
+DLLs
+resources
+strings
+imports
+exports
+configuration files
+binary libraries
+documentation
+
+Dynamic analysis
+If available and safe:
+
+run SmartSoft
+observe processes
+observe loaded DLLs
+observe COM ports
+observe MIDI devices
+observe files
+observe registry activity
+observe network connections
+observe hardware communication
+
+Static analysis tells us what the application contains.
+
+Dynamic analysis tells us what it actually does.
+
+Neither alone is sufficient.
+
+53. Do Not Immediately Decompile Everything
+Start with inexpensive information:
+
+File type
+
+PE metadata
+
+strings
+
+imports
+
+dependencies
+
+resources
+
+configuration
+
+documentation
+
+protocol specification
+
+Only then move to deeper reverse engineering if necessary.
+
+Avoid spending hours reverse-engineering machine code if the protocol is already completely documented elsewhere.
+
+54. Preserve Original Materials
+The directory:
+
+smartsoft-source-materials/
+
+should be treated as immutable source material.
+
+Do not:
+
+rename files unnecessarily
+
+modify original files
+
+overwrite binaries
+
+edit PDFs
+
+edit the original executable
+
+alter PERSLIB.bin
+
+Create derived analysis files elsewhere:
+
+docs/
+tools/
+analysis/
+
+If a modified working copy is necessary, clearly label it.
+
+55. Record Hashes
+For important source binaries, record cryptographic hashes.
+
+For example:
+
+SmartSoft 3.0.2.9.0.43b.exe
+SHA-256: <calculate>
+
+and:
+
+PERSLIB.bin
+SHA-256: <calculate>
+
+Do not invent hash values.
+
+Actually calculate them.
+
+Create:
+
+docs/source-materials.md
+
+containing:
+
+Filename
+Size
+SHA-256
+Type
+Version
+Notes
+
+This ensures that future analysis refers to the exact same source files.
+
+56. Licensing and Attribution
+The purpose of this project is to create software capable of communicating with hardware that I own/use.
+
+When inspecting existing software and documentation:
+
+do not copy proprietary source code into this project
+
+do not reproduce copyrighted code unnecessarily
+
+do not redistribute proprietary binaries
+
+use documentation and observations to implement compatible behavior
+
+keep third-party/proprietary source material in the research directory
+
+clearly document third-party material
+
+If legal/licensing questions arise, flag them rather than making assumptions.
+
+57. Do Not Reimplement SmartSoft Blindly
+The goal is NOT:
+
+"Recreate SmartSoft line by line."
+
+The goal is:
+
+"Understand the SmartFace 1248 interface and implement
+an independent modern control application."
+
+Therefore, prioritize:
+
+hardware protocol
+device state
+commands
+responses
+configuration
+behavior
+
+rather than copying SmartSoft's implementation or UI.
+
+58. Build a Capability Matrix
+Create:
+
+docs/protocol/capability-matrix.md
+
+Eventually it should look like:
+
+| Capability | SmartFace supports? | SmartSoft supports? | Protocol known? | Implemented? | Tested? |
+|------------|---------------------|----------------------|-----------------|--------------|---------|
+| Channel levels | ? | ? | ? | No | No |
+| Cue playback | ? | ? | ? | No | No |
+| Cue recording | ? | ? | ? | No | No |
+| Grand master | ? | ? | ? | No | No |
+| Submasters | ? | ? | ? | No | No |
+| Memories | ? | ? | ? | No | No |
+| Patch | ? | ? | ? | No | No |
+| State readback | ? | ? | ? | No | No |
+
+Do not fill unknown values with guesses.
+
+59. Research the Actual Hardware Capabilities
+Use:
+
+7219L1002_SmartFade_1248_Spec_Sht_vE.pdf
+SmartFade1248_spec.rtf
+SmartSoft_v3.0.1_User_Manual_revA.pdf
+
+to establish the actual capabilities of the SmartFace 1248.
+
+Build a domain model around capabilities actually supported by the hardware.
+
+Do not assume that because a feature exists in another ETC product it exists in the SmartFace 1248.
+
+60. Version Compatibility
+There are several version numbers in the materials:
+
+SmartSoft 3.0.2.9.0.43b
+SmartSoft v3.0.1 User Manual
+SmartFade MIDI Spec v1.5
+SFML v11.2.2
+
+Do not assume these are interchangeable.
+
+Document the relationship between them if it can be determined.
+
+For every protocol finding, record relevant versions.
+
+For example:
+
+Feature:
+X
+
+Documented in:
+MIDI Spec 1.5
+
+Observed in:
+SmartSoft 3.0.2.9.0.43b
+
+Hardware:
+SmartFace 1248
+
+Status:
+...
+
+61. Version the Protocol Knowledge
+If we later discover that something we believed was correct is wrong, do not silently rewrite history.
+
+Document:
+
+Previous assumption
+New evidence
+What changed
+Why the assumption was rejected
+
+This is particularly important for reverse engineering.
+
+62. First Task for Claude Code
+Before writing the actual SmartFace implementation, perform a Source Material Audit.
+
+The first phase should be:
+
+1. Enumerate all source files.
+2. Determine file types.
+3. Calculate hashes for important binaries.
+4. Extract text from PDFs/RTF/HTML/TXT.
+5. Read the documentation.
+6. Inspect the executable metadata.
+7. Inspect executable strings/imports/dependencies.
+8. Inspect the SFML library documentation.
+9. Analyze PERSLIB.bin at a basic structural level.
+10. Analyze the MIDI specification.
+11. Cross-reference everything.
+12. Identify the most likely communication architecture.
+13. Identify unknowns.
+14. Create the research documentation.
+15. Only then propose the first protocol implementation.
+
+Do NOT start by creating a fake SetChannelLevel() implementation.
+
+63. Expected Initial Report
+After the source-material audit, give me a concise but technically detailed report containing:
+
+Hardware
+What the SmartFace 1248 is
+
+Relevant interfaces
+
+Relevant capabilities
+
+Relevant limitations
+
+SmartSoft
+Exact version found
+
+Technology/runtime if identifiable
+
+Dependencies
+
+How it appears to communicate with the hardware
+
+Relevant files/resources
+
+MIDI
+What the MIDI specification documents
+
+Whether it appears to describe SmartFace communication
+
+Important commands/messages
+
+SFML
+What it appears to be
+
+How SmartSoft appears to use it
+
+What PERSLIB.bin appears to contain
+
+Whether we need to implement/read it
+
+Communication
+Give a confidence assessment for possible communication mechanisms:
+
+Serial: UNKNOWN / POSSIBLE / LIKELY / CONFIRMED
+MIDI: UNKNOWN / POSSIBLE / LIKELY / CONFIRMED
+USB: UNKNOWN / POSSIBLE / LIKELY / CONFIRMED
+Ethernet: UNKNOWN / POSSIBLE / LIKELY / CONFIRMED
+Other: ...
+
+Do not assign these statuses without evidence.
+
+Recommended next experiment
+Identify the single experiment most likely to eliminate the largest remaining uncertainty.
+
+64. Important: Ask Me for Hardware Evidence
+After analyzing the supplied files, explicitly tell me what physical information you need from me.
+
+For example:
+
+- photo of rear panel
+- exact connector used by SmartSoft
+- cable type
+- Windows Device Manager information
+- MIDI device name
+- COM port
+- SmartSoft screenshots
+- SmartSoft configuration
+- behavior when disconnected
+- etc.
+
+Do not make me provide information that can already be determined from the supplied materials.
+
+65. Desired Development Philosophy
+Think of this as two projects that eventually merge:
+
+PROJECT A
+Reverse engineer / understand the SmartFace interface
+
+PROJECT B
+Build a clean modern control application
+
+Project A must provide verified knowledge to Project B.
+
+Do not allow assumptions from Project A to silently become implementation facts in Project B.
+
+The final architecture should make it possible to replace the protocol implementation without rewriting the UI.
+
+66. End Goal
+Eventually I want to be able to launch the application and have:
+
+SmartFace Control
+        │
+        ▼
+Connect to SmartFace 1248
+        │
+        ▼
+Read/observe console state
+        │
+        ▼
+Control the console
+
+without needing SmartSoft to perform the actual control.
+
+The final application should be an independent implementation using the verified communication protocol.
+
+The initial objective, however, is NOT to achieve that immediately.
+
+The immediate objective is:
+
+Understand exactly how SmartSoft communicates with the SmartFace 1248, using the supplied source materials and controlled experiments, and build a verified technical foundation for an independent implementation.
+
+Never trade correctness for speed when dealing with the hardware protocol.
+
+67. SmartSoft ASC Show File / Converter
+
+A new source file has been added:
+
+smartsoft-source-materials/example lighting output file - Ostrov - 16.09.2026.asc
+
+
+This is a real .asc file exported/saved from SmartSoft for one of my productions.
+
+This file is extremely important and should be treated as both:
+
+a real example of SmartSoft's show/output data format
+
+a source for understanding how SmartSoft represents lighting information
+
+68. ASC Converter Is a Separate Tool
+
+The ASC converter should be implemented as a completely separate tool, not tightly coupled to the main SmartFace application.
+
+Preferred initial structure:
+
+tools/
+└── asc-converter/
+    ├── README.md
+    ├── src/
+    ├── tests/
+    └── examples/
+
+
+The converter can initially be:
+
+a .NET console application
+
+or a simple script if that is more appropriate after inspecting the format
+
+Prefer .NET if the format turns out to require substantial parsing logic, because the rest of the backend is already .NET.
+
+Do not create unnecessary complexity.
+
+The converter should eventually be usable like:
+
+asc-converter input.asc output.json
+
+
+or:
+
+asc-converter input.asc --output output.json
+
+
+The exact CLI can be decided after understanding the format.
+
+69. First Objective: Understand the ASC Format
+
+Before writing a parser, inspect:
+
+smartsoft-source-materials/example lighting output file - Ostrov - 16.09.2026.asc
+
+
+Determine:
+
+text vs binary
+
+encoding
+
+line endings
+
+file size
+
+header
+
+version information
+
+sections
+
+records
+
+delimiters
+
+comments
+
+identifiers
+
+numeric formats
+
+channel representation
+
+cue representation
+
+timing
+
+labels
+
+patch information
+
+fixture/personality references
+
+memories
+
+submasters
+
+effects
+
+macros
+
+metadata
+
+Do not assume .asc means a particular standard format.
+
+Determine what it actually contains.
+
+70. Preserve the Original File
+
+Treat:
+
+example lighting output file - Ostrov - 16.09.2026.asc
+
+
+as immutable source material.
+
+Never modify it.
+
+Make copies for experiments if necessary.
+
+Calculate and document its SHA-256 hash in:
+
+docs/source-materials.md
+
+71. Create an ASC Format Specification
+
+As the file is analyzed, create:
+
+docs/protocol/asc-format.md
+
+
+Document:
+
+File structure
+Header
+Sections
+Record types
+Fields
+Field types
+Value ranges
+Encoding
+Terminators
+References
+Unknown fields
+
+
+Use examples from the supplied file, but don't blindly assume one file contains every possible record type.
+
+72. Parser Architecture
+
+Create a dedicated parser.
+
+Conceptually:
+
+ASC file
+   │
+   ▼
+Tokenizer / reader
+   │
+   ▼
+ASC parser
+   │
+   ▼
+SmartSoft show model
+   │
+   ▼
+Exporter
+
+
+Separate parsing from exporting.
+
+For example:
+
+IAscParser
+    ↓
+SmartSoftShow
+    ↓
+IShowExporter
+
+
+This allows us to eventually support:
+
+ASC → JSON
+ASC → SQLite
+ASC → native application format
+ASC → human-readable report
+
+
+without rewriting the parser.
+
+73. Internal Show Model
+
+Do NOT make JSON itself the application's internal domain model.
+
+Instead, parse the ASC file into strongly typed objects.
+
+Potential model:
+
+SmartSoftShow
+{
+    Metadata
+    Channels
+    Fixtures
+    Patch
+    Cues
+    Memories
+    Submasters
+    Playbacks
+    Effects
+    Macros
+}
+
+
+Only include structures that actually exist in the ASC format.
+
+Do not invent fields simply because they seem useful.
+
+74. First Export Format: JSON
+
+For the first version, export to JSON.
+
+The purpose is primarily:
+
+easy inspection
+
+easy debugging
+
+easy version control
+
+easy comparison
+
+easy testing
+
+easy future import
+
+For example:
+
+{
+  "format": "smartface-show",
+  "version": 1,
+  "source": {
+    "type": "smartsoft-asc"
+  },
+  "channels": [],
+  "cues": []
+}
+
+
+This is only an example.
+
+Do not use this exact structure until the ASC file has been analyzed.
+
+The exported JSON should accurately represent the information found in the ASC file.
+
+75. Round-Trip Consideration
+
+Investigate whether it is possible and useful to eventually support:
+
+ASC → internal model → ASC
+
+
+Even if we do not implement ASC writing initially.
+
+Determine whether the ASC format appears:
+
+lossless
+
+partially lossless
+
+derived/export-only
+
+intended as a human-readable interchange format
+
+intended as a SmartSoft-specific output format
+
+If it is possible to reconstruct the original file, document this.
+
+76. ASC Converter Must Not Depend on Hardware
+
+The converter must work without:
+
+SmartFace 1248
+
+SmartSoft
+
+MIDI
+
+serial hardware
+
+network hardware
+
+It should simply transform files.
+
+This makes it useful for:
+
+migration
+
+backups
+
+testing
+
+reverse engineering
+
+automated conversion
+
+preparing shows for the new application
+
+77. Potential Future Workflow
+
+The long-term workflow may become:
+
+Existing SmartSoft show
+        │
+        │ .asc
+        ▼
+   ASC Converter
+        │
+        │
+        ▼
+Our native show format
+        │
+        ▼
+SmartFace Control
+        │
+        ▼
+SmartFace 1248
+
+
+This is desirable because it allows users to migrate existing productions rather than recreate them manually.
+
+78. ASC File and Protocol Research Must Be Cross-Referenced
+
+Compare information discovered in the ASC file with:
+
+SmartSoft manual
+MIDI specification
+SmartFace specification
+SFML documentation
+PERSLIB.bin
+SmartSoft executable
+
+
+Look for relationships such as:
+
+ASC channel number
+        ↕
+MIDI channel/message
+        ↕
+SmartFace channel
+        ↕
+SFML personality
+        ↕
+SmartSoft UI
+
+
+If a relationship can be demonstrated, document it.
+
+If it is only suspected, mark it as a hypothesis.
+
+79. Search the SmartSoft Executable for ASC References
+
+Inspect:
+
+SmartSoft 3.0.2.9.0.43b.exe
+
+
+for:
+
+.asc
+ASC
+file extensions
+export
+import
+save
+load
+
+
+Also search for strings related to fields discovered in the ASC file.
+
+This may reveal:
+
+file type names
+
+parser/exporter names
+
+record names
+
+section identifiers
+
+error messages
+
+default filenames
+
+import/export behavior
+
+Do not assume that strings alone reveal the complete format.
+
+80. Compare Multiple Files If Available Later
+
+Currently there is one real example:
+
+example lighting output file - Ostrov - 16.09.2026.asc
+
+
+Design the converter so additional ASC files can easily be added later.
+
+If I provide more files in the future, compare them to identify:
+
+invariant fields
+
+optional sections
+
+changed records
+
+version differences
+
+cue differences
+
+channel differences
+
+patch differences
+
+metadata differences
+
+A single file is insufficient to confidently infer all optional structures.
+
+81. Build an ASC Inspection Command
+
+Before the full converter, create a useful command such as:
+
+asc-converter inspect file.asc
+
+
+It should produce a human-readable report such as:
+
+File:
+example lighting output file - Ostrov - 16.09.2026.asc
+
+Format:
+<detected>
+
+Version:
+<detected>
+
+Encoding:
+<detected>
+
+Sections:
+- ...
+- ...
+- ...
+
+Channels:
+...
+
+Cues:
+...
+
+Unknown records:
+...
+
+Warnings:
+...
+
+
+The exact output depends on what the file contains.
+
+82. Unknown Data Must Be Preserved
+
+If the parser encounters something it does not understand, do NOT silently discard it.
+
+Represent it explicitly.
+
+For example:
+
+UnknownRecord
+{
+    Type
+    RawData
+    Location
+}
+
+
+or an equivalent mechanism.
+
+This is important because we are reverse-engineering the format.
+
+We may discover the meaning later.
+
+The converter should preferably operate in a way that allows unknown data to be preserved for analysis.
+
+83. Parser Error Handling
+
+Distinguish between:
+
+Fatal errors
+
+The file cannot be parsed safely.
+
+Example:
+
+invalid encoding
+corrupted structure
+unexpected end of file
+
+Warnings
+
+The file is parseable but contains something unknown.
+
+Example:
+
+unknown record type XYZ
+
+Informational messages
+
+Useful discoveries.
+
+Example:
+
+Detected SmartSoft format version 3.x
+
+
+Do not silently ignore malformed data.
+
+84. Automated Tests
+
+Create fixture-based tests using the real ASC file.
+
+For example:
+
+tests/
+└── fixtures/
+    └── ostrov-2026-09-16.asc
+
+
+Tests should verify:
+
+file loads
+
+expected sections are detected
+
+expected number of records are detected
+
+known fields parse correctly
+
+known values are preserved
+
+unknown records are retained
+
+malformed input produces useful errors
+
+Do not hardcode assumptions without documenting why they are expected.
+
+85. Snapshot Testing
+
+If appropriate, generate a normalized JSON representation of the real ASC file and use it as a snapshot.
+
+For example:
+
+tests/snapshots/
+└── ostrov-2026-09-16.json
+
+
+This will allow us to detect accidental parser changes.
+
+When the parser improves, update the snapshot deliberately.
+
+86. Converter CLI
+
+Eventually support commands along these lines:
+
+asc-converter inspect input.asc
+
+asc-converter convert input.asc output.json
+
+asc-converter validate input.asc
+
+asc-converter dump input.asc
+
+
+Possible meanings:
+
+inspect
+
+Human-readable summary.
+
+convert
+
+Convert to our native/interchange format.
+
+validate
+
+Check whether the file conforms to the currently understood format.
+
+dump
+
+Show low-level parsed records for reverse-engineering.
+
+Do not implement every command immediately.
+
+Start with inspect.
+
+87. Native Application Format
+
+Do not prematurely make the JSON representation the permanent application format.
+
+The future application could use something like:
+
+SmartFaceShow
+
+
+stored as:
+
+SQLite
+
+
+or:
+
+JSON
+
+
+or:
+
+a versioned binary/package format
+
+
+The ASC converter should produce a clean intermediate model that can later be imported into whatever native format we choose.
+
+88. Important Distinction
+
+There are now THREE related but separate things:
+
+1. SmartSoft ASC file format
+2. SmartFace hardware communication protocol
+3. Our application's native show format
+
+
+Do not conflate them.
+
+They should have separate modules and documentation.
+
+For example:
+
+ASC
+ │
+ ▼
+ASC Parser
+ │
+ ▼
+SmartSoftShow
+ │
+ ▼
+Native Show Importer
+ │
+ ▼
+Our Application
+ │
+ ▼
+SmartFace Protocol
+ │
+ ▼
+Hardware
+
+89. Long-Term Migration Goal
+
+One possible eventual feature is:
+
+Import SmartSoft show
+        │
+        ▼
+Review imported data
+        │
+        ▼
+Map/resolve unsupported features
+        │
+        ▼
+Save in our native format
+        │
+        ▼
+Run on SmartFace 1248
+
+
+If the ASC file contains information that cannot be represented by our application, the importer should report it rather than silently dropping it.
+
+For example:
+
+WARNING:
+Cue 37 contains an unsupported field XYZ.
+The cue was imported but field XYZ could not be mapped.
+
+
+This is preferable to silent data loss.
+
+90. Immediate Task
+
+After completing the general source-material audit, make the ASC file one of the first concrete reverse-engineering targets.
+
+The order should be approximately:
+
+1. Inspect ASC file
+2. Determine its structure
+3. Document discovered format
+4. Cross-reference with SmartSoft documentation
+5. Cross-reference with MIDI specification
+6. Cross-reference with SFML documentation
+7. Search executable for ASC-related evidence
+8. Build read-only parser
+9. Build inspect command
+10. Build JSON exporter
+11. Add automated tests
+
+
+Do not attempt to make the converter write ASC files yet.
+
+First understand the format.
+
+91. Success Criteria
+
+The first ASC milestone is successful when we can run something similar to:
+
+asc-converter inspect "example lighting output file - Ostrov - 16.09.2026.asc"
+
+
+and receive a reliable report of the file's contents.
+
+Then:
+
+asc-converter convert \
+  "example lighting output file - Ostrov - 16.09.2026.asc" \
+  ostrov.json
+
+
+produces a structured representation containing the information we have verified can be extracted.
+
+The converter must never silently lose unknown information.
+
+92. Strategic Importance
+
+The ASC converter is not just a utility.
+
+It may become a major part of the migration strategy:
+
+                 Existing ecosystem
+                        │
+                ┌───────▼────────┐
+                │    SmartSoft    │
+                └───────┬────────┘
+                        │
+                       ASC
+                        │
+                ┌───────▼────────┐
+                │  ASC Converter  │
+                └───────┬────────┘
+                        │
+                 Native Show Model
+                        │
+                ┌───────▼────────┐
+                │ SmartFace       │
+                │ Control         │
+                └───────┬────────┘
+                        │
+                        ▼
+                 SmartFace 1248
+
+
+Therefore, design the converter as a clean independent component that could eventually be reused by the main application.
+
+Do not make the converter dependent on Angular or the UI.
