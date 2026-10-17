@@ -3,7 +3,7 @@
 Only DOCUMENTED, INFERRED-with-high-confidence or VERIFIED items. Each has a source.
 Nothing here has yet been VERIFIED on the user's console. The verified count is **0**.
 
-Last updated: 2026-09-17 (source-material audit).
+Last updated: 2026-10-16 (Ghidra re-verification of S11; duplicate IDs F14/F15 in the SmartSoft rows renumbered to F16/F17).
 
 ## Hardware
 
@@ -22,8 +22,10 @@ Last updated: 2026-09-17 (source-material audit).
 | F11 | The ETC driver (`etchsp.sys`, "High-Speed-Pipe", by Peperoni-Light) binds USB `VID_14D5` with PIDs `0103, 0110, 0112, 0200, 0201` (+`FFFB` on 64-bit lists), **interface `MI_01`** | INFERRED (driver INF content, high) | `etchsp.inf` in installer |
 | F12 | The SmartSoft application and its SmartFade engine DLL import no Windows MIDI (winmm), DirectMusic or serial-port APIs | INFERRED (import tables, high) | `pe_report.py` on SmartSoft.exe, sfEngine.dll |
 | F13 | `sfEngine.dll` opens a device by SetupAPI interface path and uses ReadFile/WriteFile/DeviceIoControl. Its strings reference HighSpeedPipeline, Poll, Fetch object, DirtyObjects, timeouts and retries | INFERRED (imports + strings, high) | smartsoft-analysis.md S4, S6 |
-| F14 | SmartSoft requires console Normal mode and a console firmware version matching SmartSoft | INFERRED (UI strings, medium-high) | SmartSoft.exe strings; manual p.5 |
-| F15 | SmartSoft 3.0.2b package contains SmartSoft, SmartFade and SmartFade ML software, all version 3.0.2.9.0.43 | DOCUMENTED | `Setup Information.rtf` |
+| F14 | `sfEngine.dll` selects the console by enumerating device-interface GUID `{8D7140C7-BCAE-4BE2-A5C2-DFE48EBB759A}` (interface index 0 and 1 only) and keeping the interface whose `DeviceIoControl(0x222000)` returns PID **0x0200**; IOCTLs 0x222004 (BcdDevice) and 0x222008 (product string) are also issued. There is no VID comparison in the engine | INFERRED (hand-read disassembly + Ghidra pseudocode agree, high; not observed on hardware) | smartsoft-analysis.md S11.10 and S11.14.10, 2026-10-16 |
+| F15 | `sfEngine.dll` identifies protocol objects by an 8-bit ID that indexes a 42-entry name table (0 Memory … 20 ConsoleEvent … 36 FileName, 37 ConsoleVersion, 38 SystemSizes, 40 DirtyObjects, 41 SystemSettings; full list S11.6). Receive handlers for IDs 40, 36, 37 and 38 behave as their names suggest. ID 42 is used by code but has no table entry | INFERRED (hand-read disassembly + Ghidra pseudocode and table bytes agree, high) | smartsoft-analysis.md S11.6 and S11.14.6 |
+| F16 | SmartSoft requires console Normal mode and a console firmware version matching SmartSoft | INFERRED (UI strings, medium-high) | SmartSoft.exe strings; manual p.5 |
+| F17 | SmartSoft 3.0.2b package contains SmartSoft, SmartFade and SmartFade ML software, all version 3.0.2.9.0.43 | DOCUMENTED | `Setup Information.rtf` |
 
 ## MIDI
 

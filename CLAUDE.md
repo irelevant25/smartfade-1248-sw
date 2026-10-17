@@ -78,8 +78,10 @@ with no hardware dependencies.
 
 ## Current state
 
-Phase 0 (discovery) done: source-material audit. **No application code exists yet.**
-Next: hardware evidence (experiments E1/E2), then Phase 1 scaffolding after owner approval.
+Phase 0 (discovery) done: source-material audit, plus static disassembly of the USB framing
+in `sfEngine.dll` (`docs/protocol/smartsoft-analysis.md` S11, all INFERRED). **No application
+code exists yet.** Next: hardware evidence (experiments E1/E2), then Phase 1 scaffolding
+after owner approval.
 
 ## Commands
 
@@ -90,7 +92,12 @@ pip install -r tools/source-audit/requirements.txt
 python tools/source-audit/extract_smartsoft_installer.py "smartsoft-source-materials/SmartSoft 3.0.2.9.0.43b.exe"
 python tools/source-audit/pe_report.py analysis/extracted/SmartSoft_3.0.2.9.0.43b/files/sfEngine.dll
 python tools/source-audit/strings_dump.py <file> > strings.txt
+python -I tools/source-audit/x86_probe.py <pe> xref "Fetch object: %s (%d) %d %d %d"   # string xrefs
+python -I tools/source-audit/x86_probe.py <pe> func 0x1001AB00                        # annotated disassembly
 ```
+
+`x86_probe.py` (pefile + capstone, heuristic function boundaries) is the fallback when no
+REA analysis backend (Ghidra / IDA) is available on the machine. Prefer REA when it works.
 
 Build / test / run commands for the backend, frontend, mock mode and real-hardware mode
 are added here once Phase 1 is scaffolded.
