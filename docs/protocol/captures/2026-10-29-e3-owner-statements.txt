@@ -1,0 +1,23 @@
+Experiment E3: statements made by the owner in the Claude Code chat on 2026-10-29 after the capture (transcribed by Claude; the chat is the primary source). Questions asked by Claude, answers verbatim.
+
+Q1. While you held the memory 1 bump (20:44:37-45), did any light come on? (Memory 1 = channels 7 and 8.)
+A1. "No, because solo bumps fader was on 0% so it works exactly oposite/reverted. When the fader 1 is up and I press the button 1 it turn of the lights on that memory."
+
+Q2. Between "at full" (20:41:43) and "down start" (20:41:57) the capture shows fader 1 moving three times. Did you push or wiggle it at the top?
+A2. "Yes, I did not accidentaly, my bad." (i.e. the owner did move the fader accidentally; the three excursions are real operator movements.)
+
+Q3. Where is the "bumps master" fader on your console, and where was it set during the session?
+A3. "It is usually on 100% and I move it to approximately to 50% and then back. And it is on right. I mean nothing is more on right than the master slider." (The owner describes the fader they moved during the "gm to half / gm to full" steps: the rightmost fader of the console.)
+
+Q4. Did an indicator LED blink while the Grand Master was at half (which one)? In memory mode on page 1, what colour was the LED under fader 21, and what is on that fader?
+A4. "Ehm, itsn bump master and grand master the same? Maybe I move something I should not. And yes, the black out bump was blinking when I lower the master fader. The fader 21 in memory is light up because its a sequence and there is sequence saved there as well."
+
+Q5 (follow-up by the owner, unprompted). "sorry, I know understand what bump master and grand master is but on the smartfade 1248 one is called bumps and the second one master. Under both of them is a name INDEPENDENTS."
+   -> Panel labels on the owner's 1248: a fader labelled BUMPS and a fader labelled MASTER, with the INDEPENDENTS (IND 1 / IND 2) section below them. The fader moved in the "gm" steps was MASTER (the rightmost); BUMPS stood at 0 %. This agrees with the manual's names "BUMPS fader" (printed p.12) and "Master fader" (printed p.56).
+
+Claude's reading of the answers (INFERRED where the owner's words do not state it directly; the manual quotes are in the E3 record):
+- The fader moved in the "gm" steps is the rightmost fader. The owner is unsure of its name; the capture put the movement into FaderInfo body[194] and the Blackout LED blinked while it was below full, which matches the ConsoleLink (ML) description of the Grand Master. Treat "body[194] = the rightmost master fader, called Grand Master in the knowledge base" as INFERRED until the manual's panel drawing is checked.
+- The BUMPS fader ("solo bumps fader") was at 0 % at the time of the bump (the owner states it for the bump; that it stayed there all session is consistent with FaderInfo body[193] = 0x00 in every payload but is not stated), and a bump then drives the memory to the BUMPS level (0 %), so the memory-1 bump could change no level while the memory fader was at zero. Supports the reading "bump level scaled by the BUMPS master" over "bump output not reported" without excluding the latter (the bump LED still reached 0xFF).
+- The blinking LED at Grand-Master-below-full is the Blackout button's LED (owner), so LedStatus block 53 is the Blackout LED (OBSERVED pattern + owner identification).
+- Memory fader 21 on page 1 holds a sequence, so LED block 21 lit for a sequence (owner), as hypothesised.
+- The unlogged fader-1 movements at 83.6-91.4 s (two falls to 0x00 and two rises to 0xFF) are accidental operator movements, not a console artefact.

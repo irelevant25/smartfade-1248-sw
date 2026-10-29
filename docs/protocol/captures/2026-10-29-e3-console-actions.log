@@ -1,0 +1,27 @@
+2026-10-29 20:40:30.151 START guided E3 session (PC clock, local time)
+2026-10-29 20:40:56.293 owner answer: console powered off since E2 = y
+2026-10-29 20:41:01.384 smartsoft online (owner)
+2026-10-29 20:41:21.394 wait 20 s done (idle after Online)
+2026-10-29 20:41:38.167 fader1 up start
+2026-10-29 20:41:43.429 fader1 at full
+2026-10-29 20:41:48.434 wait 5 s done (fader 1 at full)
+2026-10-29 20:41:57.175 fader1 down start
+2026-10-29 20:42:01.694 fader1 at zero
+2026-10-29 20:42:06.713 wait 5 s done (fader 1 at zero)
+2026-10-29 20:42:27.402 fader5 up start
+2026-10-29 20:42:33.265 fader5 at full
+2026-10-29 20:42:38.270 wait 5 s done (fader 5 at full)
+2026-10-29 20:42:42.355 fader5 down start
+2026-10-29 20:42:47.388 fader5 at zero
+2026-10-29 20:42:52.395 wait 5 s done (fader 5 at zero)
+2026-10-29 20:44:36.917 bump1 press
+2026-10-29 20:44:45.748 bump1 release
+2026-10-29 20:44:50.756 wait 5 s done (after bump)
+2026-10-29 20:45:08.605 gm to half start
+2026-10-29 20:45:11.621 wait 3 s done (GM at half)
+2026-10-29 20:45:16.124 gm to full start
+2026-10-29 20:45:21.129 wait 5 s done (GM at full)
+2026-10-29 20:45:33.340 smartsoft close start
+2026-10-29 20:45:37.975 smartsoft closed
+2026-10-29 20:45:42.985 wait 5 s done (after close)
+2026-10-29 20:45:42.987 END guided E3 session

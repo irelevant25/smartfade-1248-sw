@@ -1,0 +1,33 @@
+# tools/usb-probe
+
+Read-only Windows PowerShell 5.1 scripts for the hardware experiments: the E1 probes (USB identification of the
+SmartFade 1248). They never write to the console: no output reports, no feature reports, no
+bulk traffic.
+
+| Script | What it prints | Mechanism |
+|---|---|---|
+| `e1-usb-descriptors.ps1` | For the device with VID 0x14D5 on any hub: connection info (speed, address, open pipes), device descriptor, string descriptors, the full configuration descriptor (interfaces, HID descriptor, endpoints), and an attempt at the HID report descriptor | Standard GET_DESCRIPTOR requests routed through the parent hub driver (`IOCTL_USB_GET_DESCRIPTOR_FROM_NODE_CONNECTION`), the same mechanism USBView / USBTreeView use |
+| `e1-hid-probe.ps1` | For the console's HID collection: `HIDD_ATTRIBUTES`, manufacturer / product / serial strings, `HIDP_CAPS`, link collections, value and button caps (the report structure Windows parsed), then a passive listen for input reports for `-ListenSeconds` seconds | HID class driver (`hid.dll` `HidD_*` / `HidP_*` queries, `ReadFile` on the interrupt IN pipe) |
+| `action-log.ps1` | Operator action log for capture sessions: type a note and press Enter at the moment of each action; every line is stamped with the PC clock (the clock USBPcap uses), so frames can be correlated with actions. Ends on an empty line. Refuses to append to an existing file (logs are hashed evidence) | Plain file writes; never touches the console |
+| `e3-guided-session.ps1` | Guided operator session used for E3 (2026-10-29): shows one instruction at a time and logs the PC-clock time at which the operator presses Enter to start each action. Its first step is the safety-rule-3 gate: it asks for the name of the SD backup made just now and logs "backup taken: <file>"; whoever runs the session starts SmartSoft only after that line exists. `-LogFile` is mandatory and must be a new file | Plain file writes; never touches the console or SmartSoft |
+
+Run without installation or admin rights:
+
+```
+powershell -NoProfile -ExecutionPolicy Bypass -File tools\usb-probe\e1-usb-descriptors.ps1
+powershell -NoProfile -ExecutionPolicy Bypass -File tools\usb-probe\e1-hid-probe.ps1 -ListenSeconds 30
+```
+
+Output is evidence: copy it unmodified (plus a one-line header with date, host and script)
+to `docs/protocol/captures/` with a date prefix and reference it from the experiment record.
+
+**Rule:** these tools never send HID output or feature reports, bulk data or vendor requests,
+and nobody adds such a feature here. An enabling or control message may only be reproduced
+after it has been observed from SmartSoft (not from the firmware updater `SFDownloader.exe`)
+in a capture and is understood. Both scripts were revised after the 2026-10-28 safety review
+(hub opened with access 0 instead of GENERIC_WRITE; report grouping by the console's first byte
+and all reports printed); the experiment record lists the hashes of the revisions used.
+
+Limitations seen on 2026-10-28: string descriptors and the HID report descriptor could not be
+read through the hub IOCTL (ERROR_GEN_FAILURE). Strings come from the HID path instead, and the
+report structure is reconstructed from Windows' preparsed data, not from the raw descriptor.
