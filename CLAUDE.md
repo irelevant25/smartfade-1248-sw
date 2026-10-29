@@ -21,6 +21,11 @@ console's firmware.
   other. "Documented" ≠ "verified".
 - Never send unverified data to the real console. Default to simulation. Real hardware mode
   must be enabled deliberately and be visibly indicated in the UI.
+- **VERIFIED is necessary, not sufficient.** A VERIFIED fact says the console or SmartSoft was
+  seen behaving that way in two independent sessions; it never clears a message for sending.
+  No PC → console message (poll, fetch or data) may be sent by our code until it has been
+  observed from SmartSoft on the 1248, understood, shown to be harmless and cleared by
+  `/hardware-safety-check`. As of 2026-10-29 none is cleared.
 - Never touch the console bootloader / firmware update path.
 - Never retry commands with side effects blindly.
 - Golden protocol tests may only use bytes from a committed capture in `docs/protocol/captures/`.
@@ -38,6 +43,9 @@ or copy its contents into source code. Derived extractions go to `analysis/extra
 | Source inventory + hashes | `docs/source-materials.md` |
 | Hardware facts | `docs/hardware/smartfade-1248.md` |
 | Protocol knowledge base (status vocabulary, facts, hypotheses, evidence matrix) | `docs/protocol/` |
+| Observed framing, commands, responses, session model (from E2 and E3; VERIFIED = reproduced behaviour, never clearance to send) | `docs/protocol/packet-format.md`, `commands.md`, `responses.md`, `state-model.md` |
+| Third-party reference compared with our 1248 evidence (ConsoleLink, SmartFade ML, evidence class 5) | `docs/protocol/consolelink-analysis.md` |
+| Capture records, evidence files, capture format | `docs/protocol/captures/`, `tools/protocol-analyzer/` |
 | SmartSoft binary analysis | `docs/protocol/smartsoft-analysis.md` |
 | MIDI analysis | `docs/protocol/midi-spec-analysis.md` |
 | Experiments, safety rules, capture format | `docs/protocol/reverse-engineering.md` |
@@ -79,13 +87,40 @@ with no hardware dependencies.
 ## Current state
 
 Phase 0 (discovery) done: source-material audit, plus static disassembly of the USB framing
-in `sfEngine.dll` (`docs/protocol/smartsoft-analysis.md` S11, all INFERRED). **No application
-code exists yet.** Next: hardware evidence (experiments E1/E2), then Phase 1 scaffolding
-after owner approval.
+in `sfEngine.dll` (`docs/protocol/smartsoft-analysis.md` S11, all INFERRED). **E1 done
+2026-10-28** (`docs/protocol/captures/2026-10-28-e1-usb-identification.md`): the console is
+`VID_14D5&PID_0200`, a full-speed composite device with HID interface 0 and vendor bulk
+interface 1; firmware 3.0.2.9.0.43. ETC's `etchsp.sys` does not load while Memory Integrity
+(HVCI) is on; the owner switched it off for the E2 session and wants it back on later, so our
+backend must use a user-mode driver (WinUSB, H7). **E2 done 2026-10-28**
+(`docs/protocol/captures/2026-10-28-e2-smartsoft-connect.md`, first USB capture, passive): the
+poll / dirty-list / fetch protocol and its framing are **OBSERVED** (facts F51-F69, documents
+`packet-format.md`, `commands.md`, `responses.md`, `state-model.md` in `docs/protocol/`);
+SmartSoft wrote only two System messages and never used the HID interface. The cross-check with the console's own `SHOW04.ASC` matched the decoded Patch, Memory, label, step and Independents objects, and SystemSettings by position only (F70-F79). *(Until E3 only the product string and the firmware version, F41 and F48, were VERIFIED.)*
+**E3 done 2026-10-29** (`docs/protocol/captures/2026-10-29-e3-console-actions.md`, second USB
+capture after a console power cycle, passive; the owner's answers are in
+`2026-10-29-e3-owner-statements.txt`): the independent reproduction of E2 promoted facts to
+**VERIFIED**, now **26** (F41, F48, F51-F55 with F55 in part, F57-F65, F67 for the shared IDs, F68,
+F70-F77 as "the console returns these bodies"); F40 and F42 stay OBSERVED (synthetic descriptor
+frames). For F58 VERIFIED means that SmartSoft sends exactly those two System messages at those
+points, **never that we may send them**. The console-side actions (faders 1 and 5, a memory bump, the
+MASTER fader, a mode switch) were decoded (F80-F92, hypotheses H46-H59), E2's 0xAB is explained by
+MASTER = 0xAA (INFERRED cause, F90), and the third-party ConsoleLink for the SmartFade ML (evidence class 5,
+`docs/protocol/consolelink-analysis.md`) was compared: it changes no 1248 status by itself, but it
+showed that the structural argument for the label byte order (UTF-16BE) also fits a second reading,
+so that byte order is downgraded to HYPOTHESIS (F73). **No protocol message is cleared for sending
+(`/hardware-safety-check` has not passed), so no code may send anything to a console yet.** **No
+application code exists yet.** Next: the owner questions and passive captures listed in
+`docs/protocol/reverse-engineering.md` ("Next capture (proposed by the E3 analysis)": H31 restart test,
+a channel at full during a MASTER move, the BUMPS fader and bumps, the 25-48 fader mode, optionally GO,
+and the SmartSoft-side "č" label capture), the zero-risk static checks, and Phase 1 scaffolding
+(simulator, decoder against captures) after owner approval.
 
 ## Commands
 
-Source audit tooling (Python 3.10+):
+Source audit tooling (Python 3.10+; on the owner's PC use `py -3.13`, the bare `python` is
+the Store stub). Read-only USB probes for E1 live in `tools/usb-probe/` (PowerShell, see its
+README).
 
 ```
 pip install -r tools/source-audit/requirements.txt

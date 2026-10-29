@@ -94,6 +94,15 @@ Format per finding: **Observation / Interpretation / Confidence / How to verify.
   notification.
 - **Confidence:** Medium.
 - **Verify:** USB descriptors from USBTreeView / Device Manager / `pnputil /enum-devices /connected /ids`.
+- **2026-10-28 (E1): the interface layout is CONFIRMED on hardware (OBSERVED, not VERIFIED).**
+  Interface 0 is HID (one raw 64-byte input and one raw 64-byte output report, usage page 0,
+  no report IDs), interface 1 is vendor-specific with bulk endpoints 0x83 IN / 0x04 OUT; see
+  [captures/2026-10-28-e1-usb-identification.md](captures/2026-10-28-e1-usb-identification.md)
+  and known-facts F40–F44. **Not confirmed:** that the HID interface carries console events
+  (F50: silent even when the owner was asked to move a fader; H29 rejected by E2, successor H38) and that the bootloader
+  appears as HID. Because the descriptor defines no report IDs, the "report IDs 1 / 2 / 3" of
+  S11.14.11 are probably the first byte the console sends, which sits at buffer offset 1
+  behind Windows' report-ID byte (INFERRED; holds only if the engine reads offset 1).
 
 ## S6. The USB protocol is an object-synchronisation protocol, not a "set channel" command set
 
@@ -210,6 +219,12 @@ console. Its purpose is to decode the E2 capture faster, not to replace it.
 - **Not covered:** what `etchsp.sys` does with the ReadFile/WriteFile buffers (bulk vs
   interrupt, URB packetisation, driver-side timeouts). The 12-byte "command" is what the
   *engine* hands to the driver, not necessarily what appears on the wire 1:1.
+  **2026-10-28 (E2): answered at URB level (OBSERVED).** The driver uses bulk transfers on
+  interface 1 (OUT 0x04, IN 0x83) and issues one URB per `WriteFile` / `ReadFile`: the 12-byte
+  header and the payload are separate URBs, and IN payloads up to 792 bytes are single URBs
+  (the split into 64-byte packets is below what USBPcap records). The engine's 12-byte command
+  is what appears on the wire 1:1. Driver-side timeouts remain unobserved. See known-facts F51
+  and the [E2 record](captures/2026-10-28-e2-smartsoft-connect.md).
 - **Stack-offset reading:** all local-variable offsets were computed by hand from push
   counts. One miscount changes a field position. Treat every field offset as "probable".
 
@@ -314,6 +329,11 @@ indexed by object ID in four places (`mov edx, [eax*4 + 0x1009c6a0]` at 0x1001AD
 - **How to verify:** E2: (1) all 12-byte OUT transfers have w0 ∈ {0,1,2}; (2) a type-1
   header is immediately followed by an OUT transfer of exactly w1 bytes; (3) in type-0/1
   headers words 2–5 repeat the words of the last type-2 header or last reply header.
+- **2026-10-28 (E2): CONFIRMED (OBSERVED).** All three checks hold: 3 231 OUT headers with
+  w0 ∈ {0,1,2} (no exception), both type-1 headers followed by exactly 7 bytes (f209/f211,
+  f375/f377), stale w2–w5 in 3 002 of 3 002 later poll / data headers (example f19 repeats
+  fetch f17's ID 0x11). The very first poll f11 is all zero rather than uninitialised stack
+  bytes. Known-facts F52, hypothesis H15.
 
 ### S11.4 Outgoing data payload (PC → console)
 
@@ -389,6 +409,13 @@ indexed by object ID in four places (`mov edx, [eax*4 + 0x1009c6a0]` at 0x1001AD
 - **How to verify:** E2: in every IN payload byte4 ∈ 0..41 and the u16 at 2–3 (try LE
   first, then BE) equals header w1 − 5; byte0 increments by one across *all* IN payloads
   regardless of header type; observe what byte1 does.
+- **2026-10-28 (E2): CONFIRMED with resolutions (OBSERVED).** Byte 0 increments by one across
+  all 244 IN payloads of both reply types. **Bytes 2–3 are a u16 little-endian length equal to
+  payload length − 5 in 244 of 244** (f16 `F6 00 2F 00 28 …`: 0x002F = 47 = 52 − 5), so the
+  "probably bodyLen" reading is right and the byte order is LE; "not checked by code" still
+  holds. **Byte 1 = 0x00 in 244 of 244** (meaning still UNKNOWN). Byte 4 is always one of the
+  21 IDs listed in F67; body u16 fields are big-endian as stated. Known-facts F53, F54,
+  hypothesis H18.
 
 ### S11.6 Object IDs (confirmed by code, not by table order)
 
@@ -476,6 +503,11 @@ indexed by object ID in four places (`mov edx, [eax*4 + 0x1009c6a0]` at 0x1001AD
   payload, not a header problem. Poll replies with payload also consume a sequence number.
 - **Confidence:** High.
 - **How to verify:** E2 as in S11.5. E2 should also reveal the initial value on both sides.
+- **2026-10-28 (E2): CONFIRMED (OBSERVED).** Two independent counters: console → PC 0xF6
+  (f16) … 0xFF (f88), 0x00 (f218) … 0xE9 (f2746), +1 per payload of both reply types, no break
+  in 244 payloads; PC → console 0x00 (f211), 0x01 (f377). Initial values: console 246 (not
+  explained; "not reset by a new session" is H31), SmartSoft 0. No "out of sequence" case
+  could occur in this capture. Known-facts F55, hypothesis H17.
 
 ### S11.9 Timing
 
@@ -486,6 +518,14 @@ indexed by object ID in four places (`mov edx, [eax*4 + 0x1009c6a0]` at 0x1001AD
 - **Interpretation:** idle cadence ≈ one poll every 20 ms plus transfer time (≈ 40–50 polls/s).
 - **Confidence:** Medium (depends on how `etchsp.sys` services a 12-byte read with nothing pending).
 - **How to verify:** E2 idle section: inter-poll interval histogram.
+- **2026-10-28 (E2): REJECTED as worded for "≈ 20 ms"; the 10 ms part CONFIRMED (OBSERVED).**
+  Idle poll-to-poll interval (n = 2 754): median **31.10 ms**, 2 560 in the 30–32 ms bin,
+  min 20.87 ms, max 45.30 ms; iterations with a fetch peak at 46–48 ms; the next poll comes
+  ≥ 10.30 ms after a fetch (n = 228) and 15.59 / 15.05 ms after the two data writes. INFERRED
+  cause: the Windows default 15.625 ms timer tick makes `msleep(20)` ≈ 31.25 ms and
+  `msleep(10)` ≈ 15.6 ms; this section's "≈ 20 ms plus transfer time" ignored the tick. The
+  re-fetch after > 10 unanswered polls never occurred (UNTESTED). Reply-header IN: median
+  1.92 ms. Known-facts F62, hypotheses H23 (rejected as worded) and H37 (successor).
 
 ### S11.10 Device discovery and IOCTLs (open leads #2 and #3)
 
@@ -524,6 +564,12 @@ indexed by object ID in four places (`mov edx, [eax*4 + 0x1009c6a0]` at 0x1001AD
 - **How to verify:** E1: the enumerated device must show `VID_14D5&PID_0200` (H21). A
   SetupAPI listing of interface GUID `{8D7140C7-…}` on a PC with the driver installed and
   the console attached must return the same path SmartSoft logs.
+- **2026-10-28 (E1):** `USB\VID_14D5&PID_0200&REV_0103` observed, **H21 confirmed**. The
+  interface-GUID listing could not be checked at first: `etchsp.sys` fails to load under HVCI
+  on the owner's PC (known-facts F46). Later the same day, with Memory Integrity off, the
+  driver loaded and the `DeviceClasses` registry shows exactly one interface of
+  `{8D7140C7-BCAE-4BE2-A5C2-DFE48EBB759A}`, for `USB\VID_14D5&PID_0200&MI_01` (F49):
+  **the GUID's role as the HSP device-interface GUID is confirmed on hardware.**
 
 ### S11.11 Lead #4 (`D5 14` at file 0x99070) — REJECTED as a VID check
 
@@ -550,6 +596,12 @@ indexed by object ID in four places (`mov edx, [eax*4 + 0x1009c6a0]` at 0x1001AD
    records drive the subsequent Fetches.
 6. Expect 16-bit body fields big-endian, the LE length word being the exception.
 
+*2026-10-28 (E2) check of this list:* items 1–4 and 6 hold (6 with two more LE exceptions,
+the inbound length word and the FileName characters, see S11.5 and known-facts F54, F60).
+**Item 5 is REJECTED:** the first fetches are not 37 / 38 / 41. The console's own first list
+(f16, 9 records) decides: the first fetch is ID 17 (f17); 37 appears only after System
+`09 00 00`, 38 and 41 only in the 157-record list (F56, F58).
+
 ### S11.13 Remaining unknowns from this pass
 
 *(Status after the Ghidra pass: see S11.14.12.)*
@@ -562,6 +614,15 @@ indexed by object ID in four places (`mov edx, [eax*4 + 0x1009c6a0]` at 0x1001AD
   path, but that is our reading, not an observation).
 - Initial sequence values and whether a reconnect resets them.
 - Body layouts for every object except the ones sketched in S11.6.
+
+**Status after E2 (2026-10-28, OBSERVED unless stated):** *payload byte 1:* 0x00 in 244 of 244,
+meaning UNKNOWN. *Bytes 2–3:* LE length, resolved. *Qualifiers a / b / c:* partly resolved,
+Memory (a, b) with a ∈ {0, 11}, Page a = 0..11, StepContent a = step, ChannelText a = 0..95
+(F57, F67); the mapping was checked against `SHOW04.ASC` later the same day (H25 confirmed as numbering, (a, b) = `$$MEMORY p f`; the physical page/fader meaning stays OPEN for E6). *Driver
+split / aggregation and endpoints:* resolved at URB level (S11.0, F51). *Nothing dirty:* a
+type-4 reply with w1 = 0 (F53), now observed, not just read from code. *Initial sequence
+values:* console 0xF6, SmartSoft 0; reset behaviour on reconnect UNKNOWN (H31). *Body layouts:*
+sizes known for 21 IDs (F67); contents mostly undecoded (H32–H35).
 
 ### S11.14 Decompiler re-verification (Ghidra 12.1.4 via REA, 2026-10-16)
 
@@ -842,7 +903,11 @@ decide).
   report ID 1 = button bitmap (bit changes logged "Button: %d %d"), ID 2 = fader values
   (changed bytes → kind-0 events, cached at `DAT_10343118[]`), ID 3 = a third report. This
   is the first code evidence that the engine reads the **HID interface** of a console
-  (H1/H5) in addition to the HSP pipe.
+  (H1/H5) in addition to the HSP pipe. **2026-10-28 (E1):** the console's HID interface
+  defines no HID report IDs (F44), so the value the engine switches on must be payload byte 0
+  of the 64-byte report, unless the code reads the buffer at an offset not re-checked here
+  (INFERRED; see H38; H29 was rejected by E2 and H28 on 2026-10-28: the HID interface was silent in all
+  listens so far, F45/F50).
 - **Offline flag.** `DAT_1009c5dc` ("no console"): `sendObject` skips the USB queue and
   applies the object locally through the mirror parser when it is set; cleared on connect
   and on the first received payload.
@@ -880,4 +945,8 @@ decide).
    **REJECTED, S11.11.** No VID check exists in `sfEngine.dll`; selection is by interface
    GUID + PID 0x0200.
 5. New: `sfmlEngine.dll` — which PID does the ML engine ask for? (Would confirm the
-   PID-per-product reading of S11.10. Low priority; not a 1248 question.)
+   PID-per-product reading of S11.10. Low priority; not a 1248 question.) **Class-5 answer,
+   2026-10-29:** the third-party ConsoleLink (SmartFade ML only) uses VID 0x14D5 / PID **0x0201** for
+   the ML (README.md:95, protocol.py:92-94; [consolelink-analysis.md](consolelink-analysis.md) T13),
+   which fits the PID-per-product reading (ours: 0x0200, F40). It is not evidence for the 1248 and not
+   a static check of `sfmlEngine.dll`, so the lead stays open.

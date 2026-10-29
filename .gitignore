@@ -1,2 +1,8 @@
 # Extracted third-party binaries (proprietary, regenerate with tools/source-audit)
 analysis/extracted/
+
+# Raw USBPcap captures include every device on the root hub (keyboard/mouse reports). Only the console-only split is committed.
+docs/protocol/captures/*.raw-all-devices.pcap
+
+# Owner's show files from the console SD card (private; hashes of the files used as evidence are in the experiment records)
+smartfade-sd-card-backup/

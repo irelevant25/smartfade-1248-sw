@@ -4,7 +4,13 @@ An independent, modern PC application to control and monitor an **ETC SmartFade 
 lighting console, plus tooling to understand how the console communicates and to convert
 SmartSoft/console `.asc` show files.
 
-**Status:** Phase 0 (discovery). Source materials have been audited. No application code yet.
+**Status:** Phase 0 (discovery). Source materials audited; experiments E1 (USB identification)
+and E2 (first USB capture of a SmartSoft session: poll / dirty-list / fetch framing) done on
+2026-10-28, E3 (console actions while SmartSoft is Online, after a console power cycle) on
+2026-10-29. 26 facts are VERIFIED as observed console / SmartSoft behaviour (USB framing, start-up,
+show objects, product string, firmware version; before E3 only the last two were). VERIFIED never
+clears a message for sending: no protocol message is cleared, so no code may talk to a console yet.
+No application code yet.
 
 | Start here | |
 |---|---|

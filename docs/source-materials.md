@@ -141,3 +141,46 @@ has no fixture/personality support, so a PERSLIB parser is not on the roadmap.
   content. Prefer the user's own show files for committed fixtures.
 - The manuals permit reproduction "only for non-commercial purposes". The docs quote only
   short excerpts.
+
+## 6. Third-party reference checkouts (git-ignored)
+
+Open-source projects read as **data** for comparison: evidence class 5 of CLAUDE.md ("other sources,
+clearly identified"). They are checked out under `analysis/extracted/` (git-ignored), read-only, never
+run and never modified. **Nothing from them is copied into our source tree, tests or documents beyond
+short quotes with file:line references**; golden protocol tests may use bytes from our own committed
+captures only (CLAUDE.md). A claim from such a source never changes a 1248 status by itself.
+
+| Checkout | Repository | Commit | Licence | Console | Used in |
+|---|---|---|---|---|---|
+| `analysis/extracted/consolelink-09b3c26/` | https://github.com/gaeljaffrain/consolelink ("ConsoleLink", version 0.1.8, annotated tag `v0.1.8`), shallow clone, `origin` as in its `.git/config` | `09b3c266757c4d4a614151fa9326e25143caaa1f` ("Bump version: 0.1.7 → 0.1.8", 2026-10-20 15:00:56 −07:00) | MIT, Copyright (c) 2026 Gaël Jaffrain (LICENSE:1-3, pyproject.toml:11-13) | SmartFade **ML** only (USB `VID 14D5 / PID 0201`); "ConsoleLink was tested with SmartFade ML" (README.md:11); **not the 1248** | [protocol/consolelink-analysis.md](protocol/consolelink-analysis.md); annotations in `protocol/hypotheses.md` (H46–H51 with "CL-ML" notes; H52–H59 come from E3, not from ConsoleLink), `protocol/evidence-matrix.md` (column CL-ML) |
+
+SHA-256 of the committed (LF) content of the files read, `git show HEAD:<path> | sha256sum`, first
+computed by the protocol-researcher on 2026-10-29 and re-checked by the curator the same day (the
+Windows working copy has CRLF line endings and the same line numbers). No SmartSoft capture is published
+in that repository; its fixtures are ConsoleLink's own `--capture` logs.
+
+| File | SHA-256 |
+|---|---|
+| `src/consolelink/protocol.py` | `952adc78a19958a083271f891f2fdfbe53f7125772a4c8021f20a3d6620e67a2` |
+| `src/consolelink/app.py` | `0853ab521be9f4834616e21ad748b02f7be0dc983497dc2a4cf64919e6fa2487` |
+| `README.md` | `a93818734b58a03098ff91f693b456cdadba171eeef267bcaf977784275bf77c` |
+| `CONTRIBUTING.md` | `262f38c8f288b35b6de1eeee1599041568b41396fb3f7b41bb61d7d6dbfdc073` |
+| `LICENSE` | `277f5cb2eff40f1793a1c3312afe93a52265dca0eecadd77b86e2f1e553f3fc9` |
+| `tests/fixtures/faders.log` | `5f53596ab78787881db28eb688618225b7cac84e3b4b3b0bad2f5f33a9fe18ec` |
+| `tests/fixtures/output_scaling.log` | `fbdfb0c893e5ea2b33cc6b6a4d1d73033eb0a814fb84d4c81098b4aa36a86878` |
+| `tests/fixtures/crossfaders.log` | `f966ac2da3179864b7dd332682bb4712759df55d8a11e6251dd2a33ace4fc0a4` |
+| `tests/fixtures/lcd.log` | `d6081f24e0a3fe110ad712bb7efee0f7b3b0105b0cdd3acc92e43cfa598cbfce` |
+| `tests/fixtures/indicators.log` | `68b1a4f69731a6622affb2b892e7a8f5ae6065968e2d3b41a0e749379f24de07` |
+| `tests/fixtures/bump_leds.log` | `c2c1d4734ed024ef656b564154294ecda705339fbcd41e98b7efdf6d11cb3c28` |
+| `tests/fixtures/labels.log` | `5ef41711754f991f8c7c8d78d29376744904287391443f6507ee8dff28b073c7` |
+| `tests/fixtures/mems_names.log` | `7be8678805fdd150afd54d8128b60f826393af9cdb9d51ce61a9af69f270fa34` |
+| `tests/fixtures/independents.log` | `e192f09a91b4c8ce494d8eda8f23fa0d5d135716ff0d36dc191cb321086d84ef` |
+| `tests/fixtures/dmx.log` | `b7b26780bd79da5be403b836b5d6a03c82c1602f9ceea83d9092f60d17af6ddf` |
+| `tests/fixtures/fader_modes.log` | `e6e76daf5af8943742e932b0dd3cd6a1fa90b778e69c061619ad7921e5381d75` |
+
+Regenerate the checkout with `git clone https://github.com/gaeljaffrain/consolelink
+analysis/extracted/consolelink-09b3c26` followed by `git checkout 09b3c266757c4d4a614151fa9326e25143caaa1f`
+(tag `v0.1.8`); a later commit may differ, so the line numbers in the analysis refer to this commit. The
+SmartFade v3.0 console manual used for the DOCUMENTED facts F5–F8 is the copy inside the SmartSoft
+installer (section 2, SHA-256 `1a93e0af…0b414`, `analysis/extracted/SmartSoft_3.0.2.9.0.43b/files/`);
+it is not a separate file in `smartsoft-source-materials/`.

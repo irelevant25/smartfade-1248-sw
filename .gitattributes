@@ -1,2 +1,9 @@
 # Immutable third-party research input: never normalize line endings (hashes in docs/source-materials.md)
 smartsoft-source-materials/** -text
+
+# Evidence files and probe scripts: keep bytes exactly as recorded (SHA-256 in the experiment records)
+docs/protocol/captures/** -text
+tools/usb-probe/** -text
+tools/protocol-analyzer/** -text
+# Owner show files (LF-only console output; SHA-256 recorded in experiment records)
+smartfade-sd-card-backup/** -text
