@@ -1,0 +1,11 @@
+Experiment E1: statements made by the owner in the Claude Code chat on 2026-10-28 (transcribed by Claude; the chat is the primary source).
+
+1. Before E1 (about 18:45): "I have connected the smartfade 1248 to the PC via USB. I also connected 4 lights to the smartfade 1248 as well on addresses 5, 8, 11 and 14. All RGB with 3 channels."
+   Also: Ghidra, JAVA_HOME and REA are available on the PC. Wireshark portable is at C:\Users\frant\OneDrive\Počítač\tools\WiresharkPortable64.
+
+2. After E1 (about 19:55), answering three questions:
+   1. "Memory integrity is off. But I would like to avoid that in the future. If it is not possible with current driver, then maybe a new one is needed. USBPcap installed: C:\Program Files\USBPcap"
+   2. "Version: 3.0.2.9.0.43"   (asked: Menu > Diagnostics > Software version)
+   3. Pasted output of tools/usb-probe/e1-hid-probe.ps1 -ListenSeconds 30, started 19:50:02.567, 0 reports (archived as 2026-10-28-e1-hid-listen-owner-30s.txt). The owner had been asked to move channel fader 1 slowly and press one bump during the listen; the message did not separately confirm that this was done.
+
+Not answered yet: rear-panel serial number; whether the console was in Normal mode; whether SmartSoft was ever "Online" on another PC.

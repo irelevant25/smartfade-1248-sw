@@ -1,0 +1,86 @@
+Experiment E1: SmartSoft installation on the owner's PC, generated 2026-10-28 20:01:09 +01:00. Produced by a PowerShell one-liner (registry queries, directory listing, Get-FileHash), output unedited.
+
+--- Uninstall registry entries matching SmartSoft:
+{583AA4E9-DF76-4D6F-B212-5492A246773F}
+  DisplayName = SmartSoft
+  DisplayVersion = 3.0.43
+  Publisher = ETC
+  InstallDate = 20260203
+  InstallLocation = 
+  InstallSource = C:\Users\frant\AppData\Local\Temp\IXP000.TMP\
+  UninstallString = MsiExec.exe /I{583AA4E9-DF76-4D6F-B212-5492A246773F}
+
+--- C:\Program Files (x86)\ETC tree (path, bytes):
+C:\Program Files (x86)\ETC\HighSpeed_Pipeline_Drivers  1
+C:\Program Files (x86)\ETC\SmartSoft  1
+C:\Program Files (x86)\ETC\HighSpeed_Pipeline_Drivers\amd64  1
+C:\Program Files (x86)\ETC\HighSpeed_Pipeline_Drivers\ia64  1
+C:\Program Files (x86)\ETC\HighSpeed_Pipeline_Drivers\x86  1
+C:\Program Files (x86)\ETC\HighSpeed_Pipeline_Drivers\etchsp.cat  10610
+C:\Program Files (x86)\ETC\HighSpeed_Pipeline_Drivers\etchsp.inf  3443
+C:\Program Files (x86)\ETC\HighSpeed_Pipeline_Drivers\amd64\etchsp.sys  22728
+C:\Program Files (x86)\ETC\HighSpeed_Pipeline_Drivers\ia64\etchsp.sys  36424
+C:\Program Files (x86)\ETC\HighSpeed_Pipeline_Drivers\x86\etchsp.sys  19656
+C:\Program Files (x86)\ETC\SmartSoft\Binaries  1
+C:\Program Files (x86)\ETC\SmartSoft\Documentation  1
+C:\Program Files (x86)\ETC\SmartSoft\Drivers  1
+C:\Program Files (x86)\ETC\SmartSoft\Examples  1
+C:\Program Files (x86)\ETC\SmartSoft\Firmware Updates  1
+C:\Program Files (x86)\ETC\SmartSoft\Resources  1
+C:\Program Files (x86)\ETC\SmartSoft\Showfiles  1
+C:\Program Files (x86)\ETC\SmartSoft\Binaries\Ostrov -.ASC  17097
+C:\Program Files (x86)\ETC\SmartSoft\Binaries\perslib.bin  234534
+C:\Program Files (x86)\ETC\SmartSoft\Binaries\Qt3Support4.dll  2396160
+C:\Program Files (x86)\ETC\SmartSoft\Binaries\QtCore4.dll  2248704
+C:\Program Files (x86)\ETC\SmartSoft\Binaries\QtGui4.dll  8364032
+C:\Program Files (x86)\ETC\SmartSoft\Binaries\QtNetwork4.dll  983040
+C:\Program Files (x86)\ETC\SmartSoft\Binaries\QtSql4.dll  204800
+C:\Program Files (x86)\ETC\SmartSoft\Binaries\QtXml4.dll  364544
+C:\Program Files (x86)\ETC\SmartSoft\Binaries\sfEngine.dll  671744
+C:\Program Files (x86)\ETC\SmartSoft\Binaries\sfmlEngine.dll  1417216
+C:\Program Files (x86)\ETC\SmartSoft\Binaries\SmartSoft.exe  6008832
+C:\Program Files (x86)\ETC\SmartSoft\Documentation\Adobe - Adobe Reader download.url  197
+C:\Program Files (x86)\ETC\SmartSoft\Documentation\FullReference.html  6450691
+C:\Program Files (x86)\ETC\SmartSoft\Documentation\SmartFadeML_v3.0_User_Manual_revA.pdf  2213978
+C:\Program Files (x86)\ETC\SmartSoft\Documentation\SmartFade_v3.0_User_Manual_revA.pdf  1389665
+C:\Program Files (x86)\ETC\SmartSoft\Documentation\SmartSoft_v3.0_User_Manual_revA.pdf  6979831
+C:\Program Files (x86)\ETC\SmartSoft\Drivers\amd64  1
+C:\Program Files (x86)\ETC\SmartSoft\Drivers\ia64  1
+C:\Program Files (x86)\ETC\SmartSoft\Drivers\x86  1
+C:\Program Files (x86)\ETC\SmartSoft\Drivers\DPInst32.exe  795104
+C:\Program Files (x86)\ETC\SmartSoft\Drivers\DPInst64.exe  930272
+C:\Program Files (x86)\ETC\SmartSoft\Drivers\etchsp.cat  10610
+C:\Program Files (x86)\ETC\SmartSoft\Drivers\etchsp.inf  3443
+C:\Program Files (x86)\ETC\SmartSoft\Drivers\ETC_HighSpeed_Driver.exe  5495888
+C:\Program Files (x86)\ETC\SmartSoft\Drivers\amd64\etchsp.sys  22728
+C:\Program Files (x86)\ETC\SmartSoft\Drivers\ia64\etchsp.sys  36424
+C:\Program Files (x86)\ETC\SmartSoft\Drivers\x86\etchsp.sys  19656
+C:\Program Files (x86)\ETC\SmartSoft\Examples\Demoshow-SmartFade.exe  9134080
+C:\Program Files (x86)\ETC\SmartSoft\Examples\Demoshow-SmartFade1248-1296.asc  14939
+C:\Program Files (x86)\ETC\SmartSoft\Examples\Demoshow-SmartFade2496.asc  14990
+C:\Program Files (x86)\ETC\SmartSoft\Examples\Demoshow-SmartFadeML.asc  130515
+C:\Program Files (x86)\ETC\SmartSoft\Examples\Demoshow-SmartFadeML.exe  9084928
+C:\Program Files (x86)\ETC\SmartSoft\Firmware Updates\SFDownloader.exe  245760
+C:\Program Files (x86)\ETC\SmartSoft\Firmware Updates\SMRTFADE.SRC  500264
+C:\Program Files (x86)\ETC\SmartSoft\Firmware Updates\SMRTFDML.SRC  1151608
+C:\Program Files (x86)\ETC\SmartSoft\Resources\AddFirewallRule.exe  128342
+C:\Program Files (x86)\ETC\SmartSoft\Resources\Setup Information.rtf  32516
+C:\Program Files (x86)\ETC\SmartSoft\Resources\SmartSoft.ico  7406
+
+--- SHA-256 of the binaries:
+C:\Program Files (x86)\ETC\HighSpeed_Pipeline_Drivers\amd64\etchsp.sys  22728  FFB2F11F36C4805FA9E2C144050876D6D2796455F63B2B7F79A98DCA50338496
+C:\Program Files (x86)\ETC\HighSpeed_Pipeline_Drivers\ia64\etchsp.sys  36424  A3E79F83FDFE15BCF0CC8C2D2CBC33B05A56AAD2A97D0BC69C5520C6A3CEF55C
+C:\Program Files (x86)\ETC\HighSpeed_Pipeline_Drivers\x86\etchsp.sys  19656  C16985B765B1A21D1613061CCA8C8D450F1D5A43E7F08B2FC4B04A3AAB1CD244
+C:\Program Files (x86)\ETC\HighSpeed_Pipeline_Drivers\etchsp.inf  3443  89052F2FB71D458DB7F1271CAFCD1E126325361570514B2709D7447C5932573E
+C:\Program Files (x86)\ETC\SmartSoft\Binaries\sfEngine.dll  671744  3228BD9BB59906F6B7EFB0F99170608A511672BA6CC977C8DE7C88C171487983
+C:\Program Files (x86)\ETC\SmartSoft\Binaries\sfmlEngine.dll  1417216  4FCA68CADD716C6BCC50252C50C406011D32CB3254C196F645E5932C6FD9A121
+C:\Program Files (x86)\ETC\SmartSoft\Binaries\SmartSoft.exe  6008832  4C4C9CF77BF57367B3F427C0006B5400CE42C36582EA5FA8C3E8174E280C8C01
+C:\Program Files (x86)\ETC\SmartSoft\Drivers\amd64\etchsp.sys  22728  FFB2F11F36C4805FA9E2C144050876D6D2796455F63B2B7F79A98DCA50338496
+C:\Program Files (x86)\ETC\SmartSoft\Drivers\ia64\etchsp.sys  36424  A3E79F83FDFE15BCF0CC8C2D2CBC33B05A56AAD2A97D0BC69C5520C6A3CEF55C
+C:\Program Files (x86)\ETC\SmartSoft\Drivers\x86\etchsp.sys  19656  C16985B765B1A21D1613061CCA8C8D450F1D5A43E7F08B2FC4B04A3AAB1CD244
+C:\Program Files (x86)\ETC\SmartSoft\Drivers\etchsp.inf  3443  89052F2FB71D458DB7F1271CAFCD1E126325361570514B2709D7447C5932573E
+C:\Program Files (x86)\ETC\SmartSoft\Firmware Updates\SFDownloader.exe  245760  6CADAC0B9A9FA22B1C10FC982F233D7D561013B8403DC39572098B75C6740B39
+
+--- HKCU\SOFTWARE\ETC (recursive):
+HKEY_CURRENT_USER\SOFTWARE\ETC\SmartSoft
+HKCU\SOFTWARE\ETC\SmartSoft value count: 0, subkey count: 0

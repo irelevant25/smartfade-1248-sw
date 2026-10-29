@@ -1,0 +1,35 @@
+Experiment E1, generated 2026-10-28 19:17:12 by tools/usb-probe/e1-usb-descriptors.ps1 on the owner's PC: Microsoft Windows 11 Pro build 26300. Console connected, SmartSoft not running, nobody touching the console.
+
+hub USB\VID_1A40&PID_0101\7&1912AA10&0&4 port 2: VID 0B05 PID 1A68
+hub USB\VID_05E3&PID_0608\6&28CF390B&0&9 port 2: VID 0D8C PID 0066
+hub USB\VID_05E3&PID_0608\6&28CF390B&0&9 port 4: VID 1A40 PID 0101
+hub USB\ROOT_HUB30\5&23F8E3F5&0&0 port 1: VID 05AC PID 024F
+hub USB\ROOT_HUB30\5&201A262C&0&0 port 7: VID 048D PID 5702
+hub USB\ROOT_HUB30\5&201A262C&0&0 port 9: VID 05E3 PID 0608
+hub USB\ROOT_HUB30\5&201A262C&0&0 port 10: VID 0BDA PID B850
+hub USB\ROOT_HUB30\5&201A262C&0&0 port 11: VID 14D5 PID 0200
+
+=== DEVICE on hub USB\ROOT_HUB30\5&201A262C&0&0, port 11
+CurrentConfigurationValue=1 Speed=1 (0 low, 1 full, 2 high, 3 super) DeviceIsHub=0 DeviceAddress=50 NumberOfOpenPipes=4 ConnectionStatus=1
+  open pipe 0: endpoint descriptor 07 05 81 03 40 00 0A  ScheduleOffset=0
+  open pipe 1: endpoint descriptor 07 05 02 03 40 00 0A  ScheduleOffset=0
+  open pipe 2: endpoint descriptor 07 05 83 02 40 00 00  ScheduleOffset=0
+  open pipe 3: endpoint descriptor 07 05 04 02 40 00 00  ScheduleOffset=0
+Device descriptor (hub cache): 12 01 10 01 00 00 00 40 D5 14 00 02 03 01 01 02 00 01
+  bLength=18 bDescriptorType=1 bcdUSB=0110 bDeviceClass=00 bDeviceSubClass=00 bDeviceProtocol=00 bMaxPacketSize0=64 idVendor=14D5 idProduct=0200 bcdDevice=0103 iManufacturer=1 iProduct=2 iSerialNumber=0 bNumConfigurations=1
+Device descriptor (GET_DESCRIPTOR): 12 01 10 01 00 00 00 40 D5 14 00 02 03 01 01 02 00 01
+String 0 failed: Exception calling "Ioctl" with "3" argument(s): "A device attached to the system is not functioning"
+iManufacturer (index 1) failed: Exception calling "Ioctl" with "3" argument(s): "A device attached to the system is not functioning"
+iProduct (index 2) failed: Exception calling "Ioctl" with "3" argument(s): "A device attached to the system is not functioning"
+iSerialNumber: index 0 (no string)
+
+Configuration 0 descriptor (64 bytes): 09 02 40 00 02 01 00 C0 00 09 04 00 00 02 03 00 00 00 09 21 11 01 00 01 22 1C 00 07 05 81 03 40 00 0A 07 05 02 03 40 00 0A 09 04 01 00 02 FF 00 00 00 07 05 83 02 40 00 00 07 05 04 02 40 00 00
+  CONFIG: wTotalLength=64 bNumInterfaces=2 bConfigurationValue=1 iConfiguration=0 bmAttributes=0xC0 bMaxPower=0 (0 mA)
+  INTERFACE: bInterfaceNumber=0 bAlternateSetting=0 bNumEndpoints=2 bInterfaceClass=0x03 bInterfaceSubClass=0x00 bInterfaceProtocol=0x00 iInterface=0
+  HID: bcdHID=0111 bCountryCode=0 bNumDescriptors=1 bDescriptorType=0x22 wDescriptorLength=28
+  ENDPOINT: bEndpointAddress=0x81 (IN 1) bmAttributes=0x03 (interrupt) wMaxPacketSize=64 bInterval=10
+  ENDPOINT: bEndpointAddress=0x02 (OUT 2) bmAttributes=0x03 (interrupt) wMaxPacketSize=64 bInterval=10
+  INTERFACE: bInterfaceNumber=1 bAlternateSetting=0 bNumEndpoints=2 bInterfaceClass=0xFF bInterfaceSubClass=0x00 bInterfaceProtocol=0x00 iInterface=0
+  ENDPOINT: bEndpointAddress=0x83 (IN 3) bmAttributes=0x02 (bulk) wMaxPacketSize=64 bInterval=0
+  ENDPOINT: bEndpointAddress=0x04 (OUT 4) bmAttributes=0x02 (bulk) wMaxPacketSize=64 bInterval=0
+HID report descriptor, interface 0: hub request failed: Exception calling "Ioctl" with "3" argument(s): "A device attached to the system is not functioning"

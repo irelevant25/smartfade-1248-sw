@@ -1,0 +1,20 @@
+Experiment E1 follow-up (H28 test), run by the owner on 2026-10-28 at 19:50:02 with tools/usb-probe/e1-hid-probe.ps1 -ListenSeconds 30.
+Instruction given to the owner: move channel fader 1 slowly up and down and press one memory bump during the 30 s listen.
+The owner pasted this output as the result; the actions were not separately confirmed in writing.
+Memory Integrity (HVCI) was already off at the time (reboot at 19:45:49, see 2026-10-28-e1-driver-loaded.txt). SmartSoft not running.
+
+PS F:\Repositories\smartfade-1248-sw> powershell -NoProfile -ExecutionPolicy Bypass -File tools\usb-probe\e1-hid-probe.ps1 -ListenSeconds 30
+=== HID\VID_14D5&PID_0200&MI_00\8&1E29FD9D&0&0000
+path: \\?\HID#VID_14D5&PID_0200&MI_00#8&1E29FD9D&0&0000#{4d1e55b2-f16f-11cf-88cb-001111000030}
+HIDD_ATTRIBUTES: VendorID=0x14D5 ProductID=0x0200 VersionNumber=0x0103
+Manufacturer string: "ETC"
+Product string:      "ETC SmartFade"
+Serial number:       "<failed, Win32 error 87>"
+HIDP_CAPS: Usage=0x0000 UsagePage=0x0000 InputReportByteLength=65 OutputReportByteLength=65 FeatureReportByteLength=0 LinkCollectionNodes=2 InputButtonCaps=0 InputValueCaps=1 InputDataIndices=1 OutputButtonCaps=0 OutputValueCaps=1 OutputDataIndices=1 FeatureButtonCaps=0 FeatureValueCaps=0 FeatureDataIndices=0
+  LinkCollection #0: LinkUsage=0x0000 LinkUsagePage=0x0000 Parent=0 Children=1 NextSibling=0 FirstChild=1 CollectionType=1 IsAlias=0
+  LinkCollection #1: LinkUsage=0x0000 LinkUsagePage=0x0000 Parent=0 Children=0 NextSibling=0 FirstChild=0 CollectionType=0 IsAlias=0
+  Input value #0: UsagePage=0x0000 ReportID=0 BitField=0x02 LinkCollection=1 LinkUsage=0x0000 LinkUsagePage=0x0000 IsRange=0 IsAbsolute=1 HasNull=0 BitSize=8 ReportCount=64 LogicalMin=-128 LogicalMax=127 PhysicalMin=0 PhysicalMax=0 Usage=0x0001 DataIndex=0
+  Output value #0: UsagePage=0x0000 ReportID=0 BitField=0x02 LinkCollection=1 LinkUsage=0x0000 LinkUsagePage=0x0000 IsRange=0 IsAbsolute=1 HasNull=0 BitSize=8 ReportCount=64 LogicalMin=-128 LogicalMax=127 PhysicalMin=0 PhysicalMax=0 Usage=0x0002 DataIndex=0
+Listening passively for input reports for 30 s (InputReportByteLength=65) ...
+Reports received: 0 (start 19:50:02.567)
+  read ended, Win32 error 995

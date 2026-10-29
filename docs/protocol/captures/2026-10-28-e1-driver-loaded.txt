@@ -1,0 +1,14 @@
+Experiment E1: state after the owner switched Memory Integrity off and rebooted, generated 2026-10-28 20:01:09 +01:00. Produced by a PowerShell one-liner, output unedited.
+Win32_DeviceGuard: SecurityServicesConfigured=0 SecurityServicesRunning=0 VirtualizationBasedSecurityStatus=2 CodeIntegrityPolicyEnforcementStatus=2
+LastBootUpTime: 2026-10-28 19:45:49
+--- device nodes:
+USB\VID_14D5&PID_0200\6&28CF390B&0&11 | Status=OK | Problem=CM_PROB_NONE | USB Composite Device | Service=usbccgp
+USB\VID_14D5&PID_0200&MI_01\7&3B1B95D&0&0001 | Status=OK | Problem=CM_PROB_NONE | USB High-Speed-Pipe | Service=ETCHSP
+USB\VID_14D5&PID_0200&MI_00\7&3B1B95D&0&0000 | Status=OK | Problem=CM_PROB_NONE | USB Input Device | Service=HidUsb
+HID\VID_14D5&PID_0200&MI_00\8&1E29FD9D&0&0000 | Status=OK | Problem=CM_PROB_NONE | HID-compliant device | Service=
+Service ETCHSP: Status=Running
+--- HKLM\SYSTEM\CurrentControlSet\Control\DeviceClasses\{8d7140c7-bcae-4be2-a5c2-dfe48ebb759a} subkeys:
+HKEY_LOCAL_MACHINE\SYSTEM\CurrentControlSet\Control\DeviceClasses\{8d7140c7-bcae-4be2-a5c2-dfe48ebb759a}\##?#USB#VID_14D5&PID_0200&MI_01#7&3b1b95d&0&0001#{8d7140c7-bcae-4be2-a5c2-dfe48ebb759a}
+  DeviceInstance = USB\VID_14D5&PID_0200&MI_01\7&3b1b95d&0&0001
+HKEY_LOCAL_MACHINE\SYSTEM\CurrentControlSet\Control\DeviceClasses\{8d7140c7-bcae-4be2-a5c2-dfe48ebb759a}\##?#USB#VID_14D5&PID_0200&MI_01#7&3b1b95d&0&0001#{8d7140c7-bcae-4be2-a5c2-dfe48ebb759a}\#
+--- Kernel-PnP events for VID_14D5 since the reboot:

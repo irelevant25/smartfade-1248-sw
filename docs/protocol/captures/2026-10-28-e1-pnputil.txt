@@ -1,0 +1,66 @@
+pnputil /enum-devices /connected /ids, filtered to the blocks containing VID_14D5
+Experiment E1, generated 2026-10-28 19:20:33 +01:00 on the owner's PC: Microsoft Windows 11 Pro build 26300. Console connected, SmartSoft not running.
+
+Instance ID:                USB\VID_14D5&PID_0200\6&28cf390b&0&11
+Device Description:         USB Composite Device
+Class Name:                 USB
+Class GUID:                 {36fc9e60-c465-11cf-8056-444553540000}
+Manufacturer Name:          (Standard USB Host Controller)
+Status:                     Started
+Driver Name:                usb.inf
+Hardware IDs:               USB\VID_14D5&PID_0200&REV_0103
+                            USB\VID_14D5&PID_0200
+Compatible IDs:             USB\COMPAT_VID_14D5&DevClass_00&SubClass_00&Prot00
+                            USB\COMPAT_VID_14D5&DevClass_00&SubClass_00
+                            USB\COMPAT_VID_14D5&DevClass_00
+                            USB\DevClass_00&SubClass_00&Prot_00
+                            USB\DevClass_00&SubClass_00
+                            USB\DevClass_00
+                            USB\COMPOSITE
+
+Instance ID:                USB\VID_14D5&PID_0200&MI_01\7&3b1b95d&0&0001
+Device Description:         USB High-Speed-Pipe
+Class Name:                 ETCHspClass
+Class GUID:                 {e029e7fa-4080-4057-bd79-9fd926ee064f}
+Manufacturer Name:          ETC
+Status:                     Problem
+Problem Code:               39 (0x27) [CM_PROB_DRIVER_FAILED_LOAD]
+Problem Status:             0xC000007B
+Driver Name:                oem64.inf
+Hardware IDs:               USB\VID_14D5&PID_0200&REV_0103&MI_01
+                            USB\VID_14D5&PID_0200&MI_01
+Compatible IDs:             USB\COMPAT_VID_14d5&Class_ff&SubClass_00&Prot_00
+                            USB\COMPAT_VID_14d5&Class_ff&SubClass_00
+                            USB\COMPAT_VID_14d5&Class_ff
+                            USB\Class_ff&SubClass_00&Prot_00
+                            USB\Class_ff&SubClass_00
+                            USB\Class_ff
+
+Instance ID:                USB\VID_14D5&PID_0200&MI_00\7&3b1b95d&0&0000
+Device Description:         USB Input Device
+Class Name:                 HIDClass
+Class GUID:                 {745a17a0-74d3-11d0-b6fe-00a0c90f57da}
+Manufacturer Name:          (Standard system devices)
+Status:                     Started
+Driver Name:                input.inf
+Hardware IDs:               USB\VID_14D5&PID_0200&REV_0103&MI_00
+                            USB\VID_14D5&PID_0200&MI_00
+Compatible IDs:             USB\COMPAT_VID_14d5&Class_03&SubClass_00&Prot_00
+                            USB\COMPAT_VID_14d5&Class_03&SubClass_00
+                            USB\COMPAT_VID_14d5&Class_03
+                            USB\Class_03&SubClass_00&Prot_00
+                            USB\Class_03&SubClass_00
+                            USB\Class_03
+
+Instance ID:                HID\VID_14D5&PID_0200&MI_00\8&1e29fd9d&0&0000
+Device Description:         HID-compliant device
+Class Name:                 HIDClass
+Class GUID:                 {745a17a0-74d3-11d0-b6fe-00a0c90f57da}
+Manufacturer Name:          (Standard system devices)
+Status:                     Started
+Driver Name:                input.inf
+Hardware IDs:               HID\VID_14D5&PID_0200&REV_0103&MI_00
+                            HID\VID_14D5&PID_0200&MI_00
+                            HID\VID_14D5&UP:0000_U:0000
+                            HID_DEVICE_UP:0000_U:0000
+                            HID_DEVICE
