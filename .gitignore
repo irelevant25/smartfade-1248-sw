@@ -22,3 +22,9 @@ dist/
 # Transfer logs of read-only USB sessions started from the repository root (the default is outside the repository)
 /captures/
 __pycache__/
+
+# raw USBPcap captures and operator action logs land in the repository root during a session; only
+# the console-only split and the dated copies under docs/protocol/captures/ are committed
+/*.pcap
+/*.pcapng
+/*-actions.txt

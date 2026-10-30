@@ -30,7 +30,7 @@ export class CrossfaderComponent {
   protected readonly keys = this._state.keys;
   protected readonly stackLed = computed(() => this._state.keys()?.stack);
   protected readonly clearLed = computed(() => this._state.keys()?.clear);
-  protected readonly ledTitle = 'LED reading from the console (which key is which is inferred)';
+  protected readonly ledTitle = 'LED reading from the console (STACK identified by a timed press, E8b; CLEAR inferred)';
 
   protected clear(): void {
     this._clear.press();

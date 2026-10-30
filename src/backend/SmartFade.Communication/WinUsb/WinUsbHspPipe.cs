@@ -203,9 +203,9 @@ public sealed class WinUsbHspPipe : IHspPipe
         if (pipeId == BulkIn)
         {
             // A transfer longer than the read asked for fails instead of being split over two reads:
-            // every read is exactly one transfer of the announced size. ASSUMPTION: a pipe policy is a
-            // host-side WinUSB setting with no bus traffic; E8's USBPcap at Connect (H68) covers every
-            // call made by Open().
+            // every read is exactly one transfer of the announced size. ASSUMPTION, answered for the owner's
+            // PC by E8b (F123, H68 CONFIRMED): the USBPcap capture showed no control traffic to the console
+            // at Open() or at the first poll, only at the Zadig bind; a pipe policy is a host-side setting.
             var noPartial = false;
             if (!WinUsbNative.WinUsb_SetPipePolicy(_interface, pipeId, WinUsbNative.AllowPartialReads, sizeof(bool), ref noPartial))
             {

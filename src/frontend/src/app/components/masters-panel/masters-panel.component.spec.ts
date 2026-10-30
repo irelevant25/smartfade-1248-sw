@@ -307,7 +307,7 @@ describe('MastersPanelComponent', () => {
       expect(independents[0].classList.contains('masters__toggle--unknown')).toBe(false);
       expect(independents[0].classList.contains('masters__ind--on')).toBe(true);
       expect(independents[0].getAttribute('aria-pressed')).toBe('true');
-      expect(independents[0].getAttribute('title')).toContain('inferred');
+      expect(independents[0].getAttribute('title')).toContain('timed press');
       expect(independents[1].getAttribute('aria-pressed')).toBe('false');
       expect(blackout().classList.contains('masters__blackout--on')).toBe(true);
 

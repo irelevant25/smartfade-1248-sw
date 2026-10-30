@@ -131,6 +131,12 @@ and `smartfade-sd-card-backup/`, and the capture analyst writes the E8b record (
 
 ### E9 runbook (passive capture of SmartSoft writing; proposed 2026-10-30 from S11.15)
 
+**Guided script (2026-10-30 evening):** `powershell -NoProfile -ExecutionPolicy Bypass -File
+tools/usb-probe/e9-guided-session.ps1 -LogFile e9-actions.txt` takes the owner through the setup gate
+(backup, ETC driver on interface 1, Memory Integrity reading, USBPcap first), starts SmartSoft itself and
+logs every step below with the PC clock; the record functions of steps 13–15 are in it, with the
+deletion of memories 9 and 10 at the end. The owner ran it the same evening (E9, 22:19–22:47 local time).
+
 The first capture of a PC changing the console. SmartSoft does the writing; our code is not
 involved and sends nothing. Every write SmartSoft makes is one it makes for any user, but a show
 load or an erase is irreversible, so those stay out of the script.
