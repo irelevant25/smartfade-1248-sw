@@ -362,7 +362,8 @@ def cmd_summary(header, frames, out):
         seg = first_fetches[k:k + len(recs)]
         k += len(recs)
         if seg:
-            ok = all(f["dframe"] > pf["dframe"] for _, f in seg)
+            # pcap frame numbers exist for USBPcap-derived files only; the backend log is ordered by seq
+            ok = all(f["dframe"] > pf["dframe"] for _, f in seg) if pf["dframe"] is not None else all(f["seq"] > pf["seq"] for _, f in seg)
             w(f"    list f{pf['dframe']}: fetches f{seg[0][1]['dframe']}..f{seg[-1][1]['dframe']} all after list: {ok}\n")
 
     # Per-object payload lengths and distinct bodies
@@ -493,7 +494,8 @@ def cmd_timeline(frames, notes, ids, t_from, t_to, max_changes, out):
                 parts.append(f"[{i}]{a}->{b}")
             more = f" ...(+{len(ch) - max_changes})" if len(ch) > max_changes else ""
             desc = f"{len(ch)} changed: " + " ".join(parts) + more
-        rows.append((pf["t"], 1, f"t={pf['t']:10.6f} f{pf['dframe']:<6d} seq{pf['seq']:<6d} {name(key[0])}({key[0]}) a={key[1]} b={key[2]} c={key[3]} pseq={p['seq']}: {desc}"))
+        pcap = ("f" + format(pf["dframe"], "<6d")) if pf["dframe"] is not None else "f-     "
+        rows.append((pf["t"], 1, f"t={pf['t']:10.6f} {pcap} seq{pf['seq']:<6d} {name(key[0])}({key[0]}) a={key[1]} b={key[2]} c={key[3]} pseq={p['seq']}: {desc}"))
     for n in notes:
         rows.append((n["t"], 0, f"t={n['t']:10.6f} NOTE {n['text']}" + (f" (log {n['logTime']})" if "logTime" in n else "")))
     for t, _, line in sorted(rows, key=lambda r: (r[0], r[1])):
