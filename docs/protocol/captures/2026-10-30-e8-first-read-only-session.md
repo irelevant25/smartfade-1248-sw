@@ -923,9 +923,11 @@ Owner statements never promote by themselves; they are matched against the data 
    empty ones high, COPY and EDIT MEM blink the stored ones, REC SEQ blinks 21–24; a slot holding a
    sequence does not count as stored for REC MEM, EDIT MEM and COPY (block 21: bright blink in REC
    MEM, steady dim in EDIT MEM). H72 stays INFERRED until a logged press ties a key to its block (E8b).
-2. **The sequence:** the owner places it in memory 21 of **page 12** (steps 1–7). The data read page
-   1: block 21 yellow on page 1's map and empty on page 12's, record 21 byte 2 = 1 on page 1 only
-   (H70). This discrepancy is OPEN for E8b. Whether it was running before the connection is
+2. **The sequence:** the owner first wrote "page 12", then corrected himself the same evening: the
+   sequence sits in **memory 21 of page 1** and its seven steps **use memories 1–7 of page 12**. That
+   agrees with the data (block 21 yellow on page 1's map, record 21 byte 2 = 1 on page 1, H70) and
+   explains page 12's map (faders 1–7 recorded = Memory (11, 0–6), the step memories) and the Sequence
+   object's seven steps; no discrepancy remains. Whether it was running before the connection is
    unresolved ("maybe I was playing with it"); holding MEMS does **not** stop a sequence, so the stop
    at 237.519 s has another cause (UNKNOWN).
 3. **CLEAR:** "I think yes" to three presses with memory fader 1 up and the later pull-down: supports

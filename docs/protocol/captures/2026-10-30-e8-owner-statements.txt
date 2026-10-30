@@ -77,3 +77,5 @@ Answers to the five questions of the E8 analysis (2026-10-30, evening, quoted):
 4. Did a record function store or change anything; was the console power-cycled since E3b; did the
    default times return to 5.0: "Yes to all."
 5. Firmware (Menu > Diagnostics): "3.0.2.9.0.43".
+Correction to answer 2 (same evening): "No, I place my sequence to MEMORY 21 on PAGE 1 but I used
+MEMORIES 1-7 from PAGE 12 for it."
