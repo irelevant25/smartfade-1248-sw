@@ -38,3 +38,15 @@ After the session (2026-10-30, late evening, quoted):
 - "Right now, I see two drivers with name ETC SmartFade (Interface 1). I guess something went wrong
   and the driver is installed twice." (Assistant: Zadig creates a driver package named after the
   device at every bind; the two binds of E8 and E8b each left one; see the E9 record's host notes.)
+
+Answers to the record's questions (2026-10-31, quoted):
+1. Memory 7 of page 1 changed by the mistaken bump: "Its possible." (Not yet checked or restored; the
+   E9b guide asks again before the next session.)
+2. Which SmartSoft window was used for the Mem Edit step: "Uuuff. I do not remember. Sorry. From what I
+   remember I used console simulator for mem edit." (Consistent with the capture: only Simulator key
+   and fader events, no Memory object write.)
+3. The drop of channel 1 at about 22:24:39 with no write from SmartSoft: "Yea, I think something wrong
+   happend because I did nothing and it dropped by itself. I guess, the panel registered the movement
+   (most likely its a electrical resistance I guess) by accident. Its quite an old device already. Or
+   I do not know what happend. It could be the software mistake." (The cause stays UNKNOWN; the owner
+   did not touch the fader. The later move at 22:24:50 was not addressed separately.)
