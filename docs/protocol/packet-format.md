@@ -53,6 +53,16 @@ framing below is unchanged and the "one URB per transfer" wording of the Transpo
 packet and no read whose length is a multiple of 64 occurred (H75 stays untested). The EP0 traffic was one burst at the driver change
 and nothing at the host's open, at Connect or at Disconnect (H68 CONFIRMED, F123).
 
+**Update 2026-10-30, late evening (E9,** [record](captures/2026-10-30-e9-smartsoft-writes.md)**).** A SmartSoft session driven through
+its Console Simulator and recorded passively (our software sent nothing) is the first capture with PC **data writes beyond the System
+pair**: 401 writes, each a type-1 header and one payload, for the ids 39, 20 (ConsoleEvent) and 9 (ChannelText). The framing below
+held for all of them: header `01 00 [w1 LE] [w2 … w5]` with the stale words in 401 of 401, payload `[pseq][u16 LE len = w1 − 4][id][body]`,
+SmartSoft's sequence byte +1 per data payload across all ids with one wrap and 0 gaps, USBD status 0, 0 framing errors; the inbound
+framing held again (894 payloads, byte 1 = 0x00, four wraps, the first pseq 245 continuing E8b's 244). The write shapes are
+**OBSERVED once** (F131) and **NOT CLEARED**: nothing here clears a message, no type-1 header is encoded anywhere in the solution, and
+the messages with their exact bytes are in [commands.md](commands.md) "PC → console data writes seen in E9". The first records with
+c ≠ 0 appeared in E9's DirtyObjects lists (four System records, F137).
+
 ## Transport
 
 | Item | Observed | Fact |
@@ -69,7 +79,7 @@ Every OUT transfer starts as a 12-byte **header**, six u16 LE words:
 | Word | Poll (w0 = 0) | Data (w0 = 1) | Fetch (w0 = 2) |
 |---|---|---|---|
 | w0 | 0 | 1 | 2 |
-| w1 | 0 | payload length (7 in both observed cases) | 0 |
+| w1 | 0 | payload length (7 in both observed cases, E2 / E3 / E3b; E9: 7, 8 or 43, F131) | 0 |
 | w2 | stale | stale | object ID |
 | w3, w4, w5 | stale | stale | qualifiers a, b, c |
 
@@ -77,6 +87,22 @@ Every OUT transfer starts as a 12-byte **header**, six u16 LE words:
 A Data header is followed by one OUT transfer of exactly w1 bytes (F52):
 
 `[seq][u16 LE len][id][body]`, len = w1 − 4. Example (f211): `00 03 00 27 09 00 00`.
+
+**Data writes seen in E9 (OBSERVED, one session; NOT CLEARED; F131).** All 401 data writes of SmartSoft's E9 session have this shape:
+a type-1 header `01 00 [w1 LE] [w2 … w5 stale]`, then 0.05–0.32 ms later (median 0.10 ms) one OUT transfer of exactly w1 bytes. The next
+OUT transfer (a poll in 220 cases, a fetch in 181) follows 14.51–16.46 ms after the payload, and consecutive writes are at least 44.8 ms
+apart (one write per loop iteration, INFERRED from smartsoft-analysis.md S11.2 step A). Nothing acknowledges a write:
+
+| Id | Body | w1 | Writes | Example payload (SmartSoft's own bytes) |
+|---|---|---|---|---|
+| 39 System | 3 bytes `09 00 00` or `07 00 00` | 7 | 2 | seq 138 `00 03 00 27 09 00 00` |
+| 20 ConsoleEvent, kind 0 (fader) | 4 bytes `[00][index][value][previous]` | 8 | 332 | seq 9665 `02 04 00 14 00 00 05 00` |
+| 20 ConsoleEvent, kind 1 (key) | 3 bytes `[01][code][state]`, state 01 on press and 00 on release | 7 | 64 | seq 19055 `56 03 00 14 01 06 01` |
+| 9 ChannelText | 39 bytes `[channel − 1][03][06][36 bytes]` | 43 | 3 | seq 57881 `1B 27 00 09 06 03 06 01 0C 00 61 00 6A` + 30 × `00` |
+
+The ConsoleEvent bodies are single bytes (no 16-bit fields); the ChannelText text block follows the byte order discussed under
+"Byte order" above (UTF-16BE for SmartSoft's write, H40; the console's side is open, H84). The meaning of every index, code and byte is
+in [commands.md](commands.md), not here.
 
 ## Console → PC
 
@@ -116,6 +142,13 @@ VERIFIED in part). The wrap rule held four more times with byte 1 = 0x00 (f6442 
 f30304 → f30310, f92058 → f92066); 1 268 payloads, 0 breaks. CL-ML's 16-bit reading of bytes 0–1 is
 contradicted six times in all.
 
+**E9 (2026-10-30, late evening):** SmartSoft's own counter now runs over a real write sequence: **401 data payloads, pseq 0x00 (f275)
+… 0xFF (f63745), 0x00 (f63757) … 0x90 (f192149), +1 per data payload across all ids (System, ConsoleEvent, ChannelText), one wrap, 0
+gaps** (OBSERVED once, F55, F131); it starts at 0x00 in each SmartSoft session. The console's counter: 894 payloads, pseq 245 (0xF5,
+seq 8) … 114, 0 breaks, four wraps with byte 1 = 0x00 (f96 → f104, f33150 → f33162, f87888 → f87894, f151486 → f151494); **the first
+pseq continues E8b's last (244)** across a change of host program with no power cycle, which makes F93 VERIFIED (E3b + E9). Whether the
+console checks SmartSoft's outbound sequence byte is UNKNOWN (it never complained).
+
 ## DirtyObjects (ID 40)
 
 Body: `[u16 BE count]` + count × `[id][u16 BE a][b][c]` (5 bytes each). Each record is fetched
@@ -124,6 +157,12 @@ length 5 + 2 + 5n, c = 0 in every record, the 423 records are exactly the 423 fe
 VERIFIED for the format and the list → fetch correspondence (F57). CL-ML (class 5): ConsoleLink's
 `[type][u16 BE][u16 LE]` equals this while c = 0 and reads the count as one byte (same values below 256). **E3b:** 268 lists, the 1 000 records are the 1 000
 fetches in order, c = 0 in every record; the 157-record list is byte-identical in five sessions (F57, F94).
+**E9 (2026-10-30, late evening):** 264 lists of payload 5 + 2 + 5n with a BE count (sizes 1 × 183, 2 × 33, 3 × 9, 4 × 14, 5 × 22, 6 × 1,
+25 × 1 at connect, 157 × 1 for the download), **630 records = 630 fetches in order**, no re-fetch, ID 40 never fetched; the 157-record list
+is byte-identical to E3b's (six sessions, F94 VERIFIED for its structure). **The first records with c ≠ 0:** four System (39) records,
+(a, b, c) = (5, 5, 6) at seq 68341, (5, 5, 8) at seq 77854 and again at seq 91071, (5, 5, 9) at seq 95545, each listed when the EDIT
+MEM key selected a memory (`27 00 05 05 06` in the list body at seq 68341); the record format is unchanged, so F57's "c = 0 in every
+record" is limited to E2–E8b, not the format (F137, H83).
 
 ## Timing seen from SmartSoft
 
@@ -139,7 +178,12 @@ next poll 31.08–52.40 ms (median 45.47), payload completion to fetch 28.01–4
 annotation, F110, H67); the SC-1 floors were never reached. **E8b (our own host's cadence again, with the bus):** idle poll to next poll
 31.10–47.76 ms (median 45.66), payload completion to fetch 28.01–44.47 ms (median 30.03), fetch to next poll 15.11–31.68 ms
 (median 15.56); the same ranges, the console answered every interval normally and the floors were again never reached; the backend's
-times and the bus agree within 0.75 ms (F62 annotation, F122, H67).
+times and the bus agree within 0.75 ms (F62 annotation, F122, H67). **E9 (SmartSoft again, 2026-10-30, late evening):** poll to next poll
+median 31.08 ms (n = 52 456, min 29.01, max 77.37), fetch to next poll median 15.48 ms (min 10.46), payload completion to fetch median
+28.72 ms (min 20.41): the cadence of E2–E3b reproduced (F62). **Writes:** data header to its payload 0.05–0.32 ms (median 0.10), payload
+to the next OUT transfer 14.51–16.46 ms (median 15.43; E3b 14.58–15.82 after its six writes), consecutive writes at least 44.8 ms apart
+(median 61.0 ms within a burst): SmartSoft's host-side behaviour, OBSERVED once, not a console limit and not a timing for our code
+(F131).
 
 ## Not known
 
@@ -155,7 +199,11 @@ sessions 2 and 3 (F94, H65); the rule behind it is still UNKNOWN. *(Update 2026-
 89-record connect list with repeats (F111); whether a zero-length packet follows a payload whose length is a multiple of
 64 bytes, as a pending list of 37 or 101 records would be (H75); the EP0 traffic at the host's open (H68). *(Update 2026-10-30, E8b: the
 EP0 question is answered, none at the host's open, F123, H68 CONFIRMED; the 64-byte question is still open, no such length occurred; USBPcap shows URBs, not packets, so
-packet-level behaviour below the URB level stays unknown.)*
+packet-level behaviour below the URB level stays unknown.)* *(Update 2026-10-30, late evening, E9:)* whether the console checks
+SmartSoft's outbound sequence byte or the previous byte of a fader event (it never complained, F131, F132); whether it accepts data
+writes from a host that never sent the System pair (our read-only session sends neither, H66; the answer can only be learned by
+sending, which nothing clears); what it does with a key press whose release never comes (a session ending between the two is
+untested); whether a page other than 1 changes the System (5, 5, c) records (H83).
 
 ## CL-ML cross-check (class 5, not 1248 evidence)
 

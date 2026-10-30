@@ -111,6 +111,31 @@ to poll, fetch to poll, payload to fetch) on every single transfer.
   E9 runbook stays the only path to a write mode. A third read-only session (E8c) is proposed in
   [reverse-engineering.md](reverse-engineering.md) ("Next capture (proposed by the E8b analysis, 2026-10-30)").
 
+### E9 (2026-10-30, late evening): the first write messages observed; nothing cleared
+
+E9 ([record](captures/2026-10-30-e9-smartsoft-writes.md)) was a **SmartSoft** session recorded passively (our software sent
+nothing): the first capture of a PC writing to the console. It observed, in one session, SmartSoft's ConsoleEvent faders (kind 0)
+and keys (kind 1) and three ChannelText label writes, with their exact bytes ([commands.md](commands.md) "PC → console data writes
+seen in E9"; F131–F138). **E9 clears no message:** SC-1's clearance (the poll and the fetch of a listed record, read-only) is
+unchanged, and no type-1 data header is encoded anywhere in the solution. The record's table "Input for a future safety check
+(SC-2)" is the starting point of a future **SC-2**, whose gate is: a second session that reproduces the writes (E9b); each message
+class understood and shown harmless (the record functions and the object writes change show data and are not reversible by the
+protocol, and a wrong bump already edited another memory in E9, F139); a whitelist of indices and codes (only four fader indices and
+13 key codes were seen, none may be derived, H82); the press / release pairing and a session that dies between them (untested); and
+`/hardware-safety-check` for each class, with `protocol-safety-reviewer` on the encoder. Whether the console accepts events from a host
+that never sent SmartSoft's System pair (our read-only session sends neither, H66) can be learned only by sending, which nothing
+clears.
+
+**A known way a read-only session ends in the safe direction (F137, H83).** In E9 the console listed System (39) records with c ≠ 0
+((5, 5, 6), (5, 5, 8), (5, 5, 9)) when the EDIT MEM key selected a memory. `HspReadSession` faults on any listed record with c ≠ 0
+(first review pass, below), so a read-only session of ours that is running while a memory other than memory 1 (memories 7, 9
+and 10 were seen) is selected for editing would end in the Error state with its reason, without any further transfer: the abort rule working as designed,
+a stop and not a deviation. Whether the console's own EDIT MEM key lists these records is untested (H83, E9b; E9's records came from
+key events sent by SmartSoft). The Memory objects the console listed after a recording (id 0, 138 bytes) are inside SC-1 as built
+(id 0 is in `ObservedListedIds` and 138 in `ObservedBodyLengths`; the qualifier ranges are not enforced), so a read-only session could
+receive a Memory object outside SmartSoft's download for the first time (note the time, as the E8 conditions say). Whether to accept
+c ≠ 0 records is a code and review question for the coordinator and is not decided here.
+
 ### Review
 
 **First pass (2026-10-30, `protocol-safety-reviewer`): not ready, two blockers.** Findings and

@@ -44,13 +44,13 @@ Rules:
 | [evidence-matrix.md](evidence-matrix.md) | Feature × source cross-reference (central document) |
 | [capability-matrix.md](capability-matrix.md) | What the console / SmartSoft / our app supports |
 | [reverse-engineering.md](reverse-engineering.md) | Experiment plan, tooling, safety rules, hardware evidence requested, capture format |
-| [packet-format.md](packet-format.md) | HSP framing as observed in E2 (OBSERVED, nothing VERIFIED); since E3 (2026-10-29) the framing facts are VERIFIED as observed behaviour; E3b (2026-10-30) reproduced them a third time; E8 (2026-10-30, our own read-only session) reproduced them with another host program, the first evidence channel other than SmartSoft; E8b (2026-10-30 evening, our second read-only session, with the bus seen in parallel) reproduced them again and showed that WinUSB splits long IN reads into two URBs (host-side) |
-| [commands.md](commands.md) | PC → console messages SmartSoft sent in E2, E3 and E3b (a record, not a list of messages we may send; VERIFIED there means SmartSoft's behaviour only); E8 and E8b were our own read-only sessions (SC-1) and add none |
-| [responses.md](responses.md) | Reply types and object payloads seen in E2, E3, E3b, E8 and E8b (the live objects are decoded from E3, E3b, E8 and E8b) |
-| [state-model.md](state-model.md) | Session phases and mirrored-state model as seen in E2, E3, E3b, E8 and E8b |
-| [safety-checks.md](safety-checks.md) | Hardware safety checks: what is cleared for sending and under which conditions (SC-1, 2026-10-30: the poll and the fetch of a listed record, read-only session; nothing else is cleared; E8 and E8b ran under it and cleared nothing further) |
+| [packet-format.md](packet-format.md) | HSP framing as observed in E2 (OBSERVED, nothing VERIFIED); since E3 (2026-10-29) the framing facts are VERIFIED as observed behaviour; E3b (2026-10-30) reproduced them a third time; E8 (2026-10-30, our own read-only session) reproduced them with another host program, the first evidence channel other than SmartSoft; E8b (2026-10-30 evening, our second read-only session, with the bus seen in parallel) reproduced them again and showed that WinUSB splits long IN reads into two URBs (host-side); E9 (2026-10-30, late evening, SmartSoft's first data writes, passive) added the type-1 data-write framing and the outbound counter over 401 writes (OBSERVED once, NOT CLEARED), reproduced the rest again and made F93 and F94 VERIFIED |
+| [commands.md](commands.md) | PC → console messages SmartSoft sent in E2, E3 and E3b (a record, not a list of messages we may send; VERIFIED there means SmartSoft's behaviour only); E8 and E8b were our own read-only sessions (SC-1) and add none; **E9 (2026-10-30, late evening) adds a section with the exact bytes of SmartSoft's ConsoleEvent (fader, key) and ChannelText writes, with the fader indices and key codes seen, each OBSERVED (one session) and NOT CLEARED** |
+| [responses.md](responses.md) | Reply types and object payloads seen in E2, E3, E3b, E8 and E8b (the live objects are decoded from E3, E3b, E8 and E8b); E9: the Memory objects the console lists after a recording, the first System records with c ≠ 0 and the live objects following PC events (section "Live objects (E9)") |
+| [state-model.md](state-model.md) | Session phases and mirrored-state model as seen in E2, E3, E3b, E8 and E8b; E9: the session with PC writes and the console's reactions (no acknowledgement, the Memory object listed after a recording, c ≠ 0 records, matching of PC faders) |
+| [safety-checks.md](safety-checks.md) | Hardware safety checks: what is cleared for sending and under which conditions (SC-1, 2026-10-30: the poll and the fetch of a listed record, read-only session; nothing else is cleared; E8 and E8b ran under it and cleared nothing further); **E9 (2026-10-30, late evening) observed SmartSoft's first write messages and cleared none; a future SC-2 is their gate; a note on the c ≠ 0 list records as a known safe stop of a read-only session** |
 | [consolelink-analysis.md](consolelink-analysis.md) | ConsoleLink (third-party, SmartFade **ML**, evidence class 5) compared with our 1248 evidence; proposed annotations and the hypotheses N1–N6 (now H46–H51). Never changes a 1248 status by itself |
-| [captures/](captures/) | Capture files, experiment records (E1, E2, E3, E3b, E8, E8b), the owner's statements and the capture format |
+| [captures/](captures/) | Capture files, experiment records (E1, E2, E3, E3b, E8, E8b), the owner's statements and the capture format; E9 (SmartSoft writing to the console, 2026-10-30, late evening) added |
 
 The four deferred documents (`packet-format.md`, `commands.md`, `responses.md`,
 `state-model.md`) were created 2026-10-28, when the first USB capture (E2) existed. They carry
@@ -81,7 +81,20 @@ never a live value; F122–F130 were added; **H68 CONFIRMED** (EP0 traffic only 
 Disconnect), H66 CONFIRMED in two sessions, H69 and H73 CONFIRMED, H72 CONFIRMED in capture for seven key LEDs (the IND keys and BLACKOUT are
 now OBSERVED with named, timed keys); H76–H80 were added. The sentence above stands unchanged: VERIFIED is necessary, not sufficient, **E8b
 clears no message**, and SC-1's two messages remain the only ones cleared. The owner's descriptions (PLAY, PAUSE, the crossfaders) are
-statements and never promote; PAUSE has not been seen in any capture.
+statements and never promote; PAUSE has not been seen in any capture. **Update 2026-10-30, late evening, E9 (SmartSoft writing to the
+console, passive, [record](captures/2026-10-30-e9-smartsoft-writes.md)):** the first capture in which a PC **writes** to the console:
+SmartSoft Online driven through its Console Simulator, 28 minutes, 401 data writes (the System pair, 332 ConsoleEvent fader events, 64
+ConsoleEvent key events, three ChannelText labels); our software sent nothing. **53 facts are VERIFIED** (four more than above: F93,
+F94 for its structure, F97 for BUMPS 0xFF and F103, each E3b + E9), the structural parts only, never a live value; F131–F140 were added
+(all OBSERVED, one session: the write framing and the outbound counter, ConsoleEvent kind 0 and kind 1 with the four fader indices and
+13 key codes seen, the console's answer, matching with PC faders, the record functions driven from the PC, the first DirtyObjects
+records with c ≠ 0, the ChannelText write, E9's side effects on the show, and the Simulator's opening sending nothing); **H5 (PC →
+console part), H6 (for the paths used) and H24 (kinds 0 and 1) CONFIRMED (OBSERVED once)**, H40 reading A OBSERVED for SmartSoft's write
+(the console's side open), H72 extended, H81–H86 added; F57's "c = 0 in every record" limited, not rejected. The sentence above stands
+unchanged and now applies to the write messages too: VERIFIED is necessary, not sufficient, **E9 clears no message**, no type-1 data
+header is encoded anywhere in the solution, and SC-1's two messages remain the only ones cleared; a future SC-2, after the repeat E9b,
+is the gate for the write messages ([safety-checks.md](safety-checks.md)). The owner's answers of 2026-10-31 are statements and never
+promote; one open owner item remains: memory 7 of page 1 was probably changed by E9 and has not been checked (F139).
 
 ## Version landscape
 

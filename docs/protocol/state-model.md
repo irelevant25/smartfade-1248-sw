@@ -45,6 +45,14 @@ fader held across a page change keeps its page (F127); the CLEAR series (F128); 
 running at fader zero (F129); GO with STACK lit and the manual crossfaders in PlaybackInfo record 5, with SequenceMain
 listed at each GO (F130). VERIFIED never clears a message for sending; the causality statements remain INFERRED.
 
+**Update 2026-10-30, late evening (E9,** [record](captures/2026-10-30-e9-smartsoft-writes.md)**).** A SmartSoft session driven through its
+Console Simulator (passive capture, our software sent nothing) is the first view of the session **with PC data writes**: the phases below
+held in the same order (F94 VERIFIED for its structure, E3b + E9), and the steady state now contains 399 further writes besides the System
+pair, ConsoleEvent faders and keys and three labels. The console answered every ConsoleEvent with the ordinary state objects, as for the
+physical controls, with no acknowledgement (F134); it listed the Memory object itself after each recording and System (5, 5, slot − 1) when
+EDIT MEM selected a memory (F136, F137); its counter continued from E8b's across a change of host program (F93 VERIFIED). VERIFIED never
+clears a message for sending; the causality statements remain INFERRED; nothing in E9's writes is cleared.
+
 ## Session phases seen (SmartSoft, firmware 3.0.2.9.0.43)
 
 | Phase | What happened | When (E2) | Fact |
@@ -111,6 +119,20 @@ cycle; the backend's log, JSONL `seq`, and the committed console-only pcap split
 | 6. Steady state | 1 513 lists of 1–6 records after the power-on list, each object first listed with the first action that changes it (ConsoleStatus 21.9 s, FaderInfo and the levels 165.5 s, PlaybackInfo 232.6 s, Independents 304.0 s, SequenceMain 1088.4 s) | as E8, with a timed log |
 | 7. End | 1121.328 s: an idle poll / reply (f125929 / f125932), then "session stopped by the application at an idle point"; no frame of the console after it | silent end (F64); a sequence was still stepping on the console (F129) |
 
+The same phases in E9 (2026-10-30, late evening; SmartSoft Online driven through its Console Simulator, passive USBPcap, **401 PC data
+writes**; JSONL `seq` and frames `fN` of the committed console-only split):
+
+| Phase | When (E9) | Difference from the earlier SmartSoft sessions |
+|---|---|---|
+| 0. Open | 76.612–76.625 s: STRING 0 and STRING 2 on EP0 (f7–f10), 1 ms before the first poll | as E3b session 1 (F41, F94) |
+| 1. First poll | 76.626 s all-zero first poll (seq 6, f11); the first reply (seq 7) is a type-4 header announcing 132 bytes, the **25-record connect list** (seq 8, f16, pseq 0xF5), fetched at once (seq 9 … 108) | E2 held 9 records, E3 one, E3b two or none, E8 89, E8b two: the pending list depends on the console's history (F94, H65) |
+| 2. Idle | 14 idle replies before the first write (the 25 fetches took the other iterations) | E2 30, E3 37, E3b 36 / 40 / 40 |
+| 3. Handshake A | 78.262 s System `09 00 00` after reply header #40 → list [37] (seq 141) → "3.0.2.9.0.43" (seq 145) | same bytes, same position (F58, F92) |
+| 4. Handshake B | 79.510 s System `07 00 00` after #79 → the 157-record list (seq 224), byte-identical | same |
+| 5. Download | 79.53–86.78 s, 157 fetches, the last payload ChannelLevels (seq 852, f1704) | same |
+| 6. Steady state | 86.8–1724.2 s: polls about every 31 ms, 264 lists in all; **399 further PC writes** (332 + 64 ConsoleEvents from the Simulator, three ChannelText labels), each ConsoleEvent answered by a list within 16–65 ms; the console lists the Memory object itself after a recording and System (5, 5, slot − 1) at an EDIT MEM selection (F134, F136, F137) | no PC data write besides the two System messages in E2, E3 and E3b |
+| 7. End | 1724.156 s: the last transfer is an idle poll / reply, 4.65 s after SmartSoft's close started; no closing message | silent end (F64) |
+
 ## Model implied by the observations
 
 - **The PC is the only initiator.** State reaches the PC only as the answer to a poll: a
@@ -126,7 +148,9 @@ cycle; the backend's log, JSONL `seq`, and the committed console-only pcap split
   never writes would ever get the full list is UNKNOWN (H30).
 - **Nothing was observed that changes console state.** The two System bodies are the only
   PC → console data; their meaning is not understood. The architecture's write path
-  (`SetChannelLevel`, `Go`, …) has no observed protocol element behind it (H6, H24).
+  (`SetChannelLevel`, `Go`, …) has no observed protocol element behind it (H6, H24). *(Superseded 2026-10-30, late evening, by E9, text
+  kept: SmartSoft's ConsoleEvent and ChannelText writes changed the console's state and show data; the write path now has OBSERVED
+  protocol elements behind it (F131–F138), none VERIFIED and none cleared.)*
 - **The HID interface plays no role in this session** (F63, H38).
 - **Live objects are not in the full list (E3, F89, H58).** The 157-record list names OutputLevels,
   ChannelLevels, LedStatus and ConsoleStatus but not FaderInfo, DisplayContent or PlaybackInfo (nor
@@ -148,7 +172,9 @@ cycle; the backend's log, JSONL `seq`, and the committed console-only pcap split
   F94): a client that reconnects without a power-on finds nothing pending and receives FaderInfo,
   DisplayContent and PlaybackInfo only when they change, so after a reconnect its 'actual' state for the
   faders, MASTER, BUMPS, LCD and playback is unknown until something moves (H58). Do not design for a fixed
-  start-up list (E2 9 records, E3 1, E3b 2 or none).
+  start-up list (E2 9 records, E3 1, E3b 2 or none). *(E9 limits "finds nothing pending": after about 85 minutes without a power cycle
+  and with another host in between, SmartSoft's connect found 25 records pending; "nothing" holds when nothing changed in between,
+  INFERRED, F94, H65.)*
 - **FaderInfo is indexed by physical fader, not by channel** (E3b, F99): in bank 25-48 physical fader 1 still
   moves record 1, and the channel it controls (25) shows in ChannelLevels and OutputLevels. The mode and the
   bank (ConsoleStatus body[0], body[4], F98) are needed to interpret a fader move.
@@ -207,6 +233,26 @@ cycle; the backend's log, JSONL `seq`, and the committed console-only pcap split
   timed fade moves Live and Next in opposite directions (sum 255), the manual crossfaders move the two bytes independently
   (sums 0 … 510), the step counter (bytes 0–1, H76) advances when a fade completes, and the LED block 50 is steady in a timed fade
   and blinking at intermediate manual positions (H64). PAUSE has not been seen (the owner's description is a statement only).
+- **A PC write is one extra OUT pair inside the same loop, and the console's answer is the ordinary state objects** (E9, F131, F134): a
+  write replaced no poll (the next poll or fetch followed 14.5–16.5 ms later) and the first list naming the changed objects came
+  16–65 ms after the event. Nothing acknowledged a write, and ConsoleEvent was never listed or fetched, so the only evidence that a
+  write had an effect is a state object that changed: the "actual" side of a desired-versus-actual store still comes from the
+  console's objects alone. OBSERVED once, not cleared.
+- **A PC fader is another fader: the console reports the PC's level and the physical fader stays** (E9, F134, F135): FaderInfo record 1
+  read the PC's 0xFF with the physical fader 1 at zero and its bump LED steady; the faders are not motorised. Matching shows only in
+  a few cases (inside EDIT MEM a PC fader changed the edited level after reaching the stored one; after leaving the edit it changed
+  no level object while its bump blinked, H79, H81).
+- **Record functions are modes of the console, and the state objects say which** (E9, F136): EDIT MEM and a bump switch the console to
+  channel mode (ConsoleStatus body[0] → 0) and list System (5, 5, slot − 1); a fader event inside the edit changes the selected
+  memory's level, not the live output (no level object changes); CLEAR returns to the previous mode and a second EDIT MEM stores. A
+  sender of fader events would have to know that a record function is open (the LCD and the key LEDs say so, F116).
+- **The console lists a recorded memory itself** (E9, F136): the Memory object (138 bytes) 18–98 ms after the storing key, so a client
+  that follows the lists learns a new or changed memory from the console's own listing (in SmartSoft's session, which had sent the System
+  pair; untested for a host that never sent it, H58).
+- **A list can name a record with c ≠ 0** (E9, F137): System (5, 5, slot − 1) at an EDIT MEM selection. A decoder must not assume
+  c = 0; SC-1's read-only session treats such a record as a fault and stops (a safe stop, H83).
+- **Show data changes through the console's own functions** (E9, F139): memories and labels changed during the session, the SD backup
+  is the only undo, and the console's state after a session is not the state before it (memory 7 of page 1 is an open owner item).
 
 ## Show content seen in the download (decoded, `SHOW04.ASC`)
 
@@ -236,4 +282,4 @@ in another mode, console power-up while connected, whether the 157-object list i
 depends on a show-changed flag; whether the initial pending list (F56) depends on what happened
 before the session. *(E3 2026-10-29: it differed after a console power cycle, F80, so it depends on something about the
 console's state or history; the cause is not isolated. The 157-record list was byte-identical in both
-sessions, but both sessions had the same show.)* *(E3b 2026-10-30: the pending list differed again after a third history, F94; after a restart nothing was pending, H65. The 157-record list was byte-identical in five sessions, all with the same show.)*
+sessions, but both sessions had the same show.)* *(E3b 2026-10-30: the pending list differed again after a third history, F94; after a restart nothing was pending, H65. The 157-record list was byte-identical in five sessions, all with the same show.)* *(E9, 2026-10-30, late evening: a SmartSoft session with PC writes ran 28 minutes, about 85 minutes after a session of another host (E8b) and with no power cycle; the pending list at connect held 25 records (F94), and the 157-record list was byte-identical in a sixth session. Still open: what happens when a write is not answered, whether a host that never sent the System pair may write events (H66), and a session that ends between a key press and its release.)*

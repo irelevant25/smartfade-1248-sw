@@ -45,7 +45,7 @@ or copy its contents into source code. Derived extractions go to `analysis/extra
 | Source inventory + hashes | `docs/source-materials.md` |
 | Hardware facts | `docs/hardware/smartfade-1248.md` |
 | Protocol knowledge base (status vocabulary, facts, hypotheses, evidence matrix) | `docs/protocol/` |
-| Observed framing, commands, responses, session model (from E2, E3, E3b and E8; VERIFIED = reproduced behaviour, never clearance to send) | `docs/protocol/packet-format.md`, `commands.md`, `responses.md`, `state-model.md` |
+| Observed framing, commands, responses, session model (from E2, E3, E3b, E8, E8b and E9; VERIFIED = reproduced behaviour, never clearance to send; E9's write messages are OBSERVED once and not cleared) | `docs/protocol/packet-format.md`, `commands.md`, `responses.md`, `state-model.md` |
 | Third-party reference compared with our 1248 evidence (ConsoleLink, SmartFade ML, evidence class 5) | `docs/protocol/consolelink-analysis.md` |
 | Capture records, evidence files, capture format | `docs/protocol/captures/`, `tools/protocol-analyzer/` |
 | SmartSoft binary analysis | `docs/protocol/smartsoft-analysis.md` |
@@ -176,6 +176,15 @@ The keys are tied to their LEDs with timed presses (IND 1 = Independents record 
 channel 50 -> DMX 47, BLACKOUT = block 53; H72 CONFIRMED in capture for seven blocks) and BLACKOUT zeroes the level objects; F122-F130 and
 H76-H80 were added. The owner's descriptions of PLAY, PAUSE and the crossfaders are statements: no PAUSE press exists in any capture.
 **E8b cleared nothing beyond SC-1.** Next: "Next capture (proposed by the E8b analysis, 2026-10-30)" in `reverse-engineering.md`.
+**E9 done 2026-10-30, late evening** (`docs/protocol/captures/2026-10-30-e9-smartsoft-writes.md`, a SmartSoft Online session driven through its
+Console Simulator and recorded passively; our software sent nothing): the **first observed PC -> console writes**, 401 in all (the System pair,
+332 ConsoleEvent fader events, 64 key events, three ChannelText labels). H5 (PC -> console part), H6 (for the paths used) and H24 (kinds 0 and 1)
+are CONFIRMED (OBSERVED once); F131-F140 and H81-H86 were added; **53 facts are VERIFIED** (F93, F94, F97, F103 added; never clearance to send).
+Live control is the ConsoleEvent message (fader indices 0x00, 0x06, 0x30 = MASTER, 0x31 = BUMPS; 13 key codes, each its LED block number - 1,
+H82); the console answers like for the panel and acknowledges nothing; the record functions driven from the PC change show data and are not
+reversible by the protocol. **E9 cleared nothing: SC-1's poll and listed fetch remain the only messages cleared, no type-1 data header is encoded
+anywhere in the solution, and the repeat E9b plus a safety check SC-2 are the gate for any write.** Open owner item: memory 7 of page 1 was
+probably changed by E9 and is not yet checked (F139). Next: "Next capture (proposed by the E9 analysis, 2026-10-30)" in `reverse-engineering.md`.
 
 ## Commands
 
