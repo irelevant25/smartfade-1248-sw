@@ -33,6 +33,7 @@
 | *(E6 probes added 2026-10-28 from the SHOW04.ASC cross-check; each is a console-menu action followed by an SD save and, where noted, an E2-type SmartSoft capture; nothing is sent by us)* | (1) **Page / fader meaning (H13, H25):** record a memory on page 2 fader 5, expect fetch qualifiers (1, 4) and `$$MEMORY 1 4`, `GROUP 29` (24 × 1 + 4 + 1). (2) **Sequence step numbering (H43):** step through a sequence on the console and note the number shown; compare with wire 1.0-7.0 and file `$CUE`. (3) **"Wait" mapping (H14):** set a known Wait on a step, expect it in the third time of the step record (F74). (4) **A patch level other than 100 % (H34):** change a proportional level, save, and find which object carries it (not the Patch body, F70); no SD show has one. (5) **A label with a character >= U+0100, such as "č" (H40):** settles the UTF-16 byte order (BE is INFERRED, F73). Also: step types CUEPARAMS 0 / 2 (H12), Independents fields (H44), SystemSettings keys and default times (H45), memory levels at 1 / 50 / 99 % (H39). | None | SD card; SmartSoft + USBPcap for the capture parts | H10-H14, H25, H34, H36, H39-H45 |
 | E7 | DMX output observation (optional). USB-DMX input or DMX analyser on console DMX OUT | None | DMX interface | Ground truth for "actual state" of outputs |
 | **E8** | **First read-only session of our own software (active, SC-1).** The backend in `--Device:Mode=Usb` polls the console over WinUSB and fetches what the console lists, as SmartSoft does, but sends neither System write; USBPcap records the bus in parallel. Steps in the runbook below: backup, Zadig on interface 1, idle 60 s, then fader 1, a bump, the MASTER, Disconnect. | Low-to-medium: the first bytes our code ever sends; only the two cleared messages (`safety-checks.md` SC-1), the session ends on the first unobserved reply, nothing is retried | SC-1 conditions 3, 4, 8, 9, 10 met; the owner's go on the day | H66, H67, H68; a second evidence channel for F52, F53, F57 (our own host instead of SmartSoft) |
+| **E9** | **SmartSoft writing (passive).** USBPcap records a SmartSoft Online session in which the owner moves faders and presses keys in SmartSoft's Console Simulator, renames a channel label and (optionally) edits one memory level; our code is not involved. Runbook below, from the static write-path analysis (`smartsoft-analysis.md` S11.15). | Low: SmartSoft's own messages, as for any user; the show backed up; no show load, erase, patch, settings or page action in the script | Interface 1 back on the ETC driver, Memory Integrity off, USBPcap, the action log | H5, H6, H24 (the PC → console data message and the ConsoleEvent framing), H40 (label byte order), the 1248 fader and button indices; the first OBSERVED PC → console write |
 
 **E1 and E2 are done (2026-10-28). Next: E3(a)** (see "Next capture" below). E2 turned the
 static hypotheses (poll / dirty / fetch objects) into observed facts; the text below about E2
@@ -84,6 +85,49 @@ Owner actions, in order; nothing in it sends anything but the cleared poll and l
 Abort rules: any Error from the backend ends the session (do not reconnect before reading the log);
 anything the console does that the owner did not cause ends it (note the time); never power-cycle
 the console to recover, just Disconnect.
+
+### E9 runbook (passive capture of SmartSoft writing; proposed 2026-10-30 from S11.15)
+
+The first capture of a PC changing the console. SmartSoft does the writing; our code is not
+involved and sends nothing. Every write SmartSoft makes is one it makes for any user, but a show
+load or an erase is irreversible, so those stay out of the script.
+
+**Setup (owner):** show backed up to the SD card, name noted (safety rule 3); interface 1 on the
+ETC driver (switched back after E8) and Memory Integrity off, as for E3b; USBPcapCMD on the
+console's root hub (`-A --inject-descriptors`) into a new file; the action log
+(`tools/usb-probe/action-log.ps1`): one entry per action, at least 15 s idle between actions, and
+after each action a note of the LCD, the LEDs and the bar; the rig as in E3b, BUMPS at full before
+step 3.
+
+**Actions, in order (SmartSoft Online; "Simulator" = SmartSoft's Console Simulator, manual p. 10):**
+
+0. Go Online and leave everything alone for 60 s: the baseline (polls, fetches, the two System writes).
+1. Open the Console Simulator and touch nothing for 30 s: does opening it write anything?
+2. Simulator channel fader 1 (bank 1-24): 0 → full → 0, slowly. Expected: type-1 headers with id 20
+   kind 0 (fader index, scale, coalescing) and the console's FaderInfo / ChannelLevels / OutputLevels
+   replies; note whether bump 1 blinks (matching, F8).
+3. Simulator channel bump 7: press, hold 2 s, release. Expected: kind 1 press and release, the button code.
+4. Simulator MASTER: full → about half → full (the MASTER fader index, S11.15 row 10).
+5. Simulator BUMPS: full → 0 → full (the BUMPS fader index).
+6. Simulator BLACKOUT: on, wait 5 s, off (its code; whether any object reports it).
+7. Simulator SOLO: on, then off.
+8. Simulator FADERS MEMS, press and release memory bump 1, then FADERS 1-24 again.
+9. Simulator GO once with the STACK button unlit (in E3b this changed no output): the GO code.
+10. Playback tab: the "all faders to zero" arrow, to identify that path.
+11. Rename channel 7's label to a text containing "č", then rename it back: a ChannelText (9)
+    whole-object write, and the test of H40 (label byte order).
+12. Optional, the owner's choice: in Mem Edit change channel 7's level in memory 1, then restore it:
+    a Memory (0, page, slot) whole-object write.
+
+**Never in E9:** the wheel (kind 2 changes menu values, see E3b's accidental 5.0 → 5.1 s change);
+REC MEM, EDIT MEM, COPY, REC SEQ; Patch, Independents or Settings edits; page clicks; Open showfile,
+New show, Save As, any Erase.
+
+**Evidence:** the USBPcap file (console-only split, as for E3b) and the action log into
+`docs/protocol/captures/` with an E9 record (`/record-experiment`); outcomes for H5, H6, H24, H40
+and the first OBSERVED PC → console data messages. Repeat the session once (E9b) so that the
+behaviour can be VERIFIED. Only after E9 and E9b can a safety check (SC-2) consider a type-1
+encoder limited to the whitelisted ConsoleEvents.
 
 ### Next capture (proposed by the E2 analysis, 2026-10-28)
 

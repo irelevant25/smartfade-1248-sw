@@ -759,6 +759,10 @@ decide).
   (`sub_10005FF0`) is also filled by the HID branch of `sub_10019810`: HID report ID 2 →
   kind 0 with `(value << 8 | index)`, report ID 1 → kind 1 `(button, pressed)` logged as
   "Button: %d %d", report ID 3 → kind 2.
+- **Correction (2026-10-30, S11.15 row 11):** no direct call links that ring to the builder;
+  the builder's single caller is sendConsoleEvent (`0x100187B0`), and the ring is filled by the
+  mirror parser's ConsoleEvent case and the HID branch. The sentence above stands as written on
+  2026-10-16; its reading "the ring feeds the builder" is superseded.
 - **Interpretation:** `ConsoleEvent` kind 0 = fader move `[0][fader][new level][previous
   level]`; SmartSoft coalesces successive moves of the same fader by updating the new
   level and keeping the first "previous level". Kind 1 = button `[1][button][pressed]`,
@@ -927,6 +931,54 @@ decide).
 | Body layouts | sketched for IDs 0, 2, 3, 4, 5, 12, 15, 20, 25, 36, 37, 38, 39, 40, 41 (serializer and parsers agree except FileName endianness and the SystemSettings extra byte) |
 
 ---
+
+### S11.15 Write paths from the GUI to the console (static, 2026-10-30, INFERRED unless marked)
+
+Question: by which messages can a PC change anything on the console, and which of them does the
+GUI actually use? Static work only (`protocol-researcher`, x86_probe + capstone/pefile; Ghidra was
+not available in that session), on the same binaries as above (`sfEngine.dll` 3228bd9b…7983,
+`SmartSoft.exe` 4c4c9cf7…8c01). Nothing here is cleared for sending; SC-1 clears the poll and the
+listed fetch only, and no type-1 data header is encoded anywhere in the solution. Addresses are VAs.
+
+| # | Finding | Status | Evidence |
+|---|---|---|---|
+| 1 | The engine gives the GUI one interface, `SFConsole : IConsole`, vtable `0x1001F36C` with 12 slots: +00 start `0x10015D60`, +04 stop, +08 state pointer (`0x1009CEC8`), **+0C sendConsoleEvent(ev\*) `0x10018790`**, **+10 sendObject(id, a, b, c) `0x10018820` → `0x10018180`**, +14 go offline, +18 newShow `0x100184A0`, +1C loadShow(path) `0x10018510`, +20 saveShow `0x10015CC0`, +24 saveShowAs(path) `0x10018620`, +28 / +2C versions. `SmartSoft.exe` calls `getConsole(5)` at `0x40BDCE` and keeps the pointer at handler+0x10 (constructor `0x40BA80`). | INFERRED, high | .rdata pointer scan; RTTI `.?AVSFConsole@@` / `.?AVIConsole@@` (COL `0x100992C8`) |
+| 2 | `sendObject` and `sendConsoleEvent` both test the offline flag `0x1009C5DC` (`0x100181C0`, `0x100187B8`). Offline: applied to the local mirror only (`0x100151A0`). Online: queued for USB (`0x100173B0`, type-1 header plus payload, S11.2 step A) and applied locally too. | INFERRED, high | disassembly |
+| 3 | The GUI's only live-control path is ConsoleEvent (id 20), sent by three graphics items: `ConsoleButton` slot 0x90 (`0x451420`) {kind 1, index = this+0x54, pressed}; `ConsoleFader` (`0x451990`) {kind 0, index = this+4, value = position × 255.5 truncated}; `ConsoleWheel` slot 0x68, mouse move (`0x452E80`) {kind 2, index, signed steps = drag / 12}. The only struct-passing slot-0C call sites are `0x451469`, `0x4519F4`, `0x452F37` (four other slot-0C hits at `0x44ED07`–`0x44ED64` pass constants to another object). | INFERRED, medium-high (unresolved indirect calls could hide more) | slot scans of .text; RTTI `ConsoleButton`, `ConsoleFader`, `ConsoleWheel` |
+| 4 | These items are built by `sub_0040DD30` from a resource layout file (`:/SmartSoft/Resources/` + `.txt`; sections "Faders", "Fader", "Button", "Wheel", "Selects", "Display"): the ConsoleFader constructor `0x451BC0` is called at `0x40ECE8`, the ConsoleWheel constructor at `0x40EF6B`. Most likely the Console Simulator panel (SmartSoft manual p. 10). ConsoleButtons are also created by `sub_00459AF0`, `sub_00460250`, `sub_00460B90`. | INFERRED, medium | constructor cross-references |
+| 5 | No GUI path writes a level object. The 31 handler sendObject sites (`0x4076FC`–`0x40C2AA`) and the System-tab sites use ids 0–5, 7–12, 23, 24, 29–32, 34, 35, 39, 41, 42, never 13 OutputLevels, 14 FaderInfo, 15 ChannelLevels or 17 PlaybackInfo. Levels, MASTER, BUMPS, BLACKOUT and GO leave SmartSoft only as ConsoleEvents (supports H6). | INFERRED, medium-high | arguments pushed before each slot-10 call |
+| 6 | GUI edits are whole-object writes: the serializer `0x10015E50` sends the engine's full copy. Examples: ChannelText(9, ch) `0x4076FC`, Memory(0, page, slot) `0x409000`, Patch(5) `0x409E93`, Independents(12) `0x407930` / `0x409F13`, SystemSettings(41) `0x409E40` (from `sub_0043DDD0`, `sub_004471D0`), and the step objects 4 / 32 / 34 / 35. ConsoleStatus(23) is sent from `0x40A120`; its trigger is UNKNOWN (no direct caller). | INFERRED, medium | as row 5 |
+| 7 | Show transfer goes through the System-tab dispatcher `0x446092` (jump table `0x4469BC`). "New show" ("This will erase all data, OK to proceed?") calls newShow and, Online, ends in the full upload (tail jump `0x10018503`); "Open showfile" calls loadShow, then the full upload when Online (`0x100185E1`); "Save" writes the PC file only; "Save As" sends sendObject(36 FileName) when Online (`0x10018751`). **Sending a show replaces the console's show.** | INFERRED (code), high; DOCUMENTED (SmartSoft manual 3.0.1 p. 24: "If a console is connected the same show will be loaded to the console. Make sure you have saved your data before loading or connecting.") | disassembly; manual |
+| 8 | System (id 39) carries **erase commands**: after their confirmation dialogs (strings `0x49E008`…`0x49E0EC`) the dispatcher sends System with a = 11 "Erase memories" (`0x446657`), 12 "Erase sequences" (`0x446726`), 13 "Erase stack" (`0x4467F5`), 14 "Erase palettes" (`0x4468C4`), 16 "Erase all" (`0x44698F`), all through the shared send at `0x44699A`–`0x4469A3`; fits the mirror parser's a ∈ {10, 11, 12, 13, 16}. Console effect UNKNOWN; **never to be sent or triggered by our code.** | INFERRED (meaning from the dialogs), high for the mapping | disassembly + strings |
+| 9 | Page select, System(39, a = 10, b = page), is sent by handler method `0x407D60`, whose only static caller is `MLButtonRow` slot 0x64 (`0x462C05`); whether the 1248 GUI ever sends it is UNKNOWN (H51). | INFERRED, medium | callers + RTTI |
+| 10 | The fader index helper `0x10016970` returns the index unchanged for 0–51 and 52 otherwise, independent of the console model; the button helper `0x10016800` is a 58-entry table (`cmp ecx, 0x3a` at `0x10016807`). The 1248 indices therefore come from the GUI layout file; ConsoleLink's ML ids (24 MASTER, 25 BUMPS) must not be assumed. | INFERRED (structure); the MASTER / BUMPS / Live / Next indices HYPOTHESIS | disassembly |
+| 11 | Correction to S11.14.4 ("the ring that feeds the builder"): the builder `sub_100169C0` has a single caller, sendConsoleEvent (`0x100187B0`); the ring push `sub_10005FF0` is called by the mirror parser's ConsoleEvent case (`0x100156B7` → `0x100156EF`), by `0x10004E88` and by the HID branch (`0x10019EE3`, `0x1001A031`, `0x1001A24B`); no direct call links the ring to the builder (the ring's consumer was not traced). An Online ConsoleEvent is sent and also replayed into SmartSoft's local engine. | INFERRED, medium-high | direct-call cross-references |
+| 12 | SmartSoft manual 3.0.1 (`smartsoft-source-materials/SmartSoft_v3.0.1_User_Manual_revA.pdf`, 34deece7…): p. 8 "on-line and off-line viewer and editor … live views into the stored data … see the positions of fader levels"; p. 10 Simulator "as if a real console were attached"; p. 12 Playback "Click on a button to change mode", "To set all faders to zero, click on the down arrow button"; pp. 15-16 "Click on names and values to edit"; p. 21 Patch "There is no UNDO for this!"; p. 23 DMX Outputs "No values may be altered on-screen". Nothing describes live channel control. | DOCUMENTED | pdftotext |
+| 13 | Console manual v3.0 (bundled PDF, 1a93e0af…): USB is mentioned only for "USB Update" (p. 74); SD loads: Menu > Save/Load Show > Load show, confirmed with MENU, 8.3 names (p. 6); DMX In (p. 23): "Merge: combines the DMX Input data with the SmartFade's post-patch output. DMX input data is not mastered in this mode." and "To Memory: directs the input DMX to fader 1 in page 1 and patches incoming DMX outputs 1-48/96 to the intensity channels … Fader 1 will be a master"; data loss Keep or Fade Out over 5 s (p. 24); Snapshot "captures a complete state of all output channels" and can be copied to a memory (pp. 34-35); Backup mode records DMX input into memories (pp. 69-70). | DOCUMENTED | pdftotext |
+
+**Open (UNKNOWN):** the 1248 wire indices and button codes, the level scale on the wire and the
+event rate after coalescing; how the console reconciles a PC fader with the non-motorised physical
+fader (matching, F8); whether the console accepts ConsoleEvents in a session that never sent the
+System 9 / 7 pair (our read-only session sends neither, H66) and whether it checks the PC's
+sequence byte; whether a pressed button stays latched when a session dies between press and
+release (ConsoleLink reports this for the ML only, W5); which object, if any, reports BLACKOUT and
+IND (none observed in E8); the meaning of each body byte of a written object, the SystemSettings
+18 / 19-byte asymmetry, what System a = 0 / 1 / 6 do, how the console handles a malformed write;
+what the Playback tab's "all faders to zero" button sends; whether DMX IN Merge is HTP and whether
+REC MEM or Snapshot record merged input.
+
+**Assessment (static only; E9 decides):** live control through ConsoleEvent (id 20), the message
+SmartSoft's own simulator uses, is the closest write path: it changes live state as if someone
+touched the panel, never show data, provided our code whitelists faders, bumps, MASTER, BUMPS,
+BLACKOUT, SOLO and GO and never sends the record / edit / copy / clear keys or the wheel. Before any
+such byte goes out: E9 and a repeat (E9b), then a new safety check (SC-2) for a type-1 encoder
+limited to exactly those messages. Object writes (memory contents, labels, patch, settings) replace
+whole objects, so one wrong byte corrupts a memory or the patch; they need a capture per object type
+and a full body decode, after live control. Sending a show replaces the console's show, and System
+carries erase commands: our code must never use either (the SD card is the non-USB way to load a
+show). DMX IN (documented Merge / "To Memory") would let a USB-DMX interface drive outputs with no
+protocol risk, but merged input is not mastered and nothing is plugged into DMX IN today (H52).
+MIDI is documented but contradictory between the two documents and no interface is available.
 
 ## Open static-analysis leads (only if captures prove insufficient)
 

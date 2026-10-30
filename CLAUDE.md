@@ -156,7 +156,12 @@ its findings follow it). The console kept reporting live changes (channels, outp
 independents, playback) to a host that never sent SmartSoft's System writes, and tolerated our cadence (H66, H67:
 curation pending); no USBPcap ran, so H68 stays open. The owner states that SmartSoft Online changes the console
 ("both ways"), so **E9, a passive USBPcap capture of SmartSoft writing, is the next experiment and the only path
-to a write mode; nothing is cleared for writing.** After E8 the owner switched interface 1 back to the ETC driver.
+to a write mode; nothing is cleared for writing.** The static write-path analysis (`docs/protocol/smartsoft-analysis.md`
+S11.15, INFERRED): SmartSoft's only live-control message is ConsoleEvent (id 20, from its Console Simulator), GUI
+edits are whole-object writes, sending a show replaces the console's show and System (id 39) carries erase
+commands, so our code must never send either of the last two; the E9 runbook (`reverse-engineering.md`) scripts the
+Simulator actions, a label rename and an optional memory edit. After E8 the owner switched interface 1 back to the
+ETC driver.
 
 ## Commands
 
