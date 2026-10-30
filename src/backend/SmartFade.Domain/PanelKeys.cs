@@ -23,6 +23,8 @@ public readonly record struct KeyLed(KeyLight Light, bool Blinking)
 /// and CLEAR of the crossfader section and the record keys COPY, REC SEQ, MAGIC, REC MEM and
 /// EDIT MEM. Which LED block belongs to which key is INFERRED from the E8 session (hypothesis H72:
 /// each block changed only in its own function or with its key); the patterns themselves are
-/// OBSERVED (F116, F117). SNAPSHOT and RATE have no identified block and are not reported.
+/// OBSERVED (F116, F117). BLACKOUT (block 53: steady blue when active, blinking while the MASTER is
+/// below full, F85 / F114) and SOLO (block 52, F100) are included for their blink. SNAPSHOT and RATE
+/// have no identified block and are not reported.
 /// </summary>
-public sealed record PanelKeys(KeyLed Stack, KeyLed Clear, KeyLed Copy, KeyLed RecSeq, KeyLed Magic, KeyLed RecMem, KeyLed EditMem);
+public sealed record PanelKeys(KeyLed Stack, KeyLed Clear, KeyLed Copy, KeyLed RecSeq, KeyLed Magic, KeyLed RecMem, KeyLed EditMem, KeyLed Blackout, KeyLed Solo);

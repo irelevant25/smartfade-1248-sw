@@ -74,6 +74,7 @@ interface KeyLedDto { light: 'off' | 'dim' | 'full'; blinking: boolean; }   // o
 
 interface PanelKeysDto {                            // STACK and CLEAR (crossfader section), the record keys; SNAPSHOT and RATE have no identified LED
   stack: KeyLedDto; clear: KeyLedDto; copy: KeyLedDto; recSeq: KeyLedDto; magic: KeyLedDto; recMem: KeyLedDto; editMem: KeyLedDto;
+  blackout: KeyLedDto; solo: KeyLedDto;             // the LED blocks 53 / 52, for the blink (block 53 blinks while the MASTER is below full, F85)
 }
 
 interface MemoryDto {                               // a memory's content, read on demand

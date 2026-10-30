@@ -131,7 +131,7 @@ describe('RecordKeysComponent', () => {
       createSampleState({
         supportedCommands: [],
         connection: { status: 'connected', mode: 'hardware', deviceDescription: 'SmartFade 1248, read-only' },
-        keys: { stack: led('full', true), clear: led('full', true), copy: led('off'), recSeq: led('off'), magic: led('full', true), recMem: led('full'), editMem: led('dim') },
+        keys: { stack: led('full', true), clear: led('full', true), copy: led('off'), recSeq: led('off'), magic: led('full', true), recMem: led('full'), editMem: led('dim'), blackout: led('off'), solo: led('off') },
       }),
     );
     fixture.detectChanges();

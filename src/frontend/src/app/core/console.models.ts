@@ -147,6 +147,9 @@ export interface PanelKeysDto {
   magic: KeyLedDto;
   recMem: KeyLedDto;
   editMem: KeyLedDto;
+  /** The BLACKOUT and SOLO LEDs, for their blink (BLACKOUT blinks while the MASTER is below full). */
+  blackout: KeyLedDto;
+  solo: KeyLedDto;
 }
 
 export interface OutputsChangedDto {

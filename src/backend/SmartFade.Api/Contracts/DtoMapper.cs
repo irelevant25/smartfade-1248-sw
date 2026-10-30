@@ -64,7 +64,7 @@ public static class DtoMapper
         new(masters.Master, masters.Bumps, masters.Blackout, masters.Solo, masters.Independent1, masters.Independent2);
 
     public static PanelKeysDto ToDto(PanelKeys keys) =>
-        new(ToDto(keys.Stack), ToDto(keys.Clear), ToDto(keys.Copy), ToDto(keys.RecSeq), ToDto(keys.Magic), ToDto(keys.RecMem), ToDto(keys.EditMem));
+        new(ToDto(keys.Stack), ToDto(keys.Clear), ToDto(keys.Copy), ToDto(keys.RecSeq), ToDto(keys.Magic), ToDto(keys.RecMem), ToDto(keys.EditMem), ToDto(keys.Blackout), ToDto(keys.Solo));
 
     public static KeyLedDto ToDto(KeyLed led) =>
         new(led.Light switch { KeyLight.Full => "full", KeyLight.Dim => "dim", _ => "off" }, led.Blinking);

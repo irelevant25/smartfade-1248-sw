@@ -24,7 +24,7 @@ public sealed record MastersDto(int Master, int Bumps, bool Blackout, bool Solo,
 public sealed record KeyLedDto(string Light, bool Blinking);
 
 /// <summary>The key LEDs a real console reports (null in the state until it does; the simulator never does).</summary>
-public sealed record PanelKeysDto(KeyLedDto Stack, KeyLedDto Clear, KeyLedDto Copy, KeyLedDto RecSeq, KeyLedDto Magic, KeyLedDto RecMem, KeyLedDto EditMem);
+public sealed record PanelKeysDto(KeyLedDto Stack, KeyLedDto Clear, KeyLedDto Copy, KeyLedDto RecSeq, KeyLedDto Magic, KeyLedDto RecMem, KeyLedDto EditMem, KeyLedDto Blackout, KeyLedDto Solo);
 
 /// <summary>A memory as the console addresses it: page 1..12, fader 1..24; Number = 24 × (page − 1) + fader.</summary>
 public sealed record MemoryStateDto(int Page, int Fader, int Number, int Level, bool Recorded, string Label, bool Reported);

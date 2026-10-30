@@ -90,7 +90,7 @@ public class ConsoleStateStoreTests
         Assert.Null(store.GetState().Keys);
         Assert.False(store.GetState().IndependentsReported);
 
-        var keys = new PanelKeys(new KeyLed(KeyLight.Full, false), KeyLed.Off, KeyLed.Off, KeyLed.Off, KeyLed.Off, KeyLed.Off, KeyLed.Off);
+        var keys = new PanelKeys(new KeyLed(KeyLight.Full, false), KeyLed.Off, KeyLed.Off, KeyLed.Off, KeyLed.Off, KeyLed.Off, KeyLed.Off, KeyLed.Off, KeyLed.Off);
         Apply(store, new DeviceStateChange(Keys: keys, Independents: new IndependentStates(true, false), MemoryPage: 12));
         var state = store.GetState();
         Assert.Equal(keys, state.Keys);

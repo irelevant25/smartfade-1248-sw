@@ -285,7 +285,7 @@ describe('MastersPanelComponent', () => {
       expect(blackout().classList.contains('masters__toggle--unknown')).toBe(false);
       expect(blackout().getAttribute('aria-pressed')).toBe('false');
       expect(blackout().getAttribute('title')).toContain('LED reading');
-      // the MASTER is below full, but the blink is the manual's rule for the simulator, not a console reading
+      // the MASTER is below full, but without an LED report the manual's rule is not applied to a console
       expect(blackout().classList.contains('masters__blackout--blink')).toBe(false);
       const independents = Array.from(element().querySelectorAll<HTMLButtonElement>('.masters__ind'));
       expect(independents.every((button) => button.disabled)).toBe(true);
@@ -310,6 +310,19 @@ describe('MastersPanelComponent', () => {
       expect(independents[0].getAttribute('title')).toContain('inferred');
       expect(independents[1].getAttribute('aria-pressed')).toBe('false');
       expect(blackout().classList.contains('masters__blackout--on')).toBe(true);
+
+      // the BLACKOUT LED reported as blinking (the MASTER below full, F85) blinks here too
+      const led = { light: 'off' as const, blinking: false };
+      state.applyConsoleStateChanged(
+        createSampleState({
+          supportedCommands: [],
+          connection: { status: 'connected', mode: 'hardware', deviceDescription: 'SmartFade 1248, read-only' },
+          masters: { master: 136, bumps: 0, blackout: false, solo: false, independent1: false, independent2: false },
+          keys: { stack: led, clear: led, copy: led, recSeq: led, magic: led, recMem: led, editMem: led, solo: led, blackout: { light: 'full', blinking: true } },
+        }),
+      );
+      fixture.detectChanges();
+      expect(blackout().classList.contains('masters__blackout--blink')).toBe(true);
     });
 
     it('marks the masters as placeholders until the console reported them', () => {

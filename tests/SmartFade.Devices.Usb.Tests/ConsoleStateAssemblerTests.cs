@@ -211,7 +211,10 @@ public class ConsoleStateAssemblerTests
         Assert.Equal(KeyLed.Off, recording?.EditMem);
 
         Assert.Equal(new KeyLed(KeyLight.Full, false), assembler.Apply(E8.Value[24971])?.Keys?.Stack);
-        Assert.Null(assembler.Apply(E8.Value[24971])?.Keys);   // unchanged: nothing to report
+        // seq 6165: the BLACKOUT LED's blink while the MASTER stood at 0x88 (F85); seq 5820: steady blue, BLACKOUT on (F114)
+        Assert.Equal(new KeyLed(KeyLight.Full, true), assembler.Apply(E8.Value[6165])?.Keys?.Blackout);
+        Assert.Equal(new KeyLed(KeyLight.Full, false), assembler.Apply(E8.Value[5820])?.Keys?.Blackout);
+        Assert.Null(assembler.Apply(E8.Value[5820])?.Keys);   // unchanged: nothing to report
     }
 
     [Fact]

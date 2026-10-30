@@ -36,17 +36,18 @@ export class MastersPanelComponent {
   protected readonly independentsUnknown = computed(() => this.observedOnly() && !this._state.independentsReported());
   /**
    * "As soon as the Master is faded under 100% the Blackout button will blink" (F5). The simulator
-   * follows the manual; the real console is only observed, and its key shows the LED's steady
-   * state only (the blink of the LED itself, F85, is not rendered), so the key does not blink in
-   * hardware mode.
+   * follows the manual; the real console reports its BLACKOUT LED, whose blink (F85) is shown as
+   * reported, and nothing is assumed while no LED report exists.
    */
-  protected readonly blackoutBlinks = computed(
-    () =>
-      this.enabled() &&
-      !this.observedOnly() &&
-      !this.masters().blackout &&
-      this.masters().master < LEVEL_MAX,
-  );
+  protected readonly blackoutBlinks = computed(() => {
+    const keys = this._state.keys();
+    if (keys) {
+      return keys.blackout.blinking;   // the console's own LED (F85): the reading, not the rule
+    }
+    return (
+      this.enabled() && !this.observedOnly() && !this.masters().blackout && this.masters().master < LEVEL_MAX
+    );
+  });
 
   protected setMaster(level: number): void {
     this._channels.setMaster(level);

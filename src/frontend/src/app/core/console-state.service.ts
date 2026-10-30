@@ -105,7 +105,7 @@ function sanitizeMasters(dto: MastersDto): MastersDto {
   };
 }
 
-const KEY_NAMES = ['stack', 'clear', 'copy', 'recSeq', 'magic', 'recMem', 'editMem'] as const;
+const KEY_NAMES = ['stack', 'clear', 'copy', 'recSeq', 'magic', 'recMem', 'editMem', 'blackout', 'solo'] as const;
 const KEY_LIGHTS = ['off', 'dim', 'full'];
 
 /** The key LEDs, or undefined unless every key is present and well-formed (the simulator sends none). */

@@ -192,7 +192,8 @@ public sealed class ConsoleStateAssembler
     }
 
     /// <summary>
-    /// The key LEDs: block 57 CLEAR, 60 STACK, 63 COPY, 64 REC SEQ, 65 MAGIC, 66 REC MEM, 67 EDIT MEM
+    /// The key LEDs: block 57 CLEAR, 60 STACK, 63 COPY, 64 REC SEQ, 65 MAGIC, 66 REC MEM, 67 EDIT MEM, plus
+    /// 53 BLACKOUT and 52 SOLO for their blink (F85: block 53 blinks while the MASTER is below full)
     /// (identities INFERRED, H72: in E8 each block changed only in its own record function or with its
     /// key; the patterns OBSERVED, F116, F117). Brightness is the first phase's strongest channel:
     /// at most 0x0A off, below 0xC8 dim (0x46), else full; blinking = the two phases differ (F85).
@@ -211,7 +212,9 @@ public sealed class ConsoleStateAssembler
             RecSeq: Led(leds.Block(64)),
             Magic: Led(leds.Block(65)),
             RecMem: Led(leds.Block(66)),
-            EditMem: Led(leds.Block(67)));
+            EditMem: Led(leds.Block(67)),
+            Blackout: Led(leds.Block(53)),
+            Solo: Led(leds.Block(52)));
         if (keys == _keys)
         {
             return null;
