@@ -55,3 +55,25 @@ Answers given after the session (2026-10-30, later the same afternoon):
   bound again (E8 runbook).
 - The session was run on the owner's PC with the backend at commit 08d1284; the owner stopped it
   with Disconnect.
+
+Answers to the five questions of the E8 analysis (2026-10-30, evening, quoted):
+1. Key LEDs, pressed one at a time on the console: "CLEAR (light all the time): nothing blink, nothing
+   light. STACK (light when turn on): nothing blink, nothing light. COPY (light when turn on): all
+   MEMORIES where something is stored blink, CLEAR blink, nothing light. REC SEQ (light when turn on):
+   MEMORIES 21-24 (which are reserved for sequence) blink, STACK blink, CLEAR blink, nothing light.
+   MAGIC (I do not know what it does): nothing blink, nothing light, it seems like it is not possible
+   to use it by itself. REC MEM (light when turn on): all MEMORIES is blink (MEMORIES with something
+   stored are blink on low and MEMORIES with nothing stored in them blink on high), STACK blink, CLEAR
+   blink, MAGIC blink, the MEMORIES where sequences are stored does not count as something is stored
+   in them when editing or recording memories. EDIT MEM (blink when turn on): all MEMORIES where
+   something is stored blink, CLEAR blink, nothing light [same note on sequences]. IND 1 (light when
+   turn on): nothing blink, nothing light. IND 2 (light when turn on): nothing blink, nothing light.
+   I think CLEAR blink when it serve as a cancel button in some operations."
+2. "The memory 21 has sequence stored from 1-7 in page 12. From what I know, sequence was not running
+   before I connected. But maybe I was playing with it. Its possible. And no, holding MEMORIES button
+   does not stop it."
+3. CLEAR three times with memory fader 1 up, the fader pulled down later: "I think yes I did. I did
+   not know you are recording what am I doing with the smartfade."
+4. Did a record function store or change anything; was the console power-cycled since E3b; did the
+   default times return to 5.0: "Yes to all."
+5. Firmware (Menu > Diagnostics): "3.0.2.9.0.43".

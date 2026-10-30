@@ -909,3 +909,30 @@ committed tool.
 **D. Not E8's business, recorded for completeness:** E9, the passive USBPcap capture of SmartSoft
 writing (CLAUDE.md), is the only path to a write mode. Nothing in E8 clears any other message:
 SC-1's clearance (poll and listed fetch, read-only) is unchanged.
+
+## Owner answers to section A (2026-10-30, evening; statements file)
+
+Owner statements never promote by themselves; they are matched against the data here.
+
+1. **Key LEDs:** the owner's account, key by key, equals the block readings of H72 in every item:
+   CLEAR lit always and blinking as the cancel key in COPY, REC SEQ, REC MEM and EDIT MEM (block 57);
+   STACK lit when active and blinking in REC SEQ and REC MEM (block 60); MAGIC blinking in REC MEM
+   only (block 65); COPY, REC SEQ and REC MEM **lit steadily** when on and EDIT MEM **blinking** when
+   on (blocks 63, 64, 66, 67), which settles the earlier "they flash" in favour of the data; IND 1 and
+   IND 2 lit when on (blocks 72, 73). The memory keys: REC MEM blinks the stored ones low and the
+   empty ones high, COPY and EDIT MEM blink the stored ones, REC SEQ blinks 21–24; a slot holding a
+   sequence does not count as stored for REC MEM, EDIT MEM and COPY (block 21: bright blink in REC
+   MEM, steady dim in EDIT MEM). H72 stays INFERRED until a logged press ties a key to its block (E8b).
+2. **The sequence:** the owner places it in memory 21 of **page 12** (steps 1–7). The data read page
+   1: block 21 yellow on page 1's map and empty on page 12's, record 21 byte 2 = 1 on page 1 only
+   (H70). This discrepancy is OPEN for E8b. Whether it was running before the connection is
+   unresolved ("maybe I was playing with it"); holding MEMS does **not** stop a sequence, so the stop
+   at 237.519 s has another cause (UNKNOWN).
+3. **CLEAR:** "I think yes" to three presses with memory fader 1 up and the later pull-down: supports
+   H73 and F120's reading.
+4. **"Yes to all":** a record function **did store or change something** during E8, so the show
+   differs from E3b's in an unknown way (no show object is fetched read-only; the page-1 LED map was
+   unchanged, so the change is an edit of existing content, another page, or the stack / a sequence);
+   the console **was power-cycled** since E3b; the default times **did** return to 5.0 (cause still
+   UNKNOWN). A named backup before E8b and E9 is therefore required, not optional.
+5. **Firmware:** 3.0.2.9.0.43, the third reading (F48); unchanged.
