@@ -33,6 +33,18 @@ from any other source.
 
 Note the directory name spelling `SMFL_…` vs `SFML_…`. It is kept as supplied.
 
+**Added 2026-10-30** (hashed that day with `sha256sum`): four documents the owner found in his installed
+SmartSoft and supplied directly. Each is **byte-identical to the installer's bundled copy** listed in
+section 2 (same SHA-256), so nothing in them is new; they are kept here because section 2 is derived
+and not in git, and the console manual is the most-cited document of the knowledge base.
+
+| File | Size (bytes) | SHA-256 | Type (verified) | Version | Notes |
+|---|---:|---|---|---|---|
+| `SmartSoft_3.0_installed_docs/SmartFade_v3.0_User_Manual_revA.pdf` | 1 389 665 | `1a93e0afcc18f26459249e5a8a3bb1582e6cfe8318559f4e7b748ff20580b414` | PDF, 84 pages, Acrobat Distiller 9.4.0, created 2010-11-11 | Console user manual v3.0 rev A | Identical to section 2. The console facts (F5–F8, F107–F109, the E8 readings) cite it; printed page = PDF page − 6 |
+| `SmartSoft_3.0_installed_docs/SmartSoft_v3.0_User_Manual_revA.pdf` | 6 979 831 | `92a23c58e57c70e5d3e09810261801f6420535b2ab022c0d204b3ff076ebd763` | PDF, 32 pages, created 2010-11-18 | SmartSoft user manual v3.0 rev A | Identical to section 2; the newer v3.0.1 above (`34deece7…`) is the one cited in `smartsoft-analysis.md` S11.15 |
+| `SmartSoft_3.0_installed_docs/SmartFadeML_v3.0_User_Manual_revA.pdf` | 2 213 978 | `f73da1b6e13f626ddcfcaa5ad8e27da00c239b9ae73f5070fb365b79b0e5959e` | PDF, 100 pages, created 2010-11-09 | SmartFade ML user manual v3.0 rev A | The ML, not our console; identical to section 2 |
+| `SmartSoft_3.0_installed_docs/FullReference.html` | 6 450 691 | `60f6fb1befc021c7348cf6eaeb6e320120ee5571294b82d57a8f4ee66b2c4e45` | HTML, 72 507 lines | Fixture library v7.5.3 for SmartFade ML v3.0.0 (CarallonMunch 3.0.1.0.0, 2011-09-22) | ML fixture list; identical to section 2; not the SFML 11.2.2 reference above |
+
 ## 2. Contents of the SmartSoft installer (derived, not in git)
 
 Regenerate with:
