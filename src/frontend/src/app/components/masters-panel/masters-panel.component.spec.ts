@@ -263,7 +263,7 @@ describe('MastersPanelComponent', () => {
   });
 
   describe('with a read-only device (hardware mode)', () => {
-    it('shows the masters without letting anything be changed, and says which keys the console never reports', () => {
+    it('shows the masters without letting anything be changed, and says which keys the console has not reported', () => {
       state.applyConsoleStateChanged(
         createSampleState({
           supportedCommands: [],
@@ -281,13 +281,35 @@ describe('MastersPanelComponent', () => {
       expect(solo().getAttribute('aria-pressed')).toBe('true');
       expect(solo().getAttribute('title')).toContain('inferred');
       expect(blackout().disabled).toBe(true);
-      expect(blackout().classList.contains('masters__toggle--unknown')).toBe(true);
-      expect(blackout().hasAttribute('aria-pressed')).toBe(false);
+      // BLACKOUT arrives with the masters as an LED reading (F114); the independents have their own object (F115)
+      expect(blackout().classList.contains('masters__toggle--unknown')).toBe(false);
+      expect(blackout().getAttribute('aria-pressed')).toBe('false');
+      expect(blackout().getAttribute('title')).toContain('LED reading');
       // the MASTER is below full, but the blink is the manual's rule for the simulator, not a console reading
       expect(blackout().classList.contains('masters__blackout--blink')).toBe(false);
       const independents = Array.from(element().querySelectorAll<HTMLButtonElement>('.masters__ind'));
       expect(independents.every((button) => button.disabled)).toBe(true);
       expect(independents.every((button) => button.classList.contains('masters__toggle--unknown'))).toBe(true);
+    });
+
+    it('shows the independents once the console reported them', () => {
+      state.applyConsoleStateChanged(
+        createSampleState({
+          supportedCommands: [],
+          independentsReported: true,
+          connection: { status: 'connected', mode: 'hardware', deviceDescription: 'SmartFade 1248, read-only' },
+          masters: { master: 255, bumps: 0, blackout: true, solo: false, independent1: true, independent2: false },
+        }),
+      );
+      fixture.detectChanges();
+      const independents = Array.from(element().querySelectorAll<HTMLButtonElement>('.masters__ind'));
+
+      expect(independents[0].classList.contains('masters__toggle--unknown')).toBe(false);
+      expect(independents[0].classList.contains('masters__ind--on')).toBe(true);
+      expect(independents[0].getAttribute('aria-pressed')).toBe('true');
+      expect(independents[0].getAttribute('title')).toContain('inferred');
+      expect(independents[1].getAttribute('aria-pressed')).toBe('false');
+      expect(blackout().classList.contains('masters__blackout--on')).toBe(true);
     });
 
     it('marks the masters as placeholders until the console reported them', () => {

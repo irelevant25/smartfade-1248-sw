@@ -27,14 +27,18 @@ export class MastersPanelComponent {
   /** Until the device reported the masters, what they show is a placeholder, not console state. */
   protected readonly mastersReported = this._state.mastersReported;
   /**
-   * The real console is only observed: BLACKOUT and the independents are never reported by it,
-   * and SOLO comes from an LED reading, so their keys say so.
+   * The real console is only observed: SOLO and BLACKOUT are LED readings (F100, F114) that arrive
+   * with the masters, and the independents come from their own object (F115), so each key says
+   * what it rests on, and says "not reported" until that part arrived.
    */
   protected readonly observedOnly = computed(() => this._state.mode() === 'hardware');
+  protected readonly blackoutUnknown = computed(() => this.observedOnly() && !this.mastersReported());
+  protected readonly independentsUnknown = computed(() => this.observedOnly() && !this._state.independentsReported());
   /**
    * "As soon as the Master is faded under 100% the Blackout button will blink" (F5). The simulator
-   * follows the manual; the real console is only observed, and its Blackout LED is not read, so
-   * the key does not blink in hardware mode.
+   * follows the manual; the real console is only observed, and its key shows the LED's steady
+   * state only (the blink of the LED itself, F85, is not rendered), so the key does not blink in
+   * hardware mode.
    */
   protected readonly blackoutBlinks = computed(
     () =>

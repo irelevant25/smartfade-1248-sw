@@ -39,6 +39,8 @@ public sealed record ConsoleStateDto(
     bool ChannelsReported,
     bool OutputsReported,
     bool MemoriesReported,
+    bool IndependentsReported,
+    int? MemoryPage,
     string? ShowFileName,
     string? FirmwareVersion);
 

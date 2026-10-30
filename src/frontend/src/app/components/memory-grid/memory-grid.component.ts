@@ -2,6 +2,7 @@ import {
   ChangeDetectionStrategy,
   Component,
   computed,
+  effect,
   inject,
   signal,
   viewChildren,
@@ -62,6 +63,19 @@ export class MemoryGridComponent {
   );
   /** The page shown, 1..12 (a UI choice; the simulator plays every page's faders). */
   protected readonly page = signal(1);
+  /** The console's own selected page when the device reports it (hardware mode, F113), else undefined. */
+  protected readonly consolePage = this._state.memoryPage;
+
+  constructor() {
+    // The real console tells which page its memory faders play: the grid follows it, and a page
+    // key still lets the user look at another page until the console's page changes again.
+    effect(() => {
+      const page = this.consolePage();
+      if (page !== undefined) {
+        this.page.set(page);
+      }
+    });
+  }
 
   protected readonly pages = computed(() =>
     Array.from({ length: this._state.capabilities().memoryPages }, (_, index) => index + 1),

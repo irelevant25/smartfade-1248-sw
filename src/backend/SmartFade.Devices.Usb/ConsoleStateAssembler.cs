@@ -31,7 +31,7 @@ namespace SmartFade.Devices.Usb;
 ///   is deleted, F107); body[2] = 0x01 keeps its UNKNOWN meaning (H39). The playback level is not
 ///   reported.
 /// </summary>
-[Evidence(EvidenceStatus.Observed, "F59, F60, F67, F71, F72, F73, F82, F83, F95, F96, F97, F100, F103", "display-only decoding; INFERRED: SOLO (F100), recorded flag (F107), fader position not reported; HYPOTHESIS: H40 label byte order, H25 page / fader")]
+[Evidence(EvidenceStatus.Observed, "F59, F60, F67, F71, F72, F73, F82, F83, F87, F95, F96, F97, F100, F103, F112, F113, F114, F115, F116", "display-only decoding; INFERRED: SOLO (F100), BLACKOUT (F114), IND 1 / IND 2 identity (F115, H72), recorded flags (F107 from a Memory object; F84 / F8 from the LED map), fader position not reported; HYPOTHESIS: H40 label byte order, H25 page / fader, H71 memory fader bytes")]
 public sealed class ConsoleStateAssembler
 {
     private readonly ConsoleCapabilities _capabilities;
@@ -42,6 +42,13 @@ public sealed class ConsoleStateAssembler
     private Masters? _masters;
     private FaderInfoObject? _faderInfo;
     private bool? _soloFromLeds;
+    private bool? _blackoutFromLeds;
+    private LedStatusObject? _leds;
+    private IndependentStates? _independents;
+    private bool _memoryMode;
+    private int _memoryPage = 1;
+    private bool _pageReported;
+    private bool _functionScreen;
     private string? _showFileName;
     private string? _firmwareVersion;
 
@@ -64,8 +71,9 @@ public sealed class ConsoleStateAssembler
     /// <summary>
     /// MASTER, BUMPS and SOLO as last reported; null, and no masters change raised, until FaderInfo
     /// has arrived (the console's power-on list starts with LedStatus, F94 / H65, so the LED reading
-    /// of SOLO is remembered and reported together with the first FaderInfo). Blackout and the
-    /// independents are never claimed.
+    /// of SOLO is remembered and reported together with the first FaderInfo). BLACKOUT is the LED
+    /// reading of block 53 (F114, INFERRED) and the independents come from the Independents object
+    /// (F115) once it has arrived.
     /// </summary>
     public Masters? Masters => _masters;
 
@@ -94,8 +102,13 @@ public sealed class ConsoleStateAssembler
                 return new DeviceStateChange(FirmwareVersion: _firmwareVersion);
             case HspObjectId.Memory:
                 return ApplyMemory(MemoryObject.Decode(body.Span));
+            case HspObjectId.ConsoleStatus:
+                return ApplyConsoleStatus(ConsoleStatusObject.Decode(body));
+            case HspObjectId.Independents:
+                return ApplyIndependents(IndependentsObject.Decode(body.Span));
             case HspObjectId.DisplayContent:
                 DisplayLines = DisplayContentObject.Decode(body.Span).Lines;
+                _functionScreen = IsFunctionScreen(DisplayLines);
                 return null;
             default:
                 return null;
@@ -158,25 +171,79 @@ public sealed class ConsoleStateAssembler
     private DeviceStateChange? ApplyFaderInfo(FaderInfoObject faders)
     {
         _faderInfo = faders;
-        return ReportMasters();
+        return Combine(ReportMasters(), ReportMemoryFaders());
     }
 
     private DeviceStateChange? ApplyLeds(LedStatusObject leds)
     {
-        if (leds.Blocks.Count < 52)
+        if (leds.Blocks.Count < 53)
         {
             return null;
         }
 
+        _leds = leds;
         _soloFromLeds = leds.Block(52) is { R1: 0xFF, G1: 0xFF, B1: 0xFF, R2: 0xFF, G2: 0xFF, B2: 0xFF };
-        return ReportMasters();
+        // Block 53 steady blue while BLACKOUT is active (F114, OBSERVED three times in E8; that the
+        // LED is BLACKOUT's is INFERRED from the owner's account and the manual, F5). Its blink with
+        // the MASTER below full (F85) is phase A != phase B and reads as "not active" here.
+        _blackoutFromLeds = leds.Block(53) is { R1: 0, G1: 0, B1: 0xFF, R2: 0, G2: 0, B2: 0xFF };
+        return Combine(ReportMasters(), ReportMemoryFaders());
     }
 
     /// <summary>
-    /// The masters are one reading from two objects: MASTER and BUMPS from FaderInfo, SOLO from
-    /// LedStatus. Nothing is claimed before both have arrived (E2 delivered FaderInfo first, JSONL
-    /// seq 16, then LedStatus, seq 20; every E3b session LedStatus first, F94), and an unchanged
-    /// reading is no change.
+    /// body[0] = 1 in memory mode (F87, VERIFIED in part); body[2] = the selected memory page − 1
+    /// (F113, OBSERVED once in E8: 0x0B while the LCD showed "Memory page:12").
+    /// </summary>
+    private DeviceStateChange? ApplyConsoleStatus(ConsoleStatusObject status)
+    {
+        var raw = status.Raw.Span;
+        _memoryMode = raw.Length > 0 && raw[0] == 1;
+        if (raw.Length < 3)
+        {
+            return null;
+        }
+
+        var page = raw[2] + 1;
+        if (!_capabilities.IsValidMemoryPage(page))
+        {
+            return null;
+        }
+
+        var changed = !_pageReported || page != _memoryPage;
+        _memoryPage = page;
+        _pageReported = true;
+        return Combine(changed ? new DeviceStateChange(MemoryPage: page) : null, ReportMemoryFaders());
+    }
+
+    /// <summary>
+    /// Record byte a = the independent's on state (F115, OBSERVED in E8: 6 + 6 changes with the keys,
+    /// in step with ChannelLevels[49] / [50] and LED blocks 72 / 73); record 1 = IND 1 by order
+    /// (INFERRED, H72).
+    /// </summary>
+    private DeviceStateChange? ApplyIndependents(IndependentsObject independents)
+    {
+        if (independents.Independents.Count < 2)
+        {
+            return null;
+        }
+
+        var states = new IndependentStates(independents.Independents[0].A == 1, independents.Independents[1].A == 1);
+        if (states == _independents)
+        {
+            return null;
+        }
+
+        _independents = states;
+        var masters = ReportMasters();
+        return masters is null ? new DeviceStateChange(Independents: states) : masters with { Independents = states };
+    }
+
+    /// <summary>
+    /// The masters are one reading from two objects: MASTER and BUMPS from FaderInfo, SOLO and
+    /// BLACKOUT from LedStatus. Nothing is claimed before both have arrived (E2 delivered FaderInfo
+    /// first, JSONL seq 16, then LedStatus, seq 20; every E3b session LedStatus first, F94), and an
+    /// unchanged reading is no change. IND 1 / IND 2 come from the Independents object when it has
+    /// arrived (false until then; the state carries its own reported flag for them).
     /// </summary>
     private DeviceStateChange? ReportMasters()
     {
@@ -185,7 +252,13 @@ public sealed class ConsoleStateAssembler
             return null;
         }
 
-        var masters = new Masters(faders.Master, faders.Bumps, Blackout: false, Solo: solo, Independent1: false, Independent2: false);
+        var masters = new Masters(
+            faders.Master,
+            faders.Bumps,
+            Blackout: _blackoutFromLeds ?? false,
+            Solo: solo,
+            Independent1: _independents?.Independent1 ?? false,
+            Independent2: _independents?.Independent2 ?? false);
         if (masters == _masters)
         {
             return null;
@@ -193,6 +266,79 @@ public sealed class ConsoleStateAssembler
 
         _masters = masters;
         return new DeviceStateChange(Masters: _masters);
+    }
+
+    /// <summary>
+    /// In memory mode physical fader k is memory fader k of the selected page: FaderInfo record k
+    /// byte 0 is its level (F112, OBSERVED in E8; bytes 0 and 1 were equal there, their difference
+    /// is H71), and LED block k says whether that memory is recorded: dim red 0x46 or full red 0xFF
+    /// in both phases, 0x0A when empty (F84 VERIFIED in part; the reading INFERRED from the manual's
+    /// "a recorded memory is indicated in red", F8). The MEMS page view and the record-function
+    /// screens reuse those LEDs (F113, F116: blinking blocks, LCD titles), so the recorded reading is
+    /// not taken while any of blocks 1–24 blinks or the LCD shows one of those screens. Labels and
+    /// contents stay unknown in a read-only session (F89).
+    /// </summary>
+    private DeviceStateChange? ReportMemoryFaders()
+    {
+        if (!_memoryMode || !_pageReported || _faderInfo is not { } faders)
+        {
+            return null;
+        }
+
+        var readLeds = _leds is { } leds && !_functionScreen && leds.Blocks.Count >= _capabilities.MemoriesPerPage
+            && !leds.Blocks.Take(_capabilities.MemoriesPerPage).Any(b => b.PhasesDiffer);
+        List<MemoryState>? changed = null;
+        for (var fader = 1; fader <= _capabilities.MemoriesPerPage && fader <= faders.FaderLevels.Count; fader++)
+        {
+            var index = _capabilities.MemoryIndex(_memoryPage, fader);
+            var current = _memories[index];
+            var recorded = current.Recorded;
+            if (readLeds)
+            {
+                var block = _leds!.Block(fader);
+                if (block.G1 == 0 && block.B1 == 0)
+                {
+                    recorded = block.R1 >= 0x46;
+                }
+            }
+
+            var next = current with { Level = faders.At(fader), Recorded = recorded, Reported = true };
+            if (next != current)
+            {
+                _memories[index] = next;
+                (changed ??= new List<MemoryState>()).Add(next);
+            }
+        }
+
+        return changed is null ? null : new DeviceStateChange(Memories: changed);
+    }
+
+    /// <summary>The LCD titles of the views that reuse the memory LEDs for something else (F113, F116; OBSERVED texts, E8).</summary>
+    private static readonly string[] FunctionScreenTitles = { "Memory page:", "Record Memory", "Edit Memory", "Record Sequence", "Copy Memory/Seq" };
+
+    private static bool IsFunctionScreen(IReadOnlyList<string> lines) =>
+        lines.Count > 0 && FunctionScreenTitles.Any(title => lines[0].StartsWith(title, StringComparison.Ordinal));
+
+    /// <summary>Merges two partial changes (each carries parts the other does not).</summary>
+    private static DeviceStateChange? Combine(DeviceStateChange? first, DeviceStateChange? second)
+    {
+        if (first is null)
+        {
+            return second;
+        }
+
+        if (second is null)
+        {
+            return first;
+        }
+
+        return first with
+        {
+            Masters = first.Masters ?? second.Masters,
+            Memories = first.Memories ?? second.Memories,
+            Independents = first.Independents ?? second.Independents,
+            MemoryPage = first.MemoryPage ?? second.MemoryPage,
+        };
     }
 
     private DeviceStateChange? ApplyMemory(MemoryObject memory)

@@ -14,9 +14,11 @@
           class="memories__page"
           [class.memories__page--current]="p === page()"
           [class.memories__page--content]="pageHasContent()[p - 1]"
+          [class.memories__page--console]="p === consolePage()"
           [disabled]="!enabled()"
           [attr.aria-pressed]="p === page()"
           [attr.aria-label]="'Page ' + p"
+          [attr.title]="p === consolePage() ? 'The page selected on the console' : null"
           (click)="selectPage(p)"
         >
           {{ p }}

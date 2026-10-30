@@ -180,6 +180,8 @@ export class ConsoleStateService {
   private readonly _channelsReported = signal(false);
   private readonly _outputsReported = signal(false);
   private readonly _memoriesReported = signal(false);
+  private readonly _independentsReported = signal(false);
+  private readonly _memoryPage = signal<number | undefined>(undefined);
 
   private readonly _channelRequests = new Map<number, Request<number>>();
   private readonly _memoryRequests = new Map<number, Request<number>>();
@@ -209,6 +211,10 @@ export class ConsoleStateService {
   readonly channelsReported = this._channelsReported.asReadonly();
   readonly outputsReported = this._outputsReported.asReadonly();
   readonly memoriesReported = this._memoriesReported.asReadonly();
+  /** False until the device reported IND 1 / IND 2; the masters' independents are placeholders before that. */
+  readonly independentsReported = this._independentsReported.asReadonly();
+  /** The console's selected memory page when the device reports one (hardware mode), else undefined. */
+  readonly memoryPage = this._memoryPage.asReadonly();
 
   /** Status of the console itself (not of the link to the backend). */
   readonly deviceStatus = computed<ConnectionStatus>(
@@ -257,6 +263,13 @@ export class ConsoleStateService {
     this._channelsReported.set(Boolean(state.channelsReported));
     this._outputsReported.set(Boolean(state.outputsReported));
     this._memoriesReported.set(Boolean(state.memoriesReported));
+    this._independentsReported.set(Boolean(state.independentsReported));
+    const page = state.memoryPage;
+    this._memoryPage.set(
+      typeof page === 'number' && Number.isInteger(page) && page >= 1 && page <= this._capabilities().memoryPages
+        ? page
+        : undefined,
+    );
   }
 
   /** Whether the connected device accepts a hub command (docs/api.md `supportedCommands`). */

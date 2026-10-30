@@ -183,6 +183,25 @@ describe('MemoryGridComponent', () => {
     expect(lit(1)).toBe('0');
   });
 
+  it('follows the page selected on the console when the device reports it', () => {
+    state.applyConsoleStateChanged(
+      createSampleState({
+        memoryPage: 12,
+        connection: { status: 'connected', mode: 'hardware', deviceDescription: 'SmartFade 1248, read-only' },
+      }),
+    );
+    fixture.detectChanges();
+
+    expect(pageButton(12).getAttribute('aria-pressed')).toBe('true');
+    expect(pageButton(12).classList.contains('memories__page--console')).toBe(true);
+    expect(pageButton(1).getAttribute('aria-pressed')).toBe('false');
+
+    // the user may look at another page; the console's page stays marked
+    click(pageButton(3));
+    expect(pageButton(3).getAttribute('aria-pressed')).toBe('true');
+    expect(pageButton(12).classList.contains('memories__page--console')).toBe(true);
+  });
+
   it('disables the faders and bump buttons while commands are not possible', () => {
     enabled.set(false);
     fixture.detectChanges();

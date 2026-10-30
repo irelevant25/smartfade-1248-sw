@@ -31,6 +31,8 @@ public sealed class ConsoleStateStore
     private bool _channelsReported;
     private bool _outputsReported;
     private bool _memoriesReported;
+    private bool _independentsReported;
+    private int? _memoryPage;
 
     public ConsoleStateStore(ConsoleCapabilities capabilities, ConnectionState initialConnection, DeviceCommands supportedCommands)
     {
@@ -77,6 +79,8 @@ public sealed class ConsoleStateStore
                 _channelsReported,
                 _outputsReported,
                 _memoriesReported,
+                _independentsReported,
+                _memoryPage,
                 _showFileName,
                 _firmwareVersion);
         }
@@ -109,6 +113,8 @@ public sealed class ConsoleStateStore
                 _channelsReported = false;
                 _outputsReported = false;
                 _memoriesReported = false;
+                _independentsReported = false;
+                _memoryPage = null;
                 for (var i = 0; i < _memories.Length; i++)
                 {
                     _memories[i] = _memories[i] with { Reported = false };   // kept for display, no longer the console's word
@@ -164,6 +170,7 @@ public sealed class ConsoleStateStore
                 ApplyOutputsUnsafe(snapshot.ChannelOutputs, changed);
                 _masters = snapshot.Masters;
                 _mastersReported = true;
+                _independentsReported = true;   // a snapshot is the device's whole word, the independents included
                 _channelsReported = true;
                 _outputsReported = true;
                 _memoriesReported = true;
@@ -198,6 +205,18 @@ public sealed class ConsoleStateStore
                 _masters = reportedMasters;
                 _mastersReported = true;
                 masters = reportedMasters;
+            }
+
+            if (change.Independents is { } independents)
+            {
+                _masters = _masters with { Independent1 = independents.Independent1, Independent2 = independents.Independent2 };
+                _independentsReported = true;
+                masters = _masters;
+            }
+
+            if (change.MemoryPage is { } page && _capabilities.IsValidMemoryPage(page))
+            {
+                _memoryPage = page;
             }
 
             if (change.ShowFileName is { } fileName)

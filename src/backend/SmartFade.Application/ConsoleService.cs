@@ -330,7 +330,7 @@ public sealed class ConsoleService : IDisposable
     private void OnDeviceStateChanged(object? sender, DeviceStateChange change)
     {
         var channels = _store.ApplyDeviceChange(change, out var masters, out var outputs, out var memories);
-        if (change.Snapshot is not null || change.ShowFileName is not null || change.FirmwareVersion is not null)
+        if (change.Snapshot is not null || change.ShowFileName is not null || change.FirmwareVersion is not null || change.Independents is not null || change.MemoryPage is not null)
         {
             // a snapshot, or a detail the UI only receives with the full state (file name, firmware)
             StateChanged?.Invoke(_store.GetState());

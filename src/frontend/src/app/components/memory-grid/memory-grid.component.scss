@@ -64,6 +64,12 @@
   color: #ff8c8c;
 }
 
+// the console's own page (hardware mode): a thin red underline whichever page the user looks at
+.memories__page--console {
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+
 // The page keys are red like the memory keys under them (the owner's request, 2026-10-30), not the
 // UI's blue accent: the current page glows, a page that holds a memory shows a dimmed red number.
 .memories__page--current {

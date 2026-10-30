@@ -40,15 +40,17 @@
         class="masters__toggle masters__blackout"
         [class.masters__blackout--on]="masters().blackout"
         [class.masters__blackout--blink]="blackoutBlinks()"
-        [class.masters__toggle--unknown]="observedOnly()"
-        [attr.aria-pressed]="observedOnly() ? null : masters().blackout"
+        [class.masters__toggle--unknown]="blackoutUnknown()"
+        [attr.aria-pressed]="blackoutUnknown() ? null : masters().blackout"
         [disabled]="!enabled() || !supports('setBlackout')"
         [attr.title]="
-          observedOnly()
-            ? 'Not reported by the console'
-            : blackoutBlinks()
-              ? 'The MASTER is below 100 %'
-              : null
+          blackoutUnknown()
+            ? 'Not reported by the console yet'
+            : observedOnly()
+              ? 'LED reading (steady blue = on)'
+              : blackoutBlinks()
+                ? 'The MASTER is below 100 %'
+                : null
         "
         (click)="toggleBlackout()"
       >
@@ -71,10 +73,16 @@
         type="button"
         class="masters__toggle masters__ind"
         [class.masters__ind--on]="masters().independent1"
-        [class.masters__toggle--unknown]="observedOnly()"
-        [attr.aria-pressed]="observedOnly() ? null : masters().independent1"
+        [class.masters__toggle--unknown]="independentsUnknown()"
+        [attr.aria-pressed]="independentsUnknown() ? null : masters().independent1"
         [disabled]="!enabled() || !supports('setIndependent')"
-        [attr.title]="observedOnly() ? 'Not reported by the console' : 'Independent 1 (DMX 97 by default)'"
+        [attr.title]="
+          independentsUnknown()
+            ? 'Not reported by the console yet'
+            : observedOnly()
+              ? 'Reported by the console (which key is IND 1 is inferred)'
+              : 'Independent 1 (DMX 97 by default)'
+        "
         (click)="toggleIndependent(1)"
       >
         Ind 1
@@ -83,10 +91,16 @@
         type="button"
         class="masters__toggle masters__ind"
         [class.masters__ind--on]="masters().independent2"
-        [class.masters__toggle--unknown]="observedOnly()"
-        [attr.aria-pressed]="observedOnly() ? null : masters().independent2"
+        [class.masters__toggle--unknown]="independentsUnknown()"
+        [attr.aria-pressed]="independentsUnknown() ? null : masters().independent2"
         [disabled]="!enabled() || !supports('setIndependent')"
-        [attr.title]="observedOnly() ? 'Not reported by the console' : 'Independent 2 (DMX 98 by default)'"
+        [attr.title]="
+          independentsUnknown()
+            ? 'Not reported by the console yet'
+            : observedOnly()
+              ? 'Reported by the console (which key is IND 2 is inferred)'
+              : 'Independent 2 (DMX 98 by default)'
+        "
         (click)="toggleIndependent(2)"
       >
         Ind 2

@@ -95,6 +95,10 @@ interface ConsoleStateDto {
   channelsReported: boolean;                        // the same for the channel levels, the DMX outputs and the memories:
   outputsReported: boolean;                         // a read-only console reports them only when they change (a memory
   memoriesReported: boolean;                        // only when it is listed), so each panel says "not reported" until then
+  independentsReported: boolean;                    // false until the device reported IND 1 / IND 2 (hardware mode: the console's
+                                                    // Independents object, F115); the simulator reports them with its snapshot
+  memoryPage: number | null;                        // the console's selected memory page, 1..12, when the device reports it
+                                                    // (hardware mode: ConsoleStatus, F113); null for the simulator (the UI chooses)
   showFileName?: string;                            // e.g. "SHOW04.ASC" when known
   firmwareVersion?: string;                         // e.g. "3.0.2.9.0.43" when known
 }

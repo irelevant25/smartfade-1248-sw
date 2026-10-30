@@ -11,6 +11,8 @@ namespace SmartFade.Application;
 /// <see cref="OutputsReported"/> and <see cref="MemoriesReported"/> until it reported that part; until then
 /// the actual levels, masters, outputs and memories are placeholders (zero levels, MASTER full,
 /// BUMPS zero, Blackout and SOLO off, no memory recorded), not console state.
+/// <see cref="IndependentsReported"/> says whether IND 1 / IND 2 in the masters are the device's word;
+/// <see cref="MemoryPage"/> is the console's selected memory page when the device reports one, else null.
 /// </summary>
 public sealed record ConsoleState(
     ConnectionState Connection,
@@ -25,5 +27,7 @@ public sealed record ConsoleState(
     bool ChannelsReported,
     bool OutputsReported,
     bool MemoriesReported,
+    bool IndependentsReported,
+    int? MemoryPage,
     string? ShowFileName,
     string? FirmwareVersion);

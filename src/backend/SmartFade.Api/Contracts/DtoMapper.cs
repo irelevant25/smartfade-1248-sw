@@ -83,6 +83,8 @@ public static class DtoMapper
             state.ChannelsReported,
             state.OutputsReported,
             state.MemoriesReported,
+            state.IndependentsReported,
+            state.MemoryPage,
             state.ShowFileName,
             state.FirmwareVersion);
 

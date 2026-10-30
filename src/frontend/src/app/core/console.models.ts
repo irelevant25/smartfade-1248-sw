@@ -119,6 +119,10 @@ export interface ConsoleStateDto {
   channelsReported?: boolean;
   outputsReported?: boolean;
   memoriesReported?: boolean;
+  /** False until the device reported IND 1 / IND 2 (hardware mode: the console's Independents object). */
+  independentsReported?: boolean;
+  /** The console's selected memory page, 1..12, when the device reports it; null for the simulator (the UI chooses). */
+  memoryPage?: number | null;
   showFileName?: string | null;
   firmwareVersion?: string | null;
 }
