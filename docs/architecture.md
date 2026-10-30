@@ -150,7 +150,7 @@ src/backend/
   SmartFade.Api/                     ASP.NET Core host: /hubs/console (SignalR), /api/status,
                                      /api/console/state|connect|disconnect, ConsoleEventsBroadcaster
                                      (outputs coalesced to ~30/s), CORS for the Angular dev server
-src/frontend/smartfade-ui/           Angular (standalone, signals), contract in docs/api.md
+src/frontend/                        Angular (standalone, signals), contract in docs/api.md
 tests/                               xUnit: Domain, Application (service + simulator),
                                      Protocol (framing bytes from E2; golden decodes of the E2, E3,
                                      E3b captures), Communication (capture reader, transports)

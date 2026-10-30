@@ -136,7 +136,7 @@ is cleared: no System write, no payload, no control command.** **Phase 1 is buil
 desired-versus-actual state, simulated device, Protocol with decoders and, since SC-1, the poll and
 listed-fetch encoder, with golden tests over the committed captures, Communication with a capture
 replay and the WinUSB pipe, SignalR/REST API on port 5160) and the
-Angular app (`src/frontend/smartfade-ui`); see `docs/architecture.md` "Phase 1 as built" and
+Angular app (`src/frontend`); see `docs/architecture.md` "Phase 1 as built" and
 `docs/api.md`. The same day the simulator and UI gained memories (REC MEM / EDIT MEM / COPY, 12
 pages × 24), bump buttons, SOLO, the independents IND 1 / IND 2 (DMX 97 / 98 by default) and the
 CLEAR key, modelled on the manual (F5, F6, F107–F109; the simulator's own readings are marked
@@ -178,7 +178,7 @@ dotnet run --project src/backend/SmartFade.Api   # http://localhost:5160, simula
 Frontend (Angular 22, Node 22):
 
 ```
-cd src/frontend/smartfade-ui
+cd src/frontend
 npm install
 npm start          # http://localhost:4200, proxies /api and /hubs to http://localhost:5160
 npm test           # Vitest, headless, no backend needed

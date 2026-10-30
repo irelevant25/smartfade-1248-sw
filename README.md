@@ -25,7 +25,7 @@ exists behind `--Device:Mode=Usb`, replay-tested against every capture; its firs
 ```
 dotnet build SmartFade.sln && dotnet test SmartFade.sln      # .NET 10 SDK (global.json)
 dotnet run --project src/backend/SmartFade.Api              # backend, http://localhost:5160, simulated console
-cd src/frontend/smartfade-ui && npm install && npm start    # UI, http://localhost:4200 (proxies to 5160)
+cd src/frontend && npm install && npm start                 # UI, http://localhost:4200 (proxies to 5160)
 ```
 
 The simulator is the default device. The read-only hardware mode

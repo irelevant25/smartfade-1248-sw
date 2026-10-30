@@ -16,7 +16,7 @@ Node 22 and npm 10. Everything else, including the Angular CLI 22, is installed 
 ## Install
 
 ```bash
-cd src/frontend/smartfade-ui
+cd src/frontend
 npm install
 ```
 
