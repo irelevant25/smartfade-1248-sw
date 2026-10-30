@@ -234,3 +234,56 @@ Decisions taken while building:
   colour with every control read-only. The first live session is experiment E8 (runbook in
   `docs/protocol/reverse-engineering.md`), still waiting for the owner's go *(E8 ran on 2026-10-30:
   861 s, no fault; record in `docs/protocol/captures/`; the readings it gave are shown by the UI)*.
+
+## Phase 2 proposal: live control after E9b and SC-2 (2026-10-31, not implemented)
+
+E9 (2026-10-30) was the first capture of a PC writing to the console. It showed, for one session,
+that SmartSoft's live control is a single message type, ConsoleEvent (object 20), sent as a type-1
+data header with a four-byte payload for a fader (`[0][index][level][previous]`) or a three-byte
+payload for a key (`[1][code][pressed]`), one write per loop iteration, never acknowledged, and
+answered by the console with the same state objects it sends for the physical controls
+(`docs/protocol/captures/2026-10-30-e9-smartsoft-writes.md`, "Input for a future safety check"). It
+cleared nothing: only a second session (E9b) can make those readings VERIFIED, and a new safety
+check, SC-2, has to clear each message before any of it is encoded. This section records how the
+write path would be built once that happens, so that nothing of it is improvised then.
+
+- **One encoder, one whitelist.** `HspOutbound` gains `FaderEvent(index, level)` and
+  `KeyEvent(code, pressed)` for exactly the indices and codes SC-2 clears, nothing else: no object
+  write, no System message, no code derived from a rule (H82 is a hypothesis, not a table). An
+  index or code outside the whitelist is a programming error (an exception), never a transfer.
+- **The write sits inside the read cycle.** `HspReadSession` already owns the poll / fetch state
+  machine; a write is a third step taken only at an idle point of the cycle (after a reply, before
+  the next poll), at most one per iteration, at least SmartSoft's observed spacing apart (44.8 ms
+  minimum, median 61 ms, F131), with the outbound counter advanced by one per write. The reply to
+  the following poll is read with the same fault rules as today.
+- **The device stays the only sender.** `UsbSmartFadeDevice` implements the commands it is cleared
+  for (`SetChannelLevel`, `SetMaster`, `SetBumps`, `BumpChannel`, `SetBlackout`, `SetSolo`, the
+  fader-mode keys, GO) by translating them into events; `SupportedCommands` lists only those, so the
+  UI enables only those controls. Everything else keeps throwing `NotSupportedException`.
+- **A key is two writes.** Press and release are separate transfers, and a session that dies between
+  them is untested (E9, ConsoleLink W5 for the ML). The device therefore sends the release itself
+  when the UI's hold ends, when the connection to the UI drops, and before any Disconnect; a held
+  key is tracked per code, and only one bump may be held at a time until a capture shows more.
+- **No fader event while a record function is open.** The console's LCD and key LEDs say when REC
+  MEM, EDIT MEM, COPY or REC SEQ is active (F116). The device refuses fader events then: in E9 a
+  fader event inside EDIT MEM edited a memory, and the record functions change show data, which the
+  owner's write mode never does by itself.
+- **The previous byte is ours.** SmartSoft sends its own last value for the index, 0x00 at session
+  start, and the console applied the first MASTER and BUMPS events although that byte did not match
+  the console's level. The device keeps its own last value per index and sends it; it never guesses
+  the console's.
+- **The UI shows the console, not the command.** As today, the UI's actual state comes only from
+  the objects the console lists after a write (FaderInfo, ChannelLevels, OutputLevels, LedStatus);
+  the desired value a user drags stays "pending" until the console reports it, which is the
+  existing desired-versus-actual model.
+- **Matching is the console's business.** Outside an edit the PC's fader took effect at once; the
+  physical faders are not motorised and stay where they are. The UI shows the console's level, and
+  the "unmatched" blink the console puts on a bump LED is shown as reported, nothing more.
+- **Recording stays on the console's keys.** The owner's write mode includes REC MEM, EDIT MEM and
+  COPY as key presses only (owner decision 2026-10-30), so the console remains in charge of its show
+  data; whether those keys can be cleared at all is SC-2's question after E9b, and the Memory
+  objects the console lists afterwards are already decoded for display.
+- **Gates before the first byte:** E9b reproduces F131–F140 with a timed log; SC-2 runs the
+  checklist for each message class with its exact bytes; `protocol-safety-reviewer` reviews the
+  encoder and the whitelist; the first write session is its own experiment with a backup, USBPcap,
+  and the session ending on the first unobserved reply, as E8 was for reading.

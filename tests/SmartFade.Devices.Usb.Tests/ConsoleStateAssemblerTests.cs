@@ -191,6 +191,28 @@ public class ConsoleStateAssemblerTests
         Assert.Null(assembler.Apply(E8.Value[6421]));   // unchanged: nothing to report
     }
 
+    private static readonly Lazy<Dictionary<int, ObjectReceived>> E9 = new(() => ObjectsOf("2026-10-30-e9-smartsoft-writes.jsonl"));
+
+    [Fact]
+    public void A_memory_the_console_lists_after_a_recording_is_shown_with_its_content()
+    {
+        // E9 seq 74007: the console listed Memory (0, 0, 8) by itself after REC MEM + bump 9 from SmartSoft's
+        // Simulator (F136): page 1, fader 9, channel 5 at the recorded level 0x79. A read-only session would
+        // receive the same object after a recording made on the console itself (H83 / H85 open).
+        var assembler = new ConsoleStateAssembler(ConsoleCapabilities.SmartFade1248);
+
+        var change = assembler.Apply(E9.Value[74007]);
+
+        var memory = Assert.Single(change?.Memories ?? Array.Empty<MemoryState>());
+        Assert.Equal((1, 9), (memory.Page, memory.Fader));
+        Assert.True(memory.Recorded);
+        Assert.True(memory.Reported);
+        var content = assembler.Memory(1, 9);
+        Assert.NotNull(content);
+        Assert.Equal(0x79, content!.Levels[4]);                       // channel 5
+        Assert.Equal(0, content.Levels.Where((_, i) => i != 4).Sum(l => (int)l));   // every other channel at zero
+    }
+
     [Fact]
     public void The_key_LEDs_follow_the_record_functions_and_STACK()
     {
