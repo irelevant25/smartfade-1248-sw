@@ -256,7 +256,7 @@ public sealed class HspReadSession
                 {
                     if (record.C != 0)
                     {
-                        return FaultWith($"listed record {record} with c = {record.C} (c = 0 in every observed record)", data);
+                        return FaultWith($"listed record {record} with c = {record.C} (c = 0 in every record SmartSoft was seen to fetch in a read-only session; E9 showed c != 0 only for System records after a PC-side EDIT MEM selection, F137 / H83, which SC-1 does not cover)", data);
                     }
 
                     if (record.ObjectId == (int)HspObjectId.DirtyObjects || !ObservedListedIds.Contains(record.ObjectId))
