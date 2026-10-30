@@ -21,3 +21,4 @@ dist/
 
 # Transfer logs of read-only USB sessions started from the repository root (the default is outside the repository)
 /captures/
+__pycache__/
