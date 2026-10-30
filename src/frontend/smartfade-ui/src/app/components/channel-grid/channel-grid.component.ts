@@ -42,10 +42,16 @@ export class ChannelGridComponent {
 
   protected readonly enabled = this._channels.enabled;
   protected readonly editing = this._edit.editing;
+  /** The device does not take channel levels (a read-only console): the faders only show. */
+  protected readonly readOnly = computed(() => !this._state.supports('setChannelLevel'));
+  protected readonly bumpsDisabled = computed(() => !this._state.supports('bumpChannel'));
+  /** Until the console reported the channel levels, the faders show placeholders (zero), not console state. */
+  protected readonly reported = this._state.channelsReported;
 
   protected readonly banks = computed<Bank[]>(() => {
     const channels = this._state.channels();
     const draft = this.editing();
+    const readOnly = this.readOnly();
     const bankSize = this._state.capabilities().physicalFaders;
     const banks: Bank[] = [];
     for (let start = 0; start < channels.length; start += bankSize) {
@@ -60,7 +66,8 @@ export class ChannelGridComponent {
             }
           : {
               channel: channel.channel,
-              desired: channel.desired,
+              // a read-only console reports levels only: the thumb follows the report
+              desired: readOnly ? channel.actual : channel.desired,
               actual: channel.actual,
               pending: channel.pending,
               output: channel.output,

@@ -173,6 +173,11 @@ export class ConsoleStateService {
   private readonly _showFileName = signal<string | undefined>(undefined);
   private readonly _firmwareVersion = signal<string | undefined>(undefined);
   private readonly _lastError = signal<ErrorDto | undefined>(undefined);
+  private readonly _supportedCommands = signal<readonly string[]>([]);
+  private readonly _mastersReported = signal(false);
+  private readonly _channelsReported = signal(false);
+  private readonly _outputsReported = signal(false);
+  private readonly _memoriesReported = signal(false);
 
   private readonly _channelRequests = new Map<number, Request<number>>();
   private readonly _memoryRequests = new Map<number, Request<number>>();
@@ -195,6 +200,13 @@ export class ConsoleStateService {
   readonly showFileName = this._showFileName.asReadonly();
   readonly firmwareVersion = this._firmwareVersion.asReadonly();
   readonly lastError = this._lastError.asReadonly();
+  /** Hub commands the connected device accepts; empty for a read-only device (hardware mode). */
+  readonly supportedCommands = this._supportedCommands.asReadonly();
+  /** False until the device reported the masters: what the masters show before that is a placeholder. */
+  readonly mastersReported = this._mastersReported.asReadonly();
+  readonly channelsReported = this._channelsReported.asReadonly();
+  readonly outputsReported = this._outputsReported.asReadonly();
+  readonly memoriesReported = this._memoriesReported.asReadonly();
 
   /** Status of the console itself (not of the link to the backend). */
   readonly deviceStatus = computed<ConnectionStatus>(
@@ -234,6 +246,20 @@ export class ConsoleStateService {
     this._outputs.set(normalizeOutputs(state.outputs ?? []));
     this._showFileName.set(state.showFileName ?? undefined);
     this._firmwareVersion.set(state.firmwareVersion ?? undefined);
+    this._supportedCommands.set(
+      Array.isArray(state.supportedCommands)
+        ? state.supportedCommands.filter((name): name is string => typeof name === 'string')
+        : [],
+    );
+    this._mastersReported.set(Boolean(state.mastersReported));
+    this._channelsReported.set(Boolean(state.channelsReported));
+    this._outputsReported.set(Boolean(state.outputsReported));
+    this._memoriesReported.set(Boolean(state.memoriesReported));
+  }
+
+  /** Whether the connected device accepts a hub command (docs/api.md `supportedCommands`). */
+  supports(command: string): boolean {
+    return this._supportedCommands().includes(command);
   }
 
   /** connectionStateChanged */
@@ -252,6 +278,7 @@ export class ConsoleStateService {
     if (valid.length === 0) {
       return;
     }
+    this._channelsReported.set(true);
     this._channels.update((current) => {
       const next = current.slice();
       for (const dto of valid) {
@@ -263,6 +290,7 @@ export class ConsoleStateService {
 
   /** mastersChanged */
   applyMastersChanged(masters: MastersDto): void {
+    this._mastersReported.set(true);
     const reported = sanitizeMasters(masters);
     const master = outrank(this._masterRequest, reported.master);
     const bumps = outrank(this._bumpsRequest, reported.bumps);
@@ -309,6 +337,7 @@ export class ConsoleStateService {
     if (valid.length === 0) {
       return;
     }
+    this._memoriesReported.set(true);
     this._memories.update((current) => {
       const next = current.slice();
       for (const dto of valid) {
@@ -323,6 +352,7 @@ export class ConsoleStateService {
     if (!Array.isArray(update?.outputs)) {
       return;
     }
+    this._outputsReported.set(true);
     this._outputs.set(normalizeOutputs(update.outputs));
   }
 

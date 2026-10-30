@@ -38,6 +38,12 @@ export function describeMode(mode: DeviceMode | undefined): ModeView {
       };
     case 'replay':
       return { label: 'Replay', tone: 'info', hint: 'Replaying recorded console data.' };
+    case 'hardware':
+      return {
+        label: 'Hardware',
+        tone: 'alert',
+        hint: 'The real console, read-only: it is observed, nothing on it can be changed from here.',
+      };
     default:
       return {
         label: String(mode).toUpperCase(),

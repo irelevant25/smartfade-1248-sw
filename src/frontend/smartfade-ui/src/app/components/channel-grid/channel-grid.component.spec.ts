@@ -153,6 +153,39 @@ describe('ChannelGridComponent', () => {
     expect(bumpButtons().every((button) => !button.disabled)).toBe(true);
   });
 
+  it('says so while the console has not reported the channels yet', () => {
+    state.applyConsoleStateChanged(createSampleState({ channelsReported: false }));
+    fixture.detectChanges();
+
+    expect(text('.grid__note')).toBe('Not reported by the console yet');
+    expect(element().querySelectorAll('.bank--unreported')).toHaveLength(2);
+
+    state.applyChannelStateChanged([{ channel: 1, desired: 0, actual: 9, pending: false, output: 9 }]);
+    fixture.detectChanges();
+
+    expect(element().querySelector('.grid__note')).toBeNull();
+    expect(element().querySelector('.bank--unreported')).toBeNull();
+  });
+
+  describe('with a read-only device (hardware mode)', () => {
+    beforeEach(() => {
+      state.applyConsoleStateChanged(createSampleState({ supportedCommands: [] }));
+      fixture.detectChanges();
+    });
+
+    it('shows the reported levels on faders that cannot be moved, with inactive bump buttons', () => {
+      expect(sliders().every((slider) => slider.disabled)).toBe(true);
+      expect(element().querySelectorAll('.fader--readonly')).toHaveLength(48);
+      expect(element().querySelectorAll('.fader--idle')).toHaveLength(0);
+      // the thumb follows the reported level: channel 2 is reported at 64 although 128 was asked
+      expect(sliders()[1].valueAsNumber).toBe(64);
+      expect(bumpButtons().every((button) => button.disabled)).toBe(true);
+
+      press(sliders()[4], 'PageUp');
+      expect(setChannelLevel).not.toHaveBeenCalled();
+    });
+  });
+
   describe('moving focus with the arrow keys', () => {
     it('Right moves to the next channel and Left back', () => {
       sliders()[2].focus();

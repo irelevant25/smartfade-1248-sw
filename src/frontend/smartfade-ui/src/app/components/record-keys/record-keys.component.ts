@@ -1,5 +1,6 @@
 import { ChangeDetectionStrategy, Component, computed, inject } from '@angular/core';
 import { ChannelService } from '../../core/channel.service';
+import { ConsoleStateService } from '../../core/console-state.service';
 import { MemoryEditService } from '../../core/memory-edit.service';
 
 /**
@@ -17,8 +18,12 @@ import { MemoryEditService } from '../../core/memory-edit.service';
 export class RecordKeysComponent {
   private readonly _edit = inject(MemoryEditService);
   private readonly _channels = inject(ChannelService);
+  private readonly _state = inject(ConsoleStateService);
 
   protected readonly enabled = this._channels.enabled;
+  /** COPY and EDIT MEM store a memory, REC MEM records one: inactive on a device that accepts neither. */
+  protected readonly canStore = computed(() => this._state.supports('storeMemory'));
+  protected readonly canRecord = computed(() => this._state.supports('recordMemory'));
   protected readonly copyArmed = computed(() => {
     const mode = this._edit.mode();
     return mode === 'copy-source' || mode === 'copy-target';

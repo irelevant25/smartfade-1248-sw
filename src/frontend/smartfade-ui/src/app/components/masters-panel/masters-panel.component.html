@@ -1,5 +1,12 @@
-<section class="masters sf-panel" aria-labelledby="masters-title">
+<section
+  class="masters sf-panel"
+  [class.masters--unreported]="!mastersReported()"
+  aria-labelledby="masters-title"
+>
   <h2 id="masters-title" class="sf-panel-title">Masters</h2>
+  @if (!mastersReported()) {
+    <p class="masters__note" role="status">Not reported by the console yet</p>
+  }
 
   <div class="masters__columns">
     <div class="masters__column">
@@ -8,8 +15,12 @@
         class="masters__toggle masters__solo"
         [class.masters__solo--on]="masters().solo"
         [attr.aria-pressed]="masters().solo"
-        [disabled]="!enabled()"
-        title="Bump mode: off = pile-on, on = solo"
+        [disabled]="!enabled() || !supports('setSolo')"
+        [attr.title]="
+          observedOnly()
+            ? 'SOLO as read from its LED (an inferred reading)'
+            : 'Bump mode: off = pile-on, on = solo'
+        "
         (click)="toggleSolo()"
       >
         Solo
@@ -18,6 +29,7 @@
         label="BUMPS"
         [desired]="masters().bumps"
         [disabled]="!enabled()"
+        [readOnly]="!supports('setBumps')"
         (levelChange)="setBumps($event)"
       />
     </div>
@@ -28,9 +40,16 @@
         class="masters__toggle masters__blackout"
         [class.masters__blackout--on]="masters().blackout"
         [class.masters__blackout--blink]="blackoutBlinks()"
-        [attr.aria-pressed]="masters().blackout"
-        [disabled]="!enabled()"
-        [attr.title]="blackoutBlinks() ? 'The MASTER is below 100 %' : null"
+        [class.masters__toggle--unknown]="observedOnly()"
+        [attr.aria-pressed]="observedOnly() ? null : masters().blackout"
+        [disabled]="!enabled() || !supports('setBlackout')"
+        [attr.title]="
+          observedOnly()
+            ? 'Not reported by the console'
+            : blackoutBlinks()
+              ? 'The MASTER is below 100 %'
+              : null
+        "
         (click)="toggleBlackout()"
       >
         Blackout
@@ -39,6 +58,7 @@
         label="MASTER"
         [desired]="masters().master"
         [disabled]="!enabled()"
+        [readOnly]="!supports('setMaster')"
         (levelChange)="setMaster($event)"
       />
     </div>
@@ -51,9 +71,10 @@
         type="button"
         class="masters__toggle masters__ind"
         [class.masters__ind--on]="masters().independent1"
-        [attr.aria-pressed]="masters().independent1"
-        [disabled]="!enabled()"
-        title="Independent 1 (DMX 97 by default)"
+        [class.masters__toggle--unknown]="observedOnly()"
+        [attr.aria-pressed]="observedOnly() ? null : masters().independent1"
+        [disabled]="!enabled() || !supports('setIndependent')"
+        [attr.title]="observedOnly() ? 'Not reported by the console' : 'Independent 1 (DMX 97 by default)'"
         (click)="toggleIndependent(1)"
       >
         Ind 1
@@ -62,9 +83,10 @@
         type="button"
         class="masters__toggle masters__ind"
         [class.masters__ind--on]="masters().independent2"
-        [attr.aria-pressed]="masters().independent2"
-        [disabled]="!enabled()"
-        title="Independent 2 (DMX 98 by default)"
+        [class.masters__toggle--unknown]="observedOnly()"
+        [attr.aria-pressed]="observedOnly() ? null : masters().independent2"
+        [disabled]="!enabled() || !supports('setIndependent')"
+        [attr.title]="observedOnly() ? 'Not reported by the console' : 'Independent 2 (DMX 98 by default)'"
         (click)="toggleIndependent(2)"
       >
         Ind 2

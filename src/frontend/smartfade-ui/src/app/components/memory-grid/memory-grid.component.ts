@@ -49,6 +49,15 @@ export class MemoryGridComponent {
   protected readonly mode = this._edit.mode;
   protected readonly loading = this._edit.loading;
   protected readonly copySource = this._edit.copySource;
+  protected readonly readOnly = computed(() => !this._state.supports('setMemoryLevel'));
+  protected readonly bumpsDisabled = computed(() => !this._state.supports('bumpMemory'));
+  /** Until the console delivered memories, every memory shown is a placeholder (unrecorded, no label). */
+  protected readonly reported = this._state.memoriesReported;
+  protected readonly unreportedNote = computed(() =>
+    this._state.mode() === 'hardware'
+      ? 'Not delivered by the console in this read-only session'
+      : 'Not reported by the console yet',
+  );
   /** The page shown, 1..12 (a UI choice; the simulator plays every page's faders). */
   protected readonly page = signal(1);
 

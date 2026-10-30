@@ -22,10 +22,15 @@ describe('connection view', () => {
       expect(describeMode(undefined)).toMatchObject({ label: 'Mode unknown', tone: 'unknown' });
     });
 
-    it('shows a mode it does not know as an alert instead of passing it off as a known one', () => {
-      const unexpected = 'hardware' as unknown as Parameters<typeof describeMode>[0];
+    it('shows HARDWARE as an alert: the real console, read-only', () => {
+      expect(describeMode('hardware')).toMatchObject({ label: 'Hardware', tone: 'alert' });
+      expect(describeMode('hardware').hint).toContain('read-only');
+    });
 
-      expect(describeMode(unexpected)).toMatchObject({ label: 'HARDWARE', tone: 'alert' });
+    it('shows a mode it does not know as an alert instead of passing it off as a known one', () => {
+      const unexpected = 'midi' as unknown as Parameters<typeof describeMode>[0];
+
+      expect(describeMode(unexpected)).toMatchObject({ label: 'MIDI', tone: 'alert' });
     });
   });
 

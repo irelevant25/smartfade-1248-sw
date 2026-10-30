@@ -43,7 +43,7 @@
         type="button"
         class="xfade__key xfade__clear"
         [class.xfade__clear--series]="clearPresses() > 0"
-        [disabled]="!enabled()"
+        [disabled]="!enabled() || !canClear()"
         title="Clear: once aborts a recording function, twice clears the channel faders, three times the memory faders"
         (click)="clear()"
       >

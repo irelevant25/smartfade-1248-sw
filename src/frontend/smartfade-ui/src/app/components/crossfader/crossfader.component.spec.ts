@@ -2,6 +2,8 @@ import { signal } from '@angular/core';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { ChannelService } from '../../core/channel.service';
 import { ClearKeyService } from '../../core/clear-key.service';
+import { ConsoleStateService } from '../../core/console-state.service';
+import { createSampleState } from '../../core/testing/sample-state';
 import { CrossfaderComponent } from './crossfader.component';
 
 describe('CrossfaderComponent', () => {
@@ -23,6 +25,8 @@ describe('CrossfaderComponent', () => {
         { provide: ClearKeyService, useValue: { presses: presses.asReadonly(), press } },
       ],
     });
+
+    TestBed.inject(ConsoleStateService).applyConsoleStateChanged(createSampleState());
 
     fixture = TestBed.createComponent(CrossfaderComponent);
     fixture.detectChanges();
@@ -82,6 +86,15 @@ describe('CrossfaderComponent', () => {
 
   it('disables CLEAR while commands are not possible', () => {
     enabled.set(false);
+    fixture.detectChanges();
+
+    expect(key('.xfade__clear').disabled).toBe(true);
+  });
+
+  it('disables CLEAR on a device that clears nothing (hardware mode)', () => {
+    TestBed.inject(ConsoleStateService).applyConsoleStateChanged(
+      createSampleState({ supportedCommands: [] }),
+    );
     fixture.detectChanges();
 
     expect(key('.xfade__clear').disabled).toBe(true);

@@ -23,9 +23,25 @@ export class MastersPanelComponent {
 
   protected readonly masters = this._state.masters;
   protected readonly enabled = this._channels.enabled;
-  /** "As soon as the Master is faded under 100% the Blackout button will blink" (F5). */
+  protected readonly supports = (command: string) => this._state.supports(command);
+  /** Until the device reported the masters, what they show is a placeholder, not console state. */
+  protected readonly mastersReported = this._state.mastersReported;
+  /**
+   * The real console is only observed: BLACKOUT and the independents are never reported by it,
+   * and SOLO comes from an LED reading, so their keys say so.
+   */
+  protected readonly observedOnly = computed(() => this._state.mode() === 'hardware');
+  /**
+   * "As soon as the Master is faded under 100% the Blackout button will blink" (F5). The simulator
+   * follows the manual; the real console is only observed, and its Blackout LED is not read, so
+   * the key does not blink in hardware mode.
+   */
   protected readonly blackoutBlinks = computed(
-    () => this.enabled() && !this.masters().blackout && this.masters().master < LEVEL_MAX,
+    () =>
+      this.enabled() &&
+      !this.observedOnly() &&
+      !this.masters().blackout &&
+      this.masters().master < LEVEL_MAX,
   );
 
   protected setMaster(level: number): void {

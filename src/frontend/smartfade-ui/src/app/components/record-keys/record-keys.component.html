@@ -7,7 +7,7 @@
       class="record__key record__key--white record__copy"
       [class.record__key--lit]="copyArmed()"
       [attr.aria-pressed]="copyArmed()"
-      [disabled]="!enabled()"
+      [disabled]="!enabled() || !canStore()"
       title="Copy a memory into another"
       (click)="toggleCopy()"
     >
@@ -34,7 +34,7 @@
       class="record__key record__key--red record__rec"
       [class.record__key--lit]="recordArmed()"
       [attr.aria-pressed]="recordArmed()"
-      [disabled]="!enabled()"
+      [disabled]="!enabled() || !canRecord()"
       title="Record the current look into a memory"
       (click)="toggleRecord()"
     >
@@ -45,7 +45,7 @@
       class="record__key record__key--red record__edit"
       [class.record__key--lit]="editArmed()"
       [attr.aria-pressed]="editArmed()"
-      [disabled]="!enabled()"
+      [disabled]="!enabled() || !canStore()"
       title="Edit a memory on the channel faders"
       (click)="toggleEdit()"
     >

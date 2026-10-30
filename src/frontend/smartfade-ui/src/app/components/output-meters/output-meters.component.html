@@ -16,6 +16,9 @@
         Outputs 1&ndash;512
       </button>
     </h2>
+    @if (!reported()) {
+      <span class="outputs__note" role="status">Not reported by the console yet</span>
+    }
     <span class="outputs__summary">{{ activeCount() }} active</span>
     <span class="outputs__readout">{{ readout() }}</span>
   </header>

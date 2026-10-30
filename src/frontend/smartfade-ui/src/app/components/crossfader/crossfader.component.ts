@@ -1,6 +1,7 @@
-import { ChangeDetectionStrategy, Component, inject } from '@angular/core';
+import { ChangeDetectionStrategy, Component, computed, inject } from '@angular/core';
 import { ChannelService } from '../../core/channel.service';
 import { ClearKeyService } from '../../core/clear-key.service';
+import { ConsoleStateService } from '../../core/console-state.service';
 import { ChannelFaderComponent } from '../channel-fader/channel-fader.component';
 
 /**
@@ -20,8 +21,10 @@ import { ChannelFaderComponent } from '../channel-fader/channel-fader.component'
 export class CrossfaderComponent {
   private readonly _channels = inject(ChannelService);
   private readonly _clear = inject(ClearKeyService);
+  private readonly _state = inject(ConsoleStateService);
 
   protected readonly enabled = this._channels.enabled;
+  protected readonly canClear = computed(() => this._state.supports('clearChannels'));
   protected readonly clearPresses = this._clear.presses;
 
   protected clear(): void {

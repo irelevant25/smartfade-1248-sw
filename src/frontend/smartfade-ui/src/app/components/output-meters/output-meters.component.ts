@@ -80,6 +80,9 @@ export class OutputMetersComponent {
     address,
     offset: ((address - 1) / OUTPUT_COUNT) * 100,
   }));
+  /** Until the console reported the outputs, the meters show placeholders (zero), not console state. */
+  protected readonly reported = this._state.outputsReported;
+
   protected readonly activeCount = computed(
     () => this._state.outputs().filter((level) => level > 0).length,
   );

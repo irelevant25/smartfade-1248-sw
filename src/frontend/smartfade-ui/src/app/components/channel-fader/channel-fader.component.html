@@ -61,7 +61,7 @@
       [class.fader__bump--armed]="bumpArmed()"
       [class.fader__bump--held]="held()"
       [style.--lit]="bumpLit()"
-      [disabled]="disabled()"
+      [disabled]="disabled() || bumpDisabled()"
       [attr.aria-label]="bumpName()"
       [attr.aria-pressed]="bumpArmed() ? null : held()"
       (pointerdown)="pressBump($event)"

@@ -1,7 +1,9 @@
 import { signal } from '@angular/core';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { ChannelService } from '../../core/channel.service';
+import { ConsoleStateService } from '../../core/console-state.service';
 import { MemoryEditService } from '../../core/memory-edit.service';
+import { createSampleState } from '../../core/testing/sample-state';
 import { RecordKeysComponent } from './record-keys.component';
 
 describe('RecordKeysComponent', () => {
@@ -34,6 +36,7 @@ describe('RecordKeysComponent', () => {
       ],
     });
     edit = TestBed.inject(MemoryEditService);
+    TestBed.inject(ConsoleStateService).applyConsoleStateChanged(createSampleState());
 
     fixture = TestBed.createComponent(RecordKeysComponent);
     fixture.detectChanges();
@@ -104,6 +107,17 @@ describe('RecordKeysComponent', () => {
 
   it('disables the working keys while commands are not possible', () => {
     enabled.set(false);
+    fixture.detectChanges();
+
+    expect(key('.record__copy').disabled).toBe(true);
+    expect(key('.record__rec').disabled).toBe(true);
+    expect(key('.record__edit').disabled).toBe(true);
+  });
+
+  it('disables the working keys on a device that records nothing (hardware mode)', () => {
+    TestBed.inject(ConsoleStateService).applyConsoleStateChanged(
+      createSampleState({ supportedCommands: [] }),
+    );
     fixture.detectChanges();
 
     expect(key('.record__copy').disabled).toBe(true);

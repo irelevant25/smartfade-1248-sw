@@ -63,6 +63,8 @@ export class ChannelFaderComponent {
   readonly bumpLit = input(0);
   /** REC MEM / EDIT MEM is waiting: the button blinks and a press selects instead of bumping. */
   readonly bumpArmed = input(false);
+  /** The bump button alone is inactive (the device accepts no bump), the fader stays usable. */
+  readonly bumpDisabled = input(false);
 
   /** The user moved the fader to this level, 0-255. */
   readonly levelChange = output<number>();
@@ -165,7 +167,7 @@ export class ChannelFaderComponent {
   // ---- Bump button ---------------------------------------------------------------------------
 
   protected pressBump(event: PointerEvent): void {
-    if (this.bumpArmed() || this.disabled() || event.button !== 0) {
+    if (this.bumpArmed() || this.disabled() || this.bumpDisabled() || event.button !== 0) {
       return;
     }
     const target = event.currentTarget as HTMLElement | null;
@@ -189,7 +191,7 @@ export class ChannelFaderComponent {
       return;   // the key's click selects
     }
     event.preventDefault();
-    if (!event.repeat && !this.disabled()) {
+    if (!event.repeat && !this.disabled() && !this.bumpDisabled()) {
       this._setHeld(true);
     }
   }
@@ -202,7 +204,7 @@ export class ChannelFaderComponent {
   }
 
   protected onBumpClick(): void {
-    if (this.bumpArmed() && !this.disabled()) {
+    if (this.bumpArmed() && !this.disabled() && !this.bumpDisabled()) {
       this.select.emit();
     }
   }

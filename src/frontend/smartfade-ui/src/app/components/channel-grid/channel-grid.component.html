@@ -5,6 +5,9 @@
 >
   <div class="grid__head">
     <h2 id="channels-title" class="sf-panel-title">Channels</h2>
+    @if (!reported()) {
+      <p class="grid__note" role="status">Not reported by the console yet</p>
+    }
     @if (editing()) {
       <div class="grid__edit" role="status">
         <span class="grid__edit-title">{{ editTitle() }}</span>
@@ -20,6 +23,7 @@
   @for (bank of banks(); track bank.first) {
     <div
       class="bank"
+      [class.bank--unreported]="!reported()"
       role="group"
       [attr.aria-label]="'Channels ' + bank.first + ' to ' + bank.last"
     >
@@ -33,7 +37,9 @@
             [actual]="fader.actual"
             [pending]="fader.pending"
             [disabled]="!enabled()"
+            [readOnly]="readOnly() && !editing()"
             [bumpable]="true"
+            [bumpDisabled]="bumpsDisabled()"
             [bumpLit]="fader.output / 255"
             (levelChange)="setLevel(fader.channel, $event)"
             (bumpChange)="bump(fader.channel, $event)"

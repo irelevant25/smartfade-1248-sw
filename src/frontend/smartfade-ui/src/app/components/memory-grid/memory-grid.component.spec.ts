@@ -146,6 +146,26 @@ describe('MemoryGridComponent', () => {
     expect(lit(2)).toBe('1');
   });
 
+  it('says so while the console has not delivered any memory', () => {
+    state.applyConsoleStateChanged(
+      createSampleState({
+        memoriesReported: false,
+        connection: { status: 'connected', mode: 'hardware', deviceDescription: 'SmartFade 1248, read-only' },
+      }),
+    );
+    fixture.detectChanges();
+
+    expect(text('.memories__note')).toBe('Not delivered by the console in this read-only session');
+    expect(element().querySelector('.memories__faders--unreported')).not.toBeNull();
+
+    state.applyMemoriesChanged([
+      { page: 1, fader: 1, number: 1, level: 0, recorded: true, label: 'OPONA' },
+    ]);
+    fixture.detectChanges();
+
+    expect(element().querySelector('.memories__note')).toBeNull();
+  });
+
   it('disables the faders and bump buttons while commands are not possible', () => {
     enabled.set(false);
     fixture.detectChanges();

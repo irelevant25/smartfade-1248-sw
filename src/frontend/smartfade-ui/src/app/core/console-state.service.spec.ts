@@ -187,6 +187,27 @@ describe('ConsoleStateService', () => {
     });
   });
 
+  describe('supported commands', () => {
+    it('knows nothing until the backend reports, then answers per command', () => {
+      expect(service.supports('setChannelLevel')).toBe(false);
+
+      service.applyConsoleStateChanged(createSampleState());
+
+      expect(service.supports('setChannelLevel')).toBe(true);
+      expect(service.supports('clearMemories')).toBe(true);
+      expect(service.supports('fly')).toBe(false);
+      expect(service.supportedCommands()).toHaveLength(13);
+    });
+
+    it('treats a read-only device as supporting nothing', () => {
+      service.applyConsoleStateChanged(createSampleState({ supportedCommands: [] }));
+      expect(service.supports('setChannelLevel')).toBe(false);
+
+      service.applyConsoleStateChanged(createSampleState({ supportedCommands: undefined }));
+      expect(service.supportedCommands()).toEqual([]);
+    });
+  });
+
   describe('connectionStateChanged', () => {
     it('updates the connection and nothing else', () => {
       service.applyConsoleStateChanged(createSampleState());

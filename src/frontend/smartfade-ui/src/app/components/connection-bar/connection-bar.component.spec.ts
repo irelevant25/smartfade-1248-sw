@@ -140,9 +140,9 @@ describe('ConnectionBarComponent', () => {
     });
 
     it('shows a mode it does not know as an alert', () => {
-      deviceIs({ mode: 'hardware' as unknown as ConnectionDto['mode'] });
+      deviceIs({ mode: 'midi' as unknown as ConnectionDto['mode'] });
 
-      expect(text('.bar__mode')).toBe('HARDWARE');
+      expect(text('.bar__mode')).toBe('MIDI');
       expect(badge().dataset['tone']).toBe('alert');
     });
   });

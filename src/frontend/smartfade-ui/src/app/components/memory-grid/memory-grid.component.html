@@ -26,10 +26,14 @@
     @if (hint(); as text) {
       <p class="memories__hint" role="status">{{ text }}</p>
     }
+    @if (!reported()) {
+      <p class="memories__note" role="status">{{ unreportedNote() }}</p>
+    }
   </div>
 
   <div
     class="memories__faders"
+    [class.memories__faders--unreported]="!reported()"
     role="group"
     [attr.aria-label]="'Memories of page ' + page()"
     [style.--columns]="memories().length"
@@ -41,7 +45,9 @@
         [caption]="memory.label"
         [desired]="memory.level"
         [disabled]="!enabled()"
+        [readOnly]="readOnly()"
         [bumpable]="true"
+        [bumpDisabled]="bumpsDisabled() && !armedFor(memory)"
         [bumpLit]="bumpLit(memory)"
         [bumpArmed]="armedFor(memory)"
         (levelChange)="setLevel(memory, $event)"

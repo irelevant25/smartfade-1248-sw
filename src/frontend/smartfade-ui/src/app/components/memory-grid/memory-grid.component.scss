@@ -70,6 +70,17 @@
   color: var(--sf-warn);
 }
 
+.memories__note {
+  flex-basis: 100%;
+  margin: 0;
+  font: 0.6875rem var(--sf-font-ui);
+  color: var(--sf-warn);
+}
+
+.memories__faders--unreported {
+  opacity: 0.45;
+}
+
 .memories__faders {
   display: grid;
   flex: 1 1 0;

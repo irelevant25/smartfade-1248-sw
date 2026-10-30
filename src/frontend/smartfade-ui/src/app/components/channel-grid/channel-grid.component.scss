@@ -23,6 +23,16 @@
   min-height: 20px;
 }
 
+.grid__note {
+  margin: 0;
+  font: 0.6875rem var(--sf-font-ui);
+  color: var(--sf-warn);
+}
+
+.bank--unreported {
+  opacity: 0.45;
+}
+
 .grid__edit {
   display: flex;
   flex: 1 1 auto;

@@ -262,6 +262,51 @@ describe('MastersPanelComponent', () => {
     });
   });
 
+  describe('with a read-only device (hardware mode)', () => {
+    it('shows the masters without letting anything be changed, and says which keys the console never reports', () => {
+      state.applyConsoleStateChanged(
+        createSampleState({
+          supportedCommands: [],
+          connection: { status: 'connected', mode: 'hardware', deviceDescription: 'SmartFade 1248, read-only' },
+          masters: { master: 128, bumps: 51, blackout: false, solo: true, independent1: false, independent2: false },
+        }),
+      );
+      fixture.detectChanges();
+
+      expect(slider(0).disabled).toBe(true);
+      expect(slider(1).disabled).toBe(true);
+      expect(faders()[1].querySelector('.fader--readonly')).not.toBeNull();
+      expect(slider(1).valueAsNumber).toBe(128);
+      expect(solo().disabled).toBe(true);
+      expect(solo().getAttribute('aria-pressed')).toBe('true');
+      expect(solo().getAttribute('title')).toContain('inferred');
+      expect(blackout().disabled).toBe(true);
+      expect(blackout().classList.contains('masters__toggle--unknown')).toBe(true);
+      expect(blackout().hasAttribute('aria-pressed')).toBe(false);
+      // the MASTER is below full, but the blink is the manual's rule for the simulator, not a console reading
+      expect(blackout().classList.contains('masters__blackout--blink')).toBe(false);
+      const independents = Array.from(element().querySelectorAll<HTMLButtonElement>('.masters__ind'));
+      expect(independents.every((button) => button.disabled)).toBe(true);
+      expect(independents.every((button) => button.classList.contains('masters__toggle--unknown'))).toBe(true);
+    });
+
+    it('marks the masters as placeholders until the console reported them', () => {
+      state.applyConsoleStateChanged(createSampleState({ mastersReported: false }));
+      fixture.detectChanges();
+
+      expect(element().querySelector('.masters--unreported')).not.toBeNull();
+      expect(element().querySelector('.masters__note')?.textContent?.trim()).toBe(
+        'Not reported by the console yet',
+      );
+
+      state.applyMastersChanged({ master: 10, bumps: 0, blackout: false, solo: false, independent1: false, independent2: false });
+      fixture.detectChanges();
+
+      expect(element().querySelector('.masters--unreported')).toBeNull();
+      expect(element().querySelector('.masters__note')).toBeNull();
+    });
+  });
+
   describe('SOLO', () => {
     it('is off at first and says so to assistive technology', () => {
       expect(solo().textContent?.trim()).toBe('Solo');

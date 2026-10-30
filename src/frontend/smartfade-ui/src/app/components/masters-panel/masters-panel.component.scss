@@ -23,6 +23,23 @@
   flex: 0 0 auto;
 }
 
+// Until the console reported the masters, the faders and keys show placeholders: dimmed and said so.
+.masters--unreported .masters__columns {
+  opacity: 0.45;
+}
+
+.masters__note {
+  margin: 0;
+  font: 0.6875rem var(--sf-font-ui);
+  color: var(--sf-warn);
+}
+
+// A state the real console never reports (observed only): the key is drawn, but its light means nothing.
+.masters__toggle--unknown {
+  border-style: dashed;
+  opacity: 0.55;
+}
+
 .masters__column {
   display: flex;
   flex-direction: column;

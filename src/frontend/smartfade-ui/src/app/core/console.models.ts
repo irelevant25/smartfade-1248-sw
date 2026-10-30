@@ -7,8 +7,11 @@
 
 export type ConnectionStatus = 'disconnected' | 'connecting' | 'connected' | 'error';
 
-/** 'hardware' does not exist in Phase 1; the mode is always shown in the UI. */
-export type DeviceMode = 'simulated' | 'replay';
+/**
+ * 'hardware' is the real console over USB, read-only (safety check SC-1); the mode is always
+ * shown in the UI, hardware mode loudly.
+ */
+export type DeviceMode = 'simulated' | 'replay' | 'hardware';
 
 /*
  * Optional values (marked `?`) may arrive as JSON null instead of being left out: both mean
@@ -108,6 +111,12 @@ export interface ConsoleStateDto {
    * the actual levels, masters, outputs and memories are placeholders, not console state.
    */
   actualStateReported?: boolean;
+  /** False until the device reported the masters; until then they are placeholders, not console state. */
+  mastersReported?: boolean;
+  /** The same for the channel levels, the DMX outputs and the memories (a read-only console lists them only when they change). */
+  channelsReported?: boolean;
+  outputsReported?: boolean;
+  memoriesReported?: boolean;
   showFileName?: string | null;
   firmwareVersion?: string | null;
 }
