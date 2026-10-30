@@ -110,15 +110,53 @@ public sealed class UsbSmartFadeDevice : ISmartFadeDevice, IAsyncDisposable
 
         RaiseConnection(ConnectionStatus.Connecting);
 
+        // Hardware mode is confirmed per day (Program.cs refuses to start otherwise); a backend left
+        // running past midnight must not connect again without a fresh confirmation.
+        var today = DateOnly.FromDateTime(_clock.GetLocalNow().DateTime);
+        if (!ServiceCollectionExtensions.IsConfirmedForToday(_options.ConfirmDate, today))
+        {
+            _logger.LogWarning("Connect refused: hardware mode is confirmed for {ConfirmDate}, today is {Today}", _options.ConfirmDate ?? "no date", today);
+            Fail(generation, $"Hardware mode is confirmed for {_options.ConfirmDate ?? "no date"} and today is {today:yyyy-MM-dd}: restart the backend with --Device:Usb:ConfirmDate={today:yyyy-MM-dd}.");
+            return Task.CompletedTask;
+        }
+
         IHspPipe pipe;
         try
         {
             pipe = _pipeFactory();
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "The console was not found");
+            Fail(generation, $"Cannot open the console: {WithoutDevicePath(ex.Message)}");
+            return Task.CompletedTask;
+        }
+
+        // The log is evidence (SC-1 item 8). It exists before the console is opened, so that whatever
+        // the open itself puts on the bus (an open question, H68) happens inside a logged session.
+        ITransferSink log;
+        try
+        {
+            log = _logFactory(pipe.Description) ?? throw new InvalidOperationException("no transfer sink was provided");
+            log.Note($"session start on {pipe.Description}");
+        }
+        catch (Exception ex)
+        {
+            pipe.Dispose();
+            _logger.LogError(ex, "The transfer log could not be created; the console was not opened");
+            Fail(generation, $"transfer log unavailable: {ex.Message}");
+            return Task.CompletedTask;
+        }
+
+        try
+        {
             pipe.Open();
         }
         catch (Exception ex)
         {
             _logger.LogError(ex, "The console could not be opened");
+            CloseLog(log, $"open failed: {ex.Message}");
+            pipe.Dispose();
             Fail(generation, $"Cannot open the console: {WithoutDevicePath(ex.Message)}");
             return Task.CompletedTask;
         }
@@ -128,6 +166,7 @@ public sealed class UsbSmartFadeDevice : ISmartFadeDevice, IAsyncDisposable
         {
             if (_generation != generation)
             {
+                log.Dispose();
                 pipe.Dispose();
                 stop.Dispose();
                 return Task.CompletedTask;
@@ -145,12 +184,13 @@ public sealed class UsbSmartFadeDevice : ISmartFadeDevice, IAsyncDisposable
         {
             if (_generation != generation)
             {
+                log.Dispose();
                 pipe.Dispose();
                 stop.Dispose();
                 return Task.CompletedTask;
             }
 
-            _session = Task.Run(() => RunSessionAsync(pipe, generation, stop.Token), CancellationToken.None);
+            _session = Task.Run(() => RunSessionAsync(pipe, log, generation, stop.Token), CancellationToken.None);
         }
 
         return Task.CompletedTask;
@@ -286,26 +326,14 @@ public sealed class UsbSmartFadeDevice : ISmartFadeDevice, IAsyncDisposable
     private static NotSupportedException ReadOnly() =>
         new("The USB device is read-only: no message that changes the console is cleared for sending.");
 
-    private async Task RunSessionAsync(IHspPipe pipe, int generation, CancellationToken stop)
+    private async Task RunSessionAsync(IHspPipe pipe, ITransferSink log, int generation, CancellationToken stop)
     {
         var session = new HspReadSession();
         LastSession = session;
         LastStopWasForced = false;
-        ITransferSink? log = null;
         string? failure = null;
         try
         {
-            try
-            {
-                log = _logFactory(pipe.Description) ?? throw new InvalidOperationException("no transfer sink was provided");
-                log.Note($"session start on {pipe.Description}");
-            }
-            catch (Exception ex)
-            {
-                // The log is evidence (SC-1 item 8): without it the session does not run.
-                throw new HspPipeException($"transfer log unavailable: {ex.Message}", ex);
-            }
-
             var loop = new HspReadLoop(pipe, session, _options, log, _clock, _delay, _lastPollStamp);
             loop.EventDecoded += OnEvent;
             try
@@ -382,10 +410,23 @@ public sealed class UsbSmartFadeDevice : ISmartFadeDevice, IAsyncDisposable
         RaiseConnection(ConnectionStatus.Disconnected);
     }
 
+    private void CloseLog(ITransferSink log, string note)
+    {
+        try
+        {
+            log.Note(note);
+            log.Dispose();
+        }
+        catch (Exception ex)
+        {
+            _logger.LogDebug(ex, "Closing the transfer log failed");
+        }
+    }
+
     /// <summary>Messages shown in the UI name no device path (the path is in the log, F42 / E1 keep the identification).</summary>
     private static string WithoutDevicePath(string message)
     {
-        var start = message.IndexOf(@"\?", StringComparison.Ordinal);
+        var start = message.IndexOf(@"\\?\", StringComparison.Ordinal);
         if (start < 0)
         {
             return message;

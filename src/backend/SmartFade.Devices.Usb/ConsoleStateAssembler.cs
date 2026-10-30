@@ -9,8 +9,9 @@ namespace SmartFade.Devices.Usb;
 /// Turns the objects the console delivers into the application's actual state, for display.
 /// No transmitted byte depends on anything here (the session sends from F51–F57 alone); the
 /// readings below are inbound decoding at the status their facts carry, and nothing is reported
-/// before the console delivered it: masters, file name and firmware stay unreported until the
-/// matching object arrives, and the Blackout and independent states are never claimed (no
+/// before the console delivered it: the masters stay unreported until FaderInfo (MASTER, BUMPS)
+/// and LedStatus (SOLO) have both arrived, file name and firmware until their object arrives,
+/// and the Blackout and independent states are never claimed (no
 /// observed object carries them). What a read-only session can know: the live level objects
 /// (ChannelLevels, OutputLevels, FaderInfo, LedStatus), the file name and firmware version, and
 /// the memories the console lists on its own (the full download needs SmartSoft's System writes,
@@ -39,6 +40,7 @@ public sealed class ConsoleStateAssembler
     private readonly MemoryState[] _memories;
     private readonly byte[][] _memoryContents;
     private Masters? _masters;
+    private FaderInfoObject? _faderInfo;
     private bool? _soloFromLeds;
     private string? _showFileName;
     private string? _firmwareVersion;
@@ -153,10 +155,10 @@ public sealed class ConsoleStateAssembler
         return new DeviceStateChange(Outputs: (byte[])_outputs.Clone());
     }
 
-    private DeviceStateChange ApplyFaderInfo(FaderInfoObject faders)
+    private DeviceStateChange? ApplyFaderInfo(FaderInfoObject faders)
     {
-        _masters = new Masters(faders.Master, faders.Bumps, Blackout: false, Solo: _soloFromLeds ?? false, Independent1: false, Independent2: false);
-        return new DeviceStateChange(Masters: _masters);
+        _faderInfo = faders;
+        return ReportMasters();
     }
 
     private DeviceStateChange? ApplyLeds(LedStatusObject leds)
@@ -166,19 +168,30 @@ public sealed class ConsoleStateAssembler
             return null;
         }
 
-        var solo = leds.Block(52) is { R1: 0xFF, G1: 0xFF, B1: 0xFF, R2: 0xFF, G2: 0xFF, B2: 0xFF };
-        _soloFromLeds = solo;
-        if (_masters is not { } masters)
-        {
-            return null;   // nothing is claimed about the masters before FaderInfo has reported MASTER and BUMPS
-        }
+        _soloFromLeds = leds.Block(52) is { R1: 0xFF, G1: 0xFF, B1: 0xFF, R2: 0xFF, G2: 0xFF, B2: 0xFF };
+        return ReportMasters();
+    }
 
-        if (masters.Solo == solo)
+    /// <summary>
+    /// The masters are one reading from two objects: MASTER and BUMPS from FaderInfo, SOLO from
+    /// LedStatus. Nothing is claimed before both have arrived (E2 delivered FaderInfo first, JSONL
+    /// seq 16, then LedStatus, seq 20; every E3b session LedStatus first, F94), and an unchanged
+    /// reading is no change.
+    /// </summary>
+    private DeviceStateChange? ReportMasters()
+    {
+        if (_faderInfo is not { } faders || _soloFromLeds is not { } solo)
         {
             return null;
         }
 
-        _masters = masters with { Solo = solo };
+        var masters = new Masters(faders.Master, faders.Bumps, Blackout: false, Solo: solo, Independent1: false, Independent2: false);
+        if (masters == _masters)
+        {
+            return null;
+        }
+
+        _masters = masters;
         return new DeviceStateChange(Masters: _masters);
     }
 

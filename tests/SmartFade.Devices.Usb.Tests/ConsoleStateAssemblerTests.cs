@@ -7,7 +7,8 @@ namespace SmartFade.Devices.Usb.Tests;
 /// <summary>
 /// The assembler fed with objects taken from the committed E3b capture, in the order the console
 /// delivered them: LedStatus comes first in every E3b session (JSONL seq 14; F94 / H65) and
-/// FaderInfo only in session 3 (seq 7959), so nothing about the masters may be claimed in between.
+/// FaderInfo only in session 3 (seq 7959), so nothing about the masters may be claimed in between;
+/// E2 delivered them the other way round (FaderInfo seq 16, LedStatus seq 20), with the same rule.
 /// </summary>
 public class ConsoleStateAssemblerTests
 {
@@ -68,6 +69,23 @@ public class ConsoleStateAssemblerTests
         Assert.Null(assembler.Apply(soloOn));
         var off = assembler.Apply(leds);
         Assert.False(off?.Masters?.Solo);
+    }
+
+    [Fact]
+    public void Claims_nothing_about_the_masters_until_LedStatus_has_arrived_either()
+    {
+        // E2 delivered the two objects the other way round: FaderInfo (JSONL seq 16) before LedStatus (seq 20)
+        var objects = FirstObjectsOf("2026-10-28-e2-smartsoft-connect.jsonl");
+        var assembler = new ConsoleStateAssembler(ConsoleCapabilities.SmartFade1248);
+
+        Assert.Null(assembler.Apply(objects[(int)HspObjectId.FaderInfo]));
+        Assert.Null(assembler.Masters);   // MASTER and BUMPS are known, SOLO is not: no reading yet
+
+        var masters = assembler.Apply(objects[(int)HspObjectId.LedStatus])?.Masters;
+
+        Assert.NotNull(masters);
+        Assert.Equal(0xAA, masters.Master);   // F90: the MASTER stood at 0xAA in E2
+        Assert.Equal(masters, assembler.Masters);
     }
 
     [Fact]

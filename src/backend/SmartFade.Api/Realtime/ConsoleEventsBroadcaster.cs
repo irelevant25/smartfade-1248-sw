@@ -85,7 +85,17 @@ public sealed class ConsoleEventsBroadcaster : BackgroundService
         }
     }
 
-    private void OnConnectionChanged(ConnectionState state) => Send("connectionStateChanged", DtoMapper.ToDto(state));
+    private void OnConnectionChanged(ConnectionState state)
+    {
+        // Outputs held for the next tick belong to the connection that delivered them: they must not
+        // reach the UI after the state reset that a connection change carries.
+        lock (_gate)
+        {
+            _latestOutputs = null;
+        }
+
+        Send("connectionStateChanged", DtoMapper.ToDto(state));
+    }
 
     private void OnChannelsChanged(IReadOnlyList<ChannelLevel> channels) =>
         Send("channelStateChanged", channels.Select(DtoMapper.ToDto).ToArray());

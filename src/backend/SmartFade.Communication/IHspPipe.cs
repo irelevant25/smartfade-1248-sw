@@ -9,7 +9,7 @@ namespace SmartFade.Communication;
 /// </summary>
 public interface IHspPipe : IDisposable
 {
-    /// <summary>Where the pipe leads, for logs and the UI (device path, or the capture file).</summary>
+    /// <summary>Where the pipe leads, for the logs only (device path, or the capture file); the UI gets the device's own description.</summary>
     string Description { get; }
 
     bool IsOpen { get; }

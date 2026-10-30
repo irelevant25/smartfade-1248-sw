@@ -63,7 +63,10 @@ def load(path):
                 header = rec
             elif rec["type"] == "frame":
                 rec["bytes"] = bytes.fromhex(rec["data"])
-                rec["dframe"] = rec["frames"][0] if rec["dir"] == "out" else rec["frames"][1]
+                # pcap frame numbers [submit, complete] exist for USBPcap-derived files only; the backend's
+                # own transfer log (SmartFade.Devices.Usb.TransferLog) has no pcap behind it
+                pcap = rec.get("frames")
+                rec["dframe"] = None if pcap is None else (pcap[0] if rec["dir"] == "out" else pcap[1])
                 frames.append(rec)
     return header, frames
 
@@ -185,7 +188,8 @@ def cmd_log(frames, out):
             p = decode_payload("in" if role == "in-payload" else "out", b)
             if p:
                 desc = f"pseq={p['seq']:3d} b1={p['b1']} len16={p['len']} id={name(p['id'])}({p['id']}) body[{len(p['body'])}]"
-        out.write(f"seq{f['seq']:5d} f{f['dframe']:6d} t={f['t']:10.6f} {f['dir']:3s} {role:10s} {len(b):4d} {desc}\n")
+        pcap = "f" + format(f["dframe"], "6d") if f["dframe"] is not None else "f     -"
+        out.write(f"seq{f['seq']:5d} {pcap} t={f['t']:10.6f} {f['dir']:3s} {role:10s} {len(b):4d} {desc}\n")
         if role in ("in-payload", "out-data"):
             out.write(f"      {hexs(b)}\n")
 

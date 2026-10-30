@@ -28,8 +28,11 @@ public class UsbSmartFadeDeviceTests
         VirtualClock? clock = null)
     {
         clock ??= new VirtualClock();
+        options ??= new UsbDeviceOptions();
+        // hardware mode is confirmed per day: the virtual clock's day, unless a test says otherwise
+        options.ConfirmDate ??= DateOnly.FromDateTime(clock.GetLocalNow().DateTime).ToString("yyyy-MM-dd");
         return new UsbSmartFadeDevice(
-            Options.Create(options ?? new UsbDeviceOptions()),
+            Options.Create(options),
             pipeFactory,
             logFactory ?? (_ => new DiscardingSink()),
             NullLogger<UsbSmartFadeDevice>.Instance,
@@ -352,6 +355,7 @@ public class UsbSmartFadeDeviceTests
 
         Assert.Contains("transfer log unavailable", end.Error, StringComparison.Ordinal);
         Assert.Empty(pipe.Writes);
+        Assert.False(pipe.IsOpen);   // the log comes first; without it the console is never opened
     }
 
     private static byte[] Header(ushort type, ushort length, ushort w2 = 0, ushort w3 = 0, ushort w4 = 0, ushort w5 = 0)
@@ -409,6 +413,40 @@ public class UsbSmartFadeDeviceTests
 
         Assert.Contains("transfer log unavailable", end.Error, StringComparison.Ordinal);
         Assert.Empty(pipe.Writes);
+        Assert.False(pipe.IsOpen);   // the log comes first; without it the console is never opened
+    }
+
+    [Fact]
+    public async Task Connect_is_refused_when_hardware_mode_was_confirmed_for_another_day()
+    {
+        var pipe = new ScriptedPipe(replies: new[] { Idle() });
+        var device = Create(() => pipe, new UsbDeviceOptions { ConfirmDate = "2026-10-29" });   // the virtual clock's day is 2026-10-30
+        var ended = WaitForStatus(device, ConnectionStatus.Error);
+
+        await device.ConnectAsync(CancellationToken.None);
+        var end = await ended;
+
+        Assert.Contains("confirmed for 2026-10-29", end.Error, StringComparison.Ordinal);
+        Assert.False(pipe.IsOpen);
+        Assert.Empty(pipe.Writes);
+    }
+
+    [Fact]
+    public async Task The_transfer_log_exists_before_the_console_is_opened()
+    {
+        var pipe = new ScriptedPipe(replies: new[] { Idle(), new byte[] { 0x05, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 } });
+        var created = new List<string>();
+        var device = Create(() => pipe, logFactory: _ =>
+        {
+            created.Add(pipe.IsOpen ? "after the open" : "before the open");
+            return new DiscardingSink();
+        });
+        var ended = WaitForStatus(device, ConnectionStatus.Error);
+
+        await device.ConnectAsync(CancellationToken.None);
+        await ended;
+
+        Assert.Equal(new[] { "before the open" }, created);
     }
 
     /// <summary>A sink that keeps nothing: the tests above check the bytes through the pipes, not the log.</summary>

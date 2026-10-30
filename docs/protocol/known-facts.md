@@ -123,7 +123,8 @@ The Status column now says which rows are VERIFIED, with the E3 frames in the So
 rows E3 did not reproduce stay OBSERVED. VERIFIED here means reproduced behaviour, not clearance
 for sending.)* Labels w0..w5 / seq / id / body are the S11 and
 H15–H20 vocabulary, not names from ETC. Nothing here may be sent to a console (no
-`/hardware-safety-check` has passed).
+`/hardware-safety-check` has passed). *(SC-1 passed on 2026-10-30 for the poll and the fetch of a listed
+record, read-only session, [safety-checks.md](safety-checks.md); nothing else in this section is cleared.)*
 
 | # | Fact | Status | Source |
 |---|---|---|---|

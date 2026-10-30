@@ -57,25 +57,28 @@ public class HspReadSessionTests
         Assert.Equal(polls, events.OfType<ReplyHeaderReceived>().Count());
     }
 
+    private static readonly Lazy<CaptureFile> E2 = new(() => CaptureFile.Load(TestPaths.Capture("2026-10-28-e2-smartsoft-connect.jsonl")));
+
+    /// <summary>The bulk OUT transfer on endpoint 0x04 (interface 1, F51) of the E2 capture with that JSONL seq: bytes SmartSoft sent.</summary>
+    private static byte[] E2Out(int seq) =>
+        Assert.Single(E2.Value.Frames, f => f.Seq == seq && f.Direction == CaptureDirection.Out && f.IsBulk && f.Endpoint == "0x04" && !f.Synthetic).Data;
+
     [Fact]
     public void The_first_poll_is_all_zero_and_a_fetch_carries_the_listed_record()
     {
         // Golden bytes loaded from docs/protocol/captures/2026-10-28-e2-smartsoft-connect.jsonl (JSONL seq numbers):
         // seq 6 the all-zero first poll (pcap f11), seq 9 the first fetch, PlaybackInfo id 17 with a = b = c = 0 (f17),
         // seq 10 the poll after it, repeating the fetch's words (f19), seq 14 the poll after the fetch of FaderInfo (id 14).
-        var capture = CaptureFile.Load(TestPaths.Capture("2026-10-28-e2-smartsoft-connect.jsonl"));
-        byte[] Out(int seq) => Assert.Single(capture.Frames, f => f.Seq == seq && f.Direction == CaptureDirection.Out).Data;
-
-        Assert.Equal(Out(6), HspOutbound.Poll(0, 0, 0, 0));
-        Assert.Equal(Out(9), HspOutbound.Fetch(new DirtyObjectRecord(17, 0, 0, 0)));
-        Assert.Equal(Out(10), HspOutbound.Poll(17, 0, 0, 0));
-        Assert.Equal(Out(14), HspOutbound.Poll(14, 0, 0, 0));
+        Assert.Equal(E2Out(6), HspOutbound.Poll(0, 0, 0, 0));
+        Assert.Equal(E2Out(9), HspOutbound.Fetch(new DirtyObjectRecord(17, 0, 0, 0)));
+        Assert.Equal(E2Out(10), HspOutbound.Poll(17, 0, 0, 0));
+        Assert.Equal(E2Out(14), HspOutbound.Poll(14, 0, 0, 0));
 
         // the same bytes spelled out, so a reader sees them without the capture (F52)
-        Assert.Equal(new byte[12], Out(6));
-        Assert.Equal(Convert.FromHexString("020000001100000000000000"), Out(9));
-        Assert.Equal(Convert.FromHexString("000000001100000000000000"), Out(10));
-        Assert.Equal(Convert.FromHexString("000000000E00000000000000"), Out(14));
+        Assert.Equal(new byte[12], E2Out(6));
+        Assert.Equal(Convert.FromHexString("020000001100000000000000"), E2Out(9));
+        Assert.Equal(Convert.FromHexString("000000001100000000000000"), E2Out(10));
+        Assert.Equal(Convert.FromHexString("000000000E00000000000000"), E2Out(14));
     }
 
     [Fact]
@@ -92,8 +95,8 @@ public class HspReadSessionTests
         Assert.Equal(1, session.PendingFetches);
         var second = session.Next();
         Assert.Equal(HspMessageType.Poll, second.Kind);
-        // the poll repeats the fetch's words: E2 JSONL seq 14, the poll after the fetch of FaderInfo (F52)
-        Assert.Equal(Convert.FromHexString("000000000E00000000000000"), second.Bytes);
+        // the poll repeats the fetch's words: E2 JSONL seq 14, the poll after the fetch of FaderInfo (F52), 00 00 00 00 0E 00 00 00 00 00 00 00
+        Assert.Equal(E2Out(14), second.Bytes);
     }
 
     [Fact]
