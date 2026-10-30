@@ -10,7 +10,9 @@
 #   - ends with the list of files to copy into docs/protocol/captures/.
 # Never in E9: the wheel, REC SEQ, Patch / Independents / Settings edits, page clicks, Open showfile,
 # New show, Save As, any Erase. Steps 13-16 use the console's own REC MEM, EDIT MEM and COPY through
-# the Simulator keys, only on the empty memories 9 and 10 of page 1, which are deleted again at the end.
+# the Simulator keys, only on the empty memories 9 and 10 of page 1, which are deleted again at the end
+# (REC MEM of an empty look; the first run on 2026-10-30 used EDIT MEM + CLEAR, which only cancels, so the
+# owner deleted them by hand afterwards).
 # -LogFile is mandatory and must be a NEW file (action logs are hashed evidence).
 param(
     [Parameter(Mandatory = $true)][string]$LogFile,
@@ -236,10 +238,10 @@ Ask "Are the keys of memories 9 AND 10 now lit dimmed red in MEMS mode? (y / n)"
 # --- 16. delete memories 9 and 10 again (all-zero content deletes, F107) ---
 Step "On the CONSOLE: channel fader 5 to ZERO (all channel faders at zero now)." "console fader 5 to zero"
 Confirm-Done "When it is at ZERO." "console fader 5 at zero"
-Step "SIMULATOR EDIT MEM, then the bump under memory 9, then (all faders at zero) SIMULATOR CLEAR: memory 9 is deleted." "delete memory 9"
+Step "SIMULATOR REC MEM, then the bump under memory 9: with every channel fader at zero an empty look is recorded, which deletes memory 9 (owner, 2026-10-30; CLEAR would only cancel)." "delete memory 9"
 Confirm-Done "When the LCD is back to normal." "memory 9 deleted"
 Wait-Idle 15 "after delete 9"
-Step "SIMULATOR EDIT MEM, then the bump under memory 10, then SIMULATOR CLEAR: memory 10 is deleted." "delete memory 10"
+Step "SIMULATOR REC MEM, then the bump under memory 10: the same empty look deletes memory 10." "delete memory 10"
 Confirm-Done "When the LCD is back to normal." "memory 10 deleted"
 Wait-Idle 15 "after delete 10"
 Ask "Are memories 9 and 10 empty again (keys unlit in MEMS mode)? (y / n)" "memories 9 and 10 empty again"

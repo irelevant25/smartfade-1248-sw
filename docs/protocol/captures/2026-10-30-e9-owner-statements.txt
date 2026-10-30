@@ -25,3 +25,16 @@ Answers typed into the guide are in the action log. Statements given outside it:
   session is recorded below when known. The statement about REC MEM storing "nothing" when no channel
   is up is an owner statement about the console's behaviour (F107's all-zero deletion rule), not a
   capture observation unless the capture shows it.
+
+After the session (2026-10-30, late evening, quoted):
+- "I already deleted MEMORIES 9 and 10."
+- "Also, I am not sure why but the MEMORY 1 with channel 7 was not on 100%. I changed that already. At
+  least I think it was like that before." (Assistant: memory 1 "GROUP 1" had channels 7 and 8 at full
+  in E2, E3b and E8, F71; the E9 guide's Mem Edit step set channel 7 to 50 % and asked to restore the
+  old value, so the restore may have written something other than full. The capture shows what Mem
+  Edit wrote; the owner set it back to 100 % by hand afterwards.)
+- "I transfer the SHOW07.ASC from the card to smartfade-sd-card-backup." (SHOW07.ASC was saved on the
+  SD card before E9 started; its comparison with SHOW06.ASC is in the E9 record.)
+- "Right now, I see two drivers with name ETC SmartFade (Interface 1). I guess something went wrong
+  and the driver is installed twice." (Assistant: Zadig creates a driver package named after the
+  device at every bind; the two binds of E8 and E8b each left one; see the E9 record's host notes.)
