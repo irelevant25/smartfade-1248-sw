@@ -48,6 +48,12 @@
   font: 700 0.8125rem var(--sf-font-mono);
   cursor: pointer;
 
+  // like the faders and keys: nothing to do while the backend is not connected
+  &:disabled {
+    cursor: default;
+    opacity: 0.45;
+  }
+
   &:hover {
     border-color: var(--sf-accent);
   }
@@ -58,10 +64,13 @@
   color: #ff8c8c;
 }
 
+// The page keys are red like the memory keys under them (the owner's request, 2026-10-30), not the
+// UI's blue accent: the current page glows, a page that holds a memory shows a dimmed red number.
 .memories__page--current {
-  border-color: var(--sf-accent);
-  background: rgba(63, 208, 224, 0.18);
-  color: var(--sf-accent);
+  border-color: var(--sf-danger);
+  background: rgba(255, 77, 77, 0.2);
+  color: #ffb3b3;
+  box-shadow: 0 0 8px rgba(255, 77, 77, 0.35);
 }
 
 .memories__hint {

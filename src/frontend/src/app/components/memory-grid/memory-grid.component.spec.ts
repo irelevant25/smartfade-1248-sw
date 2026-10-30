@@ -189,6 +189,7 @@ describe('MemoryGridComponent', () => {
 
     expect(sliders().every((slider) => slider.disabled)).toBe(true);
     expect(bumpButtons().every((button) => button.disabled)).toBe(true);
+    expect(Array.from(element().querySelectorAll<HTMLButtonElement>('.memories__page')).every((key) => key.disabled)).toBe(true);
   });
 
   describe('with REC MEM armed', () => {
