@@ -31,6 +31,14 @@ cleared the poll and the fetch of a listed record, byte for byte as described be
 our own software; the three "no code may send anything" sentences above are superseded for those two messages
 only. The stale-word rule was re-counted for it (38 517 of 38 517 polls, `tools/protocol-analyzer/poll_rules.py`).
 
+**Update 2026-10-30, E8 (**[record](captures/2026-10-30-e8-first-read-only-session.md)**).** Our own read-only session
+(a second host program on the same PC; polls and listed fetches built by our encoder; 861 s) reproduced the framing from
+the host side: 20 763 polls and 2 925 fetches with w0 in {0, 2} only and the stale words of F52 (20 762 of 20 762 after the
+first poll), every poll answered by one 12-byte header (type-3 echo 2 925 of 2 925), 2 470 lists of payload 5 + 2 + 5n, and
+5 395 payloads with byte 1 = 0x00 and the length word = payload length − 5, 0 framing errors (F51–F55, F57, F110): the first
+evidence channel other than SmartSoft, with no status change. Our code sent no data header, so the outbound payload layout was
+not re-tested, and without USBPcap the bus view (packets, USBD status, EP0) is missing (H68, H75).
+
 ## Transport
 
 | Item | Observed | Fact |
@@ -111,7 +119,10 @@ poll ≥ 10.35 ms after a fetch (n = 423): the qualitative cadence is VERIFIED o
 figures are per-session OBSERVED values, and all of it describes SmartSoft's host-side timing, not a
 console requirement and not a timing for our code to transmit with; a second PC is untested. **E3b:** idle
 median 30.79 ms within sessions (n = 24 547), next poll ≥ 10.33 ms after a fetch (n = 1 000) and 14.58–15.82 ms
-after the six data writes: reproduced on the same PC (F62).
+after the six data writes: reproduced on the same PC (F62). **E8 (our own host's cadence, not SmartSoft's):** idle poll to
+next poll 31.08–52.40 ms (median 45.47), payload completion to fetch 28.01–46.58 ms (median 30.00), fetch to next poll
+15.12–31.88 ms (median 15.60): all SmartSoft's cadence or slower, and the console answered every interval normally (F62
+annotation, F110, H67); the SC-1 floors were never reached.
 
 ## Not known
 
@@ -123,7 +134,9 @@ PlaybackInfo are not in the 157-record list (H58); whether the console's sequenc
 new SmartSoft session (H31); what the console does with an unsolicited fetch (never to be tried, CL-ML's
 technique, consolelink-analysis.md S4). *(Update 2026-10-30:)* the counter question (H31) is answered: it is
 not reset by a new SmartSoft session (F93). The connect-time list had 2 records in E3b session 1 and none in
-sessions 2 and 3 (F94, H65); the rule behind it is still UNKNOWN.
+sessions 2 and 3 (F94, H65); the rule behind it is still UNKNOWN. *(Update 2026-10-30, E8:)* a fourth history gave an
+89-record connect list with repeats (F111); whether a zero-length packet follows a payload whose length is a multiple of
+64 bytes, as a pending list of 37 or 101 records would be (H75); the EP0 traffic at the host's open (H68).
 
 ## CL-ML cross-check (class 5, not 1248 evidence)
 

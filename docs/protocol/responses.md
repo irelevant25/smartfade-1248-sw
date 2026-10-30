@@ -27,6 +27,16 @@ SystemSettings and on the LCD (section "Live objects (E3b)" below; F93–F106). 
 says what it said on 2026-10-29 carries the E3b update in its Status cell. VERIFIED never clears a message
 for sending.
 
+**Update 2026-10-30 (E8,** [record](captures/2026-10-30-e8-first-read-only-session.md)**).** Our own read-only
+session (polls and listed fetches only, **no USBPcap**, so cited by the JSONL `seq` of the backend's transfer log
+and with no pcap frame numbers) received eight live objects (IDs 12, 13, 14, 15, 17, 21, 22, 23), each with the
+body length of F67, and no show object. It added readings of FaderInfo record bytes 1–3, ConsoleStatus body[2],
+the Independents record byte 0, ChannelLevels body[49] / [50], OutputLevels body[48], the LED blocks 53, 57, 60,
+63–67, 72 and 73, the LCD texts of the page view, STACK and the record functions, and PlaybackInfo records 1 and
+5 (section "Live objects (E8)" below; F110–F120). Blinking is phase A different from phase B inside one LedStatus
+payload. A row below that still says what it said earlier carries the E8 update in its Status cell. VERIFIED
+never clears a message for sending.
+
 ## Reply types
 
 | Reply | Meaning | Fact |
@@ -46,15 +56,15 @@ for sending.
 | 5 | Patch | 514 | `02 00` + 512 bytes (F68) | OBSERVED; meaning **CONFIRMED (OBSERVED) 2026-10-28** against SHOW04.ASC (H34, F70) |
 | 8 | Page | 39 | body[0] = page a; text after `03 06` | OBSERVED |
 | 9 | ChannelText | 39 | body[0] = a = 0..95 (96 objects); text after `03 06` | OBSERVED |
-| 12 | Independents | 85 | body[0] = 2 | OBSERVED; layout OBSERVED once against SHOW04.ASC (H44, F76); field meaning UNKNOWN |
-| 13 | OutputLevels | 514 | `02 00` (BE 512) + 512 level bytes; DMX 5 changed in the fader movement | OBSERVED; index mapping INFERRED (H32). **E3 2026-10-29:** DMX d = body[1 + d] (DMX 1 = body[2], DMX 5 = body[6]); length VERIFIED (F67); index mapping OBSERVED for DMX 1 and 5 (F83) **E3b 2026-10-30:** body[0..1] = `02 00` in all 73 payloads; mapping seen for DMX 5, 7, 8 and 25; the values follow the MASTER and bumps (F83 VERIFIED in part, F96, F97, F99) |
-| 14 | FaderInfo | 195 | body[0] = 48; 48 × 4-byte records + 2 trailing bytes; body[17] changed | OBSERVED; layout HYPOTHESIS (H32). **E3:** layout CONFIRMED (OBSERVED) for faders 1 and 5, body[194] = MASTER fader, body[193] = BUMPS (HYPOTHESIS, 0x00 so far) (F82, H46); length VERIFIED (F67) **E3b:** layout VERIFIED in part (F82); BUMPS = body[193] OBSERVED (F95); records belong to the physical faders, records 25–48 never change (F99); record byte 1 moved only with a memory bump (F97, H62) |
-| 15 | ChannelLevels | 51 | body[0] = 50; body[5] changed; body[49], [50] = 0 | OBSERVED (length part H26 confirmed); Independents part open. **E3:** channel c = body[c] (channels 1 and 5 seen, F83); body[49], [50] = 0 in all 48 payloads; length VERIFIED (F67) **E3b:** body[0] = 50 and body[49], [50] = 0 in all 75 payloads; channels 5, 7, 8 and 25 seen; the values are MASTER-scaled (F96, F97, F99) |
-| 17 | PlaybackInfo | 81 | body[0] = 5; 81 = 1 + 5 × 16 | OBSERVED; layout HYPOTHESIS. **E3:** never listed or fetched (F89); E2's f24 is the only sample; H50 **E3b:** seen again, 66 payloads during a GO crossfade, 81 bytes: layout CONFIRMED in capture (F101, H50); length VERIFIED (F67) |
+| 12 | Independents | 85 | body[0] = 2 | OBSERVED; layout OBSERVED once against SHOW04.ASC (H44, F76); field meaning UNKNOWN **E8 2026-10-30:** record byte 0 (body[1], body[43]) = the independent's on state, 0 ↔ 1 with the IND keys; bytes 1–3 `FF 00 01` constant (F115; H44 supported, still HYPOTHESIS) |
+| 13 | OutputLevels | 514 | `02 00` (BE 512) + 512 level bytes; DMX 5 changed in the fader movement | OBSERVED; index mapping INFERRED (H32). **E3 2026-10-29:** DMX d = body[1 + d] (DMX 1 = body[2], DMX 5 = body[6]); length VERIFIED (F67); index mapping OBSERVED for DMX 1 and 5 (F83) **E3b 2026-10-30:** body[0..1] = `02 00` in all 73 payloads; mapping seen for DMX 5, 7, 8 and 25; the values follow the MASTER and bumps (F83 VERIFIED in part, F96, F97, F99) **E8:** body[48] = DMX 47 followed IND 2 (the show's patch: channel 50 → DMX 47, F115); the memory faders drive the stored content scaled by the fader (F112) |
+| 14 | FaderInfo | 195 | body[0] = 48; 48 × 4-byte records + 2 trailing bytes; body[17] changed | OBSERVED; layout HYPOTHESIS (H32). **E3:** layout CONFIRMED (OBSERVED) for faders 1 and 5, body[194] = MASTER fader, body[193] = BUMPS (HYPOTHESIS, 0x00 so far) (F82, H46); length VERIFIED (F67) **E3b:** layout VERIFIED in part (F82); BUMPS = body[193] OBSERVED (F95); records belong to the physical faders, records 25–48 never change (F99); record byte 1 moved only with a memory bump (F97, H62) **E8:** records 1–24 are also the memory faders (bytes 0 and 1 equal in memory mode, byte 1 = 0 in channel mode: H62 REJECTED, successor H71); byte 3 of records 1–24 = page − 1 (H69); record 21 byte 2 (body[83]) = 0x00 on page 12 against 0x01 on page 1 (H70); BUMPS = body[193] VERIFIED (F95); records 25–48 never changed (F99, F112, F113) |
+| 15 | ChannelLevels | 51 | body[0] = 50; body[5] changed; body[49], [50] = 0 | OBSERVED (length part H26 confirmed); Independents part open. **E3:** channel c = body[c] (channels 1 and 5 seen, F83); body[49], [50] = 0 in all 48 payloads; length VERIFIED (F67) **E3b:** body[0] = 50 and body[49], [50] = 0 in all 75 payloads; channels 5, 7, 8 and 25 seen; the values are MASTER-scaled (F96, F97, F99) **E8:** body[49], [50] = the independents' levels (0x00 ↔ 0xFF with the IND keys, F115; H26 Independents part CONFIRMED in capture); memory content scaled by the memory fader (F112) |
+| 17 | PlaybackInfo | 81 | body[0] = 5; 81 = 1 + 5 × 16 | OBSERVED; layout HYPOTHESIS. **E3:** never listed or fetched (F89); E2's f24 is the only sample; H50 **E3b:** seen again, 66 payloads during a GO crossfade, 81 bytes: layout CONFIRMED in capture (F101, H50); length VERIFIED (F67) **E8:** 2 340 payloads: record 1 = a running 7-step sequence (step index in bytes 0–1, the Live / Next pair, three u16 times; H63 CONFIRMED in capture for record 1), record 5 bytes 0–1 changed at the STACK press, bytes 4–9 `00 00 01 00 01 00` in all five records (F117, F118, H74); F101 VERIFIED in part |
 | 19 | InputLevels | 515 | `00 02 00` + 512 zero bytes (E3 f28): `[00][u16 BE 512][512 levels]` by analogy with OutputLevels | OBSERVED (E3, once; bytes); HYPOTHESIS (meaning, H52); F81 **E3b:** not listed or fetched (F105) |
-| 21 | DisplayContent | 41 | body[0] = 40, then 40 text-range bytes | OBSERVED; LCD reading HYPOTHESIS. **E3:** `[0x28][2 × 20]`, fader N's cell at body[2 + N], glyphs 0x20 and 0x80–0x86 (F86); bar-graph reading INFERRED (H49); length VERIFIED (F67) **E3b:** 49 payloads; row labels '25' / '37' in bank 25-48 and times 'U 5.1' / 'D 5.1' (F86 VERIFIED in part, F98, F102) |
-| 22 | LedStatus | 451 | body[0] = 75; 451 = 1 + 75 × 6 | OBSERVED; layout HYPOTHESIS (H32). **E3:** block map decoded for blocks 1–48 and the indicator blocks 53 / 55 / 58 (F84, F85; H48, H55, H56); length VERIFIED (F67) **E3b:** blocks 50 (blue during the GO crossfade), 52 (SOLO), 55 / 56 (bank) and 58 (memory mode) added (F98, F100); F84 and F85 VERIFIED in part |
-| 23 | ConsoleStatus | 7 | `00 00 00 00 00 01 00` in all 3 fetches | OBSERVED; meaning UNKNOWN. **E3:** body[0] changed 0x00 → 0x01 at the switch to memory mode (F87); reading "fader mode" HYPOTHESIS (H53) **E3b:** body[0] = mode (five transitions in E3 + E3b), body[4] = fader bank (F98); F87 VERIFIED in part |
+| 21 | DisplayContent | 41 | body[0] = 40, then 40 text-range bytes | OBSERVED; LCD reading HYPOTHESIS. **E3:** `[0x28][2 × 20]`, fader N's cell at body[2 + N], glyphs 0x20 and 0x80–0x86 (F86); bar-graph reading INFERRED (H49); length VERIFIED (F67) **E3b:** 49 payloads; row labels '25' / '37' in bank 25-48 and times 'U 5.1' / 'D 5.1' (F86 VERIFIED in part, F98, F102) **E8:** 139 payloads; new texts for the page view, STACK and the record functions; 'U 5.0' / 'D 5.0' again (F86, F102, F113, F116, F117) |
+| 22 | LedStatus | 451 | body[0] = 75; 451 = 1 + 75 × 6 | OBSERVED; layout HYPOTHESIS (H32). **E3:** block map decoded for blocks 1–48 and the indicator blocks 53 / 55 / 58 (F84, F85; H48, H55, H56); length VERIFIED (F67) **E3b:** blocks 50 (blue during the GO crossfade), 52 (SOLO), 55 / 56 (bank) and 58 (memory mode) added (F98, F100); F84 and F85 VERIFIED in part **E8:** block 53 steady blue = BLACKOUT active (INFERRED, F114); blocks 72 / 73 = IND 1 / IND 2 (F115); blocks 57, 60, 63–67 = the key LEDs of CLEAR, STACK, COPY, REC SEQ, MAGIC, REC MEM, EDIT MEM (INFERRED, H72; F116, F117); the held-MEMS page view on blocks 1–12 and the page-12 map (F113); block 52 `FF`×6 / `0A`×6 with SOLO a second time (F100); blinking = phase A ≠ phase B inside one payload |
+| 23 | ConsoleStatus | 7 | `00 00 00 00 00 01 00` in all 3 fetches | OBSERVED; meaning UNKNOWN. **E3:** body[0] changed 0x00 → 0x01 at the switch to memory mode (F87); reading "fader mode" HYPOTHESIS (H53) **E3b:** body[0] = mode (five transitions in E3 + E3b), body[4] = fader bank (F98); F87 VERIFIED in part **E8:** body[2] = memory page − 1 (0x0B on page 12; once, two transitions, F113); body[0] three more transitions (F87); body[4] not exercised |
 | 36 | FileName | 61 | length byte 30, then UTF-16LE "SHOW04.ASC" (F60) | OBSERVED **E3b:** the value is "SHOW05.ASC", the owner's last SD save (F103) |
 | 37 | ConsoleVersion | 13 | length byte 12, then ASCII "3.0.2.9.0.43" (F59) | OBSERVED (value VERIFIED, F48) |
 | 38 | SystemSizes | 8 | `30 02 00 18 00 0C 04 01` (F61) | OBSERVED; H27 confirmed, H33 open |
@@ -164,7 +174,42 @@ What E3b shows about the live objects:
   when they change; after a power-on the pending list varies (F94, H58, H65).
 - **Not yet seen:** BUMPS between 0x00 and 0xFF (H54), several stable MASTER positions (H60), a GO with the
   STACK button lit (H50, H63), a page change (H51), InputLevels with a DMX source (H52; whether anything is on
-  DMX IN is UNKNOWN, F105).
+  DMX IN is UNKNOWN, F105). *(Update 2026-10-30: a page change was seen on the read side in E8, F113; the
+  page-select write was not.)*
+
+## Live objects (E8, 2026-10-30)
+
+Source: [E8 record](captures/2026-10-30-e8-first-read-only-session.md) (JSONL `seq` of the backend's transfer
+log; **no pcap frame numbers and no USBPcap capture**) and the owner's untimed statements
+([captures/2026-10-30-e8-owner-statements.txt](captures/2026-10-30-e8-owner-statements.txt)). **OBSERVED (one
+session) unless stated; the key identities are INFERRED; nothing here may be sent to a console, and E8 sent only
+SC-1's poll and listed fetch.** Notation as in the E3 and E3b sections: "block k" = LedStatus
+body[1 + 6(k − 1) .. 6k], phase A the first three bytes and phase B the last three (steady: A = B; blinking:
+A ≠ B); "record N" = FaderInfo body[1 + 4(N − 1) .. 4N] with its bytes numbered 0–3. The rig is one LED bar at
+DMX 5–16, nothing on DMX IN.
+
+| Object | Layout / change (body) | Seen with | seq (no pcap frames) | Hyp. | Fact | Status |
+|---|---|---|---|---|---|---|
+| FaderInfo (14) | `[48][48 × 4][BUMPS][MASTER]` unchanged. **Memory mode:** record k byte 0 = byte 1 = the level of memory fader k (equal in 26 of 26 non-zero samples; byte 1 = 0 in all 15 non-zero channel-mode samples). **Byte 3 of records 1–24 = page − 1** (`00 00 00 0B` on page 12). **Record 21 byte 2 (body[83])** = 0x01 on page 1, 0x00 on page 12. BUMPS body[193] 0x00 → 0xFF → 0x00 (10 changes); MASTER body[194] moved twice. Records 25–48 never changed (record 25 stays `00 00 01 00`). Record 1 dropped `FF FF` → `00 00` in one step at 372.420 s | memory faders 1 and 2; a page change; BUMPS; MASTER; CLEAR (INFERRED) | 4168 … 4613, 18007, 18106, 7158 … 7278, 5971 … 6197, 20846 … 20918, 24706 | H46, H62 (REJECTED), H69, H70, H71, H73 | F95, F99, F112, F113, F120 | OBSERVED; BUMPS body[193] VERIFIED (F95); records 1–24 = the physical faders VERIFIED in part (F99); bytes 1–3 of a record HYPOTHESIS |
+| ConsoleStatus (23) | 7 bytes. **body[2] = memory page − 1** (`01 00 0B 00 00 01 00` on page 12); body[0] three more transitions; body[4] stayed 0; body[1], [3], [5], [6] constant | a page change (page 12 and back); mode switches | 18003, 18102; 4095, 18142, 18314 | H51, H53 | F87, F98, F113 | OBSERVED (once, two transitions); meaning HYPOTHESIS, strongly supported |
+| Independents (12) | `[2]` + 2 × `[a][b][c][d][text block]`: **a (body[1] for record 1, body[43] for record 2) = the on state**, 0x00 ↔ 0x01; b, c, d = `FF 00 01` constant | the IND keys (12 changes) | 6300, 6421 | H44 | F115 | OBSERVED; the reading HYPOTHESIS (supported); which key is which INFERRED |
+| ChannelLevels (15), OutputLevels (13) | ChannelLevels **body[49]** (record 1) and **body[50]** (record 2) 0x00 ↔ 0xFF with the IND keys; OutputLevels **body[48] = DMX 47** with record 2 only (the show's patch: channel 50 → DMX 47, channel 49 unpatched). With a memory fader up, the memory's channels carry its stored levels scaled by the fader (`GROUP 2` at full: 48 of 48 channel bytes) | the IND keys; memory faders 1 and 2 | 6308, 6312, 6429; 4463, 4467, 4176, 4180 | H11, H26 | F83, F112, F115 | OBSERVED; H26 Independents part CONFIRMED in capture |
+| LedStatus (22) | **Block 53** `00 00 FF 00 00 FF` (steady blue) while BLACKOUT is on, over the MASTER blink. **Blocks 72 / 73** `00 0A 00 00 0A 00` ↔ `00 FF 00 00 FF 00` with IND 1 / IND 2. **Block 60** `46 46 00 46 46 00` → `FF FF 00 FF FF 00` at the STACK press and `C8 C8 00 0A 0A 00` (blinking) in REC MEM and REC SEQ. **Record functions:** block 57 `FF FF FF 0A 0A 0A` blinking in all four; block 65 blinking in REC MEM only; blocks 66, 64, 63 steady in REC MEM, REC SEQ, COPY; block 67 `FF 37 37 0A 0A 0A` blinking in EDIT MEM; the bump LEDs 1–24 per function (F116). **Page view:** blocks 1–12 = the pages (current page steady full red, pages with content blinking `C8 00 00 0A 00 00`); the page-12 map has blocks 1–7 recorded. Block k `FF 00 00 FF 00 00` while memory fader k is up. Block 52 `FF`×6 with SOLO. Blocks 25–48 never changed | BLACKOUT; the IND keys; STACK; the record keys; held MEMS; memory faders; SOLO | 5820, 6165, 7483, 20754; 6304, 6425; 24971; 26861 …; 17728, 18015, 18083; 7377, 7437 | H48, H55, H56, H61, H72 | F100, F112–F117 | OBSERVED; key identities INFERRED (H72); blinking = phase A ≠ phase B inside one payload (28 of 28 screens) |
+| DisplayContent (21) | Same layout. New texts: "Memory page:1" / "Memory page:12" with "Bump 1-12 to change"; "Live:14.0 Next: 1.0" with "Mem:01/01 Mem:01/01"; "Jump to step:> 1" / "Mem:01"; "Record Memory Pg:1" / "Select Bump or Stack"; "Edit Memory"; "Record Sequence" / "Select Sequence"; "Copy Memory/Seq" / "Select source". 'U 5.0' / 'D 5.0' in 139 of 139 frames | the page view; STACK; the record keys | 17732, 18087, 24967, 25057, 26861, 27116, 29110, 29266 | H49 | F86, F102, F113, F116, F117 | OBSERVED; layout VERIFIED in part (F86) |
+| PlaybackInfo (17) | `[5][5 × 16]`. **Record 1 (body[1..16])** = a running 7-step sequence: bytes 0–1 the 0-based step index (0 … 6 cyclic, 207 changes), bytes 2 / 3 the Live / Next pair summing to 255 (2 340 of 2 340), bytes 10–15 three u16 times `00 0A` counting to 0 in every step; the stop at seq 17739 with `03 03` and `FF 00`. **Record 5** bytes 0–1 `01 01` → `00 00` at the STACK press. Bytes 4–9 `00 00 01 00 01 00` in all five records; records 2–4 never changed | a running sequence (before our first poll, stopped at 237.519 s); STACK | 51 … 17739, 24963 | H50, H63, H74 | F101, F117, F118 | OBSERVED; layout VERIFIED in part (F101); H63 CONFIRMED in capture for record 1 |
+
+What E8 shows about the live objects:
+
+- **A read-only session receives no Memory object and no ConsoleVersion** (the console lists them only after
+  SmartSoft's System writes, F89, H58), which is why the memories panel stayed empty while the memory faders
+  moved: their levels were in FaderInfo records 1–24 all along (F112).
+- **Being listed is not being changed** (F119): 48 of 139 DisplayContent payloads, 82 of 2 340 PlaybackInfo
+  payloads and 20 of the 25 later ConsoleStatus payloads equal their predecessor.
+- **Blinking is one payload** (F85, F116): phase A differs from phase B inside a single LedStatus payload; no
+  alternating payloads were seen in 28 screens.
+- **Not exercised in E8:** BUMPS between 0x00 and 0xFF (H54), several stable MASTER positions (H60), a bump (F97),
+  a level up during a MASTER move (F96), the 25-48 bank, GO with the STACK button lit, the page-select write
+  (H51), InputLevels with a DMX source (H52), BLACKOUT's effect on the level objects.
 
 ## Label text
 

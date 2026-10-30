@@ -45,7 +45,7 @@ or copy its contents into source code. Derived extractions go to `analysis/extra
 | Source inventory + hashes | `docs/source-materials.md` |
 | Hardware facts | `docs/hardware/smartfade-1248.md` |
 | Protocol knowledge base (status vocabulary, facts, hypotheses, evidence matrix) | `docs/protocol/` |
-| Observed framing, commands, responses, session model (from E2, E3 and E3b; VERIFIED = reproduced behaviour, never clearance to send) | `docs/protocol/packet-format.md`, `commands.md`, `responses.md`, `state-model.md` |
+| Observed framing, commands, responses, session model (from E2, E3, E3b and E8; VERIFIED = reproduced behaviour, never clearance to send) | `docs/protocol/packet-format.md`, `commands.md`, `responses.md`, `state-model.md` |
 | Third-party reference compared with our 1248 evidence (ConsoleLink, SmartFade ML, evidence class 5) | `docs/protocol/consolelink-analysis.md` |
 | Capture records, evidence files, capture format | `docs/protocol/captures/`, `tools/protocol-analyzer/` |
 | SmartSoft binary analysis | `docs/protocol/smartsoft-analysis.md` |
@@ -148,20 +148,26 @@ levels and SOLO with another output up, several stable MASTER positions, a known
 change, the power-on pending list; optionally GO with the STACK button lit, and the SmartSoft-side "č" label
 capture), the zero-risk static checks, and Phase 1 scaffolding
 (simulator, decoder against captures) after owner approval.
-**E8 done 2026-10-30** (`docs/protocol/captures/2026-10-30-e8-first-read-only-session.jsonl`, the backend's own
+**E8 done 2026-10-30** (`docs/protocol/captures/2026-10-30-e8-first-read-only-session.md` and its `.jsonl`, the backend's own
 transfer log of the first live read-only session of our software: 861 s, 20 763 polls, 2 925 fetches, 0 framing
-errors, no fault, stopped at an idle point; the owner's observations and answers in
-`2026-10-30-e8-owner-statements.txt`; the record `2026-10-30-e8-first-read-only-session.md` and the curation of
-its findings follow it). The console kept reporting live changes (channels, outputs, faders, LEDs, LCD, status,
-independents, playback) to a host that never sent SmartSoft's System writes, and tolerated our cadence (H66, H67:
-curation pending); no USBPcap ran, so H68 stays open. The owner states that SmartSoft Online changes the console
+errors, no fault, stopped at an idle point; the owner's answers in `2026-10-30-e8-owner-statements.txt`). The console
+kept reporting live changes (channels, outputs, faders, LEDs, LCD, status, independents, playback) to a host that never sent
+SmartSoft's System writes, and tolerated our cadence: **H66, H67 CONFIRMED** for what was used (OBSERVED, one session); no
+USBPcap ran, so **H68 stays UNTESTED**. **39 facts are VERIFIED** (F95 and, in part, F99, F100, F101 added; never clearance to
+send); F110-F121 were added (F121: sending a show and the System erase commands are destructive paths our code must never use),
+H62 was REJECTED and H69-H75 were added. **E8 cleared nothing beyond SC-1.** The owner states that SmartSoft Online changes the console
 ("both ways"), so **E9, a passive USBPcap capture of SmartSoft writing, is the next experiment and the only path
 to a write mode; nothing is cleared for writing.** The static write-path analysis (`docs/protocol/smartsoft-analysis.md`
 S11.15, INFERRED): SmartSoft's only live-control message is ConsoleEvent (id 20, from its Console Simulator), GUI
 edits are whole-object writes, sending a show replaces the console's show and System (id 39) carries erase
 commands, so our code must never send either of the last two; the E9 runbook (`reverse-engineering.md`) scripts the
 Simulator actions, a label rename and an optional memory edit. After E8 the owner switched interface 1 back to the
-ETC driver.
+ETC driver. **Owner scope decisions (2026-10-30, `reverse-engineering.md` "Owner decisions on scope"):** no wheel
+support and no settings edits, ever; a write mode means the live controls plus recording through the
+console's own REC MEM / EDIT MEM / COPY as key presses (E9 captures both); E10 is imagined as editor pages
+(patch, stack / sequences) with show save / load as `.asc` files on the PC (E6 round trip; the USB show
+upload stays closed, F121, the SD card loads). The owner questions and E8b (a second read-only session) are listed under "Next capture (proposed by the E8
+analysis, 2026-10-30)" in `reverse-engineering.md`.
 
 ## Commands
 

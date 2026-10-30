@@ -142,7 +142,8 @@ The first poll (seq 1, t = 0.102) was answered at once by a type-4 header `04 00
 (seq 2). It announced a 452-byte payload: a DirtyObjects list, pseq 0x7B, of **89 records**
 (seq 3, body `00 59` + 89 × 5 bytes, 447 bytes). In list order:
 
-`23 22 23 21 23 23 23 23 23 23 14 17 23 23 15 13` + `23` × 26 + `12` × 44 + `23` × 4
+`23 22 23 21 23 23 23 23 23 23 14 17 23 23 15 13` + `23` × ~~26~~ 25 + `12` × 44 + `23` × 4 *(the run of
+ConsoleStatus records corrected by the curator's re-decode of seq 3 on 2026-10-30: 16 + 25 + 44 + 4 = 89)*
 
 | ID | Records | Fetched (first … last) |
 |---|---|---|

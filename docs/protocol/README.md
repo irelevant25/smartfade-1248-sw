@@ -44,12 +44,13 @@ Rules:
 | [evidence-matrix.md](evidence-matrix.md) | Feature × source cross-reference (central document) |
 | [capability-matrix.md](capability-matrix.md) | What the console / SmartSoft / our app supports |
 | [reverse-engineering.md](reverse-engineering.md) | Experiment plan, tooling, safety rules, hardware evidence requested, capture format |
-| [packet-format.md](packet-format.md) | HSP framing as observed in E2 (OBSERVED, nothing VERIFIED); since E3 (2026-10-29) the framing facts are VERIFIED as observed behaviour; E3b (2026-10-30) reproduced them a third time |
-| [commands.md](commands.md) | PC → console messages SmartSoft sent in E2, E3 and E3b (a record, not a list of messages we may send; VERIFIED there means SmartSoft's behaviour only) |
-| [responses.md](responses.md) | Reply types and object payloads seen in E2, E3 and E3b (the live objects are decoded from E3 and E3b) |
-| [state-model.md](state-model.md) | Session phases and mirrored-state model as seen in E2, E3 and E3b |
+| [packet-format.md](packet-format.md) | HSP framing as observed in E2 (OBSERVED, nothing VERIFIED); since E3 (2026-10-29) the framing facts are VERIFIED as observed behaviour; E3b (2026-10-30) reproduced them a third time; E8 (2026-10-30, our own read-only session) reproduced them with another host program, the first evidence channel other than SmartSoft |
+| [commands.md](commands.md) | PC → console messages SmartSoft sent in E2, E3 and E3b (a record, not a list of messages we may send; VERIFIED there means SmartSoft's behaviour only); E8 was our own read-only session (SC-1) and adds none |
+| [responses.md](responses.md) | Reply types and object payloads seen in E2, E3, E3b and E8 (the live objects are decoded from E3, E3b and E8) |
+| [state-model.md](state-model.md) | Session phases and mirrored-state model as seen in E2, E3, E3b and E8 |
+| [safety-checks.md](safety-checks.md) | Hardware safety checks: what is cleared for sending and under which conditions (SC-1, 2026-10-30: the poll and the fetch of a listed record, read-only session; nothing else is cleared) |
 | [consolelink-analysis.md](consolelink-analysis.md) | ConsoleLink (third-party, SmartFade **ML**, evidence class 5) compared with our 1248 evidence; proposed annotations and the hypotheses N1–N6 (now H46–H51). Never changes a 1248 status by itself |
-| [captures/](captures/) | Capture files, experiment records (E1, E2, E3, E3b), the owner's statements and the capture format |
+| [captures/](captures/) | Capture files, experiment records (E1, E2, E3, E3b, E8), the owner's statements and the capture format |
 
 The four deferred documents (`packet-format.md`, `commands.md`, `responses.md`,
 `state-model.md`) were created 2026-10-28, when the first USB capture (E2) existed. They carry
@@ -65,7 +66,14 @@ part of facts first seen in E3, never a live value); the sentence above stands u
 necessary, not sufficient, and **no message is cleared; no code may send anything to a console yet.** **Update 2026-10-30, later the same day (SC-1):** safety check SC-1
 ([safety-checks.md](safety-checks.md)) cleared the poll and the listed fetch for a read-only session of our
 own software (`SmartFade.Devices.Usb`, behind `Device:Mode=Usb` confirmed per day); the sentences above are
-superseded for those two messages only, and nothing else is cleared.
+superseded for those two messages only, and nothing else is cleared. **Update 2026-10-30, E8 (our own read-only session,
+[record](captures/2026-10-30-e8-first-read-only-session.md)):** the first live session of that software ran 861 s over WinUSB on
+interface 1, sent only the poll and the fetch of a listed record, and the console kept reporting its live state to a host that
+never sent SmartSoft's System writes (H66 and H67 CONFIRMED for what was used, H68 untested, H62 REJECTED). **39 facts are VERIFIED**
+(four more than above: F95 and, each in part, F99, F100 and F101; F57's no-de-duplication detail now too), the structural parts only,
+never a live value; F110–F121 were added. The sentence above stands unchanged: VERIFIED is necessary, not sufficient, **E8 clears no
+message**, and SC-1's two messages remain the only ones cleared. SmartSoft's static write paths (smartsoft-analysis.md S11.15) add
+INFERRED context for E9 and the destructive paths our code must never use (F121).
 
 ## Version landscape
 

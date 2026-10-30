@@ -232,4 +232,5 @@ Decisions taken while building:
   one run, the API now references the device project (the earlier "no reference path" test
   became "simulated mode registers no console pipe"), and the UI shows HARDWARE in the alert
   colour with every control read-only. The first live session is experiment E8 (runbook in
-  `docs/protocol/reverse-engineering.md`), still waiting for the owner's go.
+  `docs/protocol/reverse-engineering.md`), still waiting for the owner's go *(E8 ran on 2026-10-30:
+  861 s, no fault; record in `docs/protocol/captures/`; the readings it gave are shown by the UI)*.

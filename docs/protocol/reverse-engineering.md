@@ -32,15 +32,17 @@
 | E6 | ASC round-trip probes. On console: record a memory on page 2 fader 5, a channel step, a stack state step, set MIDI channel 3, patch IND1. Save to SD. Diff with previous file | None | SD card | H10–H14 |
 | *(E6 probes added 2026-10-28 from the SHOW04.ASC cross-check; each is a console-menu action followed by an SD save and, where noted, an E2-type SmartSoft capture; nothing is sent by us)* | (1) **Page / fader meaning (H13, H25):** record a memory on page 2 fader 5, expect fetch qualifiers (1, 4) and `$$MEMORY 1 4`, `GROUP 29` (24 × 1 + 4 + 1). (2) **Sequence step numbering (H43):** step through a sequence on the console and note the number shown; compare with wire 1.0-7.0 and file `$CUE`. (3) **"Wait" mapping (H14):** set a known Wait on a step, expect it in the third time of the step record (F74). (4) **A patch level other than 100 % (H34):** change a proportional level, save, and find which object carries it (not the Patch body, F70); no SD show has one. (5) **A label with a character >= U+0100, such as "č" (H40):** settles the UTF-16 byte order (BE is INFERRED, F73). Also: step types CUEPARAMS 0 / 2 (H12), Independents fields (H44), SystemSettings keys and default times (H45), memory levels at 1 / 50 / 99 % (H39). | None | SD card; SmartSoft + USBPcap for the capture parts | H10-H14, H25, H34, H36, H39-H45 |
 | E7 | DMX output observation (optional). USB-DMX input or DMX analyser on console DMX OUT | None | DMX interface | Ground truth for "actual state" of outputs |
-| **E8** | **First read-only session of our own software (active, SC-1).** The backend in `--Device:Mode=Usb` polls the console over WinUSB and fetches what the console lists, as SmartSoft does, but sends neither System write; USBPcap records the bus in parallel. Steps in the runbook below: backup, Zadig on interface 1, idle 60 s, then fader 1, a bump, the MASTER, Disconnect. | Low-to-medium: the first bytes our code ever sends; only the two cleared messages (`safety-checks.md` SC-1), the session ends on the first unobserved reply, nothing is retried | SC-1 conditions 3, 4, 8, 9, 10 met; the owner's go on the day | H66, H67, H68; a second evidence channel for F52, F53, F57 (our own host instead of SmartSoft) |
-| **E9** | **SmartSoft writing (passive).** USBPcap records a SmartSoft Online session in which the owner moves faders and presses keys in SmartSoft's Console Simulator, renames a channel label and (optionally) edits one memory level; our code is not involved. Runbook below, from the static write-path analysis (`smartsoft-analysis.md` S11.15). | Low: SmartSoft's own messages, as for any user; the show backed up; no show load, erase, patch, settings or page action in the script | Interface 1 back on the ETC driver, Memory Integrity off, USBPcap, the action log | H5, H6, H24 (the PC → console data message and the ConsoleEvent framing), H40 (label byte order), the 1248 fader and button indices; the first OBSERVED PC → console write |
+| **E8** | **First read-only session of our own software (active, SC-1).** The backend in `--Device:Mode=Usb` polls the console over WinUSB and fetches what the console lists, as SmartSoft does, but sends neither System write; USBPcap records the bus in parallel. Steps in the runbook below: backup, Zadig on interface 1, idle 60 s, then fader 1, a bump, the MASTER, Disconnect. | Low-to-medium: the first bytes our code ever sends; only the two cleared messages (`safety-checks.md` SC-1), the session ends on the first unobserved reply, nothing is retried | SC-1 conditions 3, 4, 8, 9, 10 met; the owner's go on the day | H66, H67, H68; a second evidence channel for F52, F53, F57 (our own host instead of SmartSoft). **Done 2026-10-30** → [captures/2026-10-30-e8-first-read-only-session.md](captures/2026-10-30-e8-first-read-only-session.md): 861 s over WinUSB on interface 1, 20 763 polls and 2 925 fetches, 0 framing errors, no fault, stopped at an idle point (the backend's own transfer log; **no USBPcap ran, no action log, no named backup**: deviations from runbook steps 1, 3 and 6; the planned actions were replaced by free exploration, the owner's account is untimed, [captures/2026-10-30-e8-owner-statements.txt](captures/2026-10-30-e8-owner-statements.txt)). Results: **H66 and H67 CONFIRMED** (OBSERVED, one session) for what was used (idle polls 31–52 ms apart, fetches 28–47 ms after their list, polls 15–32 ms after a fetch; the SC-1 floors were never reached), **H68 stays UNTESTED** (no USBPcap), **H62 REJECTED** (successor H71), H63 (record 1) and H26 (Independents part) CONFIRMED in capture; F95 VERIFIED and F99, F100, F101 VERIFIED in part (VERIFIED count 39, never clearance for sending), F57's no-de-duplication detail VERIFIED; facts F110–F120 (the first evidence channel other than SmartSoft for F51–F55 and F57; the 89-record connect list; memory faders, the memory page, BLACKOUT, the independents, the record functions, STACK, a running sequence), hypotheses H69–H75. E8 cleared nothing. Next: "Next capture (proposed by the E8 analysis, 2026-10-30)" below |
+| **E9** | **SmartSoft writing (passive).** USBPcap records a SmartSoft Online session in which the owner moves faders and presses keys in SmartSoft's Console Simulator, renames a channel label, uses the console's own REC MEM, EDIT MEM and COPY through the Simulator keys on empty memories (owner decision 2026-10-30) and (optionally) edits one memory level; our code is not involved. Runbook below, from the static write-path analysis (`smartsoft-analysis.md` S11.15). | Low: SmartSoft's own messages, as for any user; the show backed up; no show load, erase, patch, settings or page action in the script | Interface 1 back on the ETC driver, Memory Integrity off, USBPcap, the action log | H5, H6, H24 (the PC → console data message and the ConsoleEvent framing), H40 (label byte order), the 1248 fader and button indices; the first OBSERVED PC → console write |
 
 **E1 and E2 are done (2026-10-28). Next: E3(a)** (see "Next capture" below). E2 turned the
 static hypotheses (poll / dirty / fetch objects) into observed facts; the text below about E2
 is the plan as written before it, kept for the record. **Update 2026-10-29: E3 (a), (b) and (c)
 are done; the next steps are the owner questions and the passive captures listed under "Next
 capture (proposed by the E3 analysis, 2026-10-29)" below.** **Update 2026-10-30: E3b is done (items B1–B4 of
-that list); the next steps are listed under "Next capture (proposed by the E3b analysis, 2026-10-30)" below.**
+that list); the next steps are listed under "Next capture (proposed by the E3b analysis, 2026-10-30)" below.** **Update 2026-10-30, later: E8 is done (the
+first read-only session of our own software, see its row); the next steps are listed under "Next capture (proposed by the E8
+analysis, 2026-10-30)" below, and E9 (the runbook below) is the only path to a write mode.**
 *(Plan text before E2:)* **Next: E2**, the single capture that turns the static hypotheses
 (poll / dirty / fetch objects) into observed facts. Before E2 the owner must decide how to get
 `etchsp.sys` loaded (see the E2 row; resolved the same evening). The zero-risk HID listen was
@@ -51,6 +53,11 @@ back on (still pending after E2, per the E2 record; our backend must not depend 
 `etchsp.sys`, H7).
 
 ### E8 runbook (first read-only session of our software; SC-1)
+
+*(Run on 2026-10-30, see the E8 row and the [E8 record](captures/2026-10-30-e8-first-read-only-session.md). Deviations from
+the steps below: step 1, no named backup was recorded (the owner says everything is backed up on the console); step 3,
+USBPcap did not run; step 6, no action log, and the planned actions were replaced by free exploration. The runbook text
+is kept as written.)*
 
 Owner actions, in order; nothing in it sends anything but the cleared poll and listed fetch.
 
@@ -86,6 +93,21 @@ Abort rules: any Error from the backend ends the session (do not reconnect befor
 anything the console does that the owner did not cause ends it (note the time); never power-cycle
 the console to recover, just Disconnect.
 
+### Owner decisions on scope (2026-10-30)
+
+- **No wheel support and no settings edits, ever.** The wheel (ConsoleEvent kind 2) changes menu
+  values and the settings are whole-object writes; neither is wanted, so no experiment captures them
+  on purpose and no safety check will consider them.
+- **A write mode means the live controls** (channel and memory faders, bumps, MASTER, BUMPS,
+  BLACKOUT, SOLO, GO) **and recording through the console's own functions**: REC MEM, EDIT MEM and
+  COPY as key presses, so that the console keeps control of its show data. E9 captures both.
+- **E10, as the owner imagines it:** editor pages for the patch and for the stack / sequences, and
+  saving and loading shows as `.asc` files on the PC. The ASC part needs the E6 round trip (save on
+  the console, change in our app, load back from the SD card) and no capture; live editing of the
+  patch or the stack over USB needs one capture per object type, like E9 for a memory. Loading a
+  show into the console over USB stays closed (SmartSoft's upload replaces the console's show,
+  F121); the SD card does that job.
+
 ### E9 runbook (passive capture of SmartSoft writing; proposed 2026-10-30 from S11.15)
 
 The first capture of a PC changing the console. SmartSoft does the writing; our code is not
@@ -118,10 +140,20 @@ step 3.
     whole-object write, and the test of H40 (label byte order).
 12. Optional, the owner's choice: in Mem Edit change channel 7's level in memory 1, then restore it:
     a Memory (0, page, slot) whole-object write.
+13. **Record functions through the Simulator keys** (owner decision 2026-10-30; backup first; only the
+    empty memories 9 and 10 of page 1, empty per the E8 LED map): channel fader 5 at about 50 %, then
+    Simulator REC MEM, then memory bump 9 (records the look into memory 9). Expected: the key events,
+    the console's "Record Memory" LCD and LED screen (F116), and whether the console lists the Memory
+    object afterwards (never observed in a session without the download, F89).
+14. Simulator EDIT MEM, memory bump 9, channel fader 5 to full, CLEAR to leave (manual: EDIT MEM and
+    CLEAR blink). Expected: the edit screen, then the changed content if the console lists it.
+15. Simulator COPY, bump 9 (source), bump 10 (target). Afterwards delete both: EDIT MEM, bump 9, all
+    channel faders to zero, CLEAR; the same for 10 (all-zero content deletes the memory, F107).
 
 **Never in E9:** the wheel (kind 2 changes menu values, see E3b's accidental 5.0 → 5.1 s change);
-REC MEM, EDIT MEM, COPY, REC SEQ; Patch, Independents or Settings edits; page clicks; Open showfile,
-New show, Save As, any Erase.
+REC SEQ (a sequence slot would be written); Patch, Independents or Settings edits; page clicks;
+Open showfile, New show, Save As, any Erase. Steps 13–15 write show data through the console's own
+functions and only into memories 9 and 10 of page 1, which are deleted again at the end.
 
 **Evidence:** the USBPcap file (console-only split, as for E3b) and the action log into
 `docs/protocol/captures/` with an E9 record (`/record-experiment`); outcomes for H5, H6, H24, H40
@@ -256,6 +288,66 @@ observations suggest 40 and 39, H30), the text helpers `sub_10013970` / `sub_100
 `sfmlEngine.dll` PID check (S11 open lead 5).
 
 **E. Owner:** switch Memory Integrity back on when the capture sessions are over (H7).
+
+### Next capture (proposed by the E8 analysis, 2026-10-30)
+
+Safety rules 1–7 above are unchanged. Everything in A is an owner question or console action that sends nothing; B is a
+second read-only session of our software (SC-1's two messages only, nothing else is cleared); C and D are tooling and a
+pointer. **E9 (the runbook above) is the only path to a write mode; nothing in E8 clears any other message.** Source:
+[E8 record](captures/2026-10-30-e8-first-read-only-session.md) "Next capture to take".
+
+**A. Owner, zero risk:**
+
+1. Which key LEDs light or blink when you press CLEAR, STACK, COPY, REC SEQ, MAGIC, REC MEM, EDIT MEM, IND 1, IND 2? Do REC MEM,
+   REC SEQ and COPY blink, or stay lit (H72)? Which IND key did you press first at about 16:26:52?
+2. Was a sequence running on memory fader 21 before you connected, and how was it started? Did holding MEMS stop it at about
+   16:29:26 (237.5 s)?
+3. Did you press CLEAR three times at about 16:31:40 (372.4 s) with memory fader 1 up, and pull fader 1 down at about 16:36:40
+   (672.3 s) (H73)?
+4. Did any record function store or change anything (a bump pressed inside REC MEM, EDIT MEM, REC SEQ or COPY)? Was the console
+   power-cycled since E3b? How did the default times return to 5.0? What is the name of the backup taken before E8?
+5. The console's firmware from Menu > Diagnostics, for the record.
+
+**B. E8b, a second read-only session of our software** (the same SC-1 conditions, this time all of them).
+
+- Setup:
+  - a named SD backup copied into `smartfade-sd-card-backup/`;
+  - USBPcap from before the Zadig bind;
+  - `action-log.ps1` with a line per action;
+  - actions at least 5 s apart.
+- Each item turns an E8 reading into a second-session observation (VERIFIED needs the reproduction). Each needs logged times.
+  1. **Repeat E8's readings with times:**
+     - memory faders 1 and 2 (F112);
+     - a page change to 12 and back (F113);
+     - BLACKOUT on and off (F114);
+     - IND 1, then IND 2, named (F115, H72);
+     - each record key entered and left with CLEAR only, one at a time (F116, H72); no bump inside a record function, since that
+       would record;
+     - STACK pressed, held and released (F117).
+  2. **New tests:**
+     - BLACKOUT with channel fader 5 at full (does any level object show the blackout?);
+     - a page change with memory fader 1 at full (H69);
+     - memory fader 1 at 50 % with the MASTER at half, and a bump at BUMPS about 50 % (H71);
+     - CLEAR × 1 to × 4 with a channel and a memory fader up (H73);
+     - start and stop the sequence on fader 21 (F118, H50);
+     - GO with STACK lit on a safe stack (H63 record 5, H64; optional, owner decision, safe rig).
+  3. **The power-on list (H65):** power on, touch nothing, connect; then disconnect and connect again (the read-only analogue
+     of F94). Watch also for a pending list of 37 or 101 records (H75; added by the curator, not in the E8 record).
+- **What the USBPcap capture adds:**
+  - **H68:** EP0 at the Zadig bind, at the backend's start and at Connect, i.e. whether Windows or WinUSB read string
+    descriptors before our first poll.
+  - USBD status for every transfer, which the backend's log does not have, and (added by the curator from H75) whether a
+    zero-length packet ever follows a transfer.
+  - A frame-by-frame cross-check of the backend's log against the bus, as E3b's tshark cross-check did for the normalizer. That
+    would verify `TransferLog` itself.
+
+**C. Tooling (zero risk):** `hsp_summary.py`'s `summary` and `timeline` modes had to accept a log without pcap frames (print the
+seq instead). *Done in the commit that added the E8 record (both modes print `f-` for the frame; re-run by the curator on the
+E8 log on 2026-10-30, both run without an error).*
+
+**D. Not E8's business, recorded for completeness:** E9, the passive USBPcap capture of SmartSoft writing (the runbook above,
+CLAUDE.md), is the only path to a write mode. Nothing in E8 clears any other message: SC-1's clearance (poll and listed fetch,
+read-only) is unchanged.
 
 ## Hardware evidence requested
 

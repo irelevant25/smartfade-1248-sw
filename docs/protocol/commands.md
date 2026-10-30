@@ -36,6 +36,12 @@ console listed in the same session (in list order, once, at SmartSoft's cadence 
 Fetch rows are superseded in that respect; the two System writes stay uncleared, and every caution
 about them stands. The sentences above are the earlier wording, kept.
 
+**Update 2026-10-30 (E8).** E8 ([record](captures/2026-10-30-e8-first-read-only-session.md)) was not a SmartSoft
+session: our own software sent 20 763 polls and 2 925 fetches of listed records (SC-1's two messages) and nothing else
+(no System write, no data header, no payload, no control transfer, nothing on interface 0), so the rows below, which
+record SmartSoft's messages, are not extended with E8's counts. The console answered all of them (F110). **E8 clears no
+other message;** the two System writes stay uncleared.
+
 | Message | Bytes as seen | Count in E2 (E3) | Effect observed | Status | Facts |
 |---|---|---|---|---|---|
 | Poll | 12-byte header, w0 = 0 (first poll f11: all zero) | 3 001 (E3: 9 692) (E3b: 25 824) | Console answers with a type-3 or type-4 reply header | **VERIFIED 2026-10-29** as SmartSoft's behaviour (E2 + E3; was OBSERVED) | F52, F53 |
@@ -64,6 +70,13 @@ Observations that matter for safety:
   and switched modes and banks. Console-side actions reach the PC as state objects only (F95–F101); no
   ConsoleEvent (H5, H24). Nothing observed so far shows what a GO, a bump or a fader write from the PC
   would look like, so no such message can be built from these observations.
+- **E8 (2026-10-30) and the static write-path analysis.** E8 sent only polls and listed fetches and saw no ConsoleEvent in
+  either direction although the owner used memory faders, BLACKOUT, the IND keys, STACK and the record keys (F112–F117). Static
+  analysis ([smartsoft-analysis.md](smartsoft-analysis.md) S11.15, INFERRED; **E9 is the test**) says that SmartSoft's only
+  live-control message is ConsoleEvent (id 20), sent by its Console Simulator, and that GUI edits of stored data are
+  whole-object writes. **Two paths are known to be destructive and our code must never use them:** sending a show (it replaces the
+  console's show, DOCUMENTED by SmartSoft manual p. 24) and the System erase commands (a = 11, 12, 13, 14, 16; INFERRED from the
+  confirmation dialogs; F121). Neither was seen on the bus.
 - **ConsoleLink (class 5).** The third-party ML client sends ConsoleEvent kinds 0 / 1, System
   `[0x0A][page][0]` and a System `07` with sequence 1 at every connect, outside its own write gate
   ([consolelink-analysis.md](consolelink-analysis.md) W1–W5, §4). None of these was seen from SmartSoft
