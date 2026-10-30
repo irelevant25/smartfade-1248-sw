@@ -1,0 +1,124 @@
+# Hardware safety checks
+
+Log of the `/hardware-safety-check` runs (checklist in `.claude/skills/hardware-safety-check`).
+A check clears a message **for the stated use only**; everything it does not name stays
+uncleared. CLAUDE.md: VERIFIED is necessary, not sufficient; a message may be sent only after it
+was observed from SmartSoft on the 1248, understood, shown to be harmless and cleared here.
+
+## SC-1 (2026-10-30): poll and listed fetch, read-only session
+
+**Scope.** The two PC → console headers a read-only session needs, byte for byte as SmartSoft
+sends them:
+
+| Message | Bytes | Rule | Cleared for |
+|---|---|---|---|
+| Poll (type 0) | `00 00 00 00 w2 w3 w4 w5`, little-endian words; w2..w5 = the words of the most recent fetch or reply header, all zero before the first | F52 (38 517 polls in E2, E3, E3b; the copy rule holds in 38 517 of 38 517, re-counted with `tools/protocol-analyzer/poll_rules.py`) | polling at SmartSoft's cadence or slower (floors from the observed minimums, rounded up: polls never closer than 21 ms, never earlier than 11 ms after a fetch) |
+| Fetch (type 2) | `02 00 00 00 id a b c` | F52, F57 (1 651 fetches: every one names a record of a DirtyObjects list the console sent in the same session, in list order, once; a poll always follows a fetch and is answered by the fetched object) | fetching **only** a record the console listed in this session, in list order, once, not earlier than 21 ms after the payload that listed it, and only an id SmartSoft was seen to fetch (`HspReadSession.ObservedListedIds`) |
+
+Implementation: `SmartFade.Protocol.HspOutbound` (the only encoder), `HspReadSession` (the state
+machine, which faults on any reply that no capture has shown), `SmartFade.Devices.Usb.HspReadLoop`
+(cadence, re-checked against the clock after every delay), `WinUsbHspPipe` (interface 1 of
+VID 14D5 / PID 0200 only, whatever the path's source). **Not cleared, not encoded anywhere:** Data
+headers (type 1), the System writes `09 00 00` / `07 00 00`, any payload, any transfer on
+interface 0, any control transfer, an unsolicited or repeated fetch, a fetch of an id never seen
+in a list, any message to a device other than VID 14D5 / PID 0200 interface 1.
+
+### Decision: GO (conditional)
+
+GO for building and reviewing the code and for the first read-only session, **E8**, once the
+conditions below are met and the owner gives the go on the day. The session itself is an
+experiment: three things in it are unobserved (items 2 and 11) and are written down as hypotheses
+H66, H67 and H68, with the session ending on the first deviation.
+
+| # | Item | Status | Evidence |
+|---|---|---|---|
+| 1 | Evidence status | **Yes for the bytes; timing proceeds at OBSERVED with the owner's go** | Framing F51–F54 VERIFIED (three sessions); stale-word rule F52 (38 517 of 38 517); replies F53 (every poll answered by exactly one 12-byte header of type 3 or 4; the poll after a fetch answered by the fetched object in 1 651 of 1 651; type 4 carries zeros); DirtyObjects F57; sequence rule F55 (in part). The cadence is SmartSoft's measured host behaviour (F62 and its 2026-10-30 annotation: OBSERVED per-session figures, not console limits), used as floors rounded up; the checklist allows a poll at OBSERVED timing with the owner's explicit go-ahead, which E8 asks for. Runs of all-zero polls answered idle: 40 in a row at the start of two E3b sessions, 2 in E3, 1 in E2 (`poll_rules.py`). |
+| 2 | Side effects understood | **Yes for the messages; the session shape is new** | A poll is answered by one header and changes nothing seen (0 anomalies in 38 517, no state object ever changed on a poll). A listed fetch delivers the object once and advances the console's payload counter (F53, F55, F57). **Unobserved:** a session that never sends SmartSoft's two System writes (does the console keep reporting live changes? H66), our own timer jitter (H67), and a session that starts without the string-descriptor reads every SmartSoft session issued on EP0 before its first poll (F56 step 1; H68). Mitigation: the session reproduces SmartSoft's cadence, sends nothing else, and stops on the first reply that differs from observed behaviour. |
+| 3 | Backup | **Condition** | The owner saves the show to the SD card before E8 and the guided script records the name (expected SHOW06.ASC). |
+| 4 | Rig | **Condition** | The DOTZ BAR 1.4 on DMX 5–16 (owner statement 2026-10-30, nothing on DMX IN); no dimmers. The MASTER down for the idle part is the owner's choice; nothing we send can change an output as far as three captures show. |
+| 5 | Firmware path untouched | **Yes** | Bulk transfers on interface 1 only; our code issues no control transfer, no pipe reset, no stall clearing; no SFDownloader, no "Firmware Upgrade", no HID. ASSUMPTION, not observed: WinUSB itself may issue standard control requests when the handle is opened; E8's USBPcap records EP0 at plug-in, at the Zadig bind and at Connect to settle it (H68). Binding WinUSB with Zadig changes the host's driver for interface 1 only: an owner action, picked by the USB ID `14D5 0200 01` (never by Zadig's label), reversible (Device Manager → the WinUSB device → uninstall and reinstall the ETC driver, or "Update driver" → pick "USB High-Speed-Pipe"); that nothing on the console changes at the rebind is INFERRED (a driver swap on the host) until E8's USBPcap at the bind shows what the host sends (H68). |
+| 6 | Mode gating | **Yes, built** | `Device:Mode=Usb` plus `Device:Usb:ConfirmDate=<today>` must both be given, or the backend refuses to start: a setting left in a shell, a launch profile or appsettings expires by itself ("this run only"). `Simulated` stays the default; any other value refuses to start; the UI badge shows HARDWARE in the alert colour; `supportedCommands` is empty, so every control is read-only and the backend refuses every command (`not_supported`); the masters are shown dimmed as "not reported" until FaderInfo arrives (an earlier LedStatus only keeps its SOLO reading for then), the channels, outputs and memories carry the same "not reported" state until the console lists them, and BLACKOUT / IND 1 / IND 2, which no observed object carries, are marked unknown. "This day only": the confirmation is a date, read from any configuration source, so it lasts the calendar day and no longer. Tests: `HostingTests` (every test host pins its mode: `Simulated`, or `Usb` with the pipe factory replaced and a device path the pipe refuses). |
+| 7 | No blind retries | **Yes, built** | `HspReadSession` never re-sends; a transfer timeout (500 ms, the console answered within 12 ms in every capture), a short transfer, an announced length above the observed maximum (792 bytes), an object body of a length never seen for its id (F67) or any other unobserved reply ends the session in the Error state with its reason, whatever the exception; a stop request is honoured only at an idle point (no fetch is left without its poll; a drain bound of 2 000 exchanges exists but is unreachable with the observed lists); host shutdown stops the session; Connect is refused while a session is alive; a session that outlives its stop reports its real end. Tests: `HspReadSessionTests`, `UsbSmartFadeDeviceTests`, `ConsoleStateAssemblerTests`. |
+| 8 | Logging on | **Yes, built; plus a condition** | Every transfer of a session is written to a capture-format JSONL (`Device:Usb:CaptureLogDirectory`, outside the repository by default, readable by `hsp_summary.py` and `CaptureFile`; written after each exchange, never between a poll and its reply; a session without a log does not start). E8 also runs USBPcap in parallel for independent evidence. |
+| 9 | Versions recorded | **Condition** | Firmware (Menu > Diagnostics), Windows build, cable, backend version and git commit in the E8 record. |
+| 10 | Review done | **Condition; two passes done, a re-check of the last changes is recorded below** | `protocol-safety-reviewer` over the exact code, see "Review" below: the first pass (2026-10-30) found two blockers and a set of majors, the second pass one blocker and three majors, all fixed the same day; the re-check of those last changes is recorded there with the commit hash. |
+| 11 | Passive first | **Yes** | E2, E3 and E3b (2026-10-28 to 2026-10-30) show SmartSoft producing both messages and the console answering them. |
+
+### Golden evidence behind the clearance
+
+`HspReadSessionTests` replays the three committed captures through `ReplayHspPipe`: the session
+engine is handed the console's transfers in capture order and every transfer it decides to send
+is compared byte for byte with SmartSoft's at the same point. Result on 2026-10-30: E2 3 001 polls
++ 228 fetches, E3 9 692 + 423, E3b 25 824 + 1 000, all identical; the only transfers skipped are
+SmartSoft's ten System writes (2 + 2 + 6); no reply failed a check. `UsbSmartFadeDeviceTests` runs the whole
+device the same way and checks the assembled state against the records (firmware string, show
+file names, MASTER / BUMPS / SOLO at the end of E3b, memory OPONA with channels 7 and 8 at full),
+and, on a virtual clock, that every transfer of the three replays keeps the cadence floors (poll
+to poll, fetch to poll, payload to fetch) on every single transfer.
+
+### Owner decisions recorded with SC-1
+
+- **Inbound decoding for display at OBSERVED or INFERRED.** CLAUDE.md allows only VERIFIED
+  elements in code that talks to hardware. No transmitted byte depends on anything below
+  VERIFIED (the session uses F51–F57 only), but the state shown in hardware mode rests on
+  OBSERVED readings (post-MASTER levels F96, BUMPS F95, the OutputLevels index F83) and INFERRED
+  ones (SOLO from its LED F100, the recorded flag of a memory from the manual's deletion rule
+  F107) and on hypotheses (label byte order H40, memory page / fader H25). Proposed reading:
+  **display-only decoding may use any status, marked as such in the UI and in
+  `ConsoleStateAssembler`; nothing sent may.** The owner is asked to confirm this exception; until
+  then it is applied as written here. Values the console never reports (Blackout, IND 1 / IND 2)
+  are shown as unknown, never as off.
+- **Timing at OBSERVED.** The cadence floors are SmartSoft's measured minimums (F62 annotation);
+  the owner's go for E8 is the explicit go-ahead the checklist asks for.
+
+### Conditions and abort rules for E8
+
+- Before: backup saved and named; USBPcap capture started; Zadig applied to the entry with USB ID
+  `14D5 0200 01` only; Memory Integrity may stay on (WinUSB is an inbox driver).
+- Start the backend with `--Device:Mode=Usb --Device:Usb:ConfirmDate=<today>`; the UI must show the
+  HARDWARE badge and "Not reported by the console yet" on the masters before Connect.
+- The session ends by itself on the first deviation (Error in the UI with the reason). Do not
+  press Connect again before the log has been read; never power-cycle the console to "fix" it.
+- Stop (Disconnect) if the console's front panel, LCD or outputs do anything the owner did not
+  cause. Record the time. Disconnect waits for an idle point (the current list is fetched to its
+  end, a few seconds at most).
+- Expected during E8, not a deviation: the channels, outputs and memories panels say "not
+  reported" until the console lists those objects (it does so only on a change; a memory only
+  when it is listed, which a read-only session may never see), and the masters stay "not
+  reported" until a FaderInfo arrives.
+- Afterwards: copy the backend's JSONL and the USBPcap file into `docs/protocol/captures/` with
+  an E8 record; update H66 / H67 / H68; add the second review to this file.
+
+### Review
+
+**First pass (2026-10-30, `protocol-safety-reviewer`): not ready, two blockers.** Findings and
+what was changed the same day:
+
+| Finding | Fix |
+|---|---|
+| **BLOCKER** The loop told a payload from a header by its length, so after a 12-byte payload (a one-record list, a ConsoleStatus object) the next fetch went out with no delay: 37 of 423 fetches in the E3 replay, 190 of 1 000 in E3b, outside the cleared use. | The payload stamp now comes from the session state, not the length; a virtual-clock test replays E2, E3 and E3b and asserts the three floors on every transfer. |
+| **BLOCKER** Evidence tags missing or wrong in `ConsoleStateAssembler` and `UsbDeviceOptions` (BUMPS called VERIFIED, the recorded flag and "position not reported" unmarked, no class attributes, timing figures without status). | Tags corrected (BUMPS OBSERVED F95; recorded flag INFERRED from F107; position not reported INFERRED; F62 figures OBSERVED), `[Evidence]` on both classes, F62 annotated in known-facts with the poll_rules.py figures and their definitions. |
+| MAJOR A type-4 reply to the poll after a fetch, and an empty list, were accepted. | Both fault; so do records with c ≠ 0, the list's own id and ids never seen in a list. |
+| MAJOR Exceptions outside a narrow filter ended the session silently (status Connected, no reason). | Any exception ends in Error with its reason; payloads under 5 bytes and announced lengths above 1 024 fault cleanly; a session without a log does not start. |
+| MAJOR Disconnect could stop between a fetch and its poll or with records unfetched; host shutdown never stopped the session. | Stops only at an idle point (bounded drain of 2 000 transfers, noted as a deviation); a hosted service stops the session on shutdown; Connect is refused while a session is alive; Disconnected is reported only once the session has ended. |
+| MAJOR `Device:Usb:DevicePath` bypassed the VID / PID filter; shared open. | The pipe refuses any path without `vid_14d5&pid_0200&mi_01`; the handle is exclusive. |
+| MAJOR Hardware mode could come from any configuration source and stay on; test hosts relied on statement order. | `Device:Usb:ConfirmDate` must equal today's date; every test host pins `Simulated`; the Usb test has two independent guards. |
+| MAJOR The handle lacked FILE_FLAG_OVERLAPPED, which `WinUsb_Initialize` requires. | Added. |
+| MAJOR Values the console never sent were shown as console state (masters before the first report; Blackout and the independents). | `mastersReported` in the state and the contract; the UI dims the masters and says "Not reported by the console yet"; BLACKOUT / IND keys marked unknown in hardware mode; SOLO's key says it is an LED reading. |
+| MAJOR The knowledge base still said "nothing is cleared"; F62 said "not a transmit timing"; H66–H68, SC-1 and E8 absent from the matrices; `poll_rules.py` untracked. | Superseded sentences annotated in commands.md, the protocol README, known-facts (header and F62), the capability and evidence matrices; H68 added; `poll_rules.py` committed with a docstring. |
+| MAJOR The WinUSB descriptor-read statement was unmarked; the EP0 string reads of every SmartSoft session were missing from the session-shape analysis. | Marked as an ASSUMPTION; H68 added; E8 records EP0. |
+| MINOR Floors just below the observed minimums; no re-check after a delay; stamps before the write; Connect filter too narrow; Zadig label unverified; log writes between poll and reply; relative log folder; device path in the UI. | Floors 21 / 11 / 21 ms; the wait re-checks the clock; stamps after the write; any exception at open fails with its reason; Zadig by USB ID; log written after each exchange; log folder under `%LOCALAPPDATA%`; the UI gets "SmartFade 1248, read-only". |
+
+**Second pass (2026-10-30, `protocol-safety-reviewer`): needs changes, one blocker.** Findings and
+what was changed the same day:
+
+| Finding | Fix |
+|---|---|
+| **BLOCKER** The golden outbound bytes in `HspReadSessionTests` were typed by hand and cited by pcap frame, never cross-checked against the committed capture. | The bytes are loaded from the E2 capture (JSONL seq 6, 9, 10, 14) and compared with the encoder's output; the literals stay beside them, cited. |
+| MAJOR LedStatus before FaderInfo (the order of every E3b session) built a placeholder masters record and reported it as console state. | No masters change until FaderInfo; the LED reading of SOLO is remembered and travels with the first FaderInfo; `ConsoleStateAssemblerTests` replays that order from E3b. |
+| MAJOR The channels, the outputs and the memories were placeholders shown as console state. | `channelsReported`, `outputsReported`, `memoriesReported` in the state and the contract; the channel, output and memory panels dim and say "not reported" (memories: "not delivered in this read-only session") until the console lists them; the runbook says what to expect. |
+| MAJOR Statements saying "nothing is cleared", "decoders only" or "no code can transmit" were still unannotated (CLAUDE.md, README, architecture.md, packet-format.md, safety rule 2's note, `Evidence.cs`). | Each annotated as superseded by SC-1 for the two messages only; `Evidence.cs` reworded. |
+| MINOR H67 said floors 20 / 20 / 10; H66's evidence cell contradicted F56 and F94; "six System writes" (ten); "every test host pinned to Simulated"; the 2 000-transfer drain described as reachable; the E8 row and runbook step 8 lacked H68; the LCD expectation had no log line; a 1 024-byte bound above the 792 observed and no body-length check; `IsIdle` equated with SmartSoft's session end; a late session end and a refused Connect unreported; file name and firmware never pushed to the UI and never cleared; device paths in error texts; the blackout blink in hardware mode; `status` = 0 claimed in the transfer log; ALLOW_PARTIAL_READS left on; the Zadig label in the locator; "nothing on the console changes" unmarked; a null log sink tolerated; Connected raised after the task started. | All changed: H66 and H67 reworded; the wording fixed here; H68 added to E8; the LCD is logged at Information; bound 792 and a per-id body-length table from F67 (checked in the replays); comments fixed; the late end and the refused Connect raise connection events; file name and firmware are pushed with the state and cleared on disconnect; error texts name no path; no blink in hardware mode; `status` is null with a header note; partial reads refused on the IN pipe; locator documented by USB ID; INFERRED marked; a missing sink stops the session (tested); Connected is raised before the first transfer. |
+| MINOR, accepted and recorded: the fetch guard is per id, not per qualifier range (consistent with F57); only the poll stamp crosses sessions; a stalled pipe needs a replug; a reply queued after a timeout faults the next session at its first fetch; a list of exactly 37, 101 or 165 records (a multiple of 64 bytes) would end the session if the console then sent a zero-length packet. | Accepted for E8: each ends in the safe direction (no transfer, or a session end with its reason); to be revisited with the E8 capture. |
+
+**Re-check of the second-pass changes:** *(pending; to be recorded here with the commit hash before E8)*

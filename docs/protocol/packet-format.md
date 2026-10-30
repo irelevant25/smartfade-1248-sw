@@ -2,7 +2,9 @@
 
 Created 2026-10-28, the day the first USB capture (E2) existed. **Everything here is OBSERVED
 at most** (one SmartSoft session, one PC, firmware 3.0.2.9.0.43, SmartSoft 3.0.43); nothing is
-VERIFIED, so no code that can talk to a real console may use it yet. Evidence: facts F51–F57,
+VERIFIED, so no code that can talk to a real console may use it yet *(2026-10-28 wording; F51–F57 are
+VERIFIED since E3 / E3b, and SC-1 cleared the poll and the listed fetch on 2026-10-30, see the update at
+the end of this section)*. Evidence: facts F51–F57,
 [E2 record](captures/2026-10-28-e2-smartsoft-connect.md), `captures/2026-10-28-e2-smartsoft-connect.pcap`
 and `.jsonl`. Field names (w0..w5, seq, id, body, a / b / c) are our labels from
 [smartsoft-analysis.md](smartsoft-analysis.md) S11, not ETC's.
@@ -23,6 +25,11 @@ framing again: 25 824 polls, 1 000 fetches, 268 DirtyObjects lists, 1 268 payloa
 URBs with status 0 (F51–F54, F57, F65: third reproduction). New: the console's sequence counter is **not
 reset by a new SmartSoft session** (F93), and F80 (start value 0x00 after a power cycle) is VERIFIED in
 part. VERIFIED still does not clear any message for sending: no code may send anything to a console yet.
+
+**Update 2026-10-30, later the same day (SC-1).** Safety check SC-1 ([safety-checks.md](safety-checks.md))
+cleared the poll and the fetch of a listed record, byte for byte as described below, for a read-only session of
+our own software; the three "no code may send anything" sentences above are superseded for those two messages
+only. The stale-word rule was re-counted for it (38 517 of 38 517 polls, `tools/protocol-analyzer/poll_rules.py`).
 
 ## Transport
 

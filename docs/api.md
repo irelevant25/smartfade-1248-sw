@@ -22,8 +22,10 @@ finalize the API until the underlying hardware capabilities are known").
 
 ```ts
 type ConnectionStatus = 'disconnected' | 'connecting' | 'connected' | 'error';
-type DeviceMode = 'simulated' | 'replay';          // 'hardware' does not exist in Phase 1; 'replay' is reserved
-                                                    // (a capture-driven device) and not selectable yet
+type DeviceMode = 'simulated' | 'replay' | 'hardware';
+                                                    // 'hardware' = the real console over USB, read-only (safety check SC-1,
+                                                    // docs/protocol/safety-checks.md): supportedCommands is empty;
+                                                    // 'replay' is reserved (a capture-driven device) and not selectable yet
 
 interface ConnectionDto {
   status: ConnectionStatus;
@@ -86,6 +88,11 @@ interface ConsoleStateDto {
   memories: MemoryStateDto[];                       // exactly 288 entries, memory 1 (page 1, fader 1) first
   actualStateReported: boolean;                     // false until the device reported its state in this connection;
                                                     // until then actual levels / masters / outputs / memories are placeholders
+  mastersReported: boolean;                         // false until the device reported the masters (hardware mode: until the
+                                                    // console delivered FaderInfo); the UI dims them and says so until then
+  channelsReported: boolean;                        // the same for the channel levels, the DMX outputs and the memories:
+  outputsReported: boolean;                         // a read-only console reports them only when they change (a memory
+  memoriesReported: boolean;                        // only when it is listed), so each panel says "not reported" until then
   showFileName?: string;                            // e.g. "SHOW04.ASC" when known
   firmwareVersion?: string;                         // e.g. "3.0.2.9.0.43" when known
 }
@@ -152,7 +159,7 @@ future hardware mode (no web page may ever drive a console without the owner's a
 
 | Route | Returns |
 |---|---|
-| `GET /api/status` | `{ mode, connection: ConnectionDto, backendVersion, protocolKnowledge: { messagesClearedForSending: 0 } }` (the zero is a rule, not a counter; fact counts live in the knowledge base, not in the API) |
+| `GET /api/status` | `{ mode, connection: ConnectionDto, backendVersion, protocolKnowledge: { messagesClearedForSending: 2 } }` (a rule, not a counter: SC-1 cleared the poll and the listed fetch for a read-only session; fact counts live in the knowledge base, not in the API) |
 | `GET /api/console/state` | `ConsoleStateDto` |
 | `POST /api/console/connect` | `ConnectionDto` |
 | `POST /api/console/disconnect` | `ConnectionDto` |
@@ -174,8 +181,15 @@ future hardware mode (no web page may ever drive a console without the owner's a
 - Levels are the console's unit, 0..255; "0xFF = 100 %" is OBSERVED against one show file (F72),
   not a specification.
 - The UI never sees bytes, object IDs, transports or endpoints.
-- `mode` is always present so the UI can show a prominent badge (SIMULATED / REPLAY); a
-  hardware mode will be added only when a message is cleared for sending.
+- `mode` is always present so the UI can show a prominent badge (SIMULATED / REPLAY / HARDWARE).
+  In `hardware` mode (read-only, SC-1) `supportedCommands` is empty: the UI shows every fader at
+  the reported level, read-only, and the backend answers every command with `not_supported`.
+  Channel `actual` and `output` are then the same number, the console's post-MASTER level
+  (OBSERVED, F96). `blackout`, `independent1` and `independent2` are never reported by the
+  console in this mode (no observed object carries them) and the UI marks their keys as unknown;
+  `solo` comes from an LED reading (INFERRED, F100). Inbound decoding for display may rest on
+  OBSERVED or INFERRED readings, marked as such in the UI; no transmitted byte depends on them
+  (owner decision recorded in docs/protocol/safety-checks.md, SC-1).
 - Commands are expressed as desired state; the backend keeps desired and actual apart and never
   assumes a write succeeded (architecture principle 3). Memory fader levels, masters and bumps
   are kept as actual values only; the UI holds its own request until the backend confirms it.

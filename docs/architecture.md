@@ -90,7 +90,7 @@ hardware limit requires it.
   Recommendation: keep the brief's .NET backend unless the owner changes the brief; in .NET
   the bulk endpoints are reachable through the WinUSB API directly (no libusb needed on
   Windows) or through a libusb binding if cross-platform matters later. The device layer is
-  small either way, and nothing in it that transmits can be written before a message is cleared for sending (VERIFIED is necessary, not sufficient; none is cleared),
+  small either way, and nothing in it that transmits can be written before a message is cleared for sending (VERIFIED is necessary, not sufficient; none is cleared *(2026-10-28 wording; SC-1 cleared the poll and the listed fetch on 2026-10-30, and the WinUSB pipe was written then)*),
   so this decision is not on the critical path yet.
 - **State of protocol knowledge (2026-10-28, after E2):** the real device layer now has
   **observed framing to build on** (poll / dirty-list / fetch over bulk 0x04 / 0x83,
@@ -122,10 +122,12 @@ hardware limit requires it.
 
 Owner approval: 2026-10-30 ("you have my approval"). The first vertical slice of the brief,
 Angular → SignalR → .NET → simulated console, with the protocol decoders tested against the
-committed captures. **No code in the solution can transmit to a console:** the only
+committed captures. **No code in the solution can transmit to a console** *(2026-10-30 morning
+wording, kept; superseded the same afternoon by safety check SC-1, see the "Hardware path"
+bullet below: the poll and the listed fetch may now be sent by the read-only USB device)*: the only
 transports are a loopback and a capture replay, the device registered by default is the
 simulator, and `Device:Mode` accepts nothing else (CLAUDE.md: VERIFIED is necessary, not
-sufficient; no message is cleared for sending).
+sufficient; no message is cleared for sending *(until SC-1, the same day)*).
 
 ```
 SmartFade.sln
@@ -138,7 +140,8 @@ src/backend/
   SmartFade.Devices.Simulated/       SimulatedSmartFadeDevice: domain-level model, no bytes
                                      (1:1 patch DOCUMENTED default; output = level × MASTER / 255
                                      rounded, a simulation assumption; Blackout → 0, DOCUMENTED F5)
-  SmartFade.Protocol/                DECODERS ONLY: HspHeader (F52/F53), inbound/outbound payloads
+  SmartFade.Protocol/                decoders (plus, since SC-1, HspOutbound and HspReadSession for the
+                                     cleared poll and listed fetch): HspHeader (F52/F53), inbound/outbound payloads
                                      (F54), DirtyObjectsList (F57), object decoders annotated with
                                      [Evidence(status, facts)], HspSessionDecoder (transfer stream → events)
   SmartFade.Communication/           IDeviceTransport (brief §10), LoopbackTransport, CaptureFile
@@ -215,3 +218,18 @@ Decisions taken while building:
   and independents, the console's Patch, F70) and the stack / sequence pages are the owner's
   next wishes; both are UI over data the console already reports, but writing them to a real
   console is a protocol question that stays closed until a message is cleared.
+- **Hardware path (2026-10-30, safety check SC-1, `docs/protocol/safety-checks.md`):** the
+  first clearance, for a read-only session: the poll and the fetch of a record the console
+  listed. `SmartFade.Protocol` gained its only encoder (`HspOutbound`) and the session state
+  machine `HspReadSession`, which decides what to send next and faults on any reply no capture
+  has shown; `SmartFade.Communication` gained `IHspPipe` with `WinUsbHspPipe` (WinUSB on
+  interface 1, P/Invoke, no third-party library, Memory Integrity can stay on) and
+  `ReplayHspPipe` (a committed capture that checks every write against SmartSoft's);
+  `SmartFade.Devices.Usb` is the read-only `ISmartFadeDevice` (`SupportedCommands = None`,
+  cadence from F62 with floors, every transfer logged in the capture format, no retry). The
+  golden proof is `HspReadSessionTests`: replayed over E2, E3 and E3b, the engine's 38 517
+  polls and 1 651 fetches are byte-identical to SmartSoft's. `Device:Mode=Usb` selects it for
+  one run, the API now references the device project (the earlier "no reference path" test
+  became "simulated mode registers no console pipe"), and the UI shows HARDWARE in the alert
+  colour with every control read-only. The first live session is experiment E8 (runbook in
+  `docs/protocol/reverse-engineering.md`), still waiting for the owner's go.

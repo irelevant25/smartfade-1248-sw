@@ -8,7 +8,8 @@
    and its effect is known to be harmless (e.g. a read/poll). Replaying edit messages can
    overwrite show data. *E2 note (2026-10-28): even polls and fetches have console-side
    effects (the console's sequence counter advances per payload, a listed dirty object is
-   delivered once), so "read" is not automatically harmless; nothing is cleared for sending.*
+   delivered once), so "read" is not automatically harmless; nothing is cleared for sending.* *(SC-1, 2026-10-30: the poll and the fetch of a listed record are cleared for a read-only session,
+   [safety-checks.md](safety-checks.md); the note stands for everything else.)*
 3. **Back up the show to SD card before every session** involving SmartSoft or our tools.
    SmartSoft "Load show" pushes a show onto the console.
 4. **Never touch the firmware/bootloader path** (self-test "Firmware Upgrade", SFDownloader).
@@ -31,6 +32,7 @@
 | E6 | ASC round-trip probes. On console: record a memory on page 2 fader 5, a channel step, a stack state step, set MIDI channel 3, patch IND1. Save to SD. Diff with previous file | None | SD card | H10–H14 |
 | *(E6 probes added 2026-10-28 from the SHOW04.ASC cross-check; each is a console-menu action followed by an SD save and, where noted, an E2-type SmartSoft capture; nothing is sent by us)* | (1) **Page / fader meaning (H13, H25):** record a memory on page 2 fader 5, expect fetch qualifiers (1, 4) and `$$MEMORY 1 4`, `GROUP 29` (24 × 1 + 4 + 1). (2) **Sequence step numbering (H43):** step through a sequence on the console and note the number shown; compare with wire 1.0-7.0 and file `$CUE`. (3) **"Wait" mapping (H14):** set a known Wait on a step, expect it in the third time of the step record (F74). (4) **A patch level other than 100 % (H34):** change a proportional level, save, and find which object carries it (not the Patch body, F70); no SD show has one. (5) **A label with a character >= U+0100, such as "č" (H40):** settles the UTF-16 byte order (BE is INFERRED, F73). Also: step types CUEPARAMS 0 / 2 (H12), Independents fields (H44), SystemSettings keys and default times (H45), memory levels at 1 / 50 / 99 % (H39). | None | SD card; SmartSoft + USBPcap for the capture parts | H10-H14, H25, H34, H36, H39-H45 |
 | E7 | DMX output observation (optional). USB-DMX input or DMX analyser on console DMX OUT | None | DMX interface | Ground truth for "actual state" of outputs |
+| **E8** | **First read-only session of our own software (active, SC-1).** The backend in `--Device:Mode=Usb` polls the console over WinUSB and fetches what the console lists, as SmartSoft does, but sends neither System write; USBPcap records the bus in parallel. Steps in the runbook below: backup, Zadig on interface 1, idle 60 s, then fader 1, a bump, the MASTER, Disconnect. | Low-to-medium: the first bytes our code ever sends; only the two cleared messages (`safety-checks.md` SC-1), the session ends on the first unobserved reply, nothing is retried | SC-1 conditions 3, 4, 8, 9, 10 met; the owner's go on the day | H66, H67, H68; a second evidence channel for F52, F53, F57 (our own host instead of SmartSoft) |
 
 **E1 and E2 are done (2026-10-28). Next: E3(a)** (see "Next capture" below). E2 turned the
 static hypotheses (poll / dirty / fetch objects) into observed facts; the text below about E2
@@ -46,6 +48,42 @@ Online and push a show as soon as anyone starts it: back up the show to SD befor
 launched at all.** Follow-up after the capture session: the owner switches Memory Integrity
 back on (still pending after E2, per the E2 record; our backend must not depend on
 `etchsp.sys`, H7).
+
+### E8 runbook (first read-only session of our software; SC-1)
+
+Owner actions, in order; nothing in it sends anything but the cleared poll and listed fetch.
+
+1. **Backup (safety rule 3):** save the show to the SD card (SHOW06.ASC or the next free name) and
+   note the name; copy the file into `smartfade-sd-card-backup/`.
+2. **Driver (once, reversible, owner action):** run Zadig, *Options → List All Devices*, and pick
+   the entry by its **USB ID `14D5 0200 01`** (vendor 14D5, product 0200, interface 01: the
+   console's interface 1, `USB\VID_14D5&PID_0200&MI_01`; the name Zadig shows for it is not
+   evidence, E1 lists "ETC SmartFade" and "USB High-Speed-Pipe"); never the entry with interface
+   `00`. Driver **WinUSB**, *Replace Driver*. Memory Integrity can stay on. SmartSoft will not see the console
+   until the ETC driver is put back (Device Manager → the WinUSB device → *Uninstall device* with
+   "delete the driver software", then *Scan for hardware changes*, or *Update driver* → *Browse my
+   computer* → *Let me pick* → "USB High-Speed-Pipe").
+3. **Capture in parallel:** start USBPcapCMD on the console's root hub as for E2/E3
+   (`-A --inject-descriptors`), into a new file.
+4. **Backend and UI:** `dotnet run --project src/backend/SmartFade.Api -- --Device:Mode=Usb
+   --Device:Usb:ConfirmDate=<today, yyyy-MM-dd>` (the backend refuses any other date: hardware
+   mode is confirmed per day; `Device:Usb:CaptureLogDirectory` defaults to
+   `%LOCALAPPDATA%\SmartFade\captures`), then `npm start` and open http://localhost:4200. The
+   badge must read **HARDWARE**, the masters must say "Not reported by the console yet" and every
+   fader must be read-only before you press Connect.
+5. **Connect**, then leave everything alone for 60 s. Expect: Connected, the LCD text in the backend
+   log, no change on the console. If the status turns to Error, stop: read the reason, keep the logs.
+6. **Actions, 10 s apart, each announced in the action log** (`tools/usb-probe/action-log.ps1`):
+   fader 1 up to full and back; bump of channel 1 (BUMPS fader up first, then down again); MASTER
+   to half and back to full. Expect the channel, output, FaderInfo and LED changes in the UI.
+7. **Disconnect**, stop the backend, stop USBPcap.
+8. **Evidence:** copy the backend's JSONL and the USBPcap file (console-only split, as for E3b)
+   into `docs/protocol/captures/` with an E8 record (`/record-experiment`); versions as in SC-1
+   item 9; update H66 / H67 / H68 and SC-1's "Review" section.
+
+Abort rules: any Error from the backend ends the session (do not reconnect before reading the log);
+anything the console does that the owner did not cause ends it (note the time); never power-cycle
+the console to recover, just Disconnect.
 
 ### Next capture (proposed by the E2 analysis, 2026-10-28)
 

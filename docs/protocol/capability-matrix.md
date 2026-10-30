@@ -23,6 +23,14 @@ default fade times (F93–F106). **VERIFIED never clears a message for sending:*
 stays **No**; E3b observed no PC -> console control either (the same two System messages in each
 session, F58), and nothing is implemented or tested.
 
+**Update 2026-10-30, later the same day (SC-1).** Safety check SC-1 ([safety-checks.md](safety-checks.md))
+cleared the poll and the fetch of a listed record for a **read-only** session of our own software
+(`SmartFade.Devices.Usb`, `Device:Mode=Usb` confirmed per day, no command accepted). The read columns can
+therefore be served by our code for the live objects the console lists on its own, once the first live session
+**E8** ([reverse-engineering.md](reverse-engineering.md), hypotheses H66–H68) has run; every write column still
+stays **No**, and the full show download (which SmartSoft obtains with its System writes) is not available to
+our code.
+
 Protocol-known values: `No` · `Documented (MIDI)` · `Partially observed` · `Observed` · `Verified`.
 
 | Capability | SmartFade 1248 supports? | SmartSoft supports? | Protocol known? (USB) | Protocol known? (MIDI) | Implemented? | Tested? |

@@ -25,7 +25,9 @@ console's firmware.
   seen behaving that way in two independent sessions; it never clears a message for sending.
   No PC → console message (poll, fetch or data) may be sent by our code until it has been
   observed from SmartSoft on the 1248, understood, shown to be harmless and cleared by
-  `/hardware-safety-check`. As of 2026-10-30 none is cleared.
+  `/hardware-safety-check`. As of 2026-10-30, SC-1 (`docs/protocol/safety-checks.md`) clears exactly
+  two, for a read-only session: the poll and the fetch of a record the console listed. Nothing else
+  is cleared, and nothing else is encoded anywhere in the solution.
 - Never touch the console bootloader / firmware update path.
 - Never retry commands with side effects blindly.
 - Golden protocol tests may only use bytes from a committed capture in `docs/protocol/captures/`.
@@ -49,6 +51,7 @@ or copy its contents into source code. Derived extractions go to `analysis/extra
 | SmartSoft binary analysis | `docs/protocol/smartsoft-analysis.md` |
 | MIDI analysis | `docs/protocol/midi-spec-analysis.md` |
 | Experiments, safety rules, capture format | `docs/protocol/reverse-engineering.md` |
+| Hardware safety checks: what is cleared for sending, under which conditions | `docs/protocol/safety-checks.md` |
 | ASC show file format | `docs/formats/asc-format.md` |
 | Architecture (proposal + "Phase 1 as built") | `docs/architecture.md` |
 | UI ↔ backend contract (SignalR, REST, DTOs; domain concepts only) | `docs/api.md` |
@@ -124,17 +127,22 @@ scaling) and H59 (FaderInfo records 25-48 = the 25-48 bank) were REJECTED; H60-H
 explained the crossfade that his log lacked (he pressed GO once, STACK button unlit) and the 5.0 -> 5.1 s
 default time (a wheel moved by accident); nothing is plugged into DMX IN (owner, 2026-10-30: only DMX OUT is
 connected; H52's content reading stays untested).
-**No protocol message is cleared for sending
-(`/hardware-safety-check` has not passed), so no code may send anything to a console yet.** **Phase 1 is built
+**Safety check SC-1 (2026-10-30, `docs/protocol/safety-checks.md`) cleared the poll and the listed fetch for a
+read-only session; `SmartFade.Devices.Usb` (WinUSB on interface 1, `Device:Mode=Usb`, UI badge HARDWARE, no
+command accepted) is built and replay-tested against E2, E3 and E3b, and the first live session E8 waits for the
+owner's go (backup, Zadig on interface 1, USBPcap in parallel; runbook in `reverse-engineering.md`). Nothing else
+is cleared: no System write, no payload, no control command.** **Phase 1 is built
 (2026-10-30, owner-approved):** .NET 10 solution (`SmartFade.sln`: Domain, Application with
-desired-versus-actual state, simulated device, decoder-only Protocol with golden tests over the
-committed captures, Communication with a capture replay, SignalR/REST API on port 5160) and the
+desired-versus-actual state, simulated device, Protocol with decoders and, since SC-1, the poll and
+listed-fetch encoder, with golden tests over the committed captures, Communication with a capture
+replay and the WinUSB pipe, SignalR/REST API on port 5160) and the
 Angular app (`src/frontend/smartfade-ui`); see `docs/architecture.md` "Phase 1 as built" and
 `docs/api.md`. The same day the simulator and UI gained memories (REC MEM / EDIT MEM / COPY, 12
 pages × 24), bump buttons, SOLO, the independents IND 1 / IND 2 (DMX 97 / 98 by default) and the
 CLEAR key, modelled on the manual (F5, F6, F107–F109; the simulator's own readings are marked
-INFERRED), plus the console's record and crossfader columns with the unmodelled keys inactive. No
-code in the solution can transmit to a console. Next: the owner questions and passive captures listed in
+INFERRED), plus the console's record and crossfader columns with the unmodelled keys inactive. Since
+SC-1 the only code that can transmit to a console is the read-only USB device, and only the poll and
+the listed fetch. Next: the owner questions and passive captures listed in
 `docs/protocol/reverse-engineering.md` ("Next capture (proposed by the E3b analysis)": BUMPS at intermediate
 levels and SOLO with another output up, several stable MASTER positions, a known DMX source on DMX IN, a page
 change, the power-on pending list; optionally GO with the STACK button lit, and the SmartSoft-side "č" label
@@ -177,12 +185,17 @@ npm test           # Vitest, headless, no backend needed
 npm run build
 ```
 
-Mock mode is the default and the only mode: `Device:Mode=Simulated` (any other value refuses to
-start). Simulator settings: `Device:Simulation:CommandLatencyMilliseconds`,
-`ConnectDelayMilliseconds`, `FailCommands`. **Real-hardware mode does not exist**: it may only be
-added after a message is cleared by `/hardware-safety-check`, and then as a deliberate, visibly
-indicated switch. The golden tests locate the captures by walking up to `SmartFade.sln`, so run
-them from a checkout. Port 5000 is taken by another application on the owner's PC.
+Mock mode is the default: `Device:Mode=Simulated`. Simulator settings:
+`Device:Simulation:CommandLatencyMilliseconds`, `ConnectDelayMilliseconds`, `FailCommands`.
+**Real-hardware mode (read-only, SC-1):**
+`dotnet run --project src/backend/SmartFade.Api -- --Device:Mode=Usb --Device:Usb:ConfirmDate=yyyy-MM-dd`
+(today's date, or the backend refuses to start: the mode is confirmed per day, never left on) sends
+only the cleared poll and listed fetch over WinUSB on the console's interface 1 (bound with Zadig
+by the owner), logs every transfer to `Device:Usb:CaptureLogDirectory` (outside the repository by
+default) and shows HARDWARE in the UI; it is never the default, any other `Device:Mode` value
+refuses to start, and it is run only as the E8 runbook says (backup first). The golden tests locate the captures by walking up to
+`SmartFade.sln`, so run them from a checkout. Port 5000 is taken by another application on the
+owner's PC.
 
 ## Working style
 

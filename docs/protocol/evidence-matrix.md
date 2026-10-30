@@ -1,6 +1,11 @@
 # Evidence matrix
 
 Central cross-reference. One row per feature. Cells say what each source contains.
+
+*2026-10-30, SC-1:* the first clearance for sending (poll and listed fetch, read-only session) is recorded in
+[safety-checks.md](safety-checks.md); the hypotheses it opens are H66–H68 and the experiment is E8
+([reverse-engineering.md](reverse-engineering.md)). The **Capture / HW test** column gains a second host for
+those two messages only once E8 has run; nothing in this matrix changes status from the clearance itself.
 `—` = not addressed by that source. Status uses the vocabulary in [README.md](README.md).
 
 Sources: **SS-Man** = SmartSoft 3.0.1 manual · **Con-Man** = SmartFade console manual v3.0 ·

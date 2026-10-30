@@ -11,10 +11,14 @@ and E2 (first USB capture of a SmartSoft session: poll / dirty-list / fetch fram
 scaling, the 25-48 bank, a GO crossfade) on 2026-10-30. 35 facts are VERIFIED as observed console / SmartSoft
 behaviour (USB framing, start-up, show objects, front-panel mirroring, product string, firmware version; nine
 of them only in part; before E3 only the last two were). VERIFIED never
-clears a message for sending: no protocol message is cleared, so no code may talk to a console yet.
+clears a message for sending: no protocol message is cleared, so no code may talk to a console yet
+*(superseded in part on 2026-10-30 by safety check SC-1, which clears the poll and the listed fetch for
+a read-only session; see below)*.
 **Phase 1 is built (2026-10-30):** the first vertical slice Angular → SignalR → .NET → simulated
-console, with protocol decoders tested against the committed captures. Nothing in it can transmit
-to a console.
+console, with protocol decoders tested against the committed captures. **Safety check SC-1
+(2026-10-30)** cleared the poll and the listed fetch for a read-only session: a WinUSB device
+exists behind `--Device:Mode=Usb`, replay-tested against every capture; its first live session
+(E8) waits for the owner.
 
 ## Run it
 
@@ -24,7 +28,10 @@ dotnet run --project src/backend/SmartFade.Api              # backend, http://lo
 cd src/frontend/smartfade-ui && npm install && npm start    # UI, http://localhost:4200 (proxies to 5160)
 ```
 
-The simulator is the default and only device; see `docs/api.md` for the UI contract and
+The simulator is the default device. The read-only hardware mode
+(`dotnet run --project src/backend/SmartFade.Api -- --Device:Mode=Usb --Device:Usb:ConfirmDate=<today>`)
+is for the E8 session only, after the preparation in `docs/protocol/reverse-engineering.md`; it is
+confirmed per day and never stays switched on. See `docs/api.md` for the UI contract and
 `docs/architecture.md` ("Phase 1 as built") for the layout.
 
 | Start here | |

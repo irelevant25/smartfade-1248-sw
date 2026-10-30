@@ -62,7 +62,10 @@ talks to a console" is a necessary condition, not a sufficient one, and **no mes
 no code may send anything to a console yet.** **Update 2026-10-30:** after the E3b sessions (three more
 sessions after another power cycle) 35 facts are VERIFIED, nine more than above, each in part (the structural
 part of facts first seen in E3, never a live value); the sentence above stands unchanged: VERIFIED is
-necessary, not sufficient, and **no message is cleared; no code may send anything to a console yet.**
+necessary, not sufficient, and **no message is cleared; no code may send anything to a console yet.** **Update 2026-10-30, later the same day (SC-1):** safety check SC-1
+([safety-checks.md](safety-checks.md)) cleared the poll and the listed fetch for a read-only session of our
+own software (`SmartFade.Devices.Usb`, behind `Device:Mode=Usb` confirmed per day); the sentences above are
+superseded for those two messages only, and nothing else is cleared.
 
 ## Version landscape
 
