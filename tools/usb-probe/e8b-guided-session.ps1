@@ -12,8 +12,18 @@
 # -LogFile is mandatory and must be a NEW file (action logs are hashed evidence).
 param(
     [Parameter(Mandatory = $true)][string]$LogFile,
-    [string]$Repo = (Split-Path -Parent (Split-Path -Parent $PSScriptRoot))
+    [string]$Repo = ""
 )
+
+# $PSScriptRoot is not usable in a parameter default under -File on Windows PowerShell 5.1.
+if ([string]::IsNullOrWhiteSpace($Repo)) {
+    $scriptPath = $MyInvocation.MyCommand.Path
+    $Repo = Split-Path -Parent (Split-Path -Parent (Split-Path -Parent $scriptPath))
+}
+if (-not (Test-Path -LiteralPath (Join-Path $Repo "SmartFade.sln"))) {
+    Write-Host ("The repository root was not found at {0}; pass -Repo <path to the checkout>." -f $Repo) -ForegroundColor Red
+    exit 1
+}
 
 if (Test-Path -LiteralPath $LogFile) {
     Write-Host ("Refusing to append to the existing file {0}: action logs are hashed evidence. Choose a new file name." -f $LogFile) -ForegroundColor Red
