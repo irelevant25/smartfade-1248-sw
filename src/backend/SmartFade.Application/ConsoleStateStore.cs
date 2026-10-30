@@ -33,6 +33,7 @@ public sealed class ConsoleStateStore
     private bool _memoriesReported;
     private bool _independentsReported;
     private int? _memoryPage;
+    private PanelKeys? _keys;
 
     public ConsoleStateStore(ConsoleCapabilities capabilities, ConnectionState initialConnection, DeviceCommands supportedCommands)
     {
@@ -81,6 +82,7 @@ public sealed class ConsoleStateStore
                 _memoriesReported,
                 _independentsReported,
                 _memoryPage,
+                _keys,
                 _showFileName,
                 _firmwareVersion);
         }
@@ -115,6 +117,7 @@ public sealed class ConsoleStateStore
                 _memoriesReported = false;
                 _independentsReported = false;
                 _memoryPage = null;
+                _keys = null;
                 for (var i = 0; i < _memories.Length; i++)
                 {
                     _memories[i] = _memories[i] with { Reported = false };   // kept for display, no longer the console's word
@@ -217,6 +220,11 @@ public sealed class ConsoleStateStore
             if (change.MemoryPage is { } page && _capabilities.IsValidMemoryPage(page))
             {
                 _memoryPage = page;
+            }
+
+            if (change.Keys is { } keys)
+            {
+                _keys = keys;
             }
 
             if (change.ShowFileName is { } fileName)

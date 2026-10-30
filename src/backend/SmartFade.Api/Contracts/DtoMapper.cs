@@ -63,6 +63,12 @@ public static class DtoMapper
     public static MastersDto ToDto(Masters masters) =>
         new(masters.Master, masters.Bumps, masters.Blackout, masters.Solo, masters.Independent1, masters.Independent2);
 
+    public static PanelKeysDto ToDto(PanelKeys keys) =>
+        new(ToDto(keys.Stack), ToDto(keys.Clear), ToDto(keys.Copy), ToDto(keys.RecSeq), ToDto(keys.Magic), ToDto(keys.RecMem), ToDto(keys.EditMem));
+
+    public static KeyLedDto ToDto(KeyLed led) =>
+        new(led.Light switch { KeyLight.Full => "full", KeyLight.Dim => "dim", _ => "off" }, led.Blinking);
+
     public static MemoryStateDto ToDto(MemoryState memory, ConsoleCapabilities capabilities) =>
         new(memory.Page, memory.Fader, memory.Number(capabilities), memory.Level, memory.Recorded, memory.Label.ToString(), memory.Reported);
 
@@ -85,6 +91,7 @@ public static class DtoMapper
             state.MemoriesReported,
             state.IndependentsReported,
             state.MemoryPage,
+            state.Keys is { } keys ? ToDto(keys) : null,
             state.ShowFileName,
             state.FirmwareVersion);
 

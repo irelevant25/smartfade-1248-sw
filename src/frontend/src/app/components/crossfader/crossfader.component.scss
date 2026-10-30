@@ -81,3 +81,37 @@
   background: #e9eef3;
   color: #0a0c0f;
 }
+
+// The console's key LEDs in hardware mode: lit at full, dimmed, or blinking (global .sf-key--blink).
+.xfade__key--lit {
+  background: currentColor;
+  box-shadow: 0 0 14px currentColor;
+
+  .xfade__icon,
+  &.xfade__stack,
+  &.xfade__clear {
+    color: inherit;
+  }
+}
+
+.xfade__stack.xfade__key--lit {
+  background: #ffd84d;
+  color: #0a0c0f;
+  box-shadow: 0 0 14px rgba(255, 216, 77, 0.6);
+}
+
+.xfade__clear.xfade__key--lit {
+  background: #e9eef3;
+  color: #0a0c0f;
+  box-shadow: 0 0 14px rgba(243, 246, 249, 0.6);
+}
+
+.xfade__key--dim {
+  border-color: currentColor;
+  box-shadow: inset 0 0 0 1px currentColor, 0 0 8px currentColor;
+}
+
+.xfade__key--led:disabled {
+  opacity: 1;
+  cursor: default;
+}

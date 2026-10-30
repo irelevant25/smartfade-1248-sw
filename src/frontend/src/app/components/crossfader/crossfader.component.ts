@@ -26,6 +26,11 @@ export class CrossfaderComponent {
   protected readonly enabled = this._channels.enabled;
   protected readonly canClear = computed(() => this._state.supports('clearChannels'));
   protected readonly clearPresses = this._clear.presses;
+  /** A real console reports the STACK and CLEAR LEDs (F117, F116; identities inferred, H72). */
+  protected readonly keys = this._state.keys;
+  protected readonly stackLed = computed(() => this._state.keys()?.stack);
+  protected readonly clearLed = computed(() => this._state.keys()?.clear);
+  protected readonly ledTitle = 'LED reading from the console (which key is which is inferred)';
 
   protected clear(): void {
     this._clear.press();

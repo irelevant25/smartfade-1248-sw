@@ -70,6 +70,12 @@ interface MemoryStateDto {                          // one memory as the console
   label: string;                                    // the console's label (up to three words), '' when none
 }
 
+interface KeyLedDto { light: 'off' | 'dim' | 'full'; blinking: boolean; }   // one key LED: its first blink phase, and whether the phases differ
+
+interface PanelKeysDto {                            // STACK and CLEAR (crossfader section), the record keys; SNAPSHOT and RATE have no identified LED
+  stack: KeyLedDto; clear: KeyLedDto; copy: KeyLedDto; recSeq: KeyLedDto; magic: KeyLedDto; recMem: KeyLedDto; editMem: KeyLedDto;
+}
+
 interface MemoryDto {                               // a memory's content, read on demand
   page: number; fader: number; number: number; label: string;
   levels: number[];                                 // exactly 48 entries, index 0 = channel 1, 0..255
@@ -99,6 +105,8 @@ interface ConsoleStateDto {
                                                     // Independents object, F115); the simulator reports them with its snapshot
   memoryPage: number | null;                        // the console's selected memory page, 1..12, when the device reports it
                                                     // (hardware mode: ConsoleStatus, F113); null for the simulator (the UI chooses)
+  keys: PanelKeysDto | null;                        // the key LEDs a real console reports (hardware mode, LedStatus; F116, F117,
+                                                    // key identities INFERRED, H72); null until reported, always null for the simulator
   showFileName?: string;                            // e.g. "SHOW04.ASC" when known
   firmwareVersion?: string;                         // e.g. "3.0.2.9.0.43" when known
 }

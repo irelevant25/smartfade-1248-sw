@@ -124,4 +124,28 @@ describe('RecordKeysComponent', () => {
     expect(key('.record__rec').disabled).toBe(true);
     expect(key('.record__edit').disabled).toBe(true);
   });
+
+  it("mirrors the console's key LEDs when a read-only device reports them", () => {
+    const led = (light: 'off' | 'dim' | 'full', blinking = false) => ({ light, blinking });
+    TestBed.inject(ConsoleStateService).applyConsoleStateChanged(
+      createSampleState({
+        supportedCommands: [],
+        connection: { status: 'connected', mode: 'hardware', deviceDescription: 'SmartFade 1248, read-only' },
+        keys: { stack: led('full', true), clear: led('full', true), copy: led('off'), recSeq: led('off'), magic: led('full', true), recMem: led('full'), editMem: led('dim') },
+      }),
+    );
+    fixture.detectChanges();
+    const key = (selector: string) => element().querySelector<HTMLButtonElement>(selector)!;
+    const keysInOrder = Array.from(element().querySelectorAll<HTMLButtonElement>('.record__key'));
+
+    expect(key('.record__rec').classList.contains('record__key--lit')).toBe(true);
+    expect(key('.record__rec').classList.contains('sf-key--blink')).toBe(false);
+    expect(key('.record__edit').classList.contains('record__key--dim')).toBe(true);
+    expect(keysInOrder[2].classList.contains('sf-key--blink')).toBe(true); // MAGIC
+    expect(keysInOrder[2].classList.contains('record__key--inactive')).toBe(false);
+    expect(key('.record__copy').classList.contains('record__key--lit')).toBe(false);
+    expect(key('.record__copy').hasAttribute('aria-pressed')).toBe(false);
+    expect(key('.record__copy').getAttribute('title')).toContain('LED reading');
+    expect(keysInOrder.every((button) => button.disabled)).toBe(true);
+  });
 });

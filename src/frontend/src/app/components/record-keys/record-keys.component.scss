@@ -72,3 +72,15 @@
 .record__key--inactive:disabled {
   opacity: 0.55;
 }
+
+// The console's LED at its dimmed level ("has content" / "selectable", manual p.11).
+.record__key--dim {
+  border-color: rgb(var(--key-rgb));
+  box-shadow: 0 0 8px rgba(var(--key-rgb), 0.35), inset 0 0 0 1px rgba(var(--key-rgb), 0.35);
+}
+
+// A key mirroring the console's LED is read-only but must not look switched off.
+.record__key--led:disabled {
+  opacity: 1;
+  cursor: default;
+}

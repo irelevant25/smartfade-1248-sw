@@ -123,8 +123,30 @@ export interface ConsoleStateDto {
   independentsReported?: boolean;
   /** The console's selected memory page, 1..12, when the device reports it; null for the simulator (the UI chooses). */
   memoryPage?: number | null;
+  /** The key LEDs a real console reports (hardware mode); null until reported, always null for the simulator. */
+  keys?: PanelKeysDto | null;
   showFileName?: string | null;
   firmwareVersion?: string | null;
+}
+
+/** One key LED as the console reports it: its first blink phase, and whether the two phases differ. */
+export interface KeyLedDto {
+  light: 'off' | 'dim' | 'full';
+  blinking: boolean;
+}
+
+/**
+ * The key LEDs a real console reports: STACK and CLEAR of the crossfader section and the record
+ * keys. Which LED is which key is inferred from one session (H72); SNAPSHOT and RATE have none.
+ */
+export interface PanelKeysDto {
+  stack: KeyLedDto;
+  clear: KeyLedDto;
+  copy: KeyLedDto;
+  recSeq: KeyLedDto;
+  magic: KeyLedDto;
+  recMem: KeyLedDto;
+  editMem: KeyLedDto;
 }
 
 export interface OutputsChangedDto {

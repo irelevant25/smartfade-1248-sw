@@ -99,4 +99,26 @@ describe('CrossfaderComponent', () => {
 
     expect(key('.xfade__clear').disabled).toBe(true);
   });
+
+  it('mirrors the STACK and CLEAR LEDs when a read-only device reports them', () => {
+    const led = (light: 'off' | 'dim' | 'full', blinking = false) => ({ light, blinking });
+    TestBed.inject(ConsoleStateService).applyConsoleStateChanged(
+      createSampleState({
+        supportedCommands: [],
+        connection: { status: 'connected', mode: 'hardware', deviceDescription: 'SmartFade 1248, read-only' },
+        keys: { stack: led('full', true), clear: led('full', true), copy: led('off'), recSeq: led('off'), magic: led('full', true), recMem: led('full'), editMem: led('dim') },
+      }),
+    );
+    fixture.detectChanges();
+    const stack = element().querySelector<HTMLButtonElement>('.xfade__stack')!;
+    const clear = element().querySelector<HTMLButtonElement>('.xfade__clear')!;
+
+    expect(stack.classList.contains('xfade__key--lit')).toBe(true);
+    expect(stack.classList.contains('sf-key--blink')).toBe(true);
+    expect(stack.classList.contains('sf-key--inactive')).toBe(false);
+    expect(stack.getAttribute('title')).toContain('LED reading');
+    expect(clear.classList.contains('xfade__key--lit')).toBe(true);
+    expect(clear.disabled).toBe(true);
+    expect(element().querySelector('.xfade__note')?.textContent).toContain('Observed from the console');
+  });
 });

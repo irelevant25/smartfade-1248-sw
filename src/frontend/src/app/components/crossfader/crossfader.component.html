@@ -1,6 +1,8 @@
 <section class="xfade sf-panel" aria-labelledby="xfade-title">
   <h2 id="xfade-title" class="sf-panel-title">Crossfader</h2>
-  <p class="xfade__note">Stack playback is not in the simulator yet.</p>
+  <p class="xfade__note">
+    {{ keys() ? 'Observed from the console: the STACK and CLEAR LEDs' : 'Stack playback is not in the simulator yet.' }}
+  </p>
 
   <div class="xfade__columns">
     <div class="xfade__column">
@@ -18,9 +20,14 @@
       </button>
       <button
         type="button"
-        class="xfade__key xfade__stack sf-key--inactive"
+        class="xfade__key xfade__stack"
+        [class.sf-key--inactive]="!keys()"
+        [class.xfade__key--lit]="stackLed()?.light === 'full'"
+        [class.xfade__key--dim]="stackLed()?.light === 'dim'"
+        [class.sf-key--blink]="stackLed()?.blinking === true"
+        [class.xfade__key--led]="!!keys()"
         disabled
-        title="Stack: not available yet"
+        [attr.title]="keys() ? ledTitle : 'Stack: not available yet'"
       >
         Stack
       </button>
@@ -43,8 +50,16 @@
         type="button"
         class="xfade__key xfade__clear"
         [class.xfade__clear--series]="clearPresses() > 0"
+        [class.xfade__key--lit]="clearLed()?.light === 'full'"
+        [class.xfade__key--dim]="clearLed()?.light === 'dim'"
+        [class.sf-key--blink]="clearLed()?.blinking === true"
+        [class.xfade__key--led]="!!keys()"
         [disabled]="!enabled() || !canClear()"
-        title="Clear: once aborts a recording function, twice clears the channel faders, three times the memory faders"
+        [attr.title]="
+          keys()
+            ? ledTitle
+            : 'Clear: once aborts a recording function, twice clears the channel faders, three times the memory faders'
+        "
         (click)="clear()"
       >
         Clear

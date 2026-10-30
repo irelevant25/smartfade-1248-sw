@@ -115,3 +115,23 @@ body {
   opacity: 0.55;
   cursor: not-allowed;
 }
+
+// A key whose LED the console reports as blinking (hardware mode): the two LED phases alternate on
+// the console at about 1 Hz; here the lit look switches on and off.
+@keyframes sf-led-blink {
+  50% {
+    opacity: 0.35;
+  }
+}
+
+.sf-key--blink {
+  animation: sf-led-blink 1s steps(1, end) infinite;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .sf-key--blink {
+    animation: none;
+    outline: 2px dashed currentColor;
+    outline-offset: 2px;
+  }
+}

@@ -20,6 +20,12 @@ public sealed record ChannelStateDto(int Channel, int Desired, int Actual, bool 
 /// <summary>Independent1 / Independent2 are the IND 1 / IND 2 toggles (F108).</summary>
 public sealed record MastersDto(int Master, int Bumps, bool Blackout, bool Solo, bool Independent1, bool Independent2);
 
+/// <summary>A key LED as the console reports it: light "off" | "dim" | "full", and whether it blinks.</summary>
+public sealed record KeyLedDto(string Light, bool Blinking);
+
+/// <summary>The key LEDs a real console reports (null in the state until it does; the simulator never does).</summary>
+public sealed record PanelKeysDto(KeyLedDto Stack, KeyLedDto Clear, KeyLedDto Copy, KeyLedDto RecSeq, KeyLedDto Magic, KeyLedDto RecMem, KeyLedDto EditMem);
+
 /// <summary>A memory as the console addresses it: page 1..12, fader 1..24; Number = 24 × (page − 1) + fader.</summary>
 public sealed record MemoryStateDto(int Page, int Fader, int Number, int Level, bool Recorded, string Label, bool Reported);
 
@@ -41,6 +47,7 @@ public sealed record ConsoleStateDto(
     bool MemoriesReported,
     bool IndependentsReported,
     int? MemoryPage,
+    PanelKeysDto? Keys,
     string? ShowFileName,
     string? FirmwareVersion);
 

@@ -82,4 +82,26 @@ public class ConsoleStateStoreTests
         store.SetConnection(new ConnectionState(ConnectionStatus.Disconnected, DeviceMode.Hardware, "test"));
         Assert.All(store.GetState().Memories, m => Assert.False(m.Reported));
     }
+
+    [Fact]
+    public void The_key_LEDs_and_the_independents_are_kept_until_the_connection_ends()
+    {
+        var store = Connected();
+        Assert.Null(store.GetState().Keys);
+        Assert.False(store.GetState().IndependentsReported);
+
+        var keys = new PanelKeys(new KeyLed(KeyLight.Full, false), KeyLed.Off, KeyLed.Off, KeyLed.Off, KeyLed.Off, KeyLed.Off, KeyLed.Off);
+        Apply(store, new DeviceStateChange(Keys: keys, Independents: new IndependentStates(true, false), MemoryPage: 12));
+        var state = store.GetState();
+        Assert.Equal(keys, state.Keys);
+        Assert.True(state.IndependentsReported);
+        Assert.True(state.Masters.Independent1);
+        Assert.Equal(12, state.MemoryPage);
+
+        store.SetConnection(new ConnectionState(ConnectionStatus.Disconnected, DeviceMode.Hardware, "test"));
+        var cleared = store.GetState();
+        Assert.Null(cleared.Keys);
+        Assert.False(cleared.IndependentsReported);
+        Assert.Null(cleared.MemoryPage);
+    }
 }

@@ -9,7 +9,8 @@ namespace SmartFade.Application.Ports;
 /// (index 0 = channel 1); <see cref="Memories"/> lists the memories whose state changed;
 /// <see cref="ShowFileName"/> and <see cref="FirmwareVersion"/> are reported on their own when a
 /// device learns them without a full snapshot; <see cref="Independents"/> and <see cref="MemoryPage"/> (the
-/// console's selected memory page, 1-based) likewise.
+/// console's selected memory page, 1-based) likewise; <see cref="Keys"/> is the LED state of the keys a real
+/// console reports (the simulator reports none).
 /// </summary>
 public sealed record DeviceStateChange(
     ConsoleSnapshot? Snapshot = null,
@@ -21,7 +22,8 @@ public sealed record DeviceStateChange(
     string? ShowFileName = null,
     string? FirmwareVersion = null,
     IndependentStates? Independents = null,
-    int? MemoryPage = null);
+    int? MemoryPage = null,
+    PanelKeys? Keys = null);
 
 /// <summary>The on / off state of IND 1 and IND 2, reported on its own when a device learns it apart from the masters.</summary>
 public sealed record IndependentStates(bool Independent1, bool Independent2);

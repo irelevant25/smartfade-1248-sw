@@ -39,7 +39,7 @@ public class ConsoleStateAssemblerTests
         // E3b seq 14: the first object of the capture is LedStatus (F94); SOLO was on in no E3b session start
         var afterLeds = assembler.Apply(objects[(int)HspObjectId.LedStatus]);
 
-        Assert.Null(afterLeds);
+        Assert.Null(afterLeds?.Masters);   // the key LEDs are reported, the masters are not
         Assert.Null(assembler.Masters);
 
         // E3b seq 7959: the first FaderInfo of the capture (session 3)
@@ -60,7 +60,7 @@ public class ConsoleStateAssemblerTests
         var soloOn = WithSoloLit(leds);
 
         // before FaderInfo: the LED reading is kept, not reported
-        Assert.Null(assembler.Apply(soloOn));
+        Assert.Null(assembler.Apply(soloOn)?.Masters);
         Assert.Null(assembler.Masters);
 
         var masters = assembler.Apply(objects[(int)HspObjectId.FaderInfo])!.Masters!;
@@ -189,6 +189,29 @@ public class ConsoleStateAssemblerTests
         var both = assembler.Apply(E8.Value[6421]);
         Assert.Equal(new IndependentStates(true, true), both?.Independents);
         Assert.Null(assembler.Apply(E8.Value[6421]));   // unchanged: nothing to report
+    }
+
+    [Fact]
+    public void The_key_LEDs_follow_the_record_functions_and_STACK()
+    {
+        // E8 seq 11: the idle map (CLEAR steady full, STACK dim); seq 26865: the "Record Memory" screen (CLEAR, STACK and
+        // MAGIC blinking, REC MEM steady full); seq 24971: STACK pressed (full, steady) (F116, F117; identities H72)
+        var assembler = new ConsoleStateAssembler(ConsoleCapabilities.SmartFade1248);
+
+        var idle = assembler.Apply(E8.Value[11])?.Keys;
+        Assert.Equal(new KeyLed(KeyLight.Full, false), idle?.Clear);
+        Assert.Equal(new KeyLed(KeyLight.Dim, false), idle?.Stack);
+        Assert.Equal(KeyLed.Off, idle?.RecMem);
+
+        var recording = assembler.Apply(E8.Value[26865])?.Keys;
+        Assert.Equal(new KeyLed(KeyLight.Full, true), recording?.Clear);
+        Assert.Equal(new KeyLed(KeyLight.Full, true), recording?.Stack);
+        Assert.Equal(new KeyLed(KeyLight.Full, true), recording?.Magic);
+        Assert.Equal(new KeyLed(KeyLight.Full, false), recording?.RecMem);
+        Assert.Equal(KeyLed.Off, recording?.EditMem);
+
+        Assert.Equal(new KeyLed(KeyLight.Full, false), assembler.Apply(E8.Value[24971])?.Keys?.Stack);
+        Assert.Null(assembler.Apply(E8.Value[24971])?.Keys);   // unchanged: nothing to report
     }
 
     [Fact]

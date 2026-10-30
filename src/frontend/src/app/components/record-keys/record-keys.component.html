@@ -5,37 +5,53 @@
     <button
       type="button"
       class="record__key record__key--white record__copy"
-      [class.record__key--lit]="copyArmed()"
-      [attr.aria-pressed]="copyArmed()"
+      [class.record__key--lit]="copyArmed() || copyLed()?.light === 'full'"
+      [class.record__key--dim]="copyLed()?.light === 'dim'"
+      [class.sf-key--blink]="copyLed()?.blinking === true"
+      [class.record__key--led]="!!keys()"
+      [attr.aria-pressed]="keys() ? null : copyArmed()"
       [disabled]="!enabled() || !canStore()"
-      title="Copy a memory into another"
+      [attr.title]="keys() ? ledTitle : 'Copy a memory into another'"
       (click)="toggleCopy()"
     >
       Copy
     </button>
     <button
       type="button"
-      class="record__key record__key--yellow record__key--inactive"
+      class="record__key record__key--yellow"
+      [class.record__key--inactive]="!keys()"
+      [class.record__key--lit]="recSeqLed()?.light === 'full'"
+      [class.record__key--dim]="recSeqLed()?.light === 'dim'"
+      [class.sf-key--blink]="recSeqLed()?.blinking === true"
+      [class.record__key--led]="!!keys()"
       disabled
-      title="Sequences are not in the simulator yet"
+      [attr.title]="keys() ? ledTitle : 'Sequences are not in the simulator yet'"
     >
       Rec Seq
     </button>
     <button
       type="button"
-      class="record__key record__key--white record__key--inactive"
+      class="record__key record__key--white"
+      [class.record__key--inactive]="!keys()"
+      [class.record__key--lit]="magicLed()?.light === 'full'"
+      [class.record__key--dim]="magicLed()?.light === 'dim'"
+      [class.sf-key--blink]="magicLed()?.blinking === true"
+      [class.record__key--led]="!!keys()"
       disabled
-      title="Magic looks are not in the simulator yet"
+      [attr.title]="keys() ? ledTitle : 'Magic looks are not in the simulator yet'"
     >
       Magic
     </button>
     <button
       type="button"
       class="record__key record__key--red record__rec"
-      [class.record__key--lit]="recordArmed()"
-      [attr.aria-pressed]="recordArmed()"
+      [class.record__key--lit]="recordArmed() || recMemLed()?.light === 'full'"
+      [class.record__key--dim]="recMemLed()?.light === 'dim'"
+      [class.sf-key--blink]="recMemLed()?.blinking === true"
+      [class.record__key--led]="!!keys()"
+      [attr.aria-pressed]="keys() ? null : recordArmed()"
       [disabled]="!enabled() || !canRecord()"
-      title="Record the current look into a memory"
+      [attr.title]="keys() ? ledTitle : 'Record the current look into a memory'"
       (click)="toggleRecord()"
     >
       Rec Mem
@@ -43,10 +59,13 @@
     <button
       type="button"
       class="record__key record__key--red record__edit"
-      [class.record__key--lit]="editArmed()"
-      [attr.aria-pressed]="editArmed()"
+      [class.record__key--lit]="editArmed() || editMemLed()?.light === 'full'"
+      [class.record__key--dim]="editMemLed()?.light === 'dim'"
+      [class.sf-key--blink]="editMemLed()?.blinking === true"
+      [class.record__key--led]="!!keys()"
+      [attr.aria-pressed]="keys() ? null : editArmed()"
       [disabled]="!enabled() || !canStore()"
-      title="Edit a memory on the channel faders"
+      [attr.title]="keys() ? ledTitle : 'Edit a memory on the channel faders'"
       (click)="toggleEdit()"
     >
       Edit Mem

@@ -31,7 +31,7 @@ namespace SmartFade.Devices.Usb;
 ///   is deleted, F107); body[2] = 0x01 keeps its UNKNOWN meaning (H39). The playback level is not
 ///   reported.
 /// </summary>
-[Evidence(EvidenceStatus.Observed, "F59, F60, F67, F71, F72, F73, F82, F83, F87, F95, F96, F97, F100, F103, F112, F113, F114, F115, F116", "display-only decoding; INFERRED: SOLO (F100), BLACKOUT (F114), IND 1 / IND 2 identity (F115, H72), recorded flags (F107 from a Memory object; F84 / F8 from the LED map), fader position not reported; HYPOTHESIS: H40 label byte order, H25 page / fader, H71 memory fader bytes")]
+[Evidence(EvidenceStatus.Observed, "F59, F60, F67, F71, F72, F73, F82, F83, F87, F95, F96, F97, F100, F103, F112, F113, F114, F115, F116, F117", "display-only decoding; INFERRED: SOLO (F100), BLACKOUT (F114), IND 1 / IND 2 identity (F115, H72), the key LEDs' identities (H72), recorded flags (F107 from a Memory object; F84 / F8 from the LED map), fader position not reported; HYPOTHESIS: H40 label byte order, H25 page / fader, H71 memory fader bytes")]
 public sealed class ConsoleStateAssembler
 {
     private readonly ConsoleCapabilities _capabilities;
@@ -49,6 +49,7 @@ public sealed class ConsoleStateAssembler
     private int _memoryPage = 1;
     private bool _pageReported;
     private bool _functionScreen;
+    private PanelKeys? _keys;
     private string? _showFileName;
     private string? _firmwareVersion;
 
@@ -187,7 +188,44 @@ public sealed class ConsoleStateAssembler
         // LED is BLACKOUT's is INFERRED from the owner's account and the manual, F5). Its blink with
         // the MASTER below full (F85) is phase A != phase B and reads as "not active" here.
         _blackoutFromLeds = leds.Block(53) is { R1: 0, G1: 0, B1: 0xFF, R2: 0, G2: 0, B2: 0xFF };
-        return Combine(ReportMasters(), ReportMemoryFaders());
+        return Combine(Combine(ReportMasters(), ReportMemoryFaders()), ReportKeys(leds));
+    }
+
+    /// <summary>
+    /// The key LEDs: block 57 CLEAR, 60 STACK, 63 COPY, 64 REC SEQ, 65 MAGIC, 66 REC MEM, 67 EDIT MEM
+    /// (identities INFERRED, H72: in E8 each block changed only in its own record function or with its
+    /// key; the patterns OBSERVED, F116, F117). Brightness is the first phase's strongest channel:
+    /// at most 0x0A off, below 0xC8 dim (0x46), else full; blinking = the two phases differ (F85).
+    /// </summary>
+    private DeviceStateChange? ReportKeys(LedStatusObject leds)
+    {
+        if (leds.Blocks.Count < 67)
+        {
+            return null;
+        }
+
+        var keys = new PanelKeys(
+            Stack: Led(leds.Block(60)),
+            Clear: Led(leds.Block(57)),
+            Copy: Led(leds.Block(63)),
+            RecSeq: Led(leds.Block(64)),
+            Magic: Led(leds.Block(65)),
+            RecMem: Led(leds.Block(66)),
+            EditMem: Led(leds.Block(67)));
+        if (keys == _keys)
+        {
+            return null;
+        }
+
+        _keys = keys;
+        return new DeviceStateChange(Keys: keys);
+    }
+
+    private static KeyLed Led(LedBlock block)
+    {
+        var strongest = Math.Max(block.R1, Math.Max(block.G1, block.B1));
+        var light = strongest <= 0x0A ? KeyLight.Off : strongest < 0xC8 ? KeyLight.Dim : KeyLight.Full;
+        return new KeyLed(light, block.PhasesDiffer);
     }
 
     /// <summary>
@@ -338,6 +376,7 @@ public sealed class ConsoleStateAssembler
             Memories = first.Memories ?? second.Memories,
             Independents = first.Independents ?? second.Independents,
             MemoryPage = first.MemoryPage ?? second.MemoryPage,
+            Keys = first.Keys ?? second.Keys,
         };
     }
 

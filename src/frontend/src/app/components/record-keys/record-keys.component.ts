@@ -33,6 +33,17 @@ export class RecordKeysComponent {
     const mode = this._edit.mode();
     return mode === 'select' || mode === 'edit';
   });
+  /**
+   * A real console reports its key LEDs (F116; which LED is which key is inferred, H72): the keys
+   * then mirror them, lit, dimmed or blinking, instead of the simulator's armed functions.
+   */
+  protected readonly keys = this._state.keys;
+  protected readonly copyLed = computed(() => this._state.keys()?.copy);
+  protected readonly recSeqLed = computed(() => this._state.keys()?.recSeq);
+  protected readonly magicLed = computed(() => this._state.keys()?.magic);
+  protected readonly recMemLed = computed(() => this._state.keys()?.recMem);
+  protected readonly editMemLed = computed(() => this._state.keys()?.editMem);
+  protected readonly ledTitle = 'LED reading from the console (which key is which is inferred)';
 
   protected toggleCopy(): void {
     this._edit.toggleCopy();

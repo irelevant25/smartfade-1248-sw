@@ -18,6 +18,7 @@ import {
   type MastersDto,
   type MemoryStateDto,
   type OutputsChangedDto,
+  PanelKeysDto,
 } from './console.models';
 import { clampLevel } from './level';
 
@@ -104,6 +105,25 @@ function sanitizeMasters(dto: MastersDto): MastersDto {
   };
 }
 
+const KEY_NAMES = ['stack', 'clear', 'copy', 'recSeq', 'magic', 'recMem', 'editMem'] as const;
+const KEY_LIGHTS = ['off', 'dim', 'full'];
+
+/** The key LEDs, or undefined unless every key is present and well-formed (the simulator sends none). */
+function sanitizeKeys(dto: PanelKeysDto | null | undefined): PanelKeysDto | undefined {
+  if (!dto || typeof dto !== 'object') {
+    return undefined;
+  }
+  const keys: Partial<PanelKeysDto> = {};
+  for (const name of KEY_NAMES) {
+    const led = dto[name];
+    if (!led || typeof led !== 'object' || !KEY_LIGHTS.includes(led.light)) {
+      return undefined;
+    }
+    keys[name] = { light: led.light, blinking: led.blinking === true };
+  }
+  return keys as PanelKeysDto;
+}
+
 /** The address comes from the DTO; the number is derived, so that it can never disagree. */
 function sanitizeMemory(dto: MemoryStateDto): MemoryStateDto {
   return {
@@ -182,6 +202,7 @@ export class ConsoleStateService {
   private readonly _memoriesReported = signal(false);
   private readonly _independentsReported = signal(false);
   private readonly _memoryPage = signal<number | undefined>(undefined);
+  private readonly _keys = signal<PanelKeysDto | undefined>(undefined);
 
   private readonly _channelRequests = new Map<number, Request<number>>();
   private readonly _memoryRequests = new Map<number, Request<number>>();
@@ -215,6 +236,8 @@ export class ConsoleStateService {
   readonly independentsReported = this._independentsReported.asReadonly();
   /** The console's selected memory page when the device reports one (hardware mode), else undefined. */
   readonly memoryPage = this._memoryPage.asReadonly();
+  /** The key LEDs a real console reports (hardware mode), else undefined: the keys then follow the UI's own logic. */
+  readonly keys = this._keys.asReadonly();
 
   /** Status of the console itself (not of the link to the backend). */
   readonly deviceStatus = computed<ConnectionStatus>(
@@ -270,6 +293,7 @@ export class ConsoleStateService {
         ? page
         : undefined,
     );
+    this._keys.set(sanitizeKeys(state.keys));
   }
 
   /** Whether the connected device accepts a hub command (docs/api.md `supportedCommands`). */
