@@ -52,3 +52,25 @@ Answers to the record's questions (2026-10-30, late evening, quoted):
    under crossfader A the "play button"; the manual calls it GO. His account of pressing it twice
    (step 14 to 1, then 1 to 2) stands; whether it blinks during a fade was not answered.
 The owner asked for the raw USBPcap capture to be purged from the pushed history ("rewrite please").
+
+The owner's description of the stack section (2026-10-30, late evening, quoted; PLAY = the key with
+the play icon under crossfader A, which the manual calls GO):
+  "When the STACK is lit (on) it in stack mode and I can go through via programmed steps by using
+  faders or PLAY or PAUSE button. When the STACK is on, everything else is as it was pretty much.
+  No change there. But I can press button PLAY which will go from current step to next step. While
+  it is going from current step to next step the button PLAY is lit. When it is done, the button is
+  dimmed. While its going from current step to another and I press PAUSE, it is paused in the middle
+  of transition. PLAY is lit and PAUSE as well. When I press PAUSE again, it goes from that stopped
+  point transition to back where it was before pressing PLAY. When I press PLAY while it was paused
+  it just continue in transition. When any of the CROSSFADERS is not 0% but both are not 100% the
+  PLAY button blink. CROSSFADERS are pretty much the transition but manual. The CROSSFADER A pretty
+  much dim the current step and CROSSFADER B pretty much lit the next step. If only one is used,
+  there is no way for me to go to the next step. But when I use both or I mean both hit 100% I am in
+  next step."
+Matching (assistant): PLAY lit steadily during a timed fade and dimmed afterwards = LED block 50
+steady during the GO fades (the record's H64 note; the manual's "blink during the fade" is not what
+the owner sees either); PLAY blinking while the crossfaders stand between 0 and 100 % = block 50
+blinking during the manual fades (record); A dims the current step and B lights the next = H80's
+A -> byte 2 (Live), B -> byte 3 (Next); both at 100 % = the step completes (record: "completed the
+fade to 03 03"). PAUSE behaviour (pause, reverse on a second press, resume with PLAY) is a statement
+only: no PAUSE press is in any capture.
