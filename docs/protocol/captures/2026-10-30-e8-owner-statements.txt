@@ -1,0 +1,57 @@
+E8, first read-only session of our own software: owner statements (2026-10-30)
+
+Context (recorded by the assistant from the owner's message the same afternoon):
+- The owner started the backend in hardware mode (commit 08d1284, Device:Mode=Usb with the
+  confirmation date 2026-10-30). The first attempt failed with the expected message "Cannot open
+  the console: No SmartFade 1248 with WinUSB on interface 1 was found. Bind WinUSB to the console's
+  interface with USB ID 14D5 0200 01 with Zadig first". The owner then bound WinUSB with Zadig
+  and connected. Interface 0 (HID) stayed on the inbox HID driver (checked on the PC afterwards:
+  MI_00 "USB Input Device" HIDClass, MI_01 "ETC SmartFade" USBDevice).
+- Transfer log: 2026-10-30-152528-usb-session.jsonl (copied into this folder as
+  2026-10-30-e8-first-read-only-session.jsonl): 861 s, 20 763 polls, 2 925 fetches, 2 470 lists,
+  2 925 objects, stopped by the application at an idle point (Disconnect).
+- Whether USBPcap ran in parallel is not yet known (asked).
+- Backup: the owner says everything is backed up on the console ("everything is backuped on the
+  panel, so do not worry about that").
+
+The owner's observations, quoted from the message (the UI was in hardware mode, read-only):
+
+  "Now, I am connected. But On CHANNELS I see: Not delivered by the console in this read-only
+  session and on MEMORIES I see: Not delivered by the console in this read-only session. I cannot
+  change anything from the UI. Probably readonly. But when I change the CHANNELS faders or
+  MEMORIES faders it works. I mean the CHANNELS works. But the MEMORIES do not. If I rise
+  something on the pannel, it shows the CHANNELS changing fader in UI but not the MEMORIES
+  faders. Also, the SOLO button and BUMPS fader works but the BLACKOUT button do not. If is turn
+  it on, the UI doesnt show it. If I change the MASTER fader, it works but the BLACKOUT button
+  does not flashing as it does ont the panel. Also, IND 1 and IND 2 buttons does not works as
+  well. I turned them on but in UI they are still off. CLEAR works. When I pressed STACK on
+  panel, it does not display on state of that button on UI. Same goes for all RECORD buttons but
+  I guess there is no logic behind them. Because on panel when I press EDIT MEM or REC MEM or REC
+  SEQ or COPY, they are flashin. By pressing REC SEQ only 21-24 in MEMORIES are flashing because
+  only they can store the sequence. By pressing EDIT MEM or COPY then only saved MEMORIES with
+  something are flashin. [...] Also when pressing REC MEM, EDIT MEM, COPY, REC SEQ or COPY the
+  CLEAR is flashing as well. When pressing REC SEQ than the STACK is flashing as well. When
+  pressing REC MEM the STACK is flashing too with MAGIC as well."
+
+What the owner did on the console, in the order the message gives it (no times; the LCD text
+and the order of the object changes in the log are the keys for matching): channel faders;
+memory faders (in a memory mode); SOLO; the BUMPS fader; BLACKOUT on; the MASTER fader (with
+BLACKOUT on, the panel's BLACKOUT key flashes); IND 1 and IND 2 on; CLEAR; STACK; the record
+keys EDIT MEM, REC MEM, REC SEQ and COPY (each pressed, each flashes on the panel; REC SEQ makes
+memory keys 21-24 flash; EDIT MEM and COPY make the keys of recorded memories flash; every record
+key makes CLEAR flash; REC SEQ makes STACK flash; REC MEM makes STACK and MAGIC flash).
+
+Wishes stated with the report: a write mode, not only read-only ("I would like to be able to
+not only READ but also WRITE"; "I guess the E8 include WRITE mode").
+
+Answers given after the session (2026-10-30, later the same afternoon):
+- USBPcap did not run in parallel ("I am not aware I ran it"): no bus capture exists for E8, so
+  the control-endpoint traffic at Connect (H68) stays unobserved.
+- SmartSoft Online changes the console and follows it: "Yes it works in both ways." A passive
+  capture of SmartSoft writing (E9) is therefore possible and is the next experiment.
+- The owner has no USB-to-MIDI interface, so the documented MIDI path is not available.
+- After the session the owner switched the console's interface 1 back from WinUSB to the ETC
+  driver ("I already swapped the drivers"); the backend will not find the console until WinUSB is
+  bound again (E8 runbook).
+- The session was run on the owner's PC with the backend at commit 08d1284; the owner stopped it
+  with Disconnect.
