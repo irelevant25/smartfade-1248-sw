@@ -1,0 +1,133 @@
+2026-10-30 20:31:48.751 START guided E8b session (PC clock, local time)
+2026-10-30 20:31:48.755 repository: F:\Repositories\smartfade-1248-sw
+2026-10-30 20:32:30.275 backup taken: SHOW06.ASC (copy it into smartfade-sd-card-backup/ after the session)
+2026-10-30 20:32:38.031 owner answer: show equals SHOW05 = y
+2026-10-30 20:32:45.329 owner answer: console powered off since E8 = n
+2026-10-30 20:32:52.483 owner answer: power cycle before E8b = y
+2026-10-30 20:33:28.105 console ready for E8b
+2026-10-30 20:35:50.334 usbpcap running (owner)
+2026-10-30 20:35:51.457 interface 1 driver service before the bind: ETCHSP
+2026-10-30 20:36:54.994 zadig bind start
+2026-10-30 20:36:55.986 interface 1 driver service after the bind: WinUSB
+2026-10-30 20:36:56.035 backend started by the script: dotnet run --project src/backend/SmartFade.Api -- --Device:Mode=Usb --Device:Usb:ConfirmDate=2026-10-30
+2026-10-30 20:36:56.052 ui dev server started by the script: npm start in src/frontend
+2026-10-30 20:37:55.826 ui ready, hardware badge (owner)
+2026-10-30 20:38:41.525 starting position set (owner)
+2026-10-30 20:38:50.704 connect pressed
+2026-10-30 20:38:56.285 connected (owner)
+2026-10-30 20:39:56.301 wait 60 s done (idle after connect)
+2026-10-30 20:40:05.980 owner answer: idle observation = n
+2026-10-30 20:40:31.479 memory mode on
+2026-10-30 20:40:36.487 wait 5 s done (memory mode)
+2026-10-30 20:40:46.082 memory fader 1 up start
+2026-10-30 20:40:52.962 memory fader 1 at full
+2026-10-30 20:40:57.977 wait 5 s done (memory fader 1 at full)
+2026-10-30 20:41:11.795 memory fader 1 down start
+2026-10-30 20:41:17.485 memory fader 1 at zero
+2026-10-30 20:41:27.288 memory fader 2 up start
+2026-10-30 20:41:38.491 memory fader 2 at zero
+2026-10-30 20:41:43.501 wait 5 s done (after memory fader 2)
+2026-10-30 20:41:53.895 page 12 start
+2026-10-30 20:41:59.616 page 12 selected
+2026-10-30 20:42:04.626 wait 5 s done (page 12)
+2026-10-30 20:42:28.193 page 1 start
+2026-10-30 20:42:33.001 page 1 selected
+2026-10-30 20:42:38.013 wait 5 s done (page 1)
+2026-10-30 20:42:44.322 blackout on
+2026-10-30 20:42:49.328 wait 5 s done (blackout on)
+2026-10-30 20:42:57.067 blackout off
+2026-10-30 20:43:02.080 wait 5 s done (blackout off)
+2026-10-30 20:43:06.788 ind 1 on
+2026-10-30 20:43:11.805 wait 5 s done (ind 1 on)
+2026-10-30 20:43:21.536 ind 2 on
+2026-10-30 20:43:26.543 wait 5 s done (ind 2 on)
+2026-10-30 20:43:28.658 ind 1 off
+2026-10-30 20:43:33.666 wait 5 s done (ind 1 off)
+2026-10-30 20:43:35.951 ind 2 off
+2026-10-30 20:43:40.963 wait 5 s done (ind 2 off)
+2026-10-30 20:43:52.325 rec mem on
+2026-10-30 20:43:57.340 wait 5 s done (rec mem screen)
+2026-10-30 20:44:01.759 rec mem left with clear
+2026-10-30 20:44:06.770 wait 5 s done (after rec mem)
+2026-10-30 20:44:10.280 edit mem on
+2026-10-30 20:44:15.293 wait 5 s done (edit mem screen)
+2026-10-30 20:44:19.514 edit mem left with clear
+2026-10-30 20:44:24.516 wait 5 s done (after edit mem)
+2026-10-30 20:44:31.005 rec seq on
+2026-10-30 20:44:36.022 wait 5 s done (rec seq screen)
+2026-10-30 20:44:40.210 rec seq left with clear
+2026-10-30 20:44:45.215 wait 5 s done (after rec seq)
+2026-10-30 20:44:48.645 copy on
+2026-10-30 20:44:53.660 wait 5 s done (copy screen)
+2026-10-30 20:44:55.795 copy left with clear
+2026-10-30 20:45:00.810 wait 5 s done (after copy)
+2026-10-30 20:45:07.225 stack press
+2026-10-30 20:45:15.001 stack release
+2026-10-30 20:45:20.011 wait 5 s done (after stack)
+2026-10-30 20:46:04.847 owner answer: stack led after press = off (if I hold it it does nothing I think, if I just press it and release right after I press it it lit)
+2026-10-30 20:46:11.996 channel mode on
+2026-10-30 20:46:17.003 wait 5 s done (channel mode)
+2026-10-30 20:46:27.027 channel fader 5 up start
+2026-10-30 20:46:31.320 channel fader 5 at full
+2026-10-30 20:46:36.336 wait 5 s done (channel fader 5 at full)
+2026-10-30 20:46:48.210 blackout on with level
+2026-10-30 20:46:53.225 wait 5 s done (blackout on with level)
+2026-10-30 20:47:00.432 owner answer: fixture at blackout = went dark
+2026-10-30 20:47:03.297 blackout off with level
+2026-10-30 20:47:08.314 wait 5 s done (blackout off with level)
+2026-10-30 20:47:11.418 channel fader 5 down start
+2026-10-30 20:47:15.624 channel fader 5 at zero
+2026-10-30 20:47:19.574 memory mode on again
+2026-10-30 20:47:24.582 wait 5 s done (memory mode again)
+2026-10-30 20:47:31.380 h69 memory fader 1 up
+2026-10-30 20:47:35.559 h69 memory fader 1 at full
+2026-10-30 20:47:45.648 h69 page 12 with fader up
+2026-10-30 20:47:50.111 h69 page 12 selected
+2026-10-30 20:47:55.116 wait 5 s done (h69 page 12, fader 1 up)
+2026-10-30 20:48:49.455 owner answer: h69 bump 1 blinking = yes it is blinking (it is remining me that the lights are from a different source not the current selected which is mem 1 from page 12)
+2026-10-30 20:48:59.376 h69 memory fader 1 down
+2026-10-30 20:49:09.039 h69 memory fader 1 at zero
+2026-10-30 20:49:14.047 wait 5 s done (h69 fader 1 at zero on page 12)
+2026-10-30 20:49:21.417 page 1 again
+2026-10-30 20:49:26.538 page 1 selected again
+2026-10-30 20:49:31.549 wait 5 s done (page 1 again)
+2026-10-30 20:49:45.629 h71 master half, fader 1 half
+2026-10-30 20:49:57.551 h71 set
+2026-10-30 20:50:02.554 wait 5 s done (h71 fader 1 half, master half)
+2026-10-30 20:50:12.841 h71 reset
+2026-10-30 20:50:19.934 h71 reset done
+2026-10-30 20:51:02.018 h71 bump 2 press
+2026-10-30 20:51:14.740 h71 bump 2 release
+2026-10-30 20:51:19.745 wait 5 s done (after h71 bump)
+2026-10-30 20:51:25.551 h71 bumps and fader 2 to zero
+2026-10-30 20:51:33.159 h71 cleanup done
+2026-10-30 20:51:58.308 h73 setup
+2026-10-30 20:52:11.828 h73 setup done
+2026-10-30 20:52:16.835 wait 5 s done (h73 setup)
+2026-10-30 20:52:23.718 clear x1
+2026-10-30 20:52:28.731 wait 5 s done (after clear x1)
+2026-10-30 20:52:31.239 clear x2
+2026-10-30 20:52:36.245 wait 5 s done (after clear x2)
+2026-10-30 20:52:37.701 clear x3
+2026-10-30 20:52:42.704 wait 5 s done (after clear x3)
+2026-10-30 20:52:44.650 clear x4
+2026-10-30 20:52:49.656 wait 5 s done (after clear x4)
+2026-10-30 20:53:22.324 owner answer: h73 result = 1 and 5 blinks and 1 and 5 are up
+2026-10-30 20:53:36.617 h73 cleanup
+2026-10-30 20:53:45.312 h73 cleanup done
+2026-10-30 20:53:50.321 wait 5 s done (after h73)
+2026-10-30 20:54:16.115 sequence start
+2026-10-30 20:54:22.664 sequence running
+2026-10-30 20:54:37.679 wait 15 s done (sequence running)
+2026-10-30 20:54:41.728 sequence stop
+2026-10-30 20:54:46.051 sequence stopped
+2026-10-30 20:54:51.068 wait 5 s done (after sequence)
+2026-10-30 20:55:21.050 owner answer: sequence start/stop method = moving fader 21 up to start and moving fader 21 down to stop
+2026-10-30 20:55:32.663 owner answer: go with stack decision = y
+2026-10-30 20:55:45.183 go with stack lit
+2026-10-30 20:55:53.362 go with stack done
+2026-10-30 20:56:03.379 wait 10 s done (end of actions)
+2026-10-30 20:56:49.648 disconnect pressed
+2026-10-30 20:56:53.344 disconnected (owner)
+2026-10-30 20:57:23.703 backend and usbpcap stopped (owner)
+2026-10-30 20:57:23.705 END guided E8b session

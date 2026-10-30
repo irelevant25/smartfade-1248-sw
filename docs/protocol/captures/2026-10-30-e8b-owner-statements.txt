@@ -1,0 +1,54 @@
+E8b, second read-only session of our own software: owner statements (2026-10-30, evening)
+
+Context (recorded by the assistant): the owner ran tools/usb-probe/e8b-guided-session.ps1 (commit
+c783223) from 20:31:48 to 20:57:23 local time; the action log 2026-10-30-e8b-actions.txt holds every
+step with the PC clock and the owner's typed answers. The backend (commit c783223) wrote
+2026-10-30-193803-usb-session.jsonl, copied here as 2026-10-30-e8b-second-read-only-session.jsonl.
+Before the session the owner stated that the show on the console equals
+smartfade-sd-card-backup/SHOW05.ASC (what was recorded during E8 was removed again); the guide's gate
+logged "backup taken: SHOW06.ASC" (the fresh save on the SD card; copied into smartfade-sd-card-backup/
+after the session: 15 944 bytes, sha256 559636399c1d82e0f95e737c961bfee31f88962fe8c486bbc6eba7f7d2177a90,
+**byte-identical to SHOW05.ASC**, so the show was unchanged, as the owner stated). USBPcap was reported running at 20:35:50, before the Zadig bind at
+20:36:55 (interface 1: ETCHSP before, WinUSB after); the .pcap was written to C:/Program Files/USBPcap/e8b.pcap
+(the admin window's working directory, as the owner suspected) and is copied here as
+2026-10-30-e8b-second-read-only-session.pcap (sha256 fcfa1a2511d8084141f0ad90b4a15fce5c2b676f13f949757d8a76e5eedc4dbf).
+
+The owner's account of the actions NOT in the guide, given after the session (quoted):
+
+  "I was not sure about the instructions about the stack. So after it was over or when I was on
+  the step of DISCONNECT I press play button once, after the step goes from 14 to 1 I press it
+  again then it goes from step 1 to 2 and then I move A crossfader (left one) to up, then down,
+  then I moved B crossfader (right one) to up, then down, then I moved them together up and down
+  and then I turned STACK off and pressed CLEAR multiple times. Then I continue with the steps."
+
+Reading of the timing (assistant): these actions happened between the guide's "go with stack lit"
+step (20:55:45, the scripted GO with STACK lit) and "disconnect pressed" (20:56:49); the action log
+has no line for them, so the console's own data (PlaybackInfo, DisplayContent, LedStatus) is the
+only clock for them.
+
+Answers typed into the guide (from the action log, for convenience):
+- show equals SHOW05: y; console powered off since E8: n; power cycle before E8b: y (done before
+  the first Connect);
+- idle observation after Connect: nothing changed by itself;
+- STACK LED after the press-and-hold: "off (if I hold it it does nothing I think, if I just press it
+  and release right after I press it it lit)";
+- fixture at BLACKOUT with channel fader 5 at full: "went dark";
+- H69, page 12 with memory fader 1 at full: "yes it is blinking (it is reminding me that the lights
+  are from a different source not the current selected which is mem 1 from page 12)";
+- H73, after CLEAR x1..x4 with channel fader 5 and memory fader 1 up: "1 and 5 blinks and 1 and 5
+  are up";
+- sequence start / stop: "moving fader 21 up to start and moving fader 21 down to stop";
+- GO with STACK lit: y (done at 20:55:45).
+
+Answers to the record's questions (2026-10-30, late evening, quoted):
+1. STACK around 20:46:20: "I pressed it twice back then. Sorry for that." Sequence control: "I am
+   usually run the sequence by moving the fader up or down to stop it." (The data, F129: fader 21
+   down zeroed the output while record 1 kept stepping; whether the console calls that "stopped" is
+   open.)
+2. Crossfader rest positions: not answered; the owner notes the naming: "The crossfaders are two
+   faders. The left one is called A and the right one is called B."
+3. The LCD plus sign: "I am not sure what that is either."
+4. GO: "Ehm, what is GO? I am not sure what you mean." The owner calls the key with the play icon
+   under crossfader A the "play button"; the manual calls it GO. His account of pressing it twice
+   (step 14 to 1, then 1 to 2) stands; whether it blinks during a fade was not answered.
+The owner asked for the raw USBPcap capture to be purged from the pushed history ("rewrite please").
