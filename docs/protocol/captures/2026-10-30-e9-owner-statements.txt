@@ -1,0 +1,27 @@
+E9, passive USBPcap capture of SmartSoft writing to the console: owner statements (2026-10-30, late evening)
+
+Context (recorded by the assistant): the owner ran tools/usb-probe/e9-guided-session.ps1 (commit
+6de4ddb) in the evening of 2026-10-30; USBPcapCMD started at 22:19:59 and SmartSoft at 22:21:16 local
+time (process creation times); the action log 2026-10-30-e9-actions.txt holds every step with the PC
+clock and the owner's typed answers. The raw root-hub capture (e9.pcap in the repository root, about
+1.1 GB, other devices included) is split to the console's device address before anything is committed;
+the committed file is 2026-10-30-e9-smartsoft-writes.pcap (console only); the raw capture's hash is kept in the E9 record for provenance. Our software was
+not involved: SmartSoft talked to the console, exactly as for any user.
+
+Answers typed into the guide are in the action log. Statements given outside it:
+
+- On the label test: "I do not think that smartfade 1248 display the labels somewhere" (the caron
+  question; the label write itself is in the capture).
+- On the deletion steps 16 (quoted from the action log, 22:47:56): "no, they are not [empty], you told
+  me to use CLEAR but CLEAR button cancel the operation, if nothing from channels is rised up and I
+  press REC MEM and press the MEMORY bump, it deletes it because it save nothing to them, or, if you
+  wanna delete with the EDIT MEM then I have to press EDIT MEM, then the MEMORY 9 for example, and then
+  go to channels and up and down every green lit channel and then press EDIT MEM to submit it."
+  Consequences (assistant): the guide's deletion instruction was wrong (CLEAR cancels EDIT MEM instead
+  of storing), so memories 9 and 10 of page 1 still hold the recorded look at the end of E9 (memory 9:
+  channel 5 as edited to full; memory 10: the copy of memory 9 taken before the edit? to be read from
+  the capture); the owner knows two ways to delete them (REC MEM with nothing raised, or EDIT MEM with
+  every lit channel brought up and down, submitted with EDIT MEM). Whether he deleted them after the
+  session is recorded below when known. The statement about REC MEM storing "nothing" when no channel
+  is up is an owner statement about the console's behaviour (F107's all-zero deletion rule), not a
+  capture observation unless the capture shows it.

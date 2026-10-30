@@ -1,0 +1,106 @@
+2026-10-30 22:17:35.374 START guided E9 session (PC clock, local time)
+2026-10-30 22:18:26.804 backup taken: SHOW07.ASC (copy it into smartfade-sd-card-backup/ after the session)
+2026-10-30 22:18:32.192 owner answer: show equals SHOW06 = y
+2026-10-30 22:18:36.635 owner answer: console powered off since E8b = n
+2026-10-30 22:18:36.739 memory integrity: off
+2026-10-30 22:18:37.719 interface 1 driver service: ETCHSP (ETC's driver)
+2026-10-30 22:20:06.542 usbpcap running (owner)
+2026-10-30 22:21:09.368 starting position set (owner)
+2026-10-30 22:21:14.756 owner answer: memories 9 and 10 empty = y
+2026-10-30 22:21:16.491 smartsoft start (Start-Process by the script)
+2026-10-30 22:21:35.677 smartsoft online (owner)
+2026-10-30 22:22:35.689 wait 60 s done (baseline: SmartSoft online, nothing touched)
+2026-10-30 22:22:54.842 simulator opened
+2026-10-30 22:23:24.850 wait 30 s done (simulator open, untouched)
+2026-10-30 22:23:38.581 sim fader 1 up start
+2026-10-30 22:23:48.174 sim fader 1 at full
+2026-10-30 22:25:06.057 owner answer: console reaction to sim fader 1 up = the fixture nothing, because the lights are on address 5 but the bump under fader 1 is lit
+2026-10-30 22:25:21.072 wait 15 s done (sim fader 1 at full)
+2026-10-30 22:25:25.991 sim fader 1 down start
+2026-10-30 22:25:31.907 sim fader 1 at zero
+2026-10-30 22:25:48.530 wait 15 s done (after sim fader 1)
+2026-10-30 22:26:04.868 sim bump 7 press
+2026-10-30 22:26:17.130 sim bump 7 release
+2026-10-30 22:26:53.714 owner answer: lights during sim bump 7 = light up when I pressed and dimm when I released
+2026-10-30 22:27:08.721 wait 15 s done (after sim bump 7)
+2026-10-30 22:27:24.108 sim master to half start
+2026-10-30 22:27:34.740 sim master at half
+2026-10-30 22:27:49.743 wait 15 s done (sim master at half)
+2026-10-30 22:27:54.836 sim master to full start
+2026-10-30 22:28:04.258 sim master at full
+2026-10-30 22:28:19.269 wait 15 s done (after sim master)
+2026-10-30 22:28:44.421 sim bumps to zero start
+2026-10-30 22:28:51.081 sim bumps at zero
+2026-10-30 22:29:06.095 wait 15 s done (sim bumps at zero)
+2026-10-30 22:29:18.501 sim bumps to full start
+2026-10-30 22:29:24.246 sim bumps at full
+2026-10-30 22:29:39.255 wait 15 s done (after sim bumps)
+2026-10-30 22:29:46.051 sim blackout on
+2026-10-30 22:30:01.066 wait 15 s done (sim blackout on)
+2026-10-30 22:30:07.761 owner answer: console blackout led after sim on = y
+2026-10-30 22:30:12.360 sim blackout off
+2026-10-30 22:30:27.368 wait 15 s done (after sim blackout)
+2026-10-30 22:30:30.663 sim solo on
+2026-10-30 22:30:45.668 wait 15 s done (sim solo on)
+2026-10-30 22:30:51.229 sim solo off
+2026-10-30 22:31:06.246 wait 15 s done (after sim solo)
+2026-10-30 22:31:17.973 sim mems and memory bump 1 press
+2026-10-30 22:31:27.688 sim memory bump 1 release
+2026-10-30 22:31:42.691 wait 15 s done (after sim memory bump)
+2026-10-30 22:31:48.567 sim channel mode again
+2026-10-30 22:32:03.584 wait 15 s done (after sim channel mode)
+2026-10-30 22:32:23.883 sim go stack unlit
+2026-10-30 22:32:39.255 sim go done
+2026-10-30 22:33:01.920 owner answer: reaction to sim go = lights nothing and console nothing
+2026-10-30 22:33:16.933 wait 15 s done (after sim go)
+2026-10-30 22:34:26.038 playback all faders to zero
+2026-10-30 22:34:41.047 wait 15 s done (after all faders to zero)
+2026-10-30 22:35:00.402 owner answer: channel 7 label before = -
+2026-10-30 22:35:58.214 channel 7 label to Caj with caron
+2026-10-30 22:36:13.228 wait 15 s done (label changed)
+2026-10-30 22:36:38.611 owner answer: caron shown = I do not think that smartfade 1248 display the labels somewhere
+2026-10-30 22:36:43.116 channel 7 label restored
+2026-10-30 22:36:58.122 wait 15 s done (label restored)
+2026-10-30 22:37:32.008 owner answer: mem edit decision = y
+2026-10-30 22:38:18.938 mem edit memory 1 channel 7 to 50
+2026-10-30 22:38:33.947 wait 15 s done (after mem edit change)
+2026-10-30 22:38:40.583 mem edit memory 1 channel 7 restored
+2026-10-30 22:38:55.597 wait 15 s done (after mem edit restore)
+2026-10-30 22:39:05.497 console fader 5 to half
+2026-10-30 22:39:13.645 console fader 5 at half
+2026-10-30 22:39:23.656 wait 10 s done (fader 5 at half)
+2026-10-30 22:39:51.691 sim rec mem
+2026-10-30 22:40:01.709 wait 10 s done (rec mem screen)
+2026-10-30 22:40:08.593 sim rec mem bump 9
+2026-10-30 22:40:23.598 wait 15 s done (after record into memory 9)
+2026-10-30 22:40:40.124 owner answer: memory 9 recorded = y
+2026-10-30 22:40:49.487 sim edit mem
+2026-10-30 22:40:59.500 wait 10 s done (edit mem screen)
+2026-10-30 22:41:08.132 sim edit mem bump 9
+2026-10-30 22:41:18.159 wait 10 s done (memory 9 in edit)
+2026-10-30 22:41:34.230 console fader 5 to full in edit
+2026-10-30 22:41:40.594 console fader 5 at full in edit
+2026-10-30 22:41:50.597 wait 10 s done (edited)
+2026-10-30 22:41:55.813 sim clear leaves edit mem
+2026-10-30 22:42:10.829 wait 15 s done (after edit mem)
+2026-10-30 22:42:15.773 sim copy
+2026-10-30 22:42:25.788 wait 10 s done (copy screen)
+2026-10-30 22:42:29.990 sim copy source 9
+2026-10-30 22:42:39.996 wait 10 s done (copy source chosen)
+2026-10-30 22:42:53.086 sim copy target 10
+2026-10-30 22:43:08.100 wait 15 s done (after copy)
+2026-10-30 22:43:16.869 owner answer: memories 9 and 10 recorded = y
+2026-10-30 22:43:38.594 console fader 5 to zero
+2026-10-30 22:43:43.257 console fader 5 at zero
+2026-10-30 22:44:23.693 delete memory 9
+2026-10-30 22:45:07.893 memory 9 deleted
+2026-10-30 22:45:22.909 wait 15 s done (after delete 9)
+2026-10-30 22:45:38.497 delete memory 10
+2026-10-30 22:45:57.312 memory 10 deleted
+2026-10-30 22:46:12.324 wait 15 s done (after delete 10)
+2026-10-30 22:47:56.657 owner answer: memories 9 and 10 empty again = no, they are not, you told me to use CLEAR but CLEAR button cancel the operation, if nothing from channels is rised up and I press REC MEM and press the MEMORY bump, it deletes it because it save nothing to them, or, if you wanna delete with the EDIT MEM then I have to press EDIT MEM, then the MEMORY 9 for example, and then go to channels and up and down every green lit channel and then press EDIT MEM to submit it
+2026-10-30 22:48:26.673 wait 30 s done (end of actions)
+2026-10-30 22:48:39.464 smartsoft close start
+2026-10-30 22:48:47.799 smartsoft closed
+2026-10-30 22:48:55.090 usbpcap stopped (owner)
+2026-10-30 22:48:55.092 END guided E9 session
