@@ -1,0 +1,44 @@
+:host {
+  display: grid;
+  grid-template-rows: auto minmax(0, 1fr) auto;
+  height: 100vh;
+  min-height: 760px;
+}
+
+.shell__main {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 118px 170px 232px;
+  grid-template-rows: minmax(0, 2fr) minmax(0, 1fr);
+  gap: 10px;
+  min-height: 0;
+  padding: 10px 10px 0;
+}
+
+.shell__channels {
+  grid-column: 1;
+  grid-row: 1;
+}
+
+.shell__memories {
+  grid-column: 1;
+  grid-row: 2;
+}
+
+.shell__record {
+  grid-column: 2;
+  grid-row: 1 / span 2;
+}
+
+.shell__crossfader {
+  grid-column: 3;
+  grid-row: 1 / span 2;
+}
+
+.shell__masters {
+  grid-column: 4;
+  grid-row: 1 / span 2;
+}
+
+.shell__outputs {
+  padding: 10px;
+}

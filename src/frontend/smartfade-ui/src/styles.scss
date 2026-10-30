@@ -1,0 +1,117 @@
+// Global design tokens and the few primitives shared by all components.
+// The look is a lighting console: dark, low glare, numerals aligned, state shown by lamps.
+
+:root {
+  color-scheme: dark;
+
+  --sf-bg: #0a0c0f;
+  --sf-surface: #11151a;
+  --sf-border: #252c34;
+  --sf-border-strong: #36404b;
+  --sf-text: #d7dde3;
+  --sf-text-dim: #8a95a1;
+  --sf-text-faint: #5b6672;
+
+  --sf-accent: #3fd0e0;
+  --sf-accent-dim: #1b7f8c;
+  --sf-accent-glow: rgba(63, 208, 224, 0.35);
+  --sf-ok: #3ddc84;
+  --sf-warn: #ffb020;
+  --sf-danger: #ff4d4d;
+  --sf-info: #6ea8ff;
+  --sf-focus: #f5f7fa;
+
+  --sf-groove: #05070a;
+  --sf-meter: #3fd0e0;
+  --sf-meter-idle: #222a33;
+
+  --sf-font-ui: system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+  --sf-font-mono: ui-monospace, 'Cascadia Mono', 'SF Mono', Consolas, 'Liberation Mono', monospace;
+}
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+html,
+body {
+  height: 100%;
+  margin: 0;
+}
+
+body {
+  min-width: 1280px;
+  background: var(--sf-bg);
+  color: var(--sf-text);
+  font: 14px/1.4 var(--sf-font-ui);
+  -webkit-font-smoothing: antialiased;
+}
+
+:focus-visible {
+  outline: 2px solid var(--sf-focus);
+  outline-offset: 2px;
+}
+
+.sf-panel {
+  background: var(--sf-surface);
+  border: 1px solid var(--sf-border);
+  border-radius: 6px;
+}
+
+.sf-panel-title {
+  margin: 0;
+  font: 600 0.6875rem/1 var(--sf-font-ui);
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--sf-text-dim);
+}
+
+// A console key: used for the connection buttons and the REC MEM / EDIT MEM / CLEAR keys.
+.sf-key {
+  appearance: none;
+  min-height: 32px;
+  padding: 0 14px;
+  border: 1px solid var(--sf-border-strong);
+  border-radius: 4px;
+  background: linear-gradient(#242b33, #1a2026);
+  color: var(--sf-text);
+  font: 600 0.75rem var(--sf-font-ui);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  cursor: pointer;
+
+  &:hover:not(:disabled) {
+    border-color: var(--sf-accent);
+  }
+
+  &:active:not(:disabled) {
+    transform: translateY(1px);
+  }
+
+  &:disabled {
+    opacity: 0.4;
+    cursor: not-allowed;
+  }
+}
+
+// A key whose function is armed (the console blinks it).
+.sf-key--lit {
+  border-color: var(--sf-warn);
+  background: rgba(255, 176, 32, 0.22);
+  color: var(--sf-warn);
+  box-shadow: 0 0 10px rgba(255, 176, 32, 0.45);
+}
+
+// A key that confirms an edit.
+.sf-key--accent {
+  border-color: var(--sf-accent);
+  color: var(--sf-accent);
+}
+
+// A key of the console that the simulator does not model yet: present, named, inactive.
+.sf-key--inactive:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}

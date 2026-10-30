@@ -1,0 +1,82 @@
+<div
+  class="fader"
+  [class.fader--lit]="level() > 0"
+  [class.fader--pending]="pending()"
+  [class.fader--idle]="disabled()"
+  [class.fader--readonly]="readOnly()"
+  [class.fader--memory]="kind() === 'memory'"
+>
+  @if (caption()) {
+    <span class="fader__caption" [attr.title]="caption()">{{ caption() }}</span>
+  }
+
+  <span class="fader__readout" aria-hidden="true"
+    >{{ percent() }}<span class="fader__unit">%</span></span
+  >
+
+  <span
+    class="fader__actual"
+    [class.fader__actual--shown]="differs()"
+    title="Level reported by the console"
+    aria-hidden="true"
+    >{{ reportedPercent() }}<span class="fader__unit">%</span></span
+  >
+
+  <div class="fader__rail" [style.--level]="levelRatio()" [style.--actual]="reportedRatio()">
+    <span class="fader__fill"></span>
+    <span class="fader__gap"></span>
+    <input
+      #slider
+      class="fader__input"
+      type="range"
+      min="0"
+      max="255"
+      step="1"
+      aria-orientation="vertical"
+      [value]="level()"
+      [disabled]="disabled() || readOnly()"
+      [attr.aria-label]="accessibleName()"
+      [attr.aria-valuetext]="valueText()"
+      (input)="onInput($event)"
+      (change)="endDrag()"
+      (pointerdown)="beginDrag()"
+      (pointerup)="endDrag()"
+      (pointercancel)="endDrag()"
+      (blur)="endDrag()"
+      (keydown)="onKeydown($event)"
+    />
+  </div>
+
+  <span
+    class="fader__lamp"
+    [class.fader__lamp--on]="pending()"
+    [attr.title]="pending() ? 'Waiting for the console' : null"
+    aria-hidden="true"
+  ></span>
+
+  @if (bumpable()) {
+    <button
+      type="button"
+      class="fader__label fader__bump"
+      [class.fader__bump--armed]="bumpArmed()"
+      [class.fader__bump--held]="held()"
+      [style.--lit]="bumpLit()"
+      [disabled]="disabled()"
+      [attr.aria-label]="bumpName()"
+      [attr.aria-pressed]="bumpArmed() ? null : held()"
+      (pointerdown)="pressBump($event)"
+      (pointerup)="releaseBump()"
+      (pointercancel)="releaseBump()"
+      (lostpointercapture)="releaseBump()"
+      (keydown)="onBumpKeydown($event)"
+      (keyup)="onBumpKeyup($event)"
+      (click)="onBumpClick()"
+      (blur)="releaseBump()"
+      (contextmenu)="$event.preventDefault()"
+    >
+      {{ label() }}
+    </button>
+  } @else {
+    <span class="fader__label fader__name">{{ label() }}</span>
+  }
+</div>

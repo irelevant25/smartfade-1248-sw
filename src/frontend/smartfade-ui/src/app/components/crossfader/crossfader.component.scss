@@ -1,0 +1,83 @@
+:host {
+  display: block;
+  min-height: 0;
+}
+
+.xfade {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  height: 100%;
+  padding: 10px 12px 12px;
+}
+
+.xfade__note {
+  margin: 0;
+  font: 0.625rem var(--sf-font-ui);
+  color: var(--sf-text-faint);
+}
+
+.xfade__columns {
+  display: grid;
+  flex: 1 1 0;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+  min-height: 0;
+}
+
+.xfade__column {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  min-height: 0;
+}
+
+.xfade__key {
+  appearance: none;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 40px;
+  border: 1px solid var(--sf-border-strong);
+  border-radius: 6px;
+  background: linear-gradient(#242b33, #1a2026);
+  font: 700 0.75rem var(--sf-font-ui);
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  cursor: pointer;
+
+  &:disabled {
+    cursor: not-allowed;
+  }
+}
+
+.xfade__icon {
+  width: 18px;
+  height: 18px;
+  fill: currentColor;
+}
+
+// GO is blue, STACK yellow, PAUSE and CLEAR white (the owner's panel, 2026-10-30).
+.xfade__go {
+  border-color: #2f5ea8;
+  color: #4ea1ff;
+}
+
+.xfade__stack {
+  border-color: #7a6a1c;
+  color: #ffd84d;
+}
+
+.xfade__pause,
+.xfade__clear {
+  color: #f3f6f9;
+}
+
+.xfade__clear:hover:not(:disabled) {
+  border-color: #fff;
+}
+
+.xfade__clear--series {
+  background: #e9eef3;
+  color: #0a0c0f;
+}

@@ -1,0 +1,55 @@
+<header class="bar">
+  <h1 class="bar__brand">SmartFade<span class="bar__model">1248</span></h1>
+
+  <span class="bar__mode" [attr.data-tone]="mode().tone" [attr.title]="mode().hint">
+    {{ mode().label }}
+  </span>
+
+  <div class="bar__status" [attr.data-tone]="status().tone" role="status">
+    <span class="bar__lamp" aria-hidden="true"></span>
+    <span class="bar__status-label">{{ status().label }}</span>
+    @if (status().detail) {
+      <span class="bar__status-detail">{{ status().detail }}</span>
+    }
+  </div>
+
+  <div class="bar__actions">
+    <button type="button" class="sf-key" [disabled]="!connectEnabled()" (click)="connect()">
+      Connect
+    </button>
+    <button type="button" class="sf-key" [disabled]="!disconnectEnabled()" (click)="disconnect()">
+      Disconnect
+    </button>
+  </div>
+
+  @if (error(); as problem) {
+    <div class="bar__error" role="alert">
+      <span class="bar__error-text" [attr.title]="problem.message">{{ problem.message }}</span>
+      @if (problem.dismissible) {
+        <button
+          type="button"
+          class="bar__error-dismiss"
+          aria-label="Dismiss error"
+          (click)="dismissError()"
+        >
+          &times;
+        </button>
+      }
+    </div>
+  }
+
+  <dl class="bar__facts">
+    @if (showFileName(); as name) {
+      <div class="bar__fact">
+        <dt>Show</dt>
+        <dd>{{ name }}</dd>
+      </div>
+    }
+    @if (firmwareVersion(); as version) {
+      <div class="bar__fact">
+        <dt>Firmware</dt>
+        <dd>{{ version }}</dd>
+      </div>
+    }
+  </dl>
+</header>

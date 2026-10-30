@@ -1,0 +1,87 @@
+:host {
+  display: block;
+}
+
+.outputs {
+  padding: 6px 12px 8px;
+}
+
+.outputs__header {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  min-height: 26px;
+}
+
+.outputs__toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 4px 6px 4px 0;
+  border: 0;
+  background: none;
+  color: inherit;
+  font: inherit;
+  letter-spacing: inherit;
+  text-transform: inherit;
+  cursor: pointer;
+
+  &:hover {
+    color: var(--sf-text);
+  }
+}
+
+.outputs__chevron {
+  width: 0;
+  height: 0;
+  border-top: 6px solid currentColor;
+  border-right: 5px solid transparent;
+  border-left: 5px solid transparent;
+  transition: transform 0.15s;
+}
+
+.outputs--collapsed .outputs__chevron {
+  transform: rotate(-90deg);
+}
+
+.outputs__summary {
+  font: 500 0.75rem var(--sf-font-mono);
+  color: var(--sf-text-dim);
+}
+
+.outputs__readout {
+  margin-left: auto;
+  font: 600 0.75rem var(--sf-font-mono);
+  color: var(--sf-accent);
+}
+
+.outputs__canvas {
+  display: block;
+  width: 100%;
+  height: 72px;
+  border-radius: 3px;
+  background-color: var(--sf-groove);
+  // A line every 64 outputs, matching the scale below.
+  background-image: linear-gradient(to right, var(--sf-border) 1px, transparent 1px);
+  background-size: 12.5% 100%;
+  cursor: crosshair;
+}
+
+.outputs__scale {
+  position: relative;
+  height: 16px;
+  font: 500 0.625rem var(--sf-font-mono);
+  color: var(--sf-text-faint);
+}
+
+.outputs__tick {
+  position: absolute;
+  top: 3px;
+  padding-left: 3px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .outputs__chevron {
+    transition: none;
+  }
+}

@@ -1,0 +1,54 @@
+<section
+  class="memories sf-panel"
+  [class.memories--armed]="mode() !== 'idle'"
+  aria-labelledby="memories-title"
+>
+  <div class="memories__head">
+    <h2 id="memories-title" class="sf-panel-title">Memories</h2>
+
+    <div class="memories__pages" role="group" aria-label="Memory page">
+      <span class="memories__pages-label" aria-hidden="true">Page</span>
+      @for (p of pages(); track p) {
+        <button
+          type="button"
+          class="memories__page"
+          [class.memories__page--current]="p === page()"
+          [class.memories__page--content]="pageHasContent()[p - 1]"
+          [attr.aria-pressed]="p === page()"
+          [attr.aria-label]="'Page ' + p"
+          (click)="selectPage(p)"
+        >
+          {{ p }}
+        </button>
+      }
+    </div>
+
+    @if (hint(); as text) {
+      <p class="memories__hint" role="status">{{ text }}</p>
+    }
+  </div>
+
+  <div
+    class="memories__faders"
+    role="group"
+    [attr.aria-label]="'Memories of page ' + page()"
+    [style.--columns]="memories().length"
+  >
+    @for (memory of memories(); track memory.number) {
+      <sf-channel-fader
+        [label]="memory.fader"
+        kind="memory"
+        [caption]="memory.label"
+        [desired]="memory.level"
+        [disabled]="!enabled()"
+        [bumpable]="true"
+        [bumpLit]="bumpLit(memory)"
+        [bumpArmed]="armedFor(memory)"
+        (levelChange)="setLevel(memory, $event)"
+        (bumpChange)="bump(memory, $event)"
+        (select)="pick(memory)"
+        (navigate)="moveFocus(memory.fader, $event)"
+      />
+    }
+  </div>
+</section>

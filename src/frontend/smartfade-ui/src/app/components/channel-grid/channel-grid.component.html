@@ -1,0 +1,46 @@
+<section
+  class="grid sf-panel"
+  [class.grid--editing]="editing()"
+  aria-labelledby="channels-title"
+>
+  <div class="grid__head">
+    <h2 id="channels-title" class="sf-panel-title">Channels</h2>
+    @if (editing()) {
+      <div class="grid__edit" role="status">
+        <span class="grid__edit-title">{{ editTitle() }}</span>
+        <span class="grid__edit-hint">Blind edit: the stage changes when you store.</span>
+        <button type="button" class="sf-key sf-key--accent grid__edit-store" (click)="store()">
+          Store
+        </button>
+        <button type="button" class="sf-key grid__edit-cancel" (click)="cancel()">Cancel</button>
+      </div>
+    }
+  </div>
+
+  @for (bank of banks(); track bank.first) {
+    <div
+      class="bank"
+      role="group"
+      [attr.aria-label]="'Channels ' + bank.first + ' to ' + bank.last"
+    >
+      <span class="bank__label" aria-hidden="true">{{ bank.first }}&ndash;{{ bank.last }}</span>
+      <div class="bank__faders" [style.--columns]="bank.faders.length">
+        @for (fader of bank.faders; track fader.channel) {
+          <sf-channel-fader
+            [label]="fader.channel"
+            kind="channel"
+            [desired]="fader.desired"
+            [actual]="fader.actual"
+            [pending]="fader.pending"
+            [disabled]="!enabled()"
+            [bumpable]="true"
+            [bumpLit]="fader.output / 255"
+            (levelChange)="setLevel(fader.channel, $event)"
+            (bumpChange)="bump(fader.channel, $event)"
+            (navigate)="moveFocus(fader.channel, $event)"
+          />
+        }
+      </div>
+    </div>
+  }
+</section>

@@ -1,0 +1,63 @@
+<section class="record sf-panel" aria-labelledby="record-title">
+  <h2 id="record-title" class="sf-panel-title">Record</h2>
+
+  <div class="record__keys">
+    <button
+      type="button"
+      class="record__key record__key--white record__copy"
+      [class.record__key--lit]="copyArmed()"
+      [attr.aria-pressed]="copyArmed()"
+      [disabled]="!enabled()"
+      title="Copy a memory into another"
+      (click)="toggleCopy()"
+    >
+      Copy
+    </button>
+    <button
+      type="button"
+      class="record__key record__key--yellow record__key--inactive"
+      disabled
+      title="Sequences are not in the simulator yet"
+    >
+      Rec Seq
+    </button>
+    <button
+      type="button"
+      class="record__key record__key--white record__key--inactive"
+      disabled
+      title="Magic looks are not in the simulator yet"
+    >
+      Magic
+    </button>
+    <button
+      type="button"
+      class="record__key record__key--red record__rec"
+      [class.record__key--lit]="recordArmed()"
+      [attr.aria-pressed]="recordArmed()"
+      [disabled]="!enabled()"
+      title="Record the current look into a memory"
+      (click)="toggleRecord()"
+    >
+      Rec Mem
+    </button>
+    <button
+      type="button"
+      class="record__key record__key--red record__edit"
+      [class.record__key--lit]="editArmed()"
+      [attr.aria-pressed]="editArmed()"
+      [disabled]="!enabled()"
+      title="Edit a memory on the channel faders"
+      (click)="toggleEdit()"
+    >
+      Edit Mem
+    </button>
+    <button
+      type="button"
+      class="record__key record__key--red record__key--inactive"
+      disabled
+      title="Snapshots are not in the simulator yet"
+    >
+      Snapshot
+    </button>
+  </div>
+</section>

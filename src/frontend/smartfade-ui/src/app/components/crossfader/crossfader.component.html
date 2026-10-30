@@ -1,0 +1,54 @@
+<section class="xfade sf-panel" aria-labelledby="xfade-title">
+  <h2 id="xfade-title" class="sf-panel-title">Crossfader</h2>
+  <p class="xfade__note">Stack playback is not in the simulator yet.</p>
+
+  <div class="xfade__columns">
+    <div class="xfade__column">
+      <sf-channel-fader label="A" [desired]="0" [disabled]="true" />
+      <button
+        type="button"
+        class="xfade__key xfade__go sf-key--inactive"
+        disabled
+        aria-label="Go"
+        title="Go: not available yet"
+      >
+        <svg class="xfade__icon" viewBox="0 0 16 16" aria-hidden="true" focusable="false">
+          <path d="M3 2l11 6-11 6z" />
+        </svg>
+      </button>
+      <button
+        type="button"
+        class="xfade__key xfade__stack sf-key--inactive"
+        disabled
+        title="Stack: not available yet"
+      >
+        Stack
+      </button>
+    </div>
+
+    <div class="xfade__column">
+      <sf-channel-fader label="B" [desired]="0" [disabled]="true" />
+      <button
+        type="button"
+        class="xfade__key xfade__pause sf-key--inactive"
+        disabled
+        aria-label="Pause"
+        title="Pause: not available yet"
+      >
+        <svg class="xfade__icon" viewBox="0 0 16 16" aria-hidden="true" focusable="false">
+          <path d="M3 2h4v12H3zM9 2h4v12H9z" />
+        </svg>
+      </button>
+      <button
+        type="button"
+        class="xfade__key xfade__clear"
+        [class.xfade__clear--series]="clearPresses() > 0"
+        [disabled]="!enabled()"
+        title="Clear: once aborts a recording function, twice clears the channel faders, three times the memory faders"
+        (click)="clear()"
+      >
+        Clear
+      </button>
+    </div>
+  </div>
+</section>

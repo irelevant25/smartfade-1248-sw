@@ -1,0 +1,74 @@
+<section class="masters sf-panel" aria-labelledby="masters-title">
+  <h2 id="masters-title" class="sf-panel-title">Masters</h2>
+
+  <div class="masters__columns">
+    <div class="masters__column">
+      <button
+        type="button"
+        class="masters__toggle masters__solo"
+        [class.masters__solo--on]="masters().solo"
+        [attr.aria-pressed]="masters().solo"
+        [disabled]="!enabled()"
+        title="Bump mode: off = pile-on, on = solo"
+        (click)="toggleSolo()"
+      >
+        Solo
+      </button>
+      <sf-channel-fader
+        label="BUMPS"
+        [desired]="masters().bumps"
+        [disabled]="!enabled()"
+        (levelChange)="setBumps($event)"
+      />
+    </div>
+
+    <div class="masters__column">
+      <button
+        type="button"
+        class="masters__toggle masters__blackout"
+        [class.masters__blackout--on]="masters().blackout"
+        [class.masters__blackout--blink]="blackoutBlinks()"
+        [attr.aria-pressed]="masters().blackout"
+        [disabled]="!enabled()"
+        [attr.title]="blackoutBlinks() ? 'The MASTER is below 100 %' : null"
+        (click)="toggleBlackout()"
+      >
+        Blackout
+      </button>
+      <sf-channel-fader
+        label="MASTER"
+        [desired]="masters().master"
+        [disabled]="!enabled()"
+        (levelChange)="setMaster($event)"
+      />
+    </div>
+  </div>
+
+  <div class="masters__independents" role="group" aria-labelledby="independents-title">
+    <h3 id="independents-title" class="sf-panel-title masters__subtitle">Independents</h3>
+    <div class="masters__columns masters__columns--keys">
+      <button
+        type="button"
+        class="masters__toggle masters__ind"
+        [class.masters__ind--on]="masters().independent1"
+        [attr.aria-pressed]="masters().independent1"
+        [disabled]="!enabled()"
+        title="Independent 1 (DMX 97 by default)"
+        (click)="toggleIndependent(1)"
+      >
+        Ind 1
+      </button>
+      <button
+        type="button"
+        class="masters__toggle masters__ind"
+        [class.masters__ind--on]="masters().independent2"
+        [attr.aria-pressed]="masters().independent2"
+        [disabled]="!enabled()"
+        title="Independent 2 (DMX 98 by default)"
+        (click)="toggleIndependent(2)"
+      >
+        Ind 2
+      </button>
+    </div>
+  </div>
+</section>

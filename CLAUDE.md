@@ -25,7 +25,7 @@ console's firmware.
   seen behaving that way in two independent sessions; it never clears a message for sending.
   No PC → console message (poll, fetch or data) may be sent by our code until it has been
   observed from SmartSoft on the 1248, understood, shown to be harmless and cleared by
-  `/hardware-safety-check`. As of 2026-10-29 none is cleared.
+  `/hardware-safety-check`. As of 2026-10-30 none is cleared.
 - Never touch the console bootloader / firmware update path.
 - Never retry commands with side effects blindly.
 - Golden protocol tests may only use bytes from a committed capture in `docs/protocol/captures/`.
@@ -43,14 +43,15 @@ or copy its contents into source code. Derived extractions go to `analysis/extra
 | Source inventory + hashes | `docs/source-materials.md` |
 | Hardware facts | `docs/hardware/smartfade-1248.md` |
 | Protocol knowledge base (status vocabulary, facts, hypotheses, evidence matrix) | `docs/protocol/` |
-| Observed framing, commands, responses, session model (from E2 and E3; VERIFIED = reproduced behaviour, never clearance to send) | `docs/protocol/packet-format.md`, `commands.md`, `responses.md`, `state-model.md` |
+| Observed framing, commands, responses, session model (from E2, E3 and E3b; VERIFIED = reproduced behaviour, never clearance to send) | `docs/protocol/packet-format.md`, `commands.md`, `responses.md`, `state-model.md` |
 | Third-party reference compared with our 1248 evidence (ConsoleLink, SmartFade ML, evidence class 5) | `docs/protocol/consolelink-analysis.md` |
 | Capture records, evidence files, capture format | `docs/protocol/captures/`, `tools/protocol-analyzer/` |
 | SmartSoft binary analysis | `docs/protocol/smartsoft-analysis.md` |
 | MIDI analysis | `docs/protocol/midi-spec-analysis.md` |
 | Experiments, safety rules, capture format | `docs/protocol/reverse-engineering.md` |
 | ASC show file format | `docs/formats/asc-format.md` |
-| Architecture proposal | `docs/architecture.md` |
+| Architecture (proposal + "Phase 1 as built") | `docs/architecture.md` |
+| UI ↔ backend contract (SignalR, REST, DTOs; domain concepts only) | `docs/api.md` |
 
 When protocol knowledge changes, update the relevant docs **in the same change**. Never
 silently rewrite an earlier conclusion: mark it REJECTED and record the new evidence.
@@ -100,20 +101,44 @@ SmartSoft wrote only two System messages and never used the HID interface. The c
 **E3 done 2026-10-29** (`docs/protocol/captures/2026-10-29-e3-console-actions.md`, second USB
 capture after a console power cycle, passive; the owner's answers are in
 `2026-10-29-e3-owner-statements.txt`): the independent reproduction of E2 promoted facts to
-**VERIFIED**, now **26** (F41, F48, F51-F55 with F55 in part, F57-F65, F67 for the shared IDs, F68,
-F70-F77 as "the console returns these bodies"); F40 and F42 stay OBSERVED (synthetic descriptor
+**VERIFIED**, **26** at that time (F41, F48, F51-F55 with F55 in part, F57-F65, F67 for the shared IDs, F68,
+F70-F77 as "the console returns these bodies"; 35 after E3b, below); F40 and F42 stay OBSERVED (synthetic descriptor
 frames). For F58 VERIFIED means that SmartSoft sends exactly those two System messages at those
 points, **never that we may send them**. The console-side actions (faders 1 and 5, a memory bump, the
 MASTER fader, a mode switch) were decoded (F80-F92, hypotheses H46-H59), E2's 0xAB is explained by
 MASTER = 0xAA (INFERRED cause, F90), and the third-party ConsoleLink for the SmartFade ML (evidence class 5,
 `docs/protocol/consolelink-analysis.md`) was compared: it changes no 1248 status by itself, but it
 showed that the structural argument for the label byte order (UTF-16BE) also fits a second reading,
-so that byte order is downgraded to HYPOTHESIS (F73). **No protocol message is cleared for sending
-(`/hardware-safety-check` has not passed), so no code may send anything to a console yet.** **No
-application code exists yet.** Next: the owner questions and passive captures listed in
-`docs/protocol/reverse-engineering.md` ("Next capture (proposed by the E3 analysis)": H31 restart test,
-a channel at full during a MASTER move, the BUMPS fader and bumps, the 25-48 fader mode, optionally GO,
-and the SmartSoft-side "č" label capture), the zero-risk static checks, and Phase 1 scaffolding
+so that byte order is downgraded to HYPOTHESIS (F73).
+**E3b done 2026-10-30** (`docs/protocol/captures/2026-10-30-e3b-live-objects.md`, third USB capture: three
+SmartSoft sessions after another console power cycle, passive; the owner's answers are in
+`2026-10-30-e3b-owner-statements.txt`): nine facts first seen in E3 (F80, F82-F87, F89, F92) are now
+**VERIFIED in part** (the structural part only, never a live value; F92 like F58 only as SmartSoft's
+behaviour), so **35** facts are VERIFIED; F93-F106 were added: the console's sequence counter is not reset by
+a SmartSoft restart (H31 CONFIRMED), BUMPS = FaderInfo body[193] (H46), the live level objects are scaled by
+the MASTER (H47), a held bump appears in them at the BUMPS level (H54, tested at BUMPS 0x00 and 0xFF only),
+ConsoleStatus body[4] is the fader bank, FaderInfo and the LED blocks belong to the physical faders in every
+mode and bank, LED block 52 is SOLO (INFERRED), a GO press shows as a PlaybackInfo crossfade (H50 layout) and
+the default fade times are in SystemSettings and on the LCD (H45). H57 (an arithmetic formula for the MASTER
+scaling) and H59 (FaderInfo records 25-48 = the 25-48 bank) were REJECTED; H60-H65 were added. The owner
+explained the crossfade that his log lacked (he pressed GO once, STACK button unlit) and the 5.0 -> 5.1 s
+default time (a wheel moved by accident); nothing is plugged into DMX IN (owner, 2026-10-30: only DMX OUT is
+connected; H52's content reading stays untested).
+**No protocol message is cleared for sending
+(`/hardware-safety-check` has not passed), so no code may send anything to a console yet.** **Phase 1 is built
+(2026-10-30, owner-approved):** .NET 10 solution (`SmartFade.sln`: Domain, Application with
+desired-versus-actual state, simulated device, decoder-only Protocol with golden tests over the
+committed captures, Communication with a capture replay, SignalR/REST API on port 5160) and the
+Angular app (`src/frontend/smartfade-ui`); see `docs/architecture.md` "Phase 1 as built" and
+`docs/api.md`. The same day the simulator and UI gained memories (REC MEM / EDIT MEM / COPY, 12
+pages × 24), bump buttons, SOLO, the independents IND 1 / IND 2 (DMX 97 / 98 by default) and the
+CLEAR key, modelled on the manual (F5, F6, F107–F109; the simulator's own readings are marked
+INFERRED), plus the console's record and crossfader columns with the unmodelled keys inactive. No
+code in the solution can transmit to a console. Next: the owner questions and passive captures listed in
+`docs/protocol/reverse-engineering.md` ("Next capture (proposed by the E3b analysis)": BUMPS at intermediate
+levels and SOLO with another output up, several stable MASTER positions, a known DMX source on DMX IN, a page
+change, the power-on pending list; optionally GO with the STACK button lit, and the SmartSoft-side "č" label
+capture), the zero-risk static checks, and Phase 1 scaffolding
 (simulator, decoder against captures) after owner approval.
 
 ## Commands
@@ -134,8 +159,30 @@ python -I tools/source-audit/x86_probe.py <pe> func 0x1001AB00                  
 `x86_probe.py` (pefile + capstone, heuristic function boundaries) is the fallback when no
 REA analysis backend (Ghidra / IDA) is available on the machine. Prefer REA when it works.
 
-Build / test / run commands for the backend, frontend, mock mode and real-hardware mode
-are added here once Phase 1 is scaffolded.
+Backend (.NET 10, SDK pinned by `global.json`, warnings are errors):
+
+```
+dotnet build SmartFade.sln                       # restore + build every project
+dotnet test SmartFade.sln                        # xUnit; the Protocol golden tests read docs/protocol/captures/*.jsonl
+dotnet run --project src/backend/SmartFade.Api   # http://localhost:5160, simulated console (mock mode)
+```
+
+Frontend (Angular 22, Node 22):
+
+```
+cd src/frontend/smartfade-ui
+npm install
+npm start          # http://localhost:4200, proxies /api and /hubs to http://localhost:5160
+npm test           # Vitest, headless, no backend needed
+npm run build
+```
+
+Mock mode is the default and the only mode: `Device:Mode=Simulated` (any other value refuses to
+start). Simulator settings: `Device:Simulation:CommandLatencyMilliseconds`,
+`ConnectDelayMilliseconds`, `FailCommands`. **Real-hardware mode does not exist**: it may only be
+added after a message is cleared by `/hardware-safety-check`, and then as a deliberate, visibly
+indicated switch. The golden tests locate the captures by walking up to `SmartFade.sln`, so run
+them from a checkout. Port 5000 is taken by another application on the owner's PC.
 
 ## Working style
 

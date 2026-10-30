@@ -1,0 +1,74 @@
+:host {
+  display: block;
+  min-height: 0;
+}
+
+.record {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  height: 100%;
+  padding: 10px 10px 12px;
+}
+
+.record__keys {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+// A console key in the colour of its LED (the owner's panel, 2026-10-30): --key-rgb is the
+// colour, the face glows with it while the function is armed.
+.record__key {
+  --key-rgb: 243, 246, 249;
+
+  appearance: none;
+  min-height: 44px;
+  padding: 0 6px;
+  border: 1px solid rgba(var(--key-rgb), 0.45);
+  border-radius: 4px;
+  background: linear-gradient(#242b33, #1a2026);
+  color: rgb(var(--key-rgb));
+  font: 700 0.75rem var(--sf-font-ui);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  white-space: nowrap;
+  cursor: pointer;
+
+  &:hover:not(:disabled) {
+    border-color: rgb(var(--key-rgb));
+  }
+
+  &:active:not(:disabled) {
+    transform: translateY(1px);
+  }
+
+  &:disabled {
+    opacity: 0.4;
+    cursor: not-allowed;
+  }
+}
+
+.record__key--white {
+  --key-rgb: 243, 246, 249;
+}
+
+.record__key--yellow {
+  --key-rgb: 255, 216, 77;
+}
+
+.record__key--red {
+  --key-rgb: 255, 92, 92;
+}
+
+.record__key--lit {
+  background: rgb(var(--key-rgb));
+  border-color: rgb(var(--key-rgb));
+  color: #0a0c0f;
+  box-shadow: 0 0 14px rgba(var(--key-rgb), 0.6);
+}
+
+// Shown, named, inactive: the simulator does not model the function yet.
+.record__key--inactive:disabled {
+  opacity: 0.55;
+}

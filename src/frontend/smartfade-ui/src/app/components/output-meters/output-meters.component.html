@@ -1,0 +1,40 @@
+<section
+  class="outputs sf-panel"
+  [class.outputs--collapsed]="collapsed()"
+  aria-labelledby="outputs-title"
+>
+  <header class="outputs__header">
+    <h2 id="outputs-title" class="outputs__title sf-panel-title">
+      <button
+        type="button"
+        class="outputs__toggle"
+        [attr.aria-expanded]="!collapsed()"
+        aria-controls="outputs-body"
+        (click)="toggle()"
+      >
+        <span class="outputs__chevron" aria-hidden="true"></span>
+        Outputs 1&ndash;512
+      </button>
+    </h2>
+    <span class="outputs__summary">{{ activeCount() }} active</span>
+    <span class="outputs__readout">{{ readout() }}</span>
+  </header>
+
+  @if (!collapsed()) {
+    <div id="outputs-body" class="outputs__body">
+      <canvas
+        #canvas
+        class="outputs__canvas"
+        role="img"
+        aria-label="Levels of outputs 1 to 512"
+        (pointermove)="onPointerMove($event)"
+        (pointerleave)="onPointerLeave()"
+      ></canvas>
+      <div class="outputs__scale" aria-hidden="true">
+        @for (tick of scale; track tick.address) {
+          <span class="outputs__tick" [style.left.%]="tick.offset">{{ tick.address }}</span>
+        }
+      </div>
+    </div>
+  }
+</section>

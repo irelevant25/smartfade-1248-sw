@@ -1,0 +1,81 @@
+:host {
+  display: block;
+  min-height: 0;
+}
+
+.memories {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  height: 100%;
+  padding: 10px 12px 10px;
+}
+
+.memories--armed {
+  border-color: var(--sf-warn);
+}
+
+.memories__head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px 18px;
+}
+
+.memories__pages {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.memories__pages-label {
+  margin-right: 6px;
+  font: 600 0.6875rem var(--sf-font-mono);
+  letter-spacing: 0.1em;
+  color: var(--sf-text-faint);
+  text-transform: uppercase;
+}
+
+.memories__page {
+  appearance: none;
+  min-width: 36px;
+  min-height: 30px;
+  padding: 0 6px;
+  border: 1px solid var(--sf-border-strong);
+  border-radius: 4px;
+  background: linear-gradient(#242b33, #1a2026);
+  color: var(--sf-text-dim);
+  font: 700 0.8125rem var(--sf-font-mono);
+  cursor: pointer;
+
+  &:hover {
+    border-color: var(--sf-accent);
+  }
+}
+
+// Pages that hold a recorded memory (the console blinks their bump while MEMS is held).
+.memories__page--content {
+  color: #ff8c8c;
+}
+
+.memories__page--current {
+  border-color: var(--sf-accent);
+  background: rgba(63, 208, 224, 0.18);
+  color: var(--sf-accent);
+}
+
+.memories__hint {
+  margin: 0 0 0 auto;
+  font: 0.6875rem var(--sf-font-ui);
+  color: var(--sf-warn);
+}
+
+.memories__faders {
+  display: grid;
+  flex: 1 1 0;
+  grid-template-columns: repeat(var(--columns), minmax(0, 1fr));
+  gap: 2px;
+  min-height: 0;
+  padding-top: 6px;
+  border-top: 1px solid var(--sf-border);
+}

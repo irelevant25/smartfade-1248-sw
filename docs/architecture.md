@@ -1,6 +1,7 @@
-# Architecture (proposal, not yet implemented)
+# Architecture
 
-Status: **proposal for review** (2026-09-17). Nothing below is built yet.
+Status: proposal of 2026-09-17, **Phase 1 implemented on 2026-10-30** with the owner's approval
+(see "Phase 1 as built" at the end). The layering below is unchanged.
 
 ## Principles
 
@@ -51,7 +52,7 @@ hardware limit requires it.
 
 | Brief | Proposal | Reason |
 |---|---|---|
-| Names `SmartFace.*` | `SmartFade.*` | Official product name (all ETC documents). **Owner to confirm.** |
+| Names `SmartFace.*` | `SmartFade.*` | Official product name (all ETC documents). **Confirmed by the owner 2026-10-30 ("for now yes").** |
 | `MockTransport` at the byte layer as the main mock | **Simulated device at the `ISmartFadeDevice` layer.** Byte-level transports only for replay/tests | A byte-level mock needs byte formats, which would mean inventing a protocol (forbidden). A domain-level simulator satisfies "Angular → .NET → Mock" without fake bytes. |
 | API centred on commands (`setChannelLevel`, `recordCue`) | Commands **plus** an object/state-sync device contract | Static analysis suggests the USB protocol is poll + dirty-object + fetch, with no obvious "set level" command (H3, H6). The device interface must accommodate state reports independent of commands. |
 | `SmartFace.Protocol` + `SmartFace.Communication` | Kept, but inside a device module, created only when the first message is verified | Avoid empty speculative projects |
@@ -62,6 +63,7 @@ hardware limit requires it.
 
 - **.NET version:** this machine has SDK 8.0.403. .NET 8 support ends **10 Nov 2026**
   (≈ 2 months). Recommend installing the .NET 10 SDK (current LTS) before scaffolding.
+  *Done 2026-10-30: SDK 10.0.403 installed, pinned in `global.json`, every project on net10.0.*
 - **USB access (future):** reuse ETC's `etchsp.sys` through its device interface, *or* bind
   WinUSB and use a user-mode library. Decide after E1/E2 (H7). **E1 (2026-10-28):** `etchsp.sys`
   is refused by Windows 11 while Memory Integrity (HVCI) is on (known-facts F46), so reusing it
@@ -113,4 +115,103 @@ hardware limit requires it.
   and every console-side action (faders, MASTER, a mode switch, a bump) arrives as state objects only
   (F82–F88), so the "actual" side must be built from objects, not from events (H5).
 - **Desktop shell:** WebView2 host vs Tauri. Deferred (brief §4).
-- **Angular:** CLI 21.2 is installed. Standalone + signals + strict TS.
+- **Angular:** CLI 21.2 was installed when this was written; the app was generated with CLI
+  22.2 on 2026-10-30 (standalone, signals, zoneless, strict TS, Vitest).
+
+## Phase 1 as built (2026-10-30)
+
+Owner approval: 2026-10-30 ("you have my approval"). The first vertical slice of the brief,
+Angular → SignalR → .NET → simulated console, with the protocol decoders tested against the
+committed captures. **No code in the solution can transmit to a console:** the only
+transports are a loopback and a capture replay, the device registered by default is the
+simulator, and `Device:Mode` accepts nothing else (CLAUDE.md: VERIFIED is necessary, not
+sufficient; no message is cleared for sending).
+
+```
+SmartFade.sln
+Directory.Build.props                nullable, implicit usings, warnings as errors
+src/backend/
+  SmartFade.Domain/                  capabilities, levels (0..255, F72/F83), masters, snapshot,
+                                     memory / patch / step / sequence / independent / label
+  SmartFade.Application/             ISmartFadeDevice port, DeviceStateChange, ConsoleStateStore
+                                     (desired vs actual, never merged), ConsoleService (use cases, events)
+  SmartFade.Devices.Simulated/       SimulatedSmartFadeDevice: domain-level model, no bytes
+                                     (1:1 patch DOCUMENTED default; output = level × MASTER / 255
+                                     rounded, a simulation assumption; Blackout → 0, DOCUMENTED F5)
+  SmartFade.Protocol/                DECODERS ONLY: HspHeader (F52/F53), inbound/outbound payloads
+                                     (F54), DirtyObjectsList (F57), object decoders annotated with
+                                     [Evidence(status, facts)], HspSessionDecoder (transfer stream → events)
+  SmartFade.Communication/           IDeviceTransport (brief §10), LoopbackTransport, CaptureFile
+                                     (normalized JSONL reader), ReplayTransport (plays the console side
+                                     of a capture; Send only records)
+  SmartFade.Api/                     ASP.NET Core host: /hubs/console (SignalR), /api/status,
+                                     /api/console/state|connect|disconnect, ConsoleEventsBroadcaster
+                                     (outputs coalesced to ~30/s), CORS for the Angular dev server
+src/frontend/smartfade-ui/           Angular (standalone, signals), contract in docs/api.md
+tests/                               xUnit: Domain, Application (service + simulator),
+                                     Protocol (framing bytes from E2; golden decodes of the E2, E3,
+                                     E3b captures), Communication (capture reader, transports)
+```
+
+Decisions taken while building:
+
+- **Target framework net10.0** (current LTS). The scaffold was built on net8.0 first because
+  winget could not install the .NET 10 SDK from this session (error 0x8A15005E twice); the
+  owner installed SDK 10.0.403 manually the same morning and every project was retargeted
+  with one `TargetFramework` line, build and tests unchanged.
+- **Levels are bytes end to end** (0..255, the console's unit); the UI converts to percent.
+- **Golden tests read the committed JSONL captures directly** from `docs/protocol/captures/`
+  (located through `SmartFade.sln`), so every expected number traces to an experiment record.
+- **`SmartFade.Infrastructure` is not created** until something needs persistence.
+- **Replay as a device** (a `ReplayDevice` that drives the application from a capture) is the
+  next step after the slice; the transport and the decoders for it exist.
+- **Protocol and Communication are not part of the running process.** They are standalone
+  projects (no dependency on Domain or Application) referenced only by their tests; the
+  earlier text above, which places them inside `SmartFade.Devices.Usb`, describes where they
+  will be consumed once a device uses them. A test pins that `SmartFade.Api` has no reference
+  path to either.
+- **Naming:** `SmartFade.*` and `ISmartFadeDevice` (the brief's `SmartFace.*` /
+  `ISmartFaceClient`) are now built in; the owner approved Phase 1 with these names on
+  2026-10-30 and confirmed them explicitly the same day ("for now yes"; deviations table above).
+- **Command pump (review item, 2026-10-30):** every device call goes through one
+  single-consumer queue in `ConsoleService`, so commands and the device's reports stay in
+  order and the device sees a token owned by the service, never a UI client's; `set…`
+  commands return on acceptance, `connect`/`disconnect` when the attempt has run. The
+  simulator's connection state machine uses a generation counter (a disconnect or link loss
+  during a connect wins; a second connect is ignored) and has test hooks for console-side
+  changes, link loss and failing commands, so the failure half of desired-versus-actual is
+  tested end to end.
+- **Local web exposure:** an Origin guard refuses browser requests from non-local origins and
+  `AllowedHosts` is restricted to localhost. Harmless with the simulator; a precondition for
+  any hardware mode, together with command capability flags (`supportedCommands` in the
+  contract) so that an observation-only real device can refuse control commands.
+- **Tests:** Domain, Application (service, simulator, silent and failing devices, ordering,
+  connection races), Protocol (framing bytes and golden decodes of E2, E3 and E3b),
+  Communication (capture reader, transports) and Api (SignalR round trip, mode refusal,
+  origin guard, pinned wire names).
+- **Memories, bumps and SOLO (2026-10-30, owner request, same day):** the simulator models the
+  console's memory faders (12 pages × 24, REC MEM, EDIT MEM, all-zero = deleted), the bump
+  buttons under every channel and memory fader (pile-on at the BUMPS level, or solo with SOLO on)
+  and reports a per-channel **output** next to the fader level, as the console's ChannelLevels
+  object carries post-MASTER values (F96, F97). The model follows the manual where it states the
+  behaviour (HTP F107, bump modes F6, Master and Blackout F5) and marks its own readings INFERRED
+  (proportional memory playback, recording before the MASTER). Ten hub commands, a
+  `memoriesChanged` event and `getMemory` were added to the contract (docs/api.md); memory
+  content is fetched on demand, the state carries only each memory's fader level, recorded flag
+  and label. The UI lays the panel out like the console: readout above each fader, the numbered
+  bump button below it, memories as a third row with page keys and the REC MEM / EDIT MEM / CLEAR
+  keys, BUMPS under SOLO and MASTER under BLACKOUT on the right. EDIT MEM is a blind edit held in
+  the UI (`MemoryEditService`) and stored with one command, so desired and actual stay apart.
+  **Second pass the same day (owner feedback):** BUMPS starts at zero like the owner's console
+  (F82, F95); the BLACKOUT key is blue, blinks while the MASTER is below full (F5) and lights
+  while on; memory bump buttons glow red at three levels (empty, recorded, contributing; F8) and
+  the key text contrasts with the glow; the console's record column (COPY, REC SEQ, MAGIC, REC
+  MEM, EDIT MEM, SNAPSHOT, in the owner's key colours) and crossfader column (A / B faders, GO,
+  STACK, PAUSE, CLEAR) sit between the faders and the masters, with the keys the simulator does
+  not model yet shown inactive; the INDEPENDENTS IND 1 / IND 2 toggle DMX 97 / 98 by default
+  (F108) under the masters; COPY copies a memory through `getMemory` + `storeMemory`; CLEAR aborts
+  an armed function, then clears the channel faders, then the memory faders (F109, press count in
+  the UI, `clearChannels` / `clearMemories` on the device). A patch editor (DMX 1–512 → channels
+  and independents, the console's Patch, F70) and the stack / sequence pages are the owner's
+  next wishes; both are UI over data the console already reports, but writing them to a real
+  console is a protocol question that stays closed until a message is cleared.

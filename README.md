@@ -7,10 +7,25 @@ SmartSoft/console `.asc` show files.
 **Status:** Phase 0 (discovery). Source materials audited; experiments E1 (USB identification)
 and E2 (first USB capture of a SmartSoft session: poll / dirty-list / fetch framing) done on
 2026-10-28, E3 (console actions while SmartSoft is Online, after a console power cycle) on
-2026-10-29. 26 facts are VERIFIED as observed console / SmartSoft behaviour (USB framing, start-up,
-show objects, product string, firmware version; before E3 only the last two were). VERIFIED never
+2026-10-29 and E3b (three more SmartSoft sessions after another power cycle: BUMPS, bumps, SOLO, the MASTER
+scaling, the 25-48 bank, a GO crossfade) on 2026-10-30. 35 facts are VERIFIED as observed console / SmartSoft
+behaviour (USB framing, start-up, show objects, front-panel mirroring, product string, firmware version; nine
+of them only in part; before E3 only the last two were). VERIFIED never
 clears a message for sending: no protocol message is cleared, so no code may talk to a console yet.
-No application code yet.
+**Phase 1 is built (2026-10-30):** the first vertical slice Angular → SignalR → .NET → simulated
+console, with protocol decoders tested against the committed captures. Nothing in it can transmit
+to a console.
+
+## Run it
+
+```
+dotnet build SmartFade.sln && dotnet test SmartFade.sln      # .NET 10 SDK (global.json)
+dotnet run --project src/backend/SmartFade.Api              # backend, http://localhost:5160, simulated console
+cd src/frontend/smartfade-ui && npm install && npm start    # UI, http://localhost:4200 (proxies to 5160)
+```
+
+The simulator is the default and only device; see `docs/api.md` for the UI contract and
+`docs/architecture.md` ("Phase 1 as built") for the layout.
 
 | Start here | |
 |---|---|
@@ -19,7 +34,8 @@ No application code yet.
 | Evidence matrix | [docs/protocol/evidence-matrix.md](docs/protocol/evidence-matrix.md) |
 | Next experiments | [docs/protocol/reverse-engineering.md](docs/protocol/reverse-engineering.md) |
 | ASC show file format | [docs/formats/asc-format.md](docs/formats/asc-format.md) |
-| Architecture proposal | [docs/architecture.md](docs/architecture.md) |
+| Architecture (proposal + "Phase 1 as built") | [docs/architecture.md](docs/architecture.md) |
+| UI ↔ backend contract (SignalR, REST, DTOs) | [docs/api.md](docs/api.md) |
 | Source materials and hashes | [docs/source-materials.md](docs/source-materials.md) |
 | Rules for contributors / Claude | [CLAUDE.md](CLAUDE.md) |
 

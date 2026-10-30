@@ -1,0 +1,293 @@
+// The fader is one input[type=range] laid out vertically (writing-mode), drawn over a groove,
+// a lit bar (actual level) and an amber gap (desired vs actual). --level and --actual are
+// ratios 0..1 set by the template; --thumb-h is the thumb height, so that the bar and the gap
+// line up with the centre of the thumb at every position. Under the fader sits the bump button
+// (numbered, lit by the output like the console's bump LEDs) or a plain name.
+
+@mixin thumb {
+  box-sizing: border-box;
+  width: var(--thumb-w);
+  height: var(--thumb-h);
+  border: 1px solid #07090b;
+  border-radius: 3px;
+  background:
+    linear-gradient(
+      to bottom,
+      transparent calc(50% - 1px),
+      var(--sf-accent) calc(50% - 1px) calc(50% + 1px),
+      transparent calc(50% + 1px)
+    ),
+    linear-gradient(to bottom, #5b6570, #2d343c 45%, #20262c 55%, #38414a);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.18),
+    0 2px 5px rgba(0, 0, 0, 0.7);
+}
+
+:host {
+  display: block;
+  height: 100%;
+  min-width: 0;
+}
+
+.fader {
+  --thumb-w: 30px;
+  --thumb-h: 26px;
+  --rail-w: 6px;
+  // Green channel bumps, red memory bumps (console manual: "the green channel bumps",
+  // "A recorded memory is indicated in red").
+  --bump-rgb: 61, 220, 132;
+
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  height: 100%;
+  padding: 6px 0 6px;
+  border-radius: 4px;
+  font-variant-numeric: tabular-nums;
+
+  &:has(.fader__input:focus-visible) {
+    outline: 2px solid var(--sf-focus);
+    outline-offset: -2px;
+    background: rgba(255, 255, 255, 0.03);
+  }
+}
+
+.fader--memory {
+  --bump-rgb: 255, 77, 77;
+}
+
+.fader--readonly {
+  --thumb-h: 6px;
+}
+
+.fader--idle {
+  opacity: 0.45;
+}
+
+.fader__caption {
+  max-width: 100%;
+  overflow: hidden;
+  font: 500 0.625rem/1.2 var(--sf-font-ui);
+  color: var(--sf-text-dim);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.fader__label {
+  font: 600 0.75rem/1.2 var(--sf-font-ui);
+  letter-spacing: 0.04em;
+  color: var(--sf-text-dim);
+  white-space: nowrap;
+}
+
+.fader--lit .fader__name {
+  color: var(--sf-accent);
+}
+
+.fader__readout {
+  font: 600 0.8125rem/1.2 var(--sf-font-mono);
+  color: var(--sf-text);
+}
+
+.fader__unit {
+  margin-left: 1px;
+  font-size: 0.625rem;
+  color: var(--sf-text-dim);
+}
+
+.fader__actual {
+  font: 500 0.6875rem/1.2 var(--sf-font-mono);
+  color: var(--sf-warn);
+  visibility: hidden;
+}
+
+.fader__actual--shown {
+  visibility: visible;
+}
+
+.fader__rail {
+  --travel: calc(100% - var(--thumb-h));
+
+  position: relative;
+  display: flex;
+  flex: 1 1 0;
+  justify-content: center;
+  width: 100%;
+  min-height: 72px;
+}
+
+.fader__rail::before {
+  content: '';
+  position: absolute;
+  top: calc(var(--thumb-h) / 2);
+  bottom: calc(var(--thumb-h) / 2);
+  left: 50%;
+  width: var(--rail-w);
+  translate: -50% 0;
+  border-radius: 3px;
+  background: var(--sf-groove);
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.05);
+}
+
+.fader__fill,
+.fader__gap {
+  position: absolute;
+  left: 50%;
+  width: var(--rail-w);
+  translate: -50% 0;
+  border-radius: 3px;
+  pointer-events: none;
+}
+
+.fader__fill {
+  bottom: calc(var(--thumb-h) / 2);
+  height: calc(var(--travel) * var(--actual));
+  background: linear-gradient(to top, var(--sf-accent-dim), var(--sf-accent));
+  box-shadow: 0 0 8px var(--sf-accent-glow);
+}
+
+.fader__gap {
+  bottom: calc(var(--thumb-h) / 2 + var(--travel) * min(var(--level), var(--actual)));
+  height: calc(
+    var(--travel) * (max(var(--level), var(--actual)) - min(var(--level), var(--actual)))
+  );
+  background: repeating-linear-gradient(-45deg, var(--sf-warn) 0 3px, transparent 3px 6px);
+}
+
+.fader__input {
+  position: relative;
+  z-index: 1;
+  appearance: none;
+  writing-mode: vertical-lr;
+  direction: rtl;
+  width: var(--thumb-w);
+  height: 100%;
+  margin: 0;
+  padding: 0;
+  background: transparent;
+  cursor: grab;
+  touch-action: none;
+  outline: none;
+
+  &:active {
+    cursor: grabbing;
+  }
+
+  &:disabled {
+    cursor: default;
+  }
+
+  &::-webkit-slider-runnable-track {
+    appearance: none;
+    width: var(--thumb-w);
+    border: 0;
+    background: transparent;
+  }
+
+  &::-webkit-slider-thumb {
+    appearance: none;
+    @include thumb;
+  }
+
+  &::-moz-range-track {
+    width: var(--thumb-w);
+    border: 0;
+    background: transparent;
+  }
+
+  &::-moz-range-thumb {
+    @include thumb;
+  }
+}
+
+.fader--readonly .fader__input::-webkit-slider-thumb {
+  background: var(--sf-accent);
+  box-shadow: none;
+}
+
+.fader--readonly .fader__input::-moz-range-thumb {
+  background: var(--sf-accent);
+  box-shadow: none;
+}
+
+.fader__lamp {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--sf-border-strong);
+}
+
+.fader__lamp--on {
+  background: var(--sf-warn);
+  box-shadow: 0 0 6px var(--sf-warn);
+  animation: fader-pulse 0.9s ease-in-out infinite alternate;
+}
+
+// The bump button: a console key whose face glows with the output (--lit, 0..1).
+.fader__bump {
+  --glow: calc(var(--lit, 0) * 0.85);
+
+  appearance: none;
+  width: 100%;
+  max-width: 46px;
+  min-height: 28px;
+  padding: 0 2px;
+  border: 1px solid var(--sf-border-strong);
+  border-radius: 4px;
+  background:
+    linear-gradient(rgba(var(--bump-rgb), var(--glow)), rgba(var(--bump-rgb), var(--glow))),
+    linear-gradient(#242b33, #1a2026);
+  // Light text on a dark key, dark text once the key glows: readable at every level.
+  color: color-mix(in srgb, #06090c calc(var(--glow) * 100%), #f3f6f9);
+  font: 700 0.75rem/1 var(--sf-font-mono);
+  letter-spacing: 0;
+  cursor: pointer;
+  touch-action: none;
+  user-select: none;
+
+  &:hover:not(:disabled) {
+    border-color: rgba(var(--bump-rgb), 0.9);
+  }
+
+  &:disabled {
+    cursor: not-allowed;
+  }
+}
+
+.fader__bump--held {
+  --glow: 0.95;
+
+  box-shadow: 0 0 12px rgba(var(--bump-rgb), 0.8);
+}
+
+.fader__bump--armed {
+  border-color: #fff;
+  animation: bump-blink 0.7s steps(2, start) infinite;
+}
+
+@keyframes bump-blink {
+  to {
+    --glow: 0.95;
+  }
+}
+
+@keyframes fader-pulse {
+  from {
+    opacity: 0.35;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .fader__lamp--on,
+  .fader__bump--armed {
+    animation: none;
+  }
+
+  .fader__bump--armed {
+    --glow: 0.6;
+  }
+}
