@@ -39,6 +39,7 @@ describe('ConsoleStateService', () => {
         number: 1,
         level: 0,
         recorded: false,
+        reported: false,
         label: '',
       });
       expect(service.memories()[287]).toEqual({
@@ -47,6 +48,7 @@ describe('ConsoleStateService', () => {
         number: 288,
         level: 0,
         recorded: false,
+        reported: false,
         label: '',
       });
       expect(service.outputs()).toHaveLength(OUTPUT_COUNT);
@@ -88,6 +90,7 @@ describe('ConsoleStateService', () => {
         number: 1,
         level: 0,
         recorded: true,
+        reported: true,
         label: 'GROUP 1',
       });
       expect(service.memories()[1].level).toBe(128);
@@ -97,6 +100,7 @@ describe('ConsoleStateService', () => {
         number: 25,
         level: 0,
         recorded: true,
+        reported: true,
         label: 'PAGE 2',
       });
       expect(service.memories()[2].recorded).toBe(false);
@@ -167,8 +171,8 @@ describe('ConsoleStateService', () => {
       service.applyConsoleStateChanged(
         createSampleState({
           memories: [
-            { page: 3, fader: 2, number: 999, level: 40, recorded: true, label: 'X' },
-            { page: 13, fader: 1, number: 1, level: 40, recorded: true, label: 'bad' },
+            { page: 3, fader: 2, number: 999, level: 40, recorded: true, reported: true, label: 'X' },
+            { page: 13, fader: 1, number: 1, level: 40, recorded: true, reported: true, label: 'bad' },
           ],
         }),
       );
@@ -180,6 +184,7 @@ describe('ConsoleStateService', () => {
         number: 50,
         level: 40,
         recorded: true,
+        reported: true,
         label: 'X',
       });
       expect(service.memories()[0].recorded).toBe(false);
@@ -306,8 +311,8 @@ describe('ConsoleStateService', () => {
       const before = service.memories();
 
       service.applyMemoriesChanged([
-        { page: 1, fader: 3, number: 3, level: 255, recorded: true, label: 'NEW' },
-        { page: 12, fader: 24, number: 288, level: 7, recorded: false, label: '' },
+        { page: 1, fader: 3, number: 3, level: 255, recorded: true, reported: true, label: 'NEW' },
+        { page: 12, fader: 24, number: 288, level: 7, recorded: false, reported: true, label: '' },
       ]);
 
       const after = service.memories();
@@ -317,6 +322,7 @@ describe('ConsoleStateService', () => {
         number: 3,
         level: 255,
         recorded: true,
+        reported: true,
         label: 'NEW',
       });
       expect(after[287].level).toBe(7);
@@ -327,7 +333,7 @@ describe('ConsoleStateService', () => {
 
     it('places a memory by page and fader, not by the number it carries', () => {
       service.applyMemoriesChanged([
-        { page: 2, fader: 1, number: 1, level: 9, recorded: true, label: '' },
+        { page: 2, fader: 1, number: 1, level: 9, recorded: true, reported: true, label: '' },
       ]);
 
       expect(service.memories()[24].level).toBe(9);
@@ -339,13 +345,13 @@ describe('ConsoleStateService', () => {
       const before = service.memories();
 
       service.applyMemoriesChanged([
-        { page: 0, fader: 1, number: 1, level: 9, recorded: true, label: '' },
-        { page: 1, fader: 25, number: 25, level: 9, recorded: true, label: '' },
+        { page: 0, fader: 1, number: 1, level: 9, recorded: true, reported: true, label: '' },
+        { page: 1, fader: 25, number: 25, level: 9, recorded: true, reported: true, label: '' },
       ]);
       expect(service.memories()).toBe(before);
 
       service.applyMemoriesChanged([
-        { page: 1, fader: 4, number: 4, level: 300, recorded: true, label: 'HOT' },
+        { page: 1, fader: 4, number: 4, level: 300, recorded: true, reported: true, label: 'HOT' },
       ]);
       expect(service.memories()[3].level).toBe(255);
     });
@@ -506,7 +512,7 @@ describe('ConsoleStateService', () => {
       ]);
       service.applyMastersChanged({ master: 77, bumps: 0, blackout: false, solo: false, independent1: false, independent2: false });
       service.applyMemoriesChanged([
-        { page: 1, fader: 1, number: 1, level: 5, recorded: true, label: '' },
+        { page: 1, fader: 1, number: 1, level: 5, recorded: true, reported: true, label: '' },
       ]);
 
       expect(service.channels()[2].desired).toBe(40);
@@ -532,15 +538,15 @@ describe('ConsoleStateService', () => {
       service.setDesiredMemoryLevel(1, 2, 200);
 
       service.applyMemoriesChanged([
-        { page: 1, fader: 2, number: 2, level: 128, recorded: true, label: '' },
+        { page: 1, fader: 2, number: 2, level: 128, recorded: true, reported: true, label: '' },
       ]);
       expect(service.memories()[1].level).toBe(200);
 
       service.applyMemoriesChanged([
-        { page: 1, fader: 2, number: 2, level: 200, recorded: true, label: '' },
+        { page: 1, fader: 2, number: 2, level: 200, recorded: true, reported: true, label: '' },
       ]);
       service.applyMemoriesChanged([
-        { page: 1, fader: 2, number: 2, level: 10, recorded: true, label: '' },
+        { page: 1, fader: 2, number: 2, level: 10, recorded: true, reported: true, label: '' },
       ]);
       expect(service.memories()[1].level).toBe(10);
     });
@@ -615,6 +621,7 @@ describe('ConsoleStateService', () => {
         number: 27,
         level: 77,
         recorded: false,
+        reported: true,
         label: '',
       });
     });
@@ -666,7 +673,7 @@ describe('ConsoleStateService', () => {
         { channel: 1, desired: 255, actual: 255, pending: false, output: 255 },
       ]);
       service.applyMemoriesChanged([
-        { page: 1, fader: 3, number: 3, level: 90, recorded: false, label: '' },
+        { page: 1, fader: 3, number: 3, level: 90, recorded: false, reported: true, label: '' },
       ]);
       expect(service.channels()[0].desired).toBe(0);
       expect(service.memories()[2].level).toBe(0);

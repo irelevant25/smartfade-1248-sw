@@ -43,7 +43,7 @@ public sealed class ConsoleStateStore
         // Placeholders until the device reports (ActualStateReported = false): not console state.
         _masters = new Masters(Level.Max, Level.Min, Blackout: false, Solo: false, Independent1: false, Independent2: false);
         _outputs = new byte[capabilities.DmxAddresses];
-        _memories = ConsoleSnapshot.EmptyMemories(capabilities).ToArray();
+        _memories = ConsoleSnapshot.EmptyMemories(capabilities).Select(m => m with { Reported = false }).ToArray();
         _connection = initialConnection;
     }
 
@@ -109,6 +109,11 @@ public sealed class ConsoleStateStore
                 _channelsReported = false;
                 _outputsReported = false;
                 _memoriesReported = false;
+                for (var i = 0; i < _memories.Length; i++)
+                {
+                    _memories[i] = _memories[i] with { Reported = false };   // kept for display, no longer the console's word
+                }
+
                 _showFileName = null;
                 _firmwareVersion = null;
             }

@@ -53,6 +53,8 @@ export class MemoryGridComponent {
   protected readonly bumpsDisabled = computed(() => !this._state.supports('bumpMemory'));
   /** Until the console delivered memories, every memory shown is a placeholder (unrecorded, no label). */
   protected readonly reported = this._state.memoriesReported;
+  /** Some memories delivered, others still placeholders (a read-only console sends them one at a time). */
+  protected readonly hasUnreported = computed(() => this._state.memories().some((memory) => !memory.reported));
   protected readonly unreportedNote = computed(() =>
     this._state.mode() === 'hardware'
       ? 'Not delivered by the console in this read-only session'

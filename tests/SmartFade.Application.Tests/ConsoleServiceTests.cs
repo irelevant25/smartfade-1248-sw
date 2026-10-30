@@ -65,8 +65,8 @@ public class ConsoleServiceTests
         Assert.Equal(512, state.Outputs.Count);
         Assert.Equal(288, state.Memories.Count);
         Assert.All(state.Memories, m => Assert.False(m.Recorded));
-        Assert.Equal(new MemoryState(1, 1, 0, Recorded: false, Label.Empty), state.Memories[0]);
-        Assert.Equal(new MemoryState(12, 24, 0, Recorded: false, Label.Empty), state.Memories[287]);
+        Assert.Equal(new MemoryState(1, 1, 0, Recorded: false, Label.Empty, Reported: false), state.Memories[0]);   // placeholders until a device reports
+        Assert.Equal(new MemoryState(12, 24, 0, Recorded: false, Label.Empty, Reported: false), state.Memories[287]);
         Assert.Equal(DeviceCommands.All, state.SupportedCommands);
     }
 

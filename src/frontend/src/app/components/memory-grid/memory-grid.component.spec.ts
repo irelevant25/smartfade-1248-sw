@@ -138,7 +138,7 @@ describe('MemoryGridComponent', () => {
 
   it('follows the backend', () => {
     state.applyMemoriesChanged([
-      { page: 1, fader: 3, number: 3, level: 255, recorded: true, label: 'NEW' },
+      { page: 1, fader: 3, number: 3, level: 255, recorded: true, reported: true, label: 'NEW' },
     ]);
     fixture.detectChanges();
 
@@ -159,11 +159,28 @@ describe('MemoryGridComponent', () => {
     expect(element().querySelector('.memories__faders--unreported')).not.toBeNull();
 
     state.applyMemoriesChanged([
-      { page: 1, fader: 1, number: 1, level: 0, recorded: true, label: 'OPONA' },
+      { page: 1, fader: 1, number: 1, level: 0, recorded: true, reported: true, label: 'OPONA' },
     ]);
     fixture.detectChanges();
 
     expect(element().querySelector('.memories__note')).toBeNull();
+  });
+
+  it('dims the memories the console has not delivered while others have arrived', () => {
+    const sample = createSampleState({
+      memoriesReported: true,
+      connection: { status: 'connected', mode: 'hardware', deviceDescription: 'SmartFade 1248, read-only' },
+    });
+    state.applyConsoleStateChanged({
+      ...sample,
+      memories: sample.memories.map((memory) => (memory.number === 1 ? memory : { ...memory, reported: false })),
+    });
+    fixture.detectChanges();
+
+    expect(text('.memories__note')).toBe('Dimmed memories were not delivered by the console in this session');
+    expect(element().querySelectorAll('.memories__fader--unreported')).toHaveLength(23);
+    expect(element().querySelector('.memories__faders--unreported')).toBeNull();
+    expect(lit(1)).toBe('0');
   });
 
   it('disables the faders and bump buttons while commands are not possible', () => {

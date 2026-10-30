@@ -50,7 +50,7 @@ public sealed class ConsoleStateAssembler
         _capabilities = capabilities;
         _channelLevels = new byte[capabilities.Channels];
         _outputs = new byte[capabilities.DmxAddresses];
-        _memories = ConsoleSnapshot.EmptyMemories(capabilities).ToArray();
+        _memories = ConsoleSnapshot.EmptyMemories(capabilities).Select(m => m with { Reported = false }).ToArray();
         _memoryContents = new byte[capabilities.Memories][];
     }
 
@@ -208,7 +208,7 @@ public sealed class ConsoleStateAssembler
         var levels = memory.Levels.Take(_capabilities.Channels).ToArray();
         _memoryContents[index] = levels;
         var label = memory.Label;
-        var state = new MemoryState(page, fader, _memories[index].Level, Recorded: levels.Any(l => l > 0), new Label(label.Line1, label.Line2, label.Line3));
+        var state = new MemoryState(page, fader, _memories[index].Level, Recorded: levels.Any(l => l > 0), new Label(label.Line1, label.Line2, label.Line3), Reported: true);
         _memories[index] = state;
         return new DeviceStateChange(Memories: new[] { state });
     }

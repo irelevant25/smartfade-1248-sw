@@ -116,7 +116,7 @@ describe('AppComponent', () => {
         { channel: 4, desired: 255, actual: 255, pending: false, output: 255 },
       ]);
       hub.emit('memoriesChanged', [
-        { page: 1, fader: 6, number: 6, level: 200, recorded: true, label: 'SIX' },
+        { page: 1, fader: 6, number: 6, level: 200, recorded: true, reported: true, label: 'SIX' },
       ]);
       fixture.detectChanges();
 

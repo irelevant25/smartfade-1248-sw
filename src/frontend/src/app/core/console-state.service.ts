@@ -64,6 +64,7 @@ function idleMemories(): MemoryStateDto[] {
     number: index + 1,
     level: 0,
     recorded: false,
+    reported: false,
     label: '',
   }));
 }
@@ -111,6 +112,7 @@ function sanitizeMemory(dto: MemoryStateDto): MemoryStateDto {
     number: memoryNumber(dto.page, dto.fader),
     level: clampLevel(dto.level),
     recorded: Boolean(dto.recorded),
+    reported: dto.reported !== false,
     label: typeof dto.label === 'string' ? dto.label : '',
   };
 }

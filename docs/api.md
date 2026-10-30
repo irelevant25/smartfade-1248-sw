@@ -65,6 +65,8 @@ interface MemoryStateDto {                          // one memory as the console
   number: number;                                   // 24 × (page − 1) + fader, 1..288
   level: number;                                    // 0..255, the memory fader (playback level)
   recorded: boolean;                                // has content; all-zero content counts as deleted (F107)
+  reported: boolean;                                // false for a placeholder the console has not delivered yet (hardware mode:
+                                                    // memories arrive one at a time, if at all); the simulator reports every memory
   label: string;                                    // the console's label (up to three words), '' when none
 }
 

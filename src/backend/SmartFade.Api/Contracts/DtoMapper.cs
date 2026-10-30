@@ -64,7 +64,7 @@ public static class DtoMapper
         new(masters.Master, masters.Bumps, masters.Blackout, masters.Solo, masters.Independent1, masters.Independent2);
 
     public static MemoryStateDto ToDto(MemoryState memory, ConsoleCapabilities capabilities) =>
-        new(memory.Page, memory.Fader, memory.Number(capabilities), memory.Level, memory.Recorded, memory.Label.ToString());
+        new(memory.Page, memory.Fader, memory.Number(capabilities), memory.Level, memory.Recorded, memory.Label.ToString(), memory.Reported);
 
     public static MemoryDto ToDto(MemoryContent memory, ConsoleCapabilities capabilities) =>
         new(memory.Page, memory.Fader, capabilities.MemoryNumber(memory.Page, memory.Fader), memory.Label.ToString(), memory.Levels.Select(b => (int)b).ToArray());

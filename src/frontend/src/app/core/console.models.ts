@@ -76,6 +76,8 @@ export interface MemoryStateDto {
   level: number;
   /** The memory has content; all-zero content counts as deleted. */
   recorded: boolean;
+  /** False for a placeholder the console has not delivered (hardware mode: memories arrive one at a time, if at all); the simulator reports every memory. */
+  reported: boolean;
   /** The console's label, up to three words; empty when none. */
   label: string;
 }

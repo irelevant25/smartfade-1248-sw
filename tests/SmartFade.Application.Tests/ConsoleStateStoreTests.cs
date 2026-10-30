@@ -66,4 +66,20 @@ public class ConsoleStateStoreTests
         Assert.Null(cleared.FirmwareVersion);
         Assert.Equal((false, false, false, false), Flags(store));
     }
+
+    [Fact]
+    public void A_delivered_memory_is_reported_and_the_others_stay_placeholders_until_the_connection_ends()
+    {
+        var store = Connected();
+        Assert.All(store.GetState().Memories, m => Assert.False(m.Reported));
+
+        Apply(store, new DeviceStateChange(Memories: new[] { new MemoryState(1, 2, 0, Recorded: true, new Label("OPONA", "", "")) }));
+        var state = store.GetState();
+        Assert.True(state.MemoriesReported);
+        Assert.True(state.Memories[1].Reported);
+        Assert.Equal(287, state.Memories.Count(m => !m.Reported));
+
+        store.SetConnection(new ConnectionState(ConnectionStatus.Disconnected, DeviceMode.Hardware, "test"));
+        Assert.All(store.GetState().Memories, m => Assert.False(m.Reported));
+    }
 }

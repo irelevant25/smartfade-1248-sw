@@ -28,6 +28,8 @@
     }
     @if (!reported()) {
       <p class="memories__note" role="status">{{ unreportedNote() }}</p>
+    } @else if (hasUnreported()) {
+      <p class="memories__note" role="status">Dimmed memories were not delivered by the console in this session</p>
     }
   </div>
 
@@ -40,15 +42,16 @@
   >
     @for (memory of memories(); track memory.number) {
       <sf-channel-fader
+        [class.memories__fader--unreported]="!memory.reported"
         [label]="memory.fader"
         kind="memory"
         [caption]="memory.label"
-        [desired]="memory.level"
+        [desired]="memory.reported ? memory.level : 0"
         [disabled]="!enabled()"
         [readOnly]="readOnly()"
         [bumpable]="true"
         [bumpDisabled]="bumpsDisabled() && !armedFor(memory)"
-        [bumpLit]="bumpLit(memory)"
+        [bumpLit]="memory.reported ? bumpLit(memory) : 0"
         [bumpArmed]="armedFor(memory)"
         (levelChange)="setLevel(memory, $event)"
         (bumpChange)="bump(memory, $event)"

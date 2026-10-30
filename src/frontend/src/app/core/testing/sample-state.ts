@@ -15,6 +15,7 @@ export function createSampleMemories(): MemoryStateDto[] {
     number: index + 1,
     level: 0,
     recorded: false,
+    reported: true,
     label: '',
   }));
 }

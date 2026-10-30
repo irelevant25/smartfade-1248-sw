@@ -21,7 +21,7 @@ public sealed record ChannelStateDto(int Channel, int Desired, int Actual, bool 
 public sealed record MastersDto(int Master, int Bumps, bool Blackout, bool Solo, bool Independent1, bool Independent2);
 
 /// <summary>A memory as the console addresses it: page 1..12, fader 1..24; Number = 24 × (page − 1) + fader.</summary>
-public sealed record MemoryStateDto(int Page, int Fader, int Number, int Level, bool Recorded, string Label);
+public sealed record MemoryStateDto(int Page, int Fader, int Number, int Level, bool Recorded, string Label, bool Reported);
 
 /// <summary>A memory's channel levels (index 0 = channel 1) and label.</summary>
 public sealed record MemoryDto(int Page, int Fader, int Number, string Label, IReadOnlyList<int> Levels);
