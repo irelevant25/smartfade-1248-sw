@@ -87,8 +87,8 @@ to poll, fetch to poll, payload to fetch) on every single transfer.
   when it is listed, which a read-only session may never see), and the masters stay "not
   reported" until both a FaderInfo and a LedStatus have arrived.
 - A memory reported by the console in this session would be new (never observed outside
-  SmartSoft's download, which follows an uncleared System write): note the time. The grid would
-  then show the other memories as empty, the known limitation recorded in the re-check below.
+  SmartSoft's download, which follows an uncleared System write): note the time. The grid shows
+  the delivered memory and dims the others as undelivered.
 - Afterwards: copy the backend's JSONL and the USBPcap file into `docs/protocol/captures/` with
   an E8 record; update H66 / H67 / H68; add the second review to this file.
 
@@ -142,4 +142,4 @@ the same day, in commit bc93144:
 | The pipe was opened before the log existed, so whatever the open puts on the bus (H68) could happen outside a logged session. | The log is created first; without a log the console is never opened. Tests assert that the pipe stays closed when the log fails and that the log exists before the open. |
 | "(host-side policy, no bus traffic)" at the ALLOW_PARTIAL_READS call carried no status. | Marked ASSUMPTION, covered by H68's USBPcap at Connect. |
 | Trivial: `WithoutDevicePath` kept the first backslash of a device path; `IHspPipe.Description` said "for the UI". | Both corrected. |
-| **Accepted, recorded:** one `memoriesReported` flag covers 288 memories that arrive one object at a time; after the first Memory object the other 287 would show as empty at level 0, a value no object reports. A Memory object outside SmartSoft's download (which follows the uncleared System write `07 00 00`) was never observed in E2, E3 or E3b, and E8 has no memory action. | Not changed for E8 (the runbook says to note the time if it happens). To be fixed with a reported flag per memory before hardware mode is used beyond E8. |
+| **Accepted, recorded:** one `memoriesReported` flag covers 288 memories that arrive one object at a time; after the first Memory object the other 287 would show as empty at level 0, a value no object reports. A Memory object outside SmartSoft's download (which follows the uncleared System write `07 00 00`) was never observed in E2, E3 or E3b, and E8 has no memory action. | Not changed for E8 (the runbook says to note the time if it happens). To be fixed with a reported flag per memory before hardware mode is used beyond E8. **Fixed later the same day (commit 91e452f):** `MemoryState.Reported` per memory (false for a placeholder, true once the console delivered it, cleared with the connection), carried as `MemoryStateDto.reported`; the memory grid dims undelivered memories and says so; tests in `ConsoleStateStoreTests` and the memory-grid spec. |
