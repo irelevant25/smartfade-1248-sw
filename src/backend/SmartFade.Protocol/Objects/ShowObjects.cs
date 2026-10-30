@@ -124,8 +124,8 @@ public readonly record struct LedBlock(byte R1, byte G1, byte B1, byte R2, byte 
 /// Object 22 (LedStatus): [count = 75][count × 6 bytes]. Blocks 1–24 follow the physical faders'
 /// bump LEDs (OBSERVED for blocks 1, 5, 7 and the memory-mode colours of blocks 1–24, F84 and the
 /// E3b record; the mapping of the remaining fader blocks is INFERRED); block 53 is the Blackout LED
-/// (INFERRED, F85), block 52 the SOLO LED and blocks 55 / 56 the 1-24 / 25-48 bank buttons (OBSERVED
-/// in E3b); the other blocks are open (H56).
+/// (INFERRED, F85), block 52 the SOLO LED (INFERRED from one press / release pair, F100) and blocks
+/// 55 / 56 the 1-24 / 25-48 bank buttons (OBSERVED in E3b, F98); the other blocks are open (H56).
 /// </summary>
 [Evidence(EvidenceStatus.Observed, "F84, F85, F98, F100", "block map: H48, H55, H56; layout VERIFIED in part (F84)")]
 public sealed record LedStatusObject(IReadOnlyList<LedBlock> Blocks)

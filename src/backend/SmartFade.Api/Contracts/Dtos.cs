@@ -35,6 +35,10 @@ public sealed record ConsoleStateDto(
     IReadOnlyList<int> Outputs,
     IReadOnlyList<MemoryStateDto> Memories,
     bool ActualStateReported,
+    bool MastersReported,
+    bool ChannelsReported,
+    bool OutputsReported,
+    bool MemoriesReported,
     string? ShowFileName,
     string? FirmwareVersion);
 

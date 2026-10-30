@@ -27,6 +27,10 @@ public sealed class ConsoleStateStore
     private string? _showFileName;
     private string? _firmwareVersion;
     private bool _actualStateReported;
+    private bool _mastersReported;
+    private bool _channelsReported;
+    private bool _outputsReported;
+    private bool _memoriesReported;
 
     public ConsoleStateStore(ConsoleCapabilities capabilities, ConnectionState initialConnection, DeviceCommands supportedCommands)
     {
@@ -69,6 +73,10 @@ public sealed class ConsoleStateStore
                 (byte[])_outputs.Clone(),
                 (MemoryState[])_memories.Clone(),
                 _actualStateReported,
+                _mastersReported,
+                _channelsReported,
+                _outputsReported,
+                _memoriesReported,
                 _showFileName,
                 _firmwareVersion);
         }
@@ -97,6 +105,12 @@ public sealed class ConsoleStateStore
                 }
 
                 _actualStateReported = false;
+                _mastersReported = false;
+                _channelsReported = false;
+                _outputsReported = false;
+                _memoriesReported = false;
+                _showFileName = null;
+                _firmwareVersion = null;
             }
         }
 
@@ -144,6 +158,10 @@ public sealed class ConsoleStateStore
 
                 ApplyOutputsUnsafe(snapshot.ChannelOutputs, changed);
                 _masters = snapshot.Masters;
+                _mastersReported = true;
+                _channelsReported = true;
+                _outputsReported = true;
+                _memoriesReported = true;
                 masters = _masters;
                 _outputs = snapshot.Outputs.ToArray();
                 outputs = (byte[])_outputs.Clone();
@@ -154,6 +172,7 @@ public sealed class ConsoleStateStore
 
             if (change.ChannelLevels is { } levels)
             {
+                _channelsReported = true;
                 foreach (var (channel, level) in levels)
                 {
                     if (_capabilities.IsValidChannel(channel))
@@ -165,23 +184,37 @@ public sealed class ConsoleStateStore
 
             if (change.ChannelOutputs is { } channelOutputs)
             {
+                _channelsReported = true;
                 ApplyOutputsUnsafe(channelOutputs, changed);
             }
 
             if (change.Masters is { } reportedMasters)
             {
                 _masters = reportedMasters;
+                _mastersReported = true;
                 masters = reportedMasters;
+            }
+
+            if (change.ShowFileName is { } fileName)
+            {
+                _showFileName = fileName;
+            }
+
+            if (change.FirmwareVersion is { } firmware)
+            {
+                _firmwareVersion = firmware;
             }
 
             if (change.Outputs is { } reportedOutputs)
             {
+                _outputsReported = true;
                 _outputs = reportedOutputs.ToArray();
                 outputs = (byte[])_outputs.Clone();
             }
 
             if (change.Memories is { } reportedMemories)
             {
+                _memoriesReported = true;
                 memories = ApplyMemoriesUnsafe(reportedMemories) ?? memories;
             }
 

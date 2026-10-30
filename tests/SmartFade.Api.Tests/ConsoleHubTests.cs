@@ -20,6 +20,8 @@ public sealed class ConsoleHubTests : IDisposable
     {
         _factory = new WebApplicationFactory<Program>().WithWebHostBuilder(builder =>
         {
+            // Pinned: a Device__Mode left in the environment must never switch a test host to the console.
+            builder.UseSetting("Device:Mode", "Simulated");
             builder.UseSetting("Device:Simulation:CommandLatencyMilliseconds", "0");
             builder.UseSetting("Device:Simulation:ConnectDelayMilliseconds", "0");
         });
@@ -28,7 +30,7 @@ public sealed class ConsoleHubTests : IDisposable
     public void Dispose() => _factory.Dispose();
 
     [Fact]
-    public async Task Status_endpoint_reports_simulated_mode_and_no_cleared_messages()
+    public async Task Status_endpoint_reports_simulated_mode_and_the_two_cleared_messages()
     {
         using var client = _factory.CreateClient();
         var status = await client.GetFromJsonAsync<StatusDto>("/api/status");
@@ -36,7 +38,8 @@ public sealed class ConsoleHubTests : IDisposable
         Assert.NotNull(status);
         Assert.Equal("simulated", status.Mode);
         Assert.Equal("disconnected", status.Connection.Status);
-        Assert.Equal(0, status.ProtocolKnowledge.MessagesClearedForSending);
+        // SC-1 (docs/protocol/safety-checks.md): the poll and the listed fetch, for a read-only session
+        Assert.Equal(2, status.ProtocolKnowledge.MessagesClearedForSending);
     }
 
     [Fact]

@@ -1,10 +1,10 @@
 namespace SmartFade.Domain;
 
 /// <summary>
-/// Which kind of device the backend talks to. There is no hardware mode in Phase 1: no
-/// protocol message is cleared for sending (CLAUDE.md, "VERIFIED is necessary, not
-/// sufficient"), so a value for a real console cannot exist yet. When one is added it must be
-/// enabled deliberately and shown prominently in the UI.
+/// Which kind of device the backend talks to. <see cref="Hardware"/> exists since safety check
+/// SC-1 (2026-10-30, docs/protocol/safety-checks.md) cleared the poll and the listed fetch for a
+/// read-only session; it is never the default, it needs the explicit configuration
+/// `Device:Mode=Usb`, and the UI shows it as HARDWARE.
 /// </summary>
 public enum DeviceMode
 {
@@ -13,4 +13,7 @@ public enum DeviceMode
 
     /// <summary>A device fed from a committed capture (read-only playback).</summary>
     Replay,
+
+    /// <summary>The real console over USB (WinUSB on interface 1), read-only.</summary>
+    Hardware,
 }

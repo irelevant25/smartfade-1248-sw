@@ -6,7 +6,8 @@ namespace SmartFade.Protocol;
 /// The 12-byte header of every HSP transfer: six u16 little-endian words
 /// {type, payload length, w2, w3, w4, w5}. For Fetch and ObjectReply, w2..w5 are
 /// (object id, a, b, c); for Poll and Data they are stale copies of earlier words and must be
-/// ignored (VERIFIED, F52 / F53). Decoder only: nothing here produces bytes for a console.
+/// ignored (VERIFIED, F52 / F53). This type only parses; the two headers a read-only session
+/// may send are produced by <see cref="HspOutbound"/> (cleared by safety check SC-1).
 /// </summary>
 [Evidence(EvidenceStatus.Verified, "F52, F53", "six u16 LE words; stale w2..w5 in poll/data headers")]
 public readonly record struct HspHeader(ushort Type, ushort Length, ushort W2, ushort W3, ushort W4, ushort W5)

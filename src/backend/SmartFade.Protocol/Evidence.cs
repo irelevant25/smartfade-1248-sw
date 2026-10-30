@@ -23,9 +23,10 @@ public enum EvidenceStatus
 
 /// <summary>
 /// Links a protocol element to the knowledge base (fact / hypothesis IDs in
-/// docs/protocol/known-facts.md and hypotheses.md). VERIFIED is necessary, not sufficient:
-/// nothing in this assembly is cleared for sending to a console (CLAUDE.md), and this
-/// assembly contains decoders only.
+/// docs/protocol/known-facts.md and hypotheses.md). VERIFIED is necessary, not sufficient
+/// (CLAUDE.md): the only elements of this assembly cleared for sending are the poll and the
+/// listed fetch of <see cref="HspOutbound"/>, for a read-only session, by safety check SC-1
+/// (docs/protocol/safety-checks.md, 2026-10-30); everything else here decodes.
 /// </summary>
 [AttributeUsage(AttributeTargets.All, AllowMultiple = true, Inherited = false)]
 public sealed class EvidenceAttribute : Attribute

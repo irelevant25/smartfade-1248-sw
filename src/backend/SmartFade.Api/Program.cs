@@ -5,6 +5,7 @@ using SmartFade.Api.Realtime;
 using SmartFade.Api.Security;
 using SmartFade.Application;
 using SmartFade.Devices.Simulated;
+using SmartFade.Devices.Usb;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -14,20 +15,42 @@ builder.Logging.AddSimpleConsole(options =>
     options.TimestampFormat = "HH:mm:ss.fff ";
 });
 
-// Device selection. Phase 1 knows the simulator only: no protocol message is cleared for
-// sending (CLAUDE.md), so there is no hardware mode to configure, and any other value refuses
-// to start rather than silently falling back.
+var backendVersion = Assembly.GetExecutingAssembly().GetCustomAttribute<AssemblyInformationalVersionAttribute>()?.InformationalVersion
+    ?? Assembly.GetExecutingAssembly().GetName().Version?.ToString()
+    ?? "0.0.0";
+
+// Device selection. The simulator is the default. "Usb" is the real console, read-only, behind
+// safety check SC-1 (docs/protocol/safety-checks.md): it must be asked for explicitly, for this
+// run, and any other value refuses to start rather than silently falling back.
 var deviceMode = builder.Configuration["Device:Mode"] ?? "Simulated";
-if (!string.Equals(deviceMode, "Simulated", StringComparison.OrdinalIgnoreCase))
+var usbMode = string.Equals(deviceMode, "Usb", StringComparison.OrdinalIgnoreCase);
+if (!usbMode && !string.Equals(deviceMode, "Simulated", StringComparison.OrdinalIgnoreCase))
 {
     throw new InvalidOperationException(
-        $"Device:Mode '{deviceMode}' is not available. Phase 1 supports 'Simulated' only: no protocol message is cleared for sending to a console.");
+        $"Device:Mode '{deviceMode}' is not available. Use 'Simulated' (default) or 'Usb' (the real console, read-only, safety check SC-1).");
 }
 
 var allowedOrigins = builder.Configuration.GetSection("Security:AllowedOrigins").Get<string[]>()
     ?? new[] { "http://localhost:4200", "http://localhost:5160", "http://127.0.0.1:5160" };
 
-builder.Services.AddSimulatedSmartFadeDevice(builder.Configuration);
+if (usbMode)
+{
+    // "This run only" (SC-1 item 6): the mode must be confirmed for today's date, so a setting left
+    // in a shell, a launch profile or appsettings cannot switch a later run to the console by accident.
+    var confirmDate = builder.Configuration["Device:Usb:ConfirmDate"];
+    if (!SmartFade.Devices.Usb.ServiceCollectionExtensions.IsConfirmedForToday(confirmDate, DateOnly.FromDateTime(DateTime.Now)))
+    {
+        throw new InvalidOperationException(
+            $"Device:Mode=Usb needs Device:Usb:ConfirmDate={DateTime.Now:yyyy-MM-dd} (today) on the same command line: hardware mode is confirmed per day, never left switched on.");
+    }
+
+    builder.Services.AddUsbSmartFadeDevice(builder.Configuration, backendVersion);
+}
+else
+{
+    builder.Services.AddSimulatedSmartFadeDevice(builder.Configuration);
+}
+
 builder.Services.AddSmartFadeApplication();
 builder.Services.AddSignalR();
 builder.Services.AddCors(options => options.AddDefaultPolicy(policy => policy
@@ -47,10 +70,6 @@ if (Directory.Exists(app.Environment.WebRootPath))
     app.UseDefaultFiles();
     app.UseStaticFiles();
 }
-
-var backendVersion = Assembly.GetExecutingAssembly().GetCustomAttribute<AssemblyInformationalVersionAttribute>()?.InformationalVersion
-    ?? Assembly.GetExecutingAssembly().GetName().Version?.ToString()
-    ?? "0.0.0";
 
 app.MapGet("/api/status", (ConsoleService console) =>
 {
@@ -74,7 +93,12 @@ app.MapPost("/api/console/disconnect", async (ConsoleService console, Cancellati
 
 app.MapHub<ConsoleHub>("/hubs/console");
 
-app.Logger.LogInformation("SmartFade backend {Version} starting in {Mode} mode", backendVersion, deviceMode);
+if (usbMode)
+{
+    app.Logger.LogWarning("HARDWARE MODE (read-only): the backend will talk to the real console when Connect is pressed; only the poll and the listed fetch are sent (SC-1). Back up the show first.");
+}
+
+app.Logger.LogInformation("SmartFade backend {Version} starting in {Mode} mode", backendVersion, usbMode ? "Usb (hardware, read-only)" : "Simulated");
 app.Run();
 
 /// <summary>Makes the entry point visible to WebApplicationFactory in the API tests.</summary>

@@ -4,6 +4,7 @@
     <ProjectReference Include="..\SmartFade.Application\SmartFade.Application.csproj" />
     <ProjectReference Include="..\SmartFade.Domain\SmartFade.Domain.csproj" />
     <ProjectReference Include="..\SmartFade.Devices.Simulated\SmartFade.Devices.Simulated.csproj" />
+    <ProjectReference Include="..\SmartFade.Devices.Usb\SmartFade.Devices.Usb.csproj" />
   </ItemGroup>
 
   <PropertyGroup>

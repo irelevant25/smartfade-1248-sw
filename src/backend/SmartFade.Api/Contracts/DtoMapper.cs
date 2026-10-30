@@ -6,10 +6,11 @@ namespace SmartFade.Api.Contracts;
 public static class DtoMapper
 {
     /// <summary>
-    /// Rule, not a counter: no PC → console message is cleared for sending (CLAUDE.md). It changes
-    /// only through `/hardware-safety-check`, never through a fact promotion.
+    /// Rule, not a counter: the messages cleared for sending by `/hardware-safety-check`, never by
+    /// a fact promotion. SC-1 (2026-10-30, docs/protocol/safety-checks.md) cleared two for a
+    /// read-only session: the poll and the fetch of a record the console listed.
     /// </summary>
-    public const int MessagesClearedForSending = 0;
+    public const int MessagesClearedForSending = 2;
 
     /// <summary>Wire names of the hub commands (docs/api.md), pinned independently of the enum member names.</summary>
     private static readonly (DeviceCommands Flag, string Name)[] CommandWireNames =
@@ -43,6 +44,7 @@ public static class DtoMapper
     {
         DeviceMode.Simulated => "simulated",
         DeviceMode.Replay => "replay",
+        DeviceMode.Hardware => "hardware",
         _ => throw new ArgumentOutOfRangeException(nameof(mode), mode, null),
     };
 
@@ -77,6 +79,10 @@ public static class DtoMapper
             state.Outputs.Select(b => (int)b).ToArray(),
             state.Memories.Select(m => ToDto(m, state.Capabilities)).ToArray(),
             state.ActualStateReported,
+            state.MastersReported,
+            state.ChannelsReported,
+            state.OutputsReported,
+            state.MemoriesReported,
             state.ShowFileName,
             state.FirmwareVersion);
 
