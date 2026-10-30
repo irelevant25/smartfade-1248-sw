@@ -44,12 +44,12 @@ Rules:
 | [evidence-matrix.md](evidence-matrix.md) | Feature × source cross-reference (central document) |
 | [capability-matrix.md](capability-matrix.md) | What the console / SmartSoft / our app supports |
 | [reverse-engineering.md](reverse-engineering.md) | Experiment plan, tooling, safety rules, hardware evidence requested, capture format |
-| [packet-format.md](packet-format.md) | HSP framing as observed in E2 (OBSERVED, nothing VERIFIED); since E3 (2026-10-29) the framing facts are VERIFIED as observed behaviour |
-| [commands.md](commands.md) | PC → console messages SmartSoft sent in E2 and E3 (a record, not a list of messages we may send; VERIFIED there means SmartSoft's behaviour only) |
-| [responses.md](responses.md) | Reply types and object payloads seen in E2 and E3 (the live objects are decoded from E3) |
-| [state-model.md](state-model.md) | Session phases and mirrored-state model as seen in E2 and E3 |
+| [packet-format.md](packet-format.md) | HSP framing as observed in E2 (OBSERVED, nothing VERIFIED); since E3 (2026-10-29) the framing facts are VERIFIED as observed behaviour; E3b (2026-10-30) reproduced them a third time |
+| [commands.md](commands.md) | PC → console messages SmartSoft sent in E2, E3 and E3b (a record, not a list of messages we may send; VERIFIED there means SmartSoft's behaviour only) |
+| [responses.md](responses.md) | Reply types and object payloads seen in E2, E3 and E3b (the live objects are decoded from E3 and E3b) |
+| [state-model.md](state-model.md) | Session phases and mirrored-state model as seen in E2, E3 and E3b |
 | [consolelink-analysis.md](consolelink-analysis.md) | ConsoleLink (third-party, SmartFade **ML**, evidence class 5) compared with our 1248 evidence; proposed annotations and the hypotheses N1–N6 (now H46–H51). Never changes a 1248 status by itself |
-| [captures/](captures/) | Capture files, experiment records (E1, E2, E3), the owner's statements and the capture format |
+| [captures/](captures/) | Capture files, experiment records (E1, E2, E3, E3b), the owner's statements and the capture format |
 
 The four deferred documents (`packet-format.md`, `commands.md`, `responses.md`,
 `state-model.md`) were created 2026-10-28, when the first USB capture (E2) existed. They carry
@@ -59,7 +59,10 @@ the independent E3 session many elements are VERIFIED (26 facts, see [known-fact
 but VERIFIED means reproduced behaviour, never clearance for sending (safety rule 2 in
 [reverse-engineering.md](reverse-engineering.md)): "only VERIFIED elements may be used by code that
 talks to a console" is a necessary condition, not a sufficient one, and **no message is cleared:
-no code may send anything to a console yet.**
+no code may send anything to a console yet.** **Update 2026-10-30:** after the E3b sessions (three more
+sessions after another power cycle) 35 facts are VERIFIED, nine more than above, each in part (the structural
+part of facts first seen in E3, never a live value); the sentence above stands unchanged: VERIFIED is
+necessary, not sufficient, and **no message is cleared; no code may send anything to a console yet.**
 
 ## Version landscape
 

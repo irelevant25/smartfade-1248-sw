@@ -25,6 +25,7 @@
 | **E1** | **USB identification.** Power the console in Normal mode, connect USB to a Windows PC *without* SmartSoft installed. Record Device Manager entry, `pnputil /enum-devices /connected /ids` output, and a descriptor dump with USBTreeView (Uwe Sieber). Repeat on the PC where SmartSoft is installed. | None (read-only) | USB A-B cable, PC | H1, H2. VID/PID, number of interfaces, endpoint types and sizes, HID report descriptor, serial string, bcdDevice (firmware?). **Done 2026-10-28** → [captures/2026-10-28-e1-usb-identification.md](captures/2026-10-28-e1-usb-identification.md): H1 and H21 confirmed; raw HID report descriptor not obtained (structure from `HidP_GetCaps` instead); `etchsp.sys` does not load under HVCI |
 | **E2** | **SmartSoft session capture.** Install Wireshark + USBPcap. Start capture, launch SmartSoft with the console connected, wait until "Online", idle 30 s, close SmartSoft. Save as pcapng. | None to the rig. SmartSoft may sync the show, so back up first | E1 done, SmartSoft installed, matching firmware. **Blocker found in E1:** `etchsp.sys` is refused while Memory Integrity (HVCI) is on (F46), so SmartSoft cannot go Online on the owner's PC as configured. Options: the owner turns Memory Integrity off for the session (Windows Security > Device security > Core isolation; reboot), or a VM / spare PC with it off. **Resolved 2026-10-28 evening:** the owner switched Memory Integrity off (reboot 19:45), the driver loads (F49), USBPcap 1.5.4.0 is installed in `C:\Program Files\USBPcap`. The owner wants Memory Integrity back on afterwards, so our own backend must never depend on `etchsp.sys` (H7) | H3, H4. Framing, poll cadence, version exchange, bulk vs HID usage. Also H29 (what enables the HID stream). **Done 2026-10-28** → [captures/2026-10-28-e2-smartsoft-connect.md](captures/2026-10-28-e2-smartsoft-connect.md): USBPcap 1.5.4.0, 125 s of SmartSoft traffic, 6 483 URBs. H3, H15–H20, H26 (length part), H27 confirmed as OBSERVED; H4 and H5 partly; H22, H23, H28, H29 rejected (as worded); facts F51–F69; F41 (product string) and F48 promoted to VERIFIED. Format caveat: the capture is classic pcap (link type 249), not pcapng. SmartSoft wrote only two System messages and the HID interface was never used |
 | **E3** | **Single-action captures.** One capture per action, each with a spoken/typed timestamp log: (a) move channel fader 1 from 0 → full → 0 slowly on the console; (b) press one memory bump; (c) move GM; (d) press GO on an empty/safe stack; (e) in SmartSoft rename one channel label. | Low (backup first) | E2 | H5, H6. Which objects change for which action, level encoding. **E3 (a), (b) and (c) done 2026-10-29** → [captures/2026-10-29-e3-console-actions.md](captures/2026-10-29-e3-console-actions.md): one guided passive capture after a console power cycle (USBPcap 1.5.4.0, 313 s, 20 326 URBs): channel faders 1 and 5, the bump of memory fader 1 in memory mode, the MASTER fader (Grand Master), plus an unlogged switch to memory mode; the owner's answers of the same evening are archived in [captures/2026-10-29-e3-owner-statements.txt](captures/2026-10-29-e3-owner-statements.txt). Results: the mirrored objects and their layouts (F80–F92), the **second independent reproduction of E2** (F41, F51–F55, F57–F65, F67, F68, F70–F77 promoted to VERIFIED as observed behaviour, never as clearance for sending), H30 partly confirmed (causality INFERRED), H32 layout confirmed and its "0xAB is the top" sub-reading rejected, hypotheses H46–H59 added. **(d) GO on a safe stack and (e) the SmartSoft-side label rename were not run and stay open**; (e) is also E6 probe 5 and needs an SD save |
+| **E3b** | **Live objects, three SmartSoft sessions (passive).** The proposals B1–B4 of the E3 analysis ("Next capture (proposed by the E3 analysis, 2026-10-29)" below), run with the guided script `tools/usb-probe/e3b-guided-session.ps1` (backup first, SmartSoft started three times by the script, owner actions with logged times): B1 restart SmartSoft twice without a power cycle, B2 a channel at full while the MASTER moves, B3 the BUMPS fader, a channel bump and memory bumps with SOLO off and on, B4 the 25-48 bank and the mode switches. | Low (backup first; nothing sent by us) | E3 done, a console power cycle, the owner at the console | H31, H46, H47, H54, H57, H59, H53, H56, H58. **Done 2026-10-30** → [captures/2026-10-30-e3b-live-objects.md](captures/2026-10-30-e3b-live-objects.md): three SmartSoft sessions after another power cycle (USBPcap 1.5.4.0, 53 935 URBs, console frames 0–1008.97 s); B1–B4 done; **B5 (GO)** was declined in the script, but the owner pressed GO once, unlogged, with the STACK button unlit (a 5-s crossfade, no output change; owner statement E3b-A1); the owner's answers are archived in [captures/2026-10-30-e3b-owner-statements.txt](captures/2026-10-30-e3b-owner-statements.txt). Results: F93–F106; F80, F82–F87, F89 and F92 VERIFIED in part (VERIFIED count 35, never clearance for sending); H31, H46 (BUMPS part), H47 (scaling part), H54 and H50 (layout) CONFIRMED; H57 and H59 REJECTED; H60–H65 added |
 | **E4** | **MIDI observation.** Console MIDI OUT → USB-MIDI interface → PC. Record with a MIDI monitor (e.g. MIDI-OX or our tool). Move GM, bumps master, crossfaders, a memory fader, press a bump, GO, PAUSE, blackout, change page. | None | USB-MIDI interface, MIDI cable | H9. Resolves MIDI doc contradictions for TX |
 | E5 | MIDI control test. PC → console MIDI IN, one message at a time: GM CC127 0 → 127, then PC 125/124, observe console + DMX out | Low-medium (blackout/GO) | E4 done | Verified MIDI write path |
 | E6 | ASC round-trip probes. On console: record a memory on page 2 fader 5, a channel step, a stack state step, set MIDI channel 3, patch IND1. Save to SD. Diff with previous file | None | SD card | H10–H14 |
@@ -35,7 +36,8 @@
 static hypotheses (poll / dirty / fetch objects) into observed facts; the text below about E2
 is the plan as written before it, kept for the record. **Update 2026-10-29: E3 (a), (b) and (c)
 are done; the next steps are the owner questions and the passive captures listed under "Next
-capture (proposed by the E3 analysis, 2026-10-29)" below.**
+capture (proposed by the E3 analysis, 2026-10-29)" below.** **Update 2026-10-30: E3b is done (items B1–B4 of
+that list); the next steps are listed under "Next capture (proposed by the E3b analysis, 2026-10-30)" below.**
 *(Plan text before E2:)* **Next: E2**, the single capture that turns the static hypotheses
 (poll / dirty / fetch objects) into observed facts. Before E2 the owner must decide how to get
 `etchsp.sys` loaded (see the E2 row; resolved the same evening). The zero-risk HID listen was
@@ -106,6 +108,11 @@ logged this time):
    MEMS → 25-48 → MEMS → 1-24 with logged times.
 5. *(optional)* **E3(d), H50:** GO on a safe stack, watching PlaybackInfo (17).
 
+*(Update 2026-10-30: B1–B4 were run as E3b. B5 was declined in the script (log `owner decision: GO step = n`),
+but the owner pressed the GO button once, unlogged, with the STACK button unlit (E3b-A1). A.5 was answered
+unclearly: the DMX IN question got a description of the rig's LED bar (E3b-A3). The current list follows the
+next heading.)*
+
 **C. Still open from E3:** the **SmartSoft-side capture** with a "č" (U+010D) label rename (E3(e) =
 E6 probe 5, H40), with a 6-character third line and an SD save, backup first. It is a SmartSoft
 write, so it is an owner decision, and it would be the first capture of SmartSoft sending anything
@@ -114,6 +121,57 @@ besides the two System messages.
 **D. Static, zero risk:** the initial values of the two start-up countdowns in `sfEngine.dll`
 (S11.14.11; the observations suggest 40 and 39, H30), the text helpers `sub_10013970` /
 `sub_100139F0` (H40), the `sfmlEngine.dll` PID check (S11 open lead 5).
+
+**E. Owner:** switch Memory Integrity back on when the capture sessions are over (H7).
+
+### Next capture (proposed by the E3b analysis, 2026-10-30)
+
+Safety rules 1–7 above are unchanged: back up the show first (the guided script asks for it), passive
+capture only, **nothing is sent by us**, the rig stays safe. Every item below is an owner action on the
+console or a static read; none needs a byte from our software.
+
+**A. Owner questions (zero risk).**
+
+1. ~~Was GO or another playback button pressed around 09:11:08?~~ **Answered (E3b-A1):** the owner pressed the
+   GO ('play') button once, with the STACK button unlit, to see what it does; a 5-s crossfade, no output change
+   (F101, F106).
+2. ~~How did the default times become 5.1 s?~~ **Answered (E3b-A2):** the owner moved the (sensitive) wheel by
+   accident (H45). **Still open:** was that before or after the `SHOW05.ASC` save at 08:55:48? It decides
+   whether the identical files show that the times are not stored in the file (F102, F104).
+3. ~~What is connected to DMX IN?~~ **Answered unclearly (E3b-A3):** the owner described the rig's LED bar
+   (DOTZ BAR 1.4 at address 5, 12-channel mode), almost certainly on DMX OUT. **Still open:** is anything
+   plugged into the DMX IN socket, and does it send (H52, F105)? **Answered 2026-10-30:** nothing is plugged into DMX IN (owner: "Only DMX out is connected (the light)").
+4. Which physical buttons carry LedStatus blocks 55, 56, 58 and 50 (and is 52 the SOLO button's LED)? Which
+   button LED lit blue during the GO crossfade (H56, H64)?
+5. Were the third memory bump (664.75 s) and the two mode switches (842.73 s, 846.60 s) the owner's actions
+   (F106)? Which step is the main stack on and which sequences are running (H63)?
+
+**B. Passive captures** (SmartSoft Online, console-only USBPcap split, the guided script as the timed action
+log; log the SOLO and GO states too):
+
+1. **H54 scaling:** BUMPS at about 50 % (also about 25 % and 75 %) with a channel bump and a memory bump
+   (`GROUP 1` = channels 7 and 8); prediction of the hypothesis, not an observation: the bumped channels read
+   about the BUMPS byte.
+2. **H54 SOLO add versus replace:** SOLO on and off with another fader up (a second output active), then a
+   memory bump; this separates 'replaces' from 'adds'.
+3. **H60:** several stable MASTER positions with one channel at full (about 25 %, 50 %, 75 % and the E2
+   position 0xAA), each held about 2 s.
+4. **H52:** a known DMX source on the DMX IN socket (the owner decides; nothing is sent by us), after the owner
+   has confirmed what is plugged in now.
+5. **H51:** a memory page change on the console (ConsoleStatus body[2]).
+6. **H62 / H61:** in memory mode bump another memory (for example `GROUP 2`) and move a memory fader without a
+   bump; in bank 25-48 move physical faders 12 and 24 (DMX 36 and 48 lie outside the rig).
+7. **H65:** power on and connect with the console untouched; power on, move one fader, connect; power on,
+   press SOLO, connect.
+8. *(optional, owner decision, safe rig)* **H50 / H63 / H64:** GO with the STACK button lit on a safe stack,
+   logged, with the step shown on the console noted before and after.
+
+**C. Still open from earlier:** the SmartSoft-side capture with a "č" (U+010D) label rename (E3(e), E6 probe
+5, H40), which is a SmartSoft write and an owner decision (unchanged).
+
+**D. Static, zero risk:** the initial values of the two start-up countdowns in `sfEngine.dll` (S11.14.11; the
+observations suggest 40 and 39, H30), the text helpers `sub_10013970` / `sub_100139F0` (H40), the
+`sfmlEngine.dll` PID check (S11 open lead 5).
 
 **E. Owner:** switch Memory Integrity back on when the capture sessions are over (H7).
 
@@ -132,6 +190,7 @@ Things that cannot be determined from the supplied materials:
 9. ~~*(new 2026-10-28, from E2)* `SHOW04.ASC` copied from the SD card into `smartfade-sd-card-backup/` (it was saved before the E2 session and is not in the repository yet), see "Next capture".~~ **Done 2026-10-28** (the same evening; SHA-256 559636399c1d82e0f95e737c961bfee31f88962fe8c486bbc6eba7f7d2177a90). Results: E2 record "Cross-check against SHOW04.ASC", facts F70-F79, H13 / H25 / H34 / H35 confirmed, H39-H45 added. The folder is untracked in git; committing the owner's show data is the owner's decision.
 10. *(new 2026-10-28, from E2)* The owner's timed account of the E2 fader action (the log was untimed, so the 42.2–45.9 s movement is only INFERRED to be it, F66), and the time SmartSoft was closed (about 125.25 s is inferred from the capture). **Answered for E3 on 2026-10-29** by the guided session: the fader moves, the MASTER move, the bump and the SmartSoft close are timed in the owner's action log (PC clock, merged into the capture); the E2 movement itself stays untimed.
 11. *(new 2026-10-29, from E3)* Still missing from the owner: which physical LEDs LedStatus blocks 55 and 58 are; the colour of memory fader 21's bump LED in memory mode on page 1; whether SOLO was on during the memory-1 bump; whether anything was connected to DMX IN (see "Next capture (proposed by the E3 analysis, 2026-10-29)"). Answered the same day: the lights did not come on during the bump because the BUMPS fader stood at 0 %; the panel labels are BUMPS and MASTER; the Blackout LED blinked while the MASTER was below full; fader 21 holds a sequence; the unlogged fader-1 moves were the owner's ([captures/2026-10-29-e3-owner-statements.txt](captures/2026-10-29-e3-owner-statements.txt)).
+12. *(new 2026-10-30, from E3b)* Answered: the owner pressed GO once at about 09:11:08 (E3b-A1); the default times changed by a wheel move (E3b-A2); the colour of memory fader 21's LED is yellowish and recorded / empty memory LEDs are red bright / dim (log 634.39 s); SOLO was off at the start and on for the second memory-bump test (log); the rig is one DOTZ BAR 1.4 LED bar at address 5 in its 12-channel mode (E3b-A3; [captures/2026-10-30-e3b-owner-statements.txt](captures/2026-10-30-e3b-owner-statements.txt)). Still missing: whether anything is plugged into DMX IN; which physical buttons carry LedStatus blocks 50, 55, 56 and 58; whether the wheel move happened before the SHOW05 save; the cause of the third memory bump and of the two mode switches.
 
 ## Tooling plan
 
@@ -139,12 +198,12 @@ Things that cannot be determined from the supplied materials:
 |---|---|---|
 | Source audit scripts (installer extraction, PE report, strings) | `tools/source-audit/` | Done |
 | USB identification probes (read-only): descriptor dump through the hub driver, HID capabilities + passive input-report listen | `tools/usb-probe/` | Done (E1) |
-| Operator action log for capture sessions (`action-log.ps1`: PC-clock-stamped notes typed at the moment of each console / SmartSoft action, same clock as USBPcap) | `tools/usb-probe/` | Done 2026-10-29 (for E3: `action-log.ps1` and the guided script `e3-guided-session.ps1`; the log is merged into the capture as `note` records by normalizer version 2, **action log merge done**) |
+| Operator action log for capture sessions (`action-log.ps1`: PC-clock-stamped notes typed at the moment of each console / SmartSoft action, same clock as USBPcap) | `tools/usb-probe/` | Done 2026-10-29 (for E3: `action-log.ps1` and the guided script `e3-guided-session.ps1`; the log is merged into the capture as `note` records by normalizer version 2, **action log merge done**) **2026-10-30:** `e3b-guided-session.ps1` (refuses an existing log, asks for the backup before it starts SmartSoft, starts SmartSoft three times itself and asks the zero-risk questions; it sends nothing to the console) used for E3b. |
 | Capture importer: USBPcap pcap → normalized capture JSONL (`usbpcap_to_jsonl.py`; classic pcap only, pcapng must be converted with tshark first) | `tools/protocol-analyzer/` | **Done 2026-10-28** (normalizer version 1, used for E2; two runs gave identical bytes; ~~Planned after E2~~). **Version 2 done 2026-10-29** (used for E3): adds `--notes-log` / `--notes-utc-offset` (action log merged as `note` records); re-run on E2 it is byte-identical except the normalizer version number |
-| Hex/record viewer, diff of two captures, object-name annotator | `tools/protocol-analyzer/` | Partly done 2026-10-28: `hsp_summary.py` (`summary`, `log`, `payloads --id N`, `diff --id N` within one capture). **Diff of two captures done 2026-10-29** (needed for E3): `startdiff --other` (first body of every object compared with another capture), plus `timeline` (per-object change timeline interleaved with the notes), `census` (the body positions that ever changed) and `lcd` (DisplayContent as two text lines); `summary` also prints the sequence wraps and the reply-header position of each data write. Hex/record viewer and object-name annotator: the `log` mode only |
-| E2 vs show-file cross-check (`e2_asc_crosscheck.py`: Patch, Memory, labels, sequences and steps, SystemSettings, Independents, live levels against `SHOW04.ASC`; specific to E2, copy and adapt) | `tools/protocol-analyzer/` | **Done 2026-10-28** (SHA-256 8C49AEDB…B314; run: `py -3.13 -I -B tools/protocol-analyzer/e2_asc_crosscheck.py <jsonl> <asc>`; re-runnable only where `smartfade-sd-card-backup/` exists) |
+| Hex/record viewer, diff of two captures, object-name annotator | `tools/protocol-analyzer/` | Partly done 2026-10-28: `hsp_summary.py` (`summary`, `log`, `payloads --id N`, `diff --id N` within one capture). **Diff of two captures done 2026-10-29** (needed for E3): `startdiff --other` (first body of every object compared with another capture), plus `timeline` (per-object change timeline interleaved with the notes), `census` (the body positions that ever changed) and `lcd` (DisplayContent as two text lines); `summary` also prints the sequence wraps and the reply-header position of each data write. Hex/record viewer and object-name annotator: the `log` mode only **2026-10-30:** `sessions` mode added to `hsp_summary.py` (per SmartSoft session: span, first replies and lists, position of each data write within its session, inbound sequence continuity, repetition of the large list); the `summary` mode counts reply headers from the start of the capture, so for sessions 2 and 3 it prints #1220 / #1259 and #2233 / #2272 where `sessions` prints #40 / #79. |
+| E2 vs show-file cross-check (`e2_asc_crosscheck.py`: Patch, Memory, labels, sequences and steps, SystemSettings, Independents, live levels against `SHOW04.ASC`; specific to E2, copy and adapt) | `tools/protocol-analyzer/` | **Done 2026-10-28** (SHA-256 8C49AEDB…B314; run: `py -3.13 -I -B tools/protocol-analyzer/e2_asc_crosscheck.py <jsonl> <asc>`; re-runnable only where `smartfade-sd-card-backup/` exists) Ran unchanged on the E3 and E3b JSONL (E3b against `SHOW05.ASC`). |
 | MIDI recorder (Windows MIDI → JSONL) | `tools/protocol-analyzer/` | Planned for E4 |
-| Replay (to mock transport only) | backend `ReplayTransport` | Planned |
+| Replay (to mock transport only) | backend `ReplayTransport` | Done 2026-10-30 (`SmartFade.Communication.ReplayTransport` plays the console side of a normalized capture, `SendAsync` only records; a `ReplayDevice` that drives the application from it is the next step) |
 
 ## Capture format (proposal)
 
@@ -237,3 +296,9 @@ Enter-key times at the start of an action (`Step` lines) or confirmation times a
 lines), so a note is not the instant the console changed; the console's own data is the reference
 ([E3 record](captures/2026-10-29-e3-console-actions.md) "Action log"). Reproduce the E3 normalization: the
 command line in `tools/protocol-analyzer/README.md` ("Reproduce the E3 normalization").
+
+E3b JSONL: 1 header, 53 935 `frame` records, 88 `note` records (86 from the log, which now also holds
+`owner answer:` lines and the script's own `smartsoft start #n` lines, plus the coordinator's capture start
+and stop); output SHA-256 `0EA97056712F1656026AE42831E766B0B1F53662F5C2A07879C5CF0D5D944594`; two runs and
+the README command gave identical bytes (command line: `tools/protocol-analyzer/README.md`, "Reproduce the E3b
+normalization"; record: [E3b record](captures/2026-10-30-e3b-live-objects.md)).

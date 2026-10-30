@@ -14,6 +14,16 @@ DisplayContent and PlaybackInfo are not in the full list (F89, H58); every kind 
 (faders, a mode switch, a bump, the MASTER fader) arrives as state objects only (F82–F88). VERIFIED never
 clears a message for sending; the causality statements remain INFERRED.
 
+**Update 2026-10-30 (E3b,** [record](captures/2026-10-30-e3b-live-objects.md)**).** Three more sessions in
+one capture (another console power cycle before the first, **no** power cycle between them) repeated the
+phases below in full each time (F94) and showed four more things: the console's sequence counter is not
+reset by a SmartSoft restart (F93); after a restart nothing is pending at connect, while after a power-on
+the pending list varies (E2 9 records, E3 InputLevels, E3b LedStatus and DisplayContent; F94, H65); the
+FaderInfo records and the LED blocks belong to the physical faders in every mode and bank (F99); a held
+bump, the MASTER fader and the BUMPS fader all show in the level objects (F95–F97). The 157-record list
+is byte-identical in five sessions. VERIFIED never clears a message for sending; the causality
+statements remain INFERRED.
+
 ## Session phases seen (SmartSoft, firmware 3.0.2.9.0.43)
 
 | Phase | What happened | When (E2) | Fact |
@@ -39,6 +49,20 @@ The same phases in E3 (2026-10-29, after a console power cycle, USB address 7):
 | 5. Download | 8.84–16.07 s (about 7.2 s), 157 fetches, last ChannelLevels f1608 | same |
 | 6. Steady state | 16.07–313.34 s: polls about every 31 ms; owner actions produce lists of 1–5 records (fader 1, fader 5, the switch to memory mode, a bump, the MASTER fader; 87 lists in all) | E2: one fader movement; FaderInfo and DisplayContent first appear at 77.90 s, with the first fader move (F89) |
 | 7. End | 313.34 s, 1.62 s after SmartSoft's close started: the last transfer is an idle poll / reply | same (F64) |
+
+The same phases in E3b (2026-10-30; session 1 after a console power cycle, sessions 2 and 3 after a close
+and a restart of SmartSoft without a power cycle; `hsp_summary.py sessions`):
+
+| Phase | Session 1 (170.7–209.5 s) | Sessions 2 (224.9–258.5 s) and 3 (271.5–1009.0 s) |
+|---|---|---|
+| 0. Open | string 0 and string 2 on EP0 (f8, f10) | string 2 only (f5386, f10084) |
+| 1. First poll | all-zero first poll (f11); the first reply is idle; the second reply (f18) carries a list of 2 records, LedStatus and DisplayContent, fetched at once (f20, f28, f36) | all-zero first poll (f5387, f10085); the replies stay idle: **nothing pending** |
+| 2. Idle | 36 idle replies before the first write | 40 idle replies |
+| 3. Handshake A | 172.005 s System `09 00 00` after reply header #40 → list [37] → "3.0.2.9.0.43" (f198) | 226.142 s and 272.745 s: same bytes, same position (#40 of the session) |
+| 4. Handshake B | 173.255 s System `07 00 00` after reply header #79 → 157-record list (f356) | 227.396 s and 273.984 s: same, byte-identical list (f5722, f10420) |
+| 5. Download | 160 fetches, last payload f1612 (pseq 162) | 158 fetches each; the counter continues (first pseq 163 and 67, F93) |
+| 6. Steady state | idle | session 2 idle; session 3 holds all owner actions (fader 5, MASTER, BUMPS, bumps, SOLO, modes, bank, a GO crossfade): 268 lists in the capture |
+| 7. End | 209.45 s: idle poll / reply, no closing message | 258.49 s and 1008.97 s likewise (F64) |
 
 ## Model implied by the observations
 
@@ -73,6 +97,19 @@ The same phases in E3 (2026-10-29, after a console power cycle, USB address 7):
   changes ConsoleStatus body[0] and LedStatus; a memory bump changed only its LED (with the BUMPS fader at
   0 %). Intermediate values are missed in the same way as in E2 (only polls bring data). No ConsoleEvent
   occurred in either direction (H5).
+- **Restarting SmartSoft repeats the whole start-up and does not reset the console's counter** (E3b, F93,
+  F94): a client that reconnects without a power-on finds nothing pending and receives FaderInfo,
+  DisplayContent and PlaybackInfo only when they change, so after a reconnect its 'actual' state for the
+  faders, MASTER, BUMPS, LCD and playback is unknown until something moves (H58). Do not design for a fixed
+  start-up list (E2 9 records, E3 1, E3b 2 or none).
+- **FaderInfo is indexed by physical fader, not by channel** (E3b, F99): in bank 25-48 physical fader 1 still
+  moves record 1, and the channel it controls (25) shows in ChannelLevels and OutputLevels. The mode and the
+  bank (ConsoleStatus body[0], body[4], F98) are needed to interpret a fader move.
+- **Bump output and the MASTER scaling are visible in the level objects** (E3b, F96, F97): the live levels are
+  post-MASTER and a held bump appears at the BUMPS level (tested at 0xFF). A model of 'desired versus actual'
+  levels must treat the console's levels as outputs, not as fader positions.
+- **A GO press shows as PlaybackInfo and an LED, not as an event** (E3b, F101): with the STACK button unlit it
+  changed no output; ConsoleEvent never occurred (H5).
 
 ## Show content seen in the download (decoded, `SHOW04.ASC`)
 
@@ -86,9 +123,9 @@ download carries, in terms of the show model:
 | 16 memories with levels and labels | Memory (0), slot (a, b), number 24a + b + 1 | 16/16, 768/768 levels | page / fader meaning (E6) |
 | 1 sequence + the main stack | Sequence (2), SequenceMain (3), StepContent (4) | steps 26/26 incl. Up / Down / third time (FOLLOWON) | sequence step numbers differ wire vs file (H43) |
 | 2 Independents | Independents (12) | 2/2 | field meaning; live levels (ChannelLevels body[49], [50] were 0) |
-| MIDI and other settings | SystemSettings (41) | run of six `SET` values at body[6..11] | per-key mapping, default times (H45) |
+| MIDI and other settings | SystemSettings (41) | run of six `SET` values at body[6..11] | per-key mapping, default times (H45) *(E3b: body[12..15] = the default Up / Down times shown on the LCD, F102; not in the file as far as F104 shows)* |
 | Labels (pages, channels, memories, sequences, independents) | text block in each object | all compared objects | byte order HYPOTHESIS, two readings fit the same bytes (H40, F73) |
-| Live state (fader positions, levels) | FaderInfo, ChannelLevels, OutputLevels | **not in the file**; at session start only channel 5 at 0xAB (INFERRED a channel fader, F78) | scale of live objects (E3(a)) *(E3 2026-10-29: 0x00–0xFF, full = 0xFF with the MASTER at 0xFF, F83; all levels 0 at the start of E3; scaling by the MASTER of live levels H47 / H57 untested)* |
+| Live state (fader positions, levels) | FaderInfo, ChannelLevels, OutputLevels | **not in the file**; at session start only channel 5 at 0xAB (INFERRED a channel fader, F78) | scale of live objects (E3(a)) *(E3 2026-10-29: 0x00–0xFF, full = 0xFF with the MASTER at 0xFF, F83; all levels 0 at the start of E3; scaling by the MASTER of live levels H47 / H57 untested)* *(E3b 2026-10-30: the live levels are MASTER-scaled, F96; BUMPS is FaderInfo body[193], F95; a held bump appears in them, F97; FaderInfo is per physical fader, F99)* |
 
 Consequence for "desired vs actual": the file is a faithful snapshot of the stored show, the live
 objects are separate state. A diff between a saved `.asc` and a download would be possible for the
@@ -101,4 +138,4 @@ in another mode, console power-up while connected, whether the 157-object list i
 depends on a show-changed flag; whether the initial pending list (F56) depends on what happened
 before the session. *(E3 2026-10-29: it differed after a console power cycle, F80, so it depends on something about the
 console's state or history; the cause is not isolated. The 157-record list was byte-identical in both
-sessions, but both sessions had the same show.)*
+sessions, but both sessions had the same show.)* *(E3b 2026-10-30: the pending list differed again after a third history, F94; after a restart nothing was pending, H65. The 157-record list was byte-identical in five sessions, all with the same show.)*

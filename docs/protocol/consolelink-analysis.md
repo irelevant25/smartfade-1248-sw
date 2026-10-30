@@ -352,6 +352,40 @@ label changed. Names: the 1248 panel labels are MASTER and BUMPS (owner, Q5), th
 fader" and "BUMPS fader" (printed pp.56, 12), the knowledge base writes **MASTER (Grand Master)** and
 **BUMPS (bump master)**.
 
+*(Update 2026-10-30: the E3b outcomes for N1, N2, N3 and N5, which supersede the rows "BUMPS part HYPOTHESIS",
+"scaling HYPOTHESIS" and "UNTESTED" above, are in §3.6.)*
+
+### 3.6 Outcomes of the E3b test and where the proposals went (curator, 2026-10-30)
+
+*Added by the curator; the researcher's text and §3.5 are unchanged.* E3b
+([record](captures/2026-10-30-e3b-live-objects.md)) tested the parts of N1, N2, N3 and N5 that E3 left open;
+the owner's statements of the same day ([E3b statements](captures/2026-10-30-e3b-owner-statements.txt)) explain
+the GO crossfade. Nothing here turns a ConsoleLink claim into a 1248 fact by itself: every outcome rests on
+our own capture, and the owner is named where he was used.
+
+| N | ID | Outcome (E3b) | Status now |
+|---|---|---|---|
+| N1 | H46 | FaderInfo body[193] moved 0x00 ↔ 0xFF 104 times, in four groups that coincide with the owner's four logged BUMPS moves; nothing else changed in those windows (F95) | BUMPS part CONFIRMED (OBSERVED); MASTER part as in §3.5 |
+| N2 | H47 | With fader 5 at full all level objects followed the MASTER (0xFF → 0x7F → 0xFF) and read 0x7F together at rest at 'half'; the owner saw fixture 1 dim (F96). ConsoleLink's 'output levels incl. Master' (O2) fits. The arithmetic of H57 (the E2 fit) is rejected | Scaling part CONFIRMED (OBSERVED); the exact rule is open (H60) |
+| N3 | H48 | Extended: blocks 1–24 follow the physical faders in every mode and bank; blocks 25–48 constant; SOLO is white in block 52 (ConsoleLink 'Solo on = white', O9, fits); the bump LED 'FF while the memory is up, 0x46 recorded, 0x0A empty' reproduced (F84, F100) | CONFIRMED (OBSERVED) for the blocks tested |
+| N4 | H49 | Layout reproduced; row labels '25' / '37' in bank 25-48; 0x87 still never occurs (F86, F98) | layout CONFIRMED; unchanged |
+| N5 | H50 | One GO crossfade (pressed by the owner, STACK button unlit, E3b-A1): Live / Next at body[67] / [68] moved in opposite directions and were reset to `FF/00`, as ConsoleLink says for the ML crossfader (O5); body[75..78] counted down 5.0 s in 1-s steps (F101) | layout CONFIRMED (OBSERVED once) |
+| N6 | H51 | No page change and no System `[0x0A][page][0]` | UNTESTED |
+
+Other ConsoleLink claims touched by E3b: **T10** (inbound bytes 0–1 as a 16-bit sequence) is contradicted four
+more times (six wraps in all; byte 1 stays 0x00; F93). **O5**: the same three times 5.0, 5.0, 0 in PlaybackInfo's
+last record and, in E2, in SystemSettings, which the curator note under H45 read as support for the 'times'
+reading, is **weakened**: after the crossfade PlaybackInfo read 5.0, 5.0, 0 (f104238) while SystemSettings read
+5.1, 5.1, 0 (F101, F102), so the E2 equality was a coincidence of two 5.0 values (INFERRED: PlaybackInfo carries
+a stack step's times). The default-times reading of SystemSettings now rests on the LCD correlation and the
+owner's wheel move (H45). The ML record bytes 0–1 of that last record are `01 01` (O5), ours `00 00` in E2 and
+`06 06` / `04 04` in E3b (H63). ConsoleLink's 'mode-agnostic' FaderInfo (type 0x0e, app.py:57, 118) fits: records
+1–24 follow the physical faders in bank 25-48 and in memory mode (F99). **O10** (ConsoleStatus byte 0 = fader-mode
+family, `data[4]` = intensity sub-mode) fits body[0] and body[4] (F98). **S3** (a pending list at connect) fits,
+but the content differs again (LedStatus and DisplayContent after E3b's power cycle, nothing after a restart;
+F94, H65). §2.6 (label byte order) is unchanged: no label changed. Names: the panel labels MASTER and BUMPS
+(owner, Q5); SOLO and the GO ('play') button as the owner calls them (E3b-A1).
+
 ## 4. What must NOT be inferred
 
 CLAUDE.md, verbatim:

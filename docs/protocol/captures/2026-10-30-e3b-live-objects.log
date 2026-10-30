@@ -1,0 +1,86 @@
+2026-10-30 08:54:57.083 START guided E3b session (PC clock, local time)
+2026-10-30 08:55:48.809 backup taken: SHOW05.ASC
+2026-10-30 08:56:03.839 owner answer: console powered off since E3 = y
+2026-10-30 08:56:13.763 owner answer: DMX IN connected = y
+2026-10-30 08:56:24.746 owner answer: SOLO lit at start = n
+2026-10-30 08:56:46.875 owner answer: fader left of MASTER = BUMPS
+2026-10-30 08:57:40.430 starting position set (owner)
+2026-10-30 08:57:42.237 smartsoft start #1 (Start-Process by the script)
+2026-10-30 08:57:51.314 smartsoft online #1 (owner)
+2026-10-30 08:58:06.332 wait 15 s done (session 1 idle)
+2026-10-30 08:58:20.287 smartsoft close #1 start
+2026-10-30 08:58:24.922 smartsoft closed #1
+2026-10-30 08:58:34.932 wait 10 s done (between sessions 1 and 2)
+2026-10-30 08:58:37.038 smartsoft start #2 (Start-Process by the script)
+2026-10-30 08:58:48.190 smartsoft online #2 (owner)
+2026-10-30 08:59:03.208 wait 15 s done (session 2 idle)
+2026-10-30 08:59:08.188 smartsoft close #2 start
+2026-10-30 08:59:11.936 smartsoft closed #2
+2026-10-30 08:59:21.943 wait 10 s done (between sessions 2 and 3)
+2026-10-30 08:59:23.656 smartsoft start #3 (Start-Process by the script)
+2026-10-30 08:59:34.637 smartsoft online #3 (owner)
+2026-10-30 08:59:49.643 wait 15 s done (session 3 idle)
+2026-10-30 09:00:04.628 fader5 up start
+2026-10-30 09:00:11.461 fader5 at full
+2026-10-30 09:00:16.476 wait 5 s done (fader 5 at full, MASTER full)
+2026-10-30 09:00:36.996 master to half start
+2026-10-30 09:00:46.713 master at half
+2026-10-30 09:00:51.721 wait 5 s done (MASTER at half, fader 5 full)
+2026-10-30 09:00:55.863 master to full start
+2026-10-30 09:01:01.269 master at full
+2026-10-30 09:01:06.272 wait 5 s done (MASTER full again)
+2026-10-30 09:01:22.774 owner answer: fixture 1 during MASTER move = dimmed and came back
+2026-10-30 09:01:29.494 fader5 down start
+2026-10-30 09:01:34.986 fader5 at zero
+2026-10-30 09:01:39.997 wait 5 s done (fader 5 at zero)
+2026-10-30 09:01:48.959 bumps up start
+2026-10-30 09:01:54.938 bumps at full
+2026-10-30 09:01:59.952 wait 5 s done (BUMPS at full)
+2026-10-30 09:02:05.169 bumps down start
+2026-10-30 09:02:10.830 bumps at zero
+2026-10-30 09:02:15.839 wait 5 s done (BUMPS at zero)
+2026-10-30 09:02:28.525 bumps up again start
+2026-10-30 09:02:33.619 bumps at full again
+2026-10-30 09:02:38.633 wait 5 s done (BUMPS at full)
+2026-10-30 09:03:05.940 channel bump 7 press
+2026-10-30 09:03:16.291 channel bump 7 release
+2026-10-30 09:03:28.262 owner answer: lights during channel bump 7 = fixture 1 bluie came on
+2026-10-30 09:03:33.276 wait 5 s done (after channel bump)
+2026-10-30 09:03:55.206 memory mode start
+2026-10-30 09:03:59.839 memory mode on
+2026-10-30 09:05:26.610 owner answer: LED colours fader 21 and 1 in memory mode = LED under 21 is yellowish and LED under fader 1 is red (high intesity, because something is saved there, LED under not saved faders are red as well but low intensity)
+2026-10-30 09:05:29.623 wait 3 s done (memory mode)
+2026-10-30 09:05:39.391 memory bump 1 press, SOLO off
+2026-10-30 09:05:45.913 memory bump 1 release
+2026-10-30 09:06:56.273 owner answer: lights during memory bump 1, SOLO off = First one came BLUE and second one came RED and then, after release, both came down 
+2026-10-30 09:07:01.287 wait 5 s done (after memory bump, SOLO off)
+2026-10-30 09:07:06.685 SOLO press
+2026-10-30 09:07:11.377 SOLO on (owner)
+2026-10-30 09:07:14.387 wait 3 s done (SOLO on)
+2026-10-30 09:07:26.517 memory bump 1 press, SOLO on
+2026-10-30 09:07:35.775 memory bump 1 release, SOLO on
+2026-10-30 09:07:47.985 owner answer: lights during memory bump 1, SOLO on = First one came BLUE and second one came RED and then, after release, both came down
+2026-10-30 09:07:52.997 wait 5 s done (after memory bump, SOLO on)
+2026-10-30 09:08:03.634 SOLO release
+2026-10-30 09:08:08.070 SOLO off (owner)
+2026-10-30 09:08:11.085 wait 3 s done (SOLO off)
+2026-10-30 09:08:40.313 bumps down final start
+2026-10-30 09:08:45.901 bumps at zero final
+2026-10-30 09:08:48.913 wait 3 s done (BUMPS at zero)
+2026-10-30 09:09:02.680 channel mode 1-24 start
+2026-10-30 09:09:06.087 channel mode 1-24 on
+2026-10-30 09:09:09.101 wait 3 s done (channel mode 1-24)
+2026-10-30 09:09:13.492 bank 25-48 press
+2026-10-30 09:09:16.728 bank 25-48 on
+2026-10-30 09:09:19.743 wait 3 s done (bank 25-48)
+2026-10-30 09:09:41.412 fader1 in bank 25-48 move start
+2026-10-30 09:09:51.073 fader1 in bank 25-48 at zero
+2026-10-30 09:09:56.078 wait 5 s done (after bank 25-48 move)
+2026-10-30 09:09:59.311 bank 1-24 press
+2026-10-30 09:10:02.634 bank 1-24 on
+2026-10-30 09:10:05.646 wait 3 s done (bank 1-24)
+2026-10-30 09:11:31.557 owner decision: GO step = n
+2026-10-30 09:11:39.562 smartsoft close #3 start
+2026-10-30 09:11:43.113 smartsoft closed #3
+2026-10-30 09:11:48.124 wait 5 s done (after close)
+2026-10-30 09:11:48.126 END guided E3b session

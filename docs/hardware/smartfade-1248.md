@@ -38,7 +38,7 @@ user's unit.
 
 | Capability | Normal mode | Notes |
 |---|---|---|
-| Intensity channels | 48 (2 × 24 channel faders, Live/Next) | HTP. 1248 manual text says "48 (96)" to cover 1296/2496. *Note 2026-10-29:* the console manual says the 1248 has two rows of 12 faders, i.e. **24 physical faders**, which the FADERS buttons switch between the channel banks 1-24 and 25-48 (known-facts F7; printed pp.10-12; the bank reading is INFERRED, F7); "2 × 24" above means the two banks |
+| Intensity channels | 48 (2 × 24 channel faders, Live/Next) | HTP. 1248 manual text says "48 (96)" to cover 1296/2496. *Note 2026-10-29:* the console manual says the 1248 has two rows of 12 faders, i.e. **24 physical faders**, which the FADERS buttons switch between the channel banks 1-24 and 25-48 (known-facts F7; printed pp.10-12; the bank reading is INFERRED, F7); "2 × 24" above means the two banks **E3b (OBSERVED):** the FADERS buttons select the banks 1-24 / 25-48 or memory mode; the console reports the mode and the bank in ConsoleStatus body[0] and body[4] (F98), and the 24 physical faders map to FaderInfo records 1–24 in every mode (F99) |
 | Channel levels resolution | UI levels 0–100 % (ASC stores integer percent). DMX output 8-bit | ASC: `CHAN n/level` |
 | Patch | 512 DMX addresses → channels, 1:1 default, per-dimmer proportional level (`PATCH 1 dmx/ch/level`) | |
 | Independents | 2 (IND1, IND2), toggle/bump modes, patched like channels | ASC `$INDEPENDENT` |
@@ -46,8 +46,8 @@ user's unit.
 | Sequences | 48 = 12 pages × 4 sequence faders, max 24 steps each; chase / tap BPM / Magic | |
 | Cue stack | 1 stack, max 199 steps, point cues (e.g. 10.1–10.6), up/down/wait/follow-on times, rate override | |
 | Snapshots | 10 temporary looks | |
-| Masters | Grand Master fader, Blackout button, Bumps master fader, Solo/Pile-on | Panel labels on the owner's unit: **MASTER** (Grand Master, rightmost) and **BUMPS** (bump master), INDEPENDENTS below them (owner's statement 2026-10-29, OBSERVED, not covered by this section's DOCUMENTED heading; the manual's names are in known-facts F5); the Blackout button blinks while the Master is below 100 % (manual p.56) |
-| Crossfader pair | Manual, timed, rate override; GO, PAUSE, RATE, CLEAR | |
+| Masters | Grand Master fader, Blackout button, Bumps master fader, Solo/Pile-on | Panel labels on the owner's unit: **MASTER** (Grand Master, rightmost) and **BUMPS** (bump master), INDEPENDENTS below them (owner's statement 2026-10-29, OBSERVED, not covered by this section's DOCUMENTED heading; the manual's names are in known-facts F5); the Blackout button blinks while the Master is below 100 % (manual p.56) **E3 / E3b (OBSERVED through USB, not DOCUMENTED):** the BUMPS level is FaderInfo body[193] and the MASTER level body[194] (known-facts F82, F95); SOLO is LedStatus block 52, white while on (INFERRED, F100); the live outputs are scaled by the MASTER (F96) and a held bump appears in them at the BUMPS level (F97) |
+| Crossfader pair | Manual, timed, rate override; GO, PAUSE, RATE, CLEAR | **E3b (OBSERVED):** the owner's GO ('play') button press started a 5-s crossfade that PlaybackInfo reported (F101); with the STACK button unlit no output changed |
 | DMX backup | 24 backup looks × 512 channels | ASC `$BACKUPLOOK` (keyword seen in engine, not in sample) |
 | Undo | last record command | |
 | Magic | random levels / random chases | |
@@ -71,6 +71,19 @@ Four RGB fixtures, 3 DMX channels each, DMX start addresses **5, 8, 11 and 14** 
 in total). With the documented 1:1 default patch these are console channels 5–16; the actual
 patch on the unit and the fixtures' channel order (R, G, B assumed) are UNKNOWN. Any active experiment (E3, E5, E7) should
 target these channels and expect visible colour changes.
+
+**Update 2026-10-30 (owner statements E3b-A3,** [captures/2026-10-30-e3b-owner-statements.txt](../protocol/captures/2026-10-30-e3b-owner-statements.txt)**).**
+The rig is **one DOTZ BAR 1.4 LED bar** (the owner's name for it; the coordinator identifies it as an ADJ
+product) in its 12-channel mode at start address 5: its four cells of three channels each (DMX 5–7, 8–10,
+11–13, 14–16) can be set separately and act as the four lights that the owner's earlier statement and the
+logs call "fixtures" 1–4 (OBSERVED, owner statements). The console's Patch object maps DMX 1–46 to channels
+1–46 (known-facts F70), so console channels 5–16 drive the bar. In E3b, with BUMPS at full, the owner saw
+channel bump 7 (DMX 7) light "fixture 1 bluie" and memory bump 1 (`GROUP 1` = channels 7 and 8, DMX 7 and 8)
+light "first one BLUE and second one RED" (log 516.04 s, 724.05 s): consistent with R, G, B order inside a
+cell (DMX 7 = the blue channel of cell 1, DMX 8 = the red channel of cell 2); OBSERVED (owner statements),
+the channel order is not otherwise documented. **DMX IN:** the owner confirmed on 2026-10-30 that only DMX OUT is connected ("Only DMX out is connected (the light)"), so nothing is plugged into DMX IN. *(Earlier wording, kept:)* nothing is confirmed to be connected to the
+console's DMX IN socket. Asked about it, the owner described this bar, which is almost certainly on the DMX
+OUT socket; the owner is asked to confirm (known-facts F105, H52).
 
 ## Information needed from the owner
 

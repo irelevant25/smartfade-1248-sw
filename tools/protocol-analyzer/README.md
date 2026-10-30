@@ -8,7 +8,7 @@ here. Captures are untrusted input: run the scripts from the repository root wit
 | Script | Input | Output |
 |---|---|---|
 | `usbpcap_to_jsonl.py` | USBPcap capture, classic pcap, link type 249; optionally an operator action log | Normalized capture JSONL (format: `docs/protocol/reverse-engineering.md`, section "Capture format"); the action log becomes `note` records (version 2) |
-| `hsp_summary.py` | Normalized JSONL | Structural checks and statistics (`summary`), one decoded line per bulk transfer (`log`), all payloads of one object ID (`payloads --id N`), body bytes that change between successive payloads (`diff --id N`), a per-object change timeline interleaved with the notes (`timeline`), the body positions that ever changed (`census`), the LCD object as two text lines (`lcd`), and the first body of every object compared with another capture (`startdiff --other X`) |
+| `hsp_summary.py` | Normalized JSONL | Structural checks and statistics (`summary`), one decoded line per bulk transfer (`log`), all payloads of one object ID (`payloads --id N`), body bytes that change between successive payloads (`diff --id N`), a per-object change timeline interleaved with the notes (`timeline`), the body positions that ever changed (`census`), the LCD object as two text lines (`lcd`), the first body of every object compared with another capture (`startdiff --other X`), and a per-SmartSoft-session view for captures with several sessions (`sessions`: span, first replies and lists, position of each data write, inbound sequence continuity, repetition of the large list) |
 | `e2_asc_crosscheck.py` | E2 JSONL + the console's show file `SHOW04.ASC` | Field-by-field comparison of the fetched objects (Patch, Memory, labels, sequences and steps, SystemSettings, Independents, live levels) with the show file; prints agreement counts. Written for E2; runs unchanged on the E3 JSONL (same objects) |
 
 ## Reproduce the E2 normalization
@@ -70,6 +70,38 @@ py -3.13 -I -B tools/protocol-analyzer/e2_asc_crosscheck.py docs/protocol/captur
 ```
 
 `timeline` accepts `--id N` (repeatable) and `--from` / `--to` (seconds) to narrow the output.
+
+## Reproduce the E3b normalization
+
+Single line, from the repository root. The action log (written by
+`tools/usb-probe/e3b-guided-session.ps1`, which also started SmartSoft three times) is in the
+PC's local time, UTC+1 on 2026-10-30; the pcap's first frame, 07:54:52.222585Z, is
+08:54:52.222585 on that clock. The two `--note` lines are the coordinator's capture start and
+stop.
+
+```
+py -3.13 -I tools/protocol-analyzer/usbpcap_to_jsonl.py docs/protocol/captures/2026-10-30-e3b-live-objects.pcap -o %TEMP%\e3b-reproduced.jsonl --device-address 7 --bus 1 --vid 14D5 --pid 0200 --console-model SF1248 --firmware 3.0.2.9.0.43 --host-app SmartSoft --host-version 3.0.2.9.0.43b --host-os "Windows 11 Pro build 26300 (Memory Integrity off)" --host-driver "etchsp.sys 2.00.000" --notes-log docs/protocol/captures/2026-10-30-e3b-live-objects.log --notes-utc-offset +01:00 --note 0 "coordinator: USBPcapCMD started at 08:54:52 local time on root hub USBPcap1 (elevated); frame 1 is at 08:54:52.222585" --note 1107.8 "coordinator: USBPcapCMD stopped by Stop-Process at about 09:13:20 local time; the last console frame is at 1008.974036 s (09:11:41.20), the raw all-devices file ends at 1122.644005 s"
+# Then compare: sha256sum %TEMP%\e3b-reproduced.jsonl against the hash in the E3b record. Never write into docs/protocol/captures/: the committed JSONL files are hashed evidence.
+```
+
+Expected: source SHA-256 `E470719DBCF2B723EEB1A8E5CE4177B8A6BB0689D62A56C5652ACCDBD4E1B6A2`,
+53935 transfers from 107870 frames, 88 notes (86 from the log, SHA-256
+`E69ECA64C6FF32633754E1147E49FA4054E4EF4D63E15BAE80483A8A223097A1`), output SHA-256
+`0EA97056712F1656026AE42831E766B0B1F53662F5C2A07879C5CF0D5D944594` (normalizer version 2; two
+runs gave identical bytes).
+
+Then, for the numbers quoted in the E3b record:
+
+```
+py -3.13 -I -B tools/protocol-analyzer/hsp_summary.py docs/protocol/captures/2026-10-30-e3b-live-objects.jsonl summary
+py -3.13 -I -B tools/protocol-analyzer/hsp_summary.py docs/protocol/captures/2026-10-30-e3b-live-objects.jsonl sessions
+py -3.13 -I -B tools/protocol-analyzer/hsp_summary.py docs/protocol/captures/2026-10-30-e3b-live-objects.jsonl timeline
+py -3.13 -I -B tools/protocol-analyzer/hsp_summary.py docs/protocol/captures/2026-10-30-e3b-live-objects.jsonl census
+py -3.13 -I -B tools/protocol-analyzer/hsp_summary.py docs/protocol/captures/2026-10-30-e3b-live-objects.jsonl lcd
+py -3.13 -I -B tools/protocol-analyzer/hsp_summary.py docs/protocol/captures/2026-10-30-e3b-live-objects.jsonl payloads --id 17
+py -3.13 -I -B tools/protocol-analyzer/hsp_summary.py docs/protocol/captures/2026-10-29-e3-console-actions.jsonl startdiff --other docs/protocol/captures/2026-10-30-e3b-live-objects.jsonl
+py -3.13 -I -B tools/protocol-analyzer/e2_asc_crosscheck.py docs/protocol/captures/2026-10-30-e3b-live-objects.jsonl smartfade-sd-card-backup/SHOW05.ASC
+```
 
 ## How `usbpcap_to_jsonl.py` works
 

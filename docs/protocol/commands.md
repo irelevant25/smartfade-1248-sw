@@ -7,7 +7,8 @@ our unit, its effect on the console understood and known to be harmless (safety 
 reverse-engineering.md; a reproduction alone proves only that SmartSoft sends it), and
 `/hardware-safety-check`. Framing: [packet-format.md](packet-format.md).
 Evidence: [E2 record](captures/2026-10-28-e2-smartsoft-connect.md) and, since 2026-10-29,
-the [E3 record](captures/2026-10-29-e3-console-actions.md).
+the [E3 record](captures/2026-10-29-e3-console-actions.md) and, since 2026-10-30, the
+[E3b record](captures/2026-10-30-e3b-live-objects.md).
 
 **Update 2026-10-29 (E3).** The second SmartSoft session, after a console power cycle, sent the same
 four kinds of message (poll, fetch, the two System writes) and nothing else: no ConsoleEvent, no show
@@ -19,12 +20,22 @@ page stays a record, not a list of messages we may send: every message still nee
 console understood and known to be harmless (safety rule 2) and `/hardware-safety-check`, and none has
 passed. The "Created ... none VERIFIED" wording above is the 2026-10-28 text, kept.
 
+**Update 2026-10-30 (E3b).** Three more SmartSoft sessions (one capture, another console power cycle before
+the first) sent the same four kinds of message and nothing else: polls, fetches and **six** System writes,
+two per session, byte-identical to E2's and E3's (`00 03 00 27 09 00 00`, `01 03 00 27 07 00 00`) and at the
+same points (after reply headers #40 and #79 of each session; F92). No ConsoleEvent, no show data, no System
+`[0x0A][page][0]` (no page change was made) and nothing on interface 0, although the owner operated bumps,
+SOLO, the BUMPS and MASTER faders, modes, a bank switch and, once, the GO button (E3b-A1,
+[owner statements](captures/2026-10-30-e3b-owner-statements.txt)). The rows below
+are VERIFIED as SmartSoft's behaviour only, as before: **this does not say that we may send them**, and none
+is cleared (safety rule 2; `/hardware-safety-check` has not passed).
+
 | Message | Bytes as seen | Count in E2 (E3) | Effect observed | Status | Facts |
 |---|---|---|---|---|---|
-| Poll | 12-byte header, w0 = 0 (first poll f11: all zero) | 3 001 (E3: 9 692) | Console answers with a type-3 or type-4 reply header | **VERIFIED 2026-10-29** as SmartSoft's behaviour (E2 + E3; was OBSERVED) | F52, F53 |
-| Fetch | 12-byte header, w0 = 2, w2 = object ID, w3..w5 = a, b, c (example f17: ID 17; E3 f21: ID 19) | 228 (E3: 423) | Object delivered in the reply to the next poll; treated as a read by SmartSoft's code (S11, INFERRED), console-side effects UNKNOWN (the console's sequence counter advances per payload and a listed object is delivered once), not established as safe to send; every fetch named by a DirtyObjects record | **VERIFIED 2026-10-29** as SmartSoft's behaviour (E2 + E3; was OBSERVED); console-side effects stay UNKNOWN | F52, F57 |
-| Data: System (ID 39), body `09 00 00` | header f209 `01 00 07 00 …` + payload f211 `00 03 00 27 09 00 00` (E3: f177 + f179, byte-identical) | 1 (29.872 s) (E3: 1, 7.515 s) | Next poll: DirtyObjects list with ConsoleVersion (ID 37) | **VERIFIED 2026-10-29 as SmartSoft's behaviour only** (E2 + E3; was OBSERVED); effect causality OBSERVED twice, still INFERRED; sent after reply header #40 in both sessions (count-driven, INFERRED) | F58, F92 |
-| Data: System (ID 39), body `07 00 00` | header f375 + payload f377 `01 03 00 27 07 00 00` (E3: f343 + f345, byte-identical) | 1 (31.133 s) (E3: 1, 8.766 s) | Next poll: 157-record DirtyObjects list, full download | **VERIFIED 2026-10-29 as SmartSoft's behaviour only** (E2 + E3; was OBSERVED); effect causality OBSERVED twice, still INFERRED; sent after reply header #79 in both sessions (count-driven, INFERRED) | F58, F92 |
+| Poll | 12-byte header, w0 = 0 (first poll f11: all zero) | 3 001 (E3: 9 692) (E3b: 25 824) | Console answers with a type-3 or type-4 reply header | **VERIFIED 2026-10-29** as SmartSoft's behaviour (E2 + E3; was OBSERVED) | F52, F53 |
+| Fetch | 12-byte header, w0 = 2, w2 = object ID, w3..w5 = a, b, c (example f17: ID 17; E3 f21: ID 19) | 228 (E3: 423) (E3b: 1 000) | Object delivered in the reply to the next poll; treated as a read by SmartSoft's code (S11, INFERRED), console-side effects UNKNOWN (the console's sequence counter advances per payload and a listed object is delivered once), not established as safe to send; every fetch named by a DirtyObjects record | **VERIFIED 2026-10-29** as SmartSoft's behaviour (E2 + E3; was OBSERVED); console-side effects stay UNKNOWN | F52, F57 |
+| Data: System (ID 39), body `09 00 00` | header f209 `01 00 07 00 …` + payload f211 `00 03 00 27 09 00 00` (E3: f177 + f179, byte-identical) (E3b: f181 + f183, f5547 + f5549, f10245 + f10247, byte-identical) | 1 (29.872 s) (E3: 1, 7.515 s) (E3b: 3, at 172.005 / 226.142 / 272.745 s) | Next poll: DirtyObjects list with ConsoleVersion (ID 37) | **VERIFIED 2026-10-29 as SmartSoft's behaviour only** (E2 + E3; was OBSERVED); effect causality OBSERVED twice, still INFERRED; sent after reply header #40 in both sessions (count-driven, INFERRED) **E3b:** reproduced in three more sessions (five in all), after reply header #40 of each session; still SmartSoft's behaviour only | F58, F92 |
+| Data: System (ID 39), body `07 00 00` | header f375 + payload f377 `01 03 00 27 07 00 00` (E3: f343 + f345, byte-identical) (E3b: f347 + f349, f5713 + f5715, f10411 + f10413, byte-identical) | 1 (31.133 s) (E3: 1, 8.766 s) (E3b: 3, at 173.255 / 227.396 / 273.984 s) | Next poll: 157-record DirtyObjects list, full download | **VERIFIED 2026-10-29 as SmartSoft's behaviour only** (E2 + E3; was OBSERVED); effect causality OBSERVED twice, still INFERRED; sent after reply header #79 in both sessions (count-driven, INFERRED) **E3b:** reproduced in three more sessions (five in all), after reply header #79 of each session; still SmartSoft's behaviour only | F58, F92 |
 
 Observations that matter for safety:
 
@@ -42,6 +53,11 @@ Observations that matter for safety:
   mode switch on the console while SmartSoft was Online, and SmartSoft still sent nothing but polls,
   fetches and its two start-up System messages. Console-side actions reach the PC only as state
   objects (F82–F88); no ConsoleEvent (ID 20) occurred in either direction (H5, H24).
+- **E3b (2026-10-30):** three more sessions again sent only polls, fetches and the two start-up System
+  messages (six in all), although the owner pressed bumps, SOLO and GO and moved the BUMPS and MASTER faders
+  and switched modes and banks. Console-side actions reach the PC as state objects only (F95–F101); no
+  ConsoleEvent (H5, H24). Nothing observed so far shows what a GO, a bump or a fader write from the PC
+  would look like, so no such message can be built from these observations.
 - **ConsoleLink (class 5).** The third-party ML client sends ConsoleEvent kinds 0 / 1, System
   `[0x0A][page][0]` and a System `07` with sequence 1 at every connect, outside its own write gate
   ([consolelink-analysis.md](consolelink-analysis.md) W1–W5, §4). None of these was seen from SmartSoft

@@ -6,3 +6,15 @@ docs/protocol/captures/*.raw-all-devices.pcap
 
 # Owner's show files from the console SD card (private; hashes of the files used as evidence are in the experiment records)
 smartfade-sd-card-backup/
+
+# .NET build output
+bin/
+obj/
+*.user
+.vs/
+TestResults/
+
+# Angular
+node_modules/
+dist/
+.angular/

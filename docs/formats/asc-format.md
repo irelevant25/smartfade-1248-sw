@@ -24,12 +24,14 @@
 | `Demoshow-SmartFade2496.asc` | ETC, in installer | `2.0.0b20` | `SMARTFADE WIDE` | — |
 | `Demoshow-SmartFadeML.asc` | ETC, in installer | `2.1.0b20` | `SmartFadeML` | — (different dialect, out of scope) |
 | `smartfade-sd-card-backup/SHOW04.ASC` | Console, saved to SD 2026-10-28 (fw 3.0.2.9.0.43), SHA-256 `559636399c1d82e0f95e737c961bfee31f88962fe8c486bbc6eba7f7d2177a90`, 15 944 bytes | `3.0.2 43` | `SMARTFADE` | 1 153 |
+| `smartfade-sd-card-backup/SHOW05.ASC` | Console, saved to SD 2026-10-30 (fw 3.0.2.9.0.43), the owner's backup before E3b; **byte-identical to SHOW04.ASC** (same SHA-256 `559636399c1d82e0f95e737c961bfee31f88962fe8c486bbc6eba7f7d2177a90`, 15 944 bytes, `cmp` finds no difference) | `3.0.2 43` | `SMARTFADE` | 1 153 |
 | `smartfade-sd-card-backup/SHOW01/02/03/10/11/99.ASC` | Console (SD card, owner) | `3.0.2 43` | `SMARTFADE` | 828 / 1 079 / 1 276 / 1 192 / 898 / 923 |
 | 23 named `*.asc` shows in the same folder (+ `SMRTFADE.SRC`) | Owner's older shows (origin per file UNKNOWN) | `3.0.2 43` (3 files `3.0.1 41`) | `SMARTFADE` | 804 to 1 436 |
 
 SHOW04.ASC is the only file correlated with live console objects (E2 capture, see
 "Cross-check against the E2 capture" below). The other SD files are used here only for keyword
-inventory and line-ending comparison.
+inventory and line-ending comparison. *(Update 2026-10-30: the E3b capture was cross-checked against SHOW05.ASC,
+which is byte-identical to SHOW04.ASC, so it is the same show and not a second one.)*
 
 The 1248/1296 demo and 2496 demo have identical keyword counts and differ in the `CONSOLE`
 line. **The 1248 and 1296 cannot be told apart from the file** (both `SMARTFADE`, both list
@@ -230,6 +232,13 @@ further bytes with no `SET` line (body[0..5], body[12..17]; the latter possibly 
 HYPOTHESIS, see the E2 record). The file's `SET` block is therefore not the whole settings
 object.
 
+**E3b (2026-10-30, OBSERVED):** body[13] and body[15] read 0x33 instead of 0x32 in all three sessions and the
+LCD's times read 'U 5.1' / 'D 5.1' instead of 'U 5.0' / 'D 5.0': body[12..15] are the console's default Up /
+Down times (strongly supported; known-facts F102, H45), changed by the owner moving the wheel by accident
+(E3b-A2, [owner statements](../protocol/captures/2026-10-30-e3b-owner-statements.txt)). `SHOW05.ASC` equals `SHOW04.ASC` byte for byte, and the file has no `SET` line for these times, so
+they are **probably not stored in the file** (INFERRED, with the limit stated in F102: the console's value at
+the moment of the SHOW05 save is not recorded).
+
 ## Cross-check against the E2 capture (SHOW04.ASC)
 
 Source: `docs/protocol/captures/2026-10-28-e2-smartsoft-connect.md`, section "Cross-check
@@ -253,6 +262,18 @@ comparison with the file is still one show and one file, so the rows below keep 
 | FOLLOWON | third time, tenths of a second | OBSERVED; name "Wait" UNKNOWN |
 | `$INDEPENDENT` | 4-byte record `00 FF 00 01` | OBSERVED |
 | `SET` | six values at SystemSettings body[6..11] | OBSERVED (position only) |
+
+**E3b (2026-10-30).** `e2_asc_crosscheck.py` run on the E3b JSONL against `SHOW05.ASC` (byte-identical to
+SHOW04.ASC) repeated every result in all three sessions (known-facts F104): Patch 3 × 512 of 512, Memory 16
+`GROUP`s with 2 304 of 2 304 level bytes, labels 36 of 36 pages and 288 of 288 channels, StepContent 57 of 57,
+Sequence records 21 of 21 differing only in the cue number, `SET` values at SystemSettings body[6..11],
+Independents `00 FF 00 01` × 6. **Two saves of the same show, made two days and two console power cycles
+apart, are byte-identical** (OBSERVED, one pair of saves). The live state at the two save moments is not
+recorded (E2's session start had the MASTER at 0xAA and fader 5 at full, E3b's starting position was set after
+the SHOW05 save), so the limit is: nothing that differed in the console's history between the saves reached the
+file; INFERRED, not shown, that fader positions, MASTER, BUMPS, SOLO, modes and the default fade times are not
+stored. The console's FileName object follows the last SD save: 'SHOW04.ASC' in E2 and E3, 'SHOW05.ASC' in E3b
+(F103).
 
 ### Sequence step numbers: two number sets
 
@@ -301,7 +322,8 @@ in an E2-style capture the wire side can be compared too.
   spaces must be reproduced exactly.
 - The file appears to be the **complete** show (console SD backups use the same format), so it
   is probably lossless for the 1248's show data. It probably excludes transient state (current
-  fader positions, live levels, snapshots? UNKNOWN).
+  fader positions, live levels, snapshots? UNKNOWN). *(Update 2026-10-30: two saves of the same show are
+  byte-identical although the console's history between them differed (F104); see the limit in "Cross-check".)*
 - Plan: the parser keeps every line's raw text and position. A later writer can be tested
   with "parse → write → byte-compare" on every sample.
 

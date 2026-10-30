@@ -21,6 +21,9 @@ Modes:
   startdiff first body of every (id, a, b, c) compared with another capture (--other)
   census    for every (id, a, b, c): body positions that ever changed, value ranges, frames
   lcd       DisplayContent (ID 21) as two 20-character lines, changes only (0x80-0x87 -> <0>..<7>)
+  sessions  split at pauses > --session-gap s (default 2): per SmartSoft session the span, the
+            first replies and lists, the position of each data write, the inbound pseq
+            continuity across sessions, and whether the large list repeats byte for byte
 
 Frame numbers printed as fNNN are pcap frame numbers of the data-carrying frame
 (OUT: submission frame, IN: completion frame); seqNNN are JSONL record numbers;
@@ -538,6 +541,70 @@ def cmd_lcd(frames, out):
         prev = lines
 
 
+def split_sessions(events, gap_s):
+    """Split the classified bulk events into SmartSoft sessions at pauses longer than gap_s
+    between one transfer's completion and the next transfer's submission."""
+    sessions, cur, last_t = [], [], None
+    for role, f in events:
+        if last_t is not None and f["tSubmit"] - last_t > gap_s:
+            sessions.append(cur)
+            cur = []
+        cur.append((role, f))
+        last_t = f["t"]
+    if cur:
+        sessions.append(cur)
+    return sessions
+
+
+def cmd_sessions(frames, gap_s, out):
+    """Per session: span, counts, the first replies, every DirtyObjects list's size in order of
+    the first lists, the position of each data write (reply-header ordinal within the session,
+    idle replies just before), the first / last inbound pseq and the continuity across sessions,
+    and whether the large list repeats byte for byte."""
+    events, _ = classify(frames)
+    sessions = split_sessions(events, gap_s)
+    prev_last_pseq, big_lists = None, []
+    for n, sess in enumerate(sessions, 1):
+        bulk = [f for _, f in sess]
+        roles = collections.Counter(r for r, _ in sess)
+        out.write(f"session {n}: f{bulk[0]['dframe']} (tSubmit={bulk[0]['tSubmit']:.6f}) .. f{bulk[-1]['dframe']} (t={bulk[-1]['t']:.6f}); "
+                  f"polls {roles['poll']}, fetches {roles['fetch']}, data writes {roles['out-data']}, payloads {roles['in-payload']}\n")
+        replies = idle_run = 0
+        first_replies = []
+        for role, f in sess:
+            if role == "reply":
+                replies += 1
+                hw = words(f["bytes"])
+                idle_run = idle_run + 1 if (hw[0] == 4 and hw[1] == 0) else 0
+                if len(first_replies) < 3:
+                    first_replies.append(f"f{f['dframe']} {hexs(f['bytes'][:4])}")
+            elif role == "out-data":
+                out.write(f"   write f{f['dframe']} t={f['t']:.6f} [{hexs(f['bytes'])}] after reply header #{replies} of the session, after {idle_run} consecutive idle replies\n")
+        out.write(f"   first reply headers: {'; '.join(first_replies)}\n")
+        pls = [(hf, pf) for kind, hf, pf in pairs(sess) if kind == "reply" and pf is not None]
+        if pls:
+            p0, pz = decode_payload("in", pls[0][1]["bytes"]), decode_payload("in", pls[-1][1]["bytes"])
+            cont = "" if prev_last_pseq is None else f"; previous session's last pseq {prev_last_pseq} -> {'continues (+1)' if (prev_last_pseq + 1) % 256 == p0['seq'] else 'does NOT continue'}"
+            out.write(f"   inbound pseq first {p0['seq']} (f{pls[0][1]['dframe']}), last {pz['seq']} (f{pls[-1][1]['dframe']}){cont}\n")
+            prev_last_pseq = pz["seq"]
+        k = 0
+        for hf, pf in pls:
+            p = decode_payload("in", pf["bytes"])
+            if p["id"] != 40:
+                continue
+            cnt, recs = dirty_records(p["body"])
+            if k < 4 or cnt > 100:
+                out.write(f"   list f{pf['dframe']} t={pf['t']:.6f} pseq={p['seq']} count={cnt}"
+                          + (f" records={[(name(r[0]), r[0], r[1], r[2], r[3]) for r in recs]}" if cnt <= 12 else "") + "\n")
+            if cnt > 100:
+                big_lists.append((n, pf, bytes(p["body"])))
+            k += 1
+    if big_lists:
+        ref = big_lists[0][2]
+        for n, pf, body in big_lists:
+            out.write(f"large list of session {n}: f{pf['dframe']}, {len(body)} body bytes, identical to session {big_lists[0][0]}'s: {body == ref}\n")
+
+
 def first_bodies(frames):
     """First IN body of every (id, a, b, c) in a capture, with its payload frame."""
     events, _ = classify(frames)
@@ -575,7 +642,9 @@ def main(argv=None) -> int:
     ap = argparse.ArgumentParser(description=__doc__.splitlines()[0])
     ap.add_argument("jsonl")
     ap.add_argument("mode", nargs="?", default="summary",
-                    choices=["summary", "log", "payloads", "diff", "timeline", "startdiff", "census", "lcd"])
+                    choices=["summary", "log", "payloads", "diff", "timeline", "startdiff", "census", "lcd", "sessions"])
+    ap.add_argument("--session-gap", type=float, default=2.0,
+                    help="sessions: a pause longer than this many seconds between bulk transfers starts a new session")
     ap.add_argument("--id", type=int, action="append",
                     help="object ID for payloads / diff (one), or a filter for timeline (repeatable)")
     ap.add_argument("--other", help="second JSONL for startdiff")
@@ -596,6 +665,8 @@ def main(argv=None) -> int:
                      args.max_changes, out)
     elif args.mode == "census":
         cmd_census(frames, out)
+    elif args.mode == "sessions":
+        cmd_sessions(frames, args.session_gap, out)
     elif args.mode == "lcd":
         cmd_lcd(frames, out)
     elif args.mode == "startdiff":

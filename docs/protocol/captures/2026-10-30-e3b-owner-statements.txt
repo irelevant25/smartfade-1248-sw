@@ -1,0 +1,19 @@
+Experiment E3b: statements made by the owner in the Claude Code chat on 2026-10-30 after the capture (transcribed by Claude; the chat is the primary source). Questions asked by Claude, answers verbatim.
+
+Q1. Around 09:11:08 (23 s before you answered "n" to GO) the console ran a 5-second crossfade. Did you press GO, STACK or another playback button then?
+A1. "I press play button, because I was not sure what it wants from me so I tested it before my answer."
+
+Q2. The console's default fade times read 5.1 s today, 5.0 s yesterday. Did you turn a wheel or change a setting?
+A2. "Yes I accidentaly move the the wheel. It is pretty sensitive."
+
+Q3. What is connected to the console's DMX IN, and does it send anything?
+A3. "Yes, one light is connected DOTZ BAR 1.4. It has 4 lights inside and I setup its address to 5 and channels 12 so every lights can be setup separately and simulate 4 different lights."
+
+Q4. (.NET 10 SDK) "The command did not worked for me either so I downloaded it from microsoft manuall. I downloaded 10.0.403 SDK x64 version exe and install it which required closing all other .NET instances."
+
+Earlier in the same session (the E3b action log, 08:56): "owner answer: DMX IN connected = y"; and on 2026-10-28: "4 lights ... on addresses 5, 8, 11 and 14. All RGB with 3 channels."
+
+Claude's reading (INFERRED, kept out of the verbatim answers above):
+- A1 resolves the unlogged crossfade at 975.70-980.86 s: the owner pressed the GO ("play") button once at about 09:11:08 while the STACK button was unlit, before deciding to log "GO step = n". It is an owner action, not a console artefact.
+- A2 supports H45: the wheel changed the default fade times from 5.0 s to 5.1 s, which SystemSettings body[12..15] and the LCD "U 5.1 / D 5.1" reflect; the owner's wheel is the LCD-menu wheel.
+- A3 describes the rig, not necessarily the DMX IN socket: an ADJ DOTZ BAR 1.4 LED bar in its 12-channel mode at start address 5 (four cells of three channels, DMX 5-16), which is what was earlier called "4 RGB lights at 5, 8, 11, 14". Whether anything is plugged into the console's DMX IN socket is still UNKNOWN; the owner is asked to confirm. The all-zero InputLevels object of E3 (F81) is consistent with nothing on DMX IN.
