@@ -34,6 +34,17 @@ BLACKOUT, the IND keys, STACK, the record functions and CLEAR) all arrived as st
 and a running sequence appeared as a stream of PlaybackInfo (F118). VERIFIED never clears a message for sending;
 the causality statements remain INFERRED.
 
+**Update 2026-10-30 (E8b,** [record](captures/2026-10-30-e8b-second-read-only-session.md)**).** The second live session of
+our own software (1 121 s, polls and listed fetches only, after a power cycle, **with USBPcap from before the Zadig bind**
+and a timed action log) ran the polling and fetching phases again without the System writes (H66 CONFIRMED in two
+sessions) and added the bus view: the backend's log equals the bus byte for byte (F122); the EP0 traffic is one burst at
+the driver change and nothing at the backend start, at Connect or at Disconnect (H68 CONFIRMED, F123); the pending list
+after a power cycle was the 2-record list of E3b session 1 (F124). New readings of the mirrored state: BLACKOUT zeroes the
+level objects (F125); in memory mode the FaderInfo records are pre-MASTER while the level objects are post-MASTER (F126); a
+fader held across a page change keeps its page (F127); the CLEAR series (F128); a sequence started by its fader keeps
+running at fader zero (F129); GO with STACK lit and the manual crossfaders in PlaybackInfo record 5, with SequenceMain
+listed at each GO (F130). VERIFIED never clears a message for sending; the causality statements remain INFERRED.
+
 ## Session phases seen (SmartSoft, firmware 3.0.2.9.0.43)
 
 | Phase | What happened | When (E2) | Fact |
@@ -87,6 +98,18 @@ backend's transfer log, JSONL `seq`, `hsp_summary.py log` and the E8 scripts und
 | 5. Download | none | 157 fetches in the SmartSoft sessions |
 | 6. Steady state | 4.953–743.871 s: 2 469 lists of 1–6 records (2 305 with one record, 2 261 of them PlaybackInfo alone), then 117 s idle; every front-panel action the owner reports shows in them | as in the SmartSoft sessions, except that PlaybackInfo dominates here because a sequence was running (F118) |
 | 7. End | 861.296 s: an idle poll / reply, then "session stopped by the application at an idle point" | silent end, as SmartSoft's (F64) |
+
+The same phases in E8b (2026-10-30 evening; our own host, polls and listed fetches only, **no System writes**, after a power
+cycle; the backend's log, JSONL `seq`, and the committed console-only pcap split, `fN`):
+
+| Phase | When (E8b) | Difference from E8 and the SmartSoft sessions |
+|---|---|---|
+| 0. Open | EP0 burst at the Zadig bind, 20:36:45 (f7–f18: string reads, a stalled HID SET_IDLE, GET_STATUS, the HID interrupt reads cancelled and resubmitted), 78 s before the first poll; **nothing at the backend start (20:36:56) or at Connect (20:38:03)** | SmartSoft's string reads came right before its first poll; E8 had no bus view (H68 CONFIRMED, F123) |
+| 1. First poll | 0.098 s all-zero first poll (seq 1, f19); the first reply is idle (seq 2, f22); the second (seq 4, f26) announces the 17-byte list [LedStatus, DisplayContent] (seq 5, f28), fetched (seq 6 … 13) | the same list as E3b session 1 after a power cycle; E8 held 89 records after a history unknown to us (F111, F124) |
+| 2. Idle | idle replies; no list from 34.7 to 141.2 s (106.5 s) | no handshake count to wait for |
+| 3. Handshake A, 4. Handshake B, 5. Download | **not sent**, no ConsoleVersion, no 157-record list, no show object (SequenceMain, listed by the console at each GO, excepted) | SmartSoft writes `09 00 00` after reply header #40 and `07 00 00` after #79 (F58) |
+| 6. Steady state | 1 513 lists of 1–6 records after the power-on list, each object first listed with the first action that changes it (ConsoleStatus 21.9 s, FaderInfo and the levels 165.5 s, PlaybackInfo 232.6 s, Independents 304.0 s, SequenceMain 1088.4 s) | as E8, with a timed log |
+| 7. End | 1121.328 s: an idle poll / reply (f125929 / f125932), then "session stopped by the application at an idle point"; no frame of the console after it | silent end (F64); a sequence was still stepping on the console (F129) |
 
 ## Model implied by the observations
 
@@ -155,6 +178,35 @@ backend's transfer log, JSONL `seq`, `hsp_summary.py log` and the E8 scripts und
   LedStatus payload. A mirror cannot detect blinking by comparing successive payloads.
 - **A running sequence makes PlaybackInfo the busiest object** (E8, F118): 2 340 of the 2 925 fetched objects, the
   rate being our fetch cadence (about 93 ms), not the console's.
+- **The host's log is not the bus, and WinUSB splits long reads** (E8b, F122): the 61 112 transfers of the backend's log equal
+  the bus byte for byte, but an IN read longer than 64 bytes and not a multiple of 64 is two URBs on the bus (1 845 reads;
+  INFERRED host-side behaviour). A replay or pipe test must accept the split; the decoders see the concatenated record.
+- **A bind is not a session, and the first poll needs no preceding EP0 traffic** (E8b, F123, H68 CONFIRMED): the driver change
+  produced one EP0 burst (string reads, a stalled HID SET_IDLE, GET_STATUS) and no re-enumeration; nothing followed at the
+  backend start, at Connect or at Disconnect, and the first poll, 78 s after the last string read, was answered normally.
+- **After a power cycle the pending list can be the minimal two records** (E8b, F124): LedStatus and DisplayContent, byte-identical
+  to E3b session 1's; every other object arrives only with the first action that changes it, so a client that connects right
+  after a power-on knows nothing of faders, masters, status, playback or independents until they change (H58, H65). The console
+  powered on in memory mode (INFERRED) and LED blocks 25–48 had a different constant colour (H78).
+- **BLACKOUT acts on the level objects** (E8b, F125): with a channel at full, FaderInfo record byte 0, ChannelLevels, OutputLevels,
+  the LED G byte and the LCD cell of the channel go to zero within 0.3 s and come back with BLACKOUT off, the MASTER staying at
+  full; an "actual" level in a mirror is the post-MASTER, post-BLACKOUT output, not the fader position.
+- **In memory mode the FaderInfo record is the fader's level before the MASTER; the level objects are after it** (E8b, F126):
+  a mirror must not read an output level from a FaderInfo record in memory mode (record `94 94` at MASTER 0x76 against levels 0x45);
+  in channel mode record byte 0 is post-MASTER and post-BLACKOUT. A held bump shows at the BUMPS level in both.
+- **A memory fader keeps its page across a page change** (E8b, F127): the content of a fader above zero is the old page's until
+  the fader reaches zero, FaderInfo byte 3 being per fader and ConsoleStatus body[2] the selected page; the bump LED blinks
+  (H69 CONFIRMED, H79).
+- **Key presses that change nothing visible still produce listings** (E8b, F128, F119): every CLEAR series re-listed DisplayContent
+  unchanged; two presses clear the channel intensities, three the memory faders (the faders stay up and their bump LEDs blink
+  until they are brought to zero).
+- **A sequence is started by its fader and keeps running at fader zero** (E8b, F129): record 21, the output and block 21 fall back
+  but PlaybackInfo record 1 keeps stepping (listed about every 93 ms by our cadence) until something unknown stops it; a mirror
+  must not infer "stopped" from the fader or from the absence of output.
+- **GO with STACK lit and the manual crossfaders live in PlaybackInfo record 5; SequenceMain is listed at each GO** (E8b, F130): a
+  timed fade moves Live and Next in opposite directions (sum 255), the manual crossfaders move the two bytes independently
+  (sums 0 … 510), the step counter (bytes 0–1, H76) advances when a fade completes, and the LED block 50 is steady in a timed fade
+  and blinking at intermediate manual positions (H64). PAUSE has not been seen (the owner's description is a statement only).
 
 ## Show content seen in the download (decoded, `SHOW04.ASC`)
 
@@ -170,7 +222,7 @@ download carries, in terms of the show model:
 | 2 Independents | Independents (12) | 2/2 | field meaning; live levels (ChannelLevels body[49], [50] were 0) *(E8 2026-10-30: record byte 0 = the on state and ChannelLevels body[49], [50] = the levels moved with the IND keys, F115; the other fields are still open)* |
 | MIDI and other settings | SystemSettings (41) | run of six `SET` values at body[6..11] | per-key mapping, default times (H45) *(E3b: body[12..15] = the default Up / Down times shown on the LCD, F102; not in the file as far as F104 shows)* |
 | Labels (pages, channels, memories, sequences, independents) | text block in each object | all compared objects | byte order HYPOTHESIS, two readings fit the same bytes (H40, F73) |
-| Live state (fader positions, levels) | FaderInfo, ChannelLevels, OutputLevels | **not in the file**; at session start only channel 5 at 0xAB (INFERRED a channel fader, F78) | scale of live objects (E3(a)) *(E3 2026-10-29: 0x00–0xFF, full = 0xFF with the MASTER at 0xFF, F83; all levels 0 at the start of E3; scaling by the MASTER of live levels H47 / H57 untested)* *(E3b 2026-10-30: the live levels are MASTER-scaled, F96; BUMPS is FaderInfo body[193], F95; a held bump appears in them, F97; FaderInfo is per physical fader, F99)* *(E8 2026-10-30: the memory faders are FaderInfo records 1–24 and drive the levels with the memory's stored content, F112; the memory page is ConsoleStatus body[2], F113)* |
+| Live state (fader positions, levels) | FaderInfo, ChannelLevels, OutputLevels | **not in the file**; at session start only channel 5 at 0xAB (INFERRED a channel fader, F78) | scale of live objects (E3(a)) *(E3 2026-10-29: 0x00–0xFF, full = 0xFF with the MASTER at 0xFF, F83; all levels 0 at the start of E3; scaling by the MASTER of live levels H47 / H57 untested)* *(E3b 2026-10-30: the live levels are MASTER-scaled, F96; BUMPS is FaderInfo body[193], F95; a held bump appears in them, F97; FaderInfo is per physical fader, F99)* *(E8 2026-10-30: the memory faders are FaderInfo records 1–24 and drive the levels with the memory's stored content, F112; the memory page is ConsoleStatus body[2], F113)* *(E8b 2026-10-30: BLACKOUT zeroes the level objects, F125; in memory mode the FaderInfo records are pre-MASTER while ChannelLevels and OutputLevels are post-MASTER, F126; the stack's crossfade state is PlaybackInfo record 5, F130)* |
 
 Consequence for "desired vs actual": the file is a faithful snapshot of the stored show, the live
 objects are separate state. A diff between a saved `.asc` and a download would be possible for the
@@ -179,7 +231,7 @@ parts above; nothing here is VERIFIED.
 ## Open
 
 Behaviour when a poll is not answered, reconnect after an unclean stop, a second host (*E8, 2026-10-30: a
-second host program ran on the same PC for 861 s, F110; a second PC is untested*), a console
+second host program ran on the same PC for 861 s, F110; a second PC is untested; E8b, 2026-10-30 evening: a second session of the same host, 1 121 s, with the bus seen in parallel, F122*), a console
 in another mode, console power-up while connected, whether the 157-object list is always full or
 depends on a show-changed flag; whether the initial pending list (F56) depends on what happened
 before the session. *(E3 2026-10-29: it differed after a console power cycle, F80, so it depends on something about the

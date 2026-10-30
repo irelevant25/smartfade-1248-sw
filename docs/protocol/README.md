@@ -44,13 +44,13 @@ Rules:
 | [evidence-matrix.md](evidence-matrix.md) | Feature × source cross-reference (central document) |
 | [capability-matrix.md](capability-matrix.md) | What the console / SmartSoft / our app supports |
 | [reverse-engineering.md](reverse-engineering.md) | Experiment plan, tooling, safety rules, hardware evidence requested, capture format |
-| [packet-format.md](packet-format.md) | HSP framing as observed in E2 (OBSERVED, nothing VERIFIED); since E3 (2026-10-29) the framing facts are VERIFIED as observed behaviour; E3b (2026-10-30) reproduced them a third time; E8 (2026-10-30, our own read-only session) reproduced them with another host program, the first evidence channel other than SmartSoft |
-| [commands.md](commands.md) | PC → console messages SmartSoft sent in E2, E3 and E3b (a record, not a list of messages we may send; VERIFIED there means SmartSoft's behaviour only); E8 was our own read-only session (SC-1) and adds none |
-| [responses.md](responses.md) | Reply types and object payloads seen in E2, E3, E3b and E8 (the live objects are decoded from E3, E3b and E8) |
-| [state-model.md](state-model.md) | Session phases and mirrored-state model as seen in E2, E3, E3b and E8 |
-| [safety-checks.md](safety-checks.md) | Hardware safety checks: what is cleared for sending and under which conditions (SC-1, 2026-10-30: the poll and the fetch of a listed record, read-only session; nothing else is cleared) |
+| [packet-format.md](packet-format.md) | HSP framing as observed in E2 (OBSERVED, nothing VERIFIED); since E3 (2026-10-29) the framing facts are VERIFIED as observed behaviour; E3b (2026-10-30) reproduced them a third time; E8 (2026-10-30, our own read-only session) reproduced them with another host program, the first evidence channel other than SmartSoft; E8b (2026-10-30 evening, our second read-only session, with the bus seen in parallel) reproduced them again and showed that WinUSB splits long IN reads into two URBs (host-side) |
+| [commands.md](commands.md) | PC → console messages SmartSoft sent in E2, E3 and E3b (a record, not a list of messages we may send; VERIFIED there means SmartSoft's behaviour only); E8 and E8b were our own read-only sessions (SC-1) and add none |
+| [responses.md](responses.md) | Reply types and object payloads seen in E2, E3, E3b, E8 and E8b (the live objects are decoded from E3, E3b, E8 and E8b) |
+| [state-model.md](state-model.md) | Session phases and mirrored-state model as seen in E2, E3, E3b, E8 and E8b |
+| [safety-checks.md](safety-checks.md) | Hardware safety checks: what is cleared for sending and under which conditions (SC-1, 2026-10-30: the poll and the fetch of a listed record, read-only session; nothing else is cleared; E8 and E8b ran under it and cleared nothing further) |
 | [consolelink-analysis.md](consolelink-analysis.md) | ConsoleLink (third-party, SmartFade **ML**, evidence class 5) compared with our 1248 evidence; proposed annotations and the hypotheses N1–N6 (now H46–H51). Never changes a 1248 status by itself |
-| [captures/](captures/) | Capture files, experiment records (E1, E2, E3, E3b, E8), the owner's statements and the capture format |
+| [captures/](captures/) | Capture files, experiment records (E1, E2, E3, E3b, E8, E8b), the owner's statements and the capture format |
 
 The four deferred documents (`packet-format.md`, `commands.md`, `responses.md`,
 `state-model.md`) were created 2026-10-28, when the first USB capture (E2) existed. They carry
@@ -73,7 +73,15 @@ never sent SmartSoft's System writes (H66 and H67 CONFIRMED for what was used, H
 (four more than above: F95 and, each in part, F99, F100 and F101; F57's no-de-duplication detail now too), the structural parts only,
 never a live value; F110–F121 were added. The sentence above stands unchanged: VERIFIED is necessary, not sufficient, **E8 clears no
 message**, and SC-1's two messages remain the only ones cleared. SmartSoft's static write paths (smartsoft-analysis.md S11.15) add
-INFERRED context for E9 and the destructive paths our code must never use (F121).
+INFERRED context for E9 and the destructive paths our code must never use (F121). **Update 2026-10-30, evening, E8b (our second read-only
+session, [record](captures/2026-10-30-e8b-second-read-only-session.md)):** 1 121 s over WinUSB on interface 1 after a power cycle, polls and
+listed fetches only, with USBPcap from before the Zadig bind, a named backup and a timed action log. **49 facts are VERIFIED** (ten more than
+above: F110, F112, F113, F114 (the block 53 pattern), F115, F116, F119, F120 and, each in part, F117 and F118), the structural parts only,
+never a live value; F122–F130 were added; **H68 CONFIRMED** (EP0 traffic only at the Zadig bind: nothing at the backend start, at Connect or at
+Disconnect), H66 CONFIRMED in two sessions, H69 and H73 CONFIRMED, H72 CONFIRMED in capture for seven key LEDs (the IND keys and BLACKOUT are
+now OBSERVED with named, timed keys); H76–H80 were added. The sentence above stands unchanged: VERIFIED is necessary, not sufficient, **E8b
+clears no message**, and SC-1's two messages remain the only ones cleared. The owner's descriptions (PLAY, PAUSE, the crossfaders) are
+statements and never promote; PAUSE has not been seen in any capture.
 
 ## Version landscape
 

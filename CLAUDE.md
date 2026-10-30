@@ -168,6 +168,14 @@ console's own REC MEM / EDIT MEM / COPY as key presses (E9 captures both); E10 i
 (patch, stack / sequences) with show save / load as `.asc` files on the PC (E6 round trip; the USB show
 upload stays closed, F121, the SD card loads). The owner questions and E8b (a second read-only session) are listed under "Next capture (proposed by the E8
 analysis, 2026-10-30)" in `reverse-engineering.md`.
+**E8b done 2026-10-30, evening** (`docs/protocol/captures/2026-10-30-e8b-second-read-only-session.md`, the second read-only session of
+our software: 1 121 s, polls and listed fetches only, with USBPcap from before the Zadig bind, a named backup and a timed action log):
+the bus equals the backend's log byte for byte, and **H68 is answered** (EP0 traffic only at the Zadig bind; nothing at the backend start,
+at Connect or at Disconnect). **49 facts are VERIFIED** (F110, F112-F116, F119, F120 added, F117 and F118 in part; never clearance to send).
+The keys are tied to their LEDs with timed presses (IND 1 = Independents record 1 = LED block 72 = channel 49, IND 2 = record 2 = block 73 =
+channel 50 -> DMX 47, BLACKOUT = block 53; H72 CONFIRMED in capture for seven blocks) and BLACKOUT zeroes the level objects; F122-F130 and
+H76-H80 were added. The owner's descriptions of PLAY, PAUSE and the crossfaders are statements: no PAUSE press exists in any capture.
+**E8b cleared nothing beyond SC-1.** Next: "Next capture (proposed by the E8b analysis, 2026-10-30)" in `reverse-engineering.md`.
 
 ## Commands
 

@@ -39,12 +39,26 @@ first poll), every poll answered by one 12-byte header (type-3 echo 2 925 of 2 9
 evidence channel other than SmartSoft, with no status change. Our code sent no data header, so the outbound payload layout was
 not re-tested, and without USBPcap the bus view (packets, USBD status, EP0) is missing (H68, H75).
 
+**Update 2026-10-30, E8b (**[record](captures/2026-10-30-e8b-second-read-only-session.md)**).** A second session of the same host
+program (1 121 s, after a power cycle) reproduced the framing from the host side and, for the first time for our host, **on the bus**
+(USBPcap from before the Zadig bind): 27 484 polls and 2 315 fetches with w0 in {0, 2} only and the stale words of F52 (27 483 of
+27 483 after the first poll), every poll answered by one 12-byte header (type-3 echo 2 315 of 2 315), 1 514 lists of payload
+5 + 2 + 5n and 3 829 payloads with byte 1 = 0x00 and the length word = payload length − 5, 0 framing errors (F51–F55, F57).
+**The backend's transfer log equals the bus byte for byte** (61 112 of 61 112 transfers, USBD status 0 in all 62 957 bulk URBs, the
+log's times within 0.75 ms of the bus; F122), which checks the log (`TransferLog`) but not the encoder, whose outbound bytes stay
+circular as evidence for itself. **Host-side only:** under WinUSB an IN read longer than 64 bytes and not a multiple of 64 is
+**two URBs** on the bus, a whole-packet part and the remainder (1 845 reads: 86, 90, 200, 456 and 519 bytes; INFERRED as WinUSB
+behaviour, SmartSoft's ETC driver having read every payload in one URB in E2–E3b); the console sees IN tokens either way, so the
+framing below is unchanged and the "one URB per transfer" wording of the Transport table describes the ETC driver. No zero-length
+packet and no read whose length is a multiple of 64 occurred (H75 stays untested). The EP0 traffic was one burst at the driver change
+and nothing at the host's open, at Connect or at Disconnect (H68 CONFIRMED, F123).
+
 ## Transport
 
 | Item | Observed | Fact |
 |---|---|---|
 | Interface / endpoints | Interface 1 (vendor class), bulk OUT 0x04, bulk IN 0x83, 64-byte packets. Interface 0 (HID) unused | F42, F51, F63 |
-| URB granularity | One bulk URB per `WriteFile` / `ReadFile` of the driver; header and payload are separate transfers | F51 |
+| URB granularity | One bulk URB per `WriteFile` / `ReadFile` of the driver; header and payload are separate transfers. **E8b 2026-10-30 (WinUSB, our host, on the bus):** this is the ETC driver's behaviour; under WinUSB every OUT and every IN of up to 64 bytes is one URB, but an IN longer than 64 bytes and not a multiple of 64 is two URBs (a whole-packet part and the remainder; host-side, INFERRED); header and payload are still separate transfers | F51, F122 |
 | Direction rule | Strictly host-driven: every reply-header IN follows a poll OUT, and every payload IN follows its own reply header; the console never sends unsolicited | F51 |
 | Byte order | Little-endian for header words and length words (OBSERVED); big-endian for numeric u16 fields inside bodies (OBSERVED); FileName characters UTF-16LE (OBSERVED); label text blocks UTF-16BE (INFERRED from structure, H40). **Update 2026-10-29:** the first three items are **VERIFIED** (E2 + E3). The label byte order is **downgraded INFERRED → HYPOTHESIS** (not rejected): two readings fit the same 38-byte block and give the same text for every label seen: **A** 18 UTF-16BE code units after `03 06`, **B** (CL-ML, class 5) one pad byte then UTF-16LE lines of 12 / 12 / 11 bytes; decided by a "č" label and a 6-character third line (consolelink-analysis.md §2.6) | F54, F60, F73, H36, H40 |
 
@@ -122,7 +136,10 @@ median 30.79 ms within sessions (n = 24 547), next poll ≥ 10.33 ms after a fet
 after the six data writes: reproduced on the same PC (F62). **E8 (our own host's cadence, not SmartSoft's):** idle poll to
 next poll 31.08–52.40 ms (median 45.47), payload completion to fetch 28.01–46.58 ms (median 30.00), fetch to next poll
 15.12–31.88 ms (median 15.60): all SmartSoft's cadence or slower, and the console answered every interval normally (F62
-annotation, F110, H67); the SC-1 floors were never reached.
+annotation, F110, H67); the SC-1 floors were never reached. **E8b (our own host's cadence again, with the bus):** idle poll to next poll
+31.10–47.76 ms (median 45.66), payload completion to fetch 28.01–44.47 ms (median 30.03), fetch to next poll 15.11–31.68 ms
+(median 15.56); the same ranges, the console answered every interval normally and the floors were again never reached; the backend's
+times and the bus agree within 0.75 ms (F62 annotation, F122, H67).
 
 ## Not known
 
@@ -136,7 +153,9 @@ technique, consolelink-analysis.md S4). *(Update 2026-10-30:)* the counter quest
 not reset by a new SmartSoft session (F93). The connect-time list had 2 records in E3b session 1 and none in
 sessions 2 and 3 (F94, H65); the rule behind it is still UNKNOWN. *(Update 2026-10-30, E8:)* a fourth history gave an
 89-record connect list with repeats (F111); whether a zero-length packet follows a payload whose length is a multiple of
-64 bytes, as a pending list of 37 or 101 records would be (H75); the EP0 traffic at the host's open (H68).
+64 bytes, as a pending list of 37 or 101 records would be (H75); the EP0 traffic at the host's open (H68). *(Update 2026-10-30, E8b: the
+EP0 question is answered, none at the host's open, F123, H68 CONFIRMED; the 64-byte question is still open, no such length occurred; USBPcap shows URBs, not packets, so
+packet-level behaviour below the URB level stays unknown.)*
 
 ## CL-ML cross-check (class 5, not 1248 evidence)
 

@@ -9,9 +9,10 @@ and E2 (first USB capture of a SmartSoft session: poll / dirty-list / fetch fram
 2026-10-28, E3 (console actions while SmartSoft is Online, after a console power cycle) on
 2026-10-29 and E3b (three more SmartSoft sessions after another power cycle: BUMPS, bumps, SOLO, the MASTER
 scaling, the 25-48 bank, a GO crossfade) on 2026-10-30, and E8 (the first read-only session of our own software,
-861 s over WinUSB) the same day. 39 facts are VERIFIED as observed console / SmartSoft
-behaviour (USB framing, start-up, show objects, front-panel mirroring, product string, firmware version; twelve
-of them only in part; before E3 only the last two were). VERIFIED never
+861 s over WinUSB) and E8b (the second, 1 121 s, with USBPcap and a timed action log) the same day. 49 facts are VERIFIED as
+observed console / SmartSoft behaviour (USB framing, start-up, show objects, front-panel mirroring, memory faders and pages,
+BLACKOUT, the independents, the record-function screens, product string, firmware version; fourteen of them only in part; before E3
+only the last two were). VERIFIED never
 clears a message for sending: no protocol message is cleared, so no code may talk to a console yet
 *(superseded in part on 2026-10-30 by safety check SC-1, which clears the poll and the listed fetch for
 a read-only session; see below)*.
@@ -20,7 +21,9 @@ console, with protocol decoders tested against the committed captures. **Safety 
 (2026-10-30)** cleared the poll and the listed fetch for a read-only session: a WinUSB device
 exists behind `--Device:Mode=Usb`, replay-tested against every capture; its first live session
 (E8, 2026-10-30) read the console for 861 s with polls and listed fetches only (the console kept reporting its live
-state; H66 and H67 CONFIRMED for what was used) and cleared nothing further.
+state; H66 and H67 CONFIRMED for what was used) and cleared nothing further; its second (E8b, the same evening, 1 121 s) showed on the
+bus that nothing else was sent and that no control transfer reached the console at the backend start or at Connect (H68 CONFIRMED),
+tied the independents' and BLACKOUT's keys to their LEDs with timed presses, and also cleared nothing further.
 
 ## Run it
 
@@ -32,7 +35,7 @@ cd src/frontend && npm install && npm start                 # UI, http://localho
 
 The simulator is the default device. The read-only hardware mode
 (`dotnet run --project src/backend/SmartFade.Api -- --Device:Mode=Usb --Device:Usb:ConfirmDate=<today>`)
-is for read-only hardware sessions only (E8 done 2026-10-30, E8b next), after the preparation in
+is for read-only hardware sessions only (E8 and E8b done 2026-10-30), after the preparation in
 `docs/protocol/reverse-engineering.md`; it is
 confirmed per day and never stays switched on. See `docs/api.md` for the UI contract and
 `docs/architecture.md` ("Phase 1 as built") for the layout.

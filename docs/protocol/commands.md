@@ -42,6 +42,15 @@ session: our own software sent 20 763 polls and 2 925 fetches of listed records 
 record SmartSoft's messages, are not extended with E8's counts. The console answered all of them (F110). **E8 clears no
 other message;** the two System writes stay uncleared.
 
+**Update 2026-10-30 (E8b).** E8b ([record](captures/2026-10-30-e8b-second-read-only-session.md)) was a second session of our own software, again not
+a SmartSoft session: it sent 27 484 polls and 2 315 fetches of listed records (SC-1's two messages) and nothing else, and this time the
+bus confirms it: 29 799 OUT transfers on 0x04, all 12-byte headers, equal to the backend's log byte for byte, no System write, no data
+header, no payload and no control transfer of ours, nothing on interface 0 (F122; the EP0 burst at the Zadig bind preceded the backend by
+11 s and was not ours, F123). The rows below, which record SmartSoft's messages, are not extended with E8b's counts. The console answered
+every poll and fetch (F110) and no ConsoleEvent occurred in either direction although the owner used memory faders, a page change,
+BLACKOUT, the IND keys, STACK, the record keys, GO, the crossfaders and CLEAR (F112–F130); the owner's description of PAUSE is a
+statement and no PAUSE press exists in any capture. **E8b clears no other message;** the two System writes stay uncleared.
+
 | Message | Bytes as seen | Count in E2 (E3) | Effect observed | Status | Facts |
 |---|---|---|---|---|---|
 | Poll | 12-byte header, w0 = 0 (first poll f11: all zero) | 3 001 (E3: 9 692) (E3b: 25 824) | Console answers with a type-3 or type-4 reply header | **VERIFIED 2026-10-29** as SmartSoft's behaviour (E2 + E3; was OBSERVED) | F52, F53 |

@@ -33,7 +33,7 @@
 | *(E6 probes added 2026-10-28 from the SHOW04.ASC cross-check; each is a console-menu action followed by an SD save and, where noted, an E2-type SmartSoft capture; nothing is sent by us)* | (1) **Page / fader meaning (H13, H25):** record a memory on page 2 fader 5, expect fetch qualifiers (1, 4) and `$$MEMORY 1 4`, `GROUP 29` (24 × 1 + 4 + 1). (2) **Sequence step numbering (H43):** step through a sequence on the console and note the number shown; compare with wire 1.0-7.0 and file `$CUE`. (3) **"Wait" mapping (H14):** set a known Wait on a step, expect it in the third time of the step record (F74). (4) **A patch level other than 100 % (H34):** change a proportional level, save, and find which object carries it (not the Patch body, F70); no SD show has one. (5) **A label with a character >= U+0100, such as "č" (H40):** settles the UTF-16 byte order (BE is INFERRED, F73). Also: step types CUEPARAMS 0 / 2 (H12), Independents fields (H44), SystemSettings keys and default times (H45), memory levels at 1 / 50 / 99 % (H39). | None | SD card; SmartSoft + USBPcap for the capture parts | H10-H14, H25, H34, H36, H39-H45 |
 | E7 | DMX output observation (optional). USB-DMX input or DMX analyser on console DMX OUT | None | DMX interface | Ground truth for "actual state" of outputs |
 | **E8** | **First read-only session of our own software (active, SC-1).** The backend in `--Device:Mode=Usb` polls the console over WinUSB and fetches what the console lists, as SmartSoft does, but sends neither System write; USBPcap records the bus in parallel. Steps in the runbook below: backup, Zadig on interface 1, idle 60 s, then fader 1, a bump, the MASTER, Disconnect. | Low-to-medium: the first bytes our code ever sends; only the two cleared messages (`safety-checks.md` SC-1), the session ends on the first unobserved reply, nothing is retried | SC-1 conditions 3, 4, 8, 9, 10 met; the owner's go on the day | H66, H67, H68; a second evidence channel for F52, F53, F57 (our own host instead of SmartSoft). **Done 2026-10-30** → [captures/2026-10-30-e8-first-read-only-session.md](captures/2026-10-30-e8-first-read-only-session.md): 861 s over WinUSB on interface 1, 20 763 polls and 2 925 fetches, 0 framing errors, no fault, stopped at an idle point (the backend's own transfer log; **no USBPcap ran, no action log, no named backup**: deviations from runbook steps 1, 3 and 6; the planned actions were replaced by free exploration, the owner's account is untimed, [captures/2026-10-30-e8-owner-statements.txt](captures/2026-10-30-e8-owner-statements.txt)). Results: **H66 and H67 CONFIRMED** (OBSERVED, one session) for what was used (idle polls 31–52 ms apart, fetches 28–47 ms after their list, polls 15–32 ms after a fetch; the SC-1 floors were never reached), **H68 stays UNTESTED** (no USBPcap), **H62 REJECTED** (successor H71), H63 (record 1) and H26 (Independents part) CONFIRMED in capture; F95 VERIFIED and F99, F100, F101 VERIFIED in part (VERIFIED count 39, never clearance for sending), F57's no-de-duplication detail VERIFIED; facts F110–F120 (the first evidence channel other than SmartSoft for F51–F55 and F57; the 89-record connect list; memory faders, the memory page, BLACKOUT, the independents, the record functions, STACK, a running sequence), hypotheses H69–H75. E8 cleared nothing. Next: "Next capture (proposed by the E8 analysis, 2026-10-30)" below |
-| **E8b** | **Second read-only session of our own software (active, SC-1), with everything E8 lacked:** a named SD backup, USBPcap started before the WinUSB bind (H68), and a timed action log from `tools/usb-probe/e8b-guided-session.ps1`, which also starts the backend and the UI. It repeats E8's readings with times (memory faders, page change, BLACKOUT, IND 1 then IND 2 named, each record key entered and left with CLEAR, STACK) and adds the tests of H69, H71 and H73, BLACKOUT with a level up, the sequence on fader 21 started and stopped, optionally GO with STACK lit, optionally the power-on list (H65). | Low-to-medium, as E8: only the two cleared messages; no bump inside a record function | SC-1 conditions 3, 4, 8, 9, 10 met; the owner's go on the day (given 2026-10-30 evening) | F110-F120 to VERIFIED where reproduced; H68; H69, H71, H73; H72 (key to block); H65 |
+| **E8b** | **Second read-only session of our own software (active, SC-1), with everything E8 lacked:** a named SD backup, USBPcap started before the WinUSB bind (H68), and a timed action log from `tools/usb-probe/e8b-guided-session.ps1`, which also starts the backend and the UI. It repeats E8's readings with times (memory faders, page change, BLACKOUT, IND 1 then IND 2 named, each record key entered and left with CLEAR, STACK) and adds the tests of H69, H71 and H73, BLACKOUT with a level up, the sequence on fader 21 started and stopped, optionally GO with STACK lit, optionally the power-on list (H65). | Low-to-medium, as E8: only the two cleared messages; no bump inside a record function | SC-1 conditions 3, 4, 8, 9, 10 met; the owner's go on the day (given 2026-10-30 evening) | F110-F120 to VERIFIED where reproduced; H68; H69, H71, H73; H72 (key to block); H65. **Done 2026-10-30 (evening)** → [captures/2026-10-30-e8b-second-read-only-session.md](captures/2026-10-30-e8b-second-read-only-session.md): 1 121 s over WinUSB on interface 1 after a power cycle, 27 484 polls and 2 315 fetches, 0 framing errors, no fault, stopped at an idle point; USBPcap ran from before the Zadig bind (the committed `.pcap` is the console-only split; the raw root-hub capture, which held other devices, was removed from the pushed history at the owner's request), a named backup (`SHOW06.ASC` = `SHOW05.ASC`) and a timed action log. Deviations from the runbook: Connect was pressed before the starting position was set, and the GO part (two GO presses, the crossfaders, STACK off, CLEAR) came after the scripted step, unlogged, timed by the console's data only. Results: **F110, F112, F113, F114 (the block 53 pattern), F115, F116, F119 and F120 VERIFIED and F117, F118 VERIFIED in part (VERIFIED count 49, never clearance for sending)**; **H68 CONFIRMED** (EP0 traffic only at the Zadig bind: nothing at the backend start, at Connect or at Disconnect), H66 CONFIRMED in two sessions, H67 same scope (floors untested), H69 and H73 CONFIRMED, H72 CONFIRMED in capture for blocks 60, 63, 64, 66, 67, 72 and 73 (the IND keys and BLACKOUT named by timed presses), H54 also at BUMPS 0x81; H71 narrowed, not separated; facts F122–F130 (the bus view and WinUSB's split reads, EP0 around a read-only session, the power-on list, BLACKOUT zeroing the level objects, memory-mode FaderInfo pre-MASTER, the page hold, the CLEAR series, a sequence that keeps running at fader zero, GO with STACK lit and the crossfaders), hypotheses H76–H80. E8b cleared nothing. Next: "Next capture (proposed by the E8b analysis, 2026-10-30)" below |
 | **E9** | **SmartSoft writing (passive).** USBPcap records a SmartSoft Online session in which the owner moves faders and presses keys in SmartSoft's Console Simulator, renames a channel label, uses the console's own REC MEM, EDIT MEM and COPY through the Simulator keys on empty memories (owner decision 2026-10-30) and (optionally) edits one memory level; our code is not involved. Runbook below, from the static write-path analysis (`smartsoft-analysis.md` S11.15). | Low: SmartSoft's own messages, as for any user; the show backed up; no show load, erase, patch, settings or page action in the script | Interface 1 back on the ETC driver, Memory Integrity off, USBPcap, the action log | H5, H6, H24 (the PC → console data message and the ConsoleEvent framing), H40 (label byte order), the 1248 fader and button indices; the first OBSERVED PC → console write |
 
 **E1 and E2 are done (2026-10-28). Next: E3(a)** (see "Next capture" below). E2 turned the
@@ -43,7 +43,7 @@ are done; the next steps are the owner questions and the passive captures listed
 capture (proposed by the E3 analysis, 2026-10-29)" below.** **Update 2026-10-30: E3b is done (items B1–B4 of
 that list); the next steps are listed under "Next capture (proposed by the E3b analysis, 2026-10-30)" below.** **Update 2026-10-30, later: E8 is done (the
 first read-only session of our own software, see its row); the next steps are listed under "Next capture (proposed by the E8
-analysis, 2026-10-30)" below, and E9 (the runbook below) is the only path to a write mode.**
+analysis, 2026-10-30)" below, and E9 (the runbook below) is the only path to a write mode.** **Update 2026-10-30, evening: E8b is done too (the second read-only session, see its row); the next steps are listed under "Next capture (proposed by the E8b analysis, 2026-10-30)" below; E9 stays the only path to a write mode.**
 *(Plan text before E2:)* **Next: E2**, the single capture that turns the static hypotheses
 (poll / dirty / fetch objects) into observed facts. Before E2 the owner must decide how to get
 `etchsp.sys` loaded (see the E2 row; resolved the same evening). The zero-risk HID listen was
@@ -95,6 +95,13 @@ anything the console does that the owner did not cause ends it (note the time); 
 the console to recover, just Disconnect.
 
 ### E8b runbook (second read-only session of our software; SC-1)
+
+*(Run on 2026-10-30 evening, see the E8b row and the [E8b record](captures/2026-10-30-e8b-second-read-only-session.md). Deviations from
+the steps below: Connect was pressed before the starting position was set, so the first mode switches (21.8–34.7 s) are inside the
+session; the GO part (two GO presses, the crossfaders, STACK off, CLEAR) happened after the scripted "go with stack lit" step and is not in
+the action log, timed by the console's data only; the raw root-hub USBPcap file was first committed unsplit (resolved: the committed `.pcap`
+is the console-only split). The other steps were followed: the named backup, the power cycle, USBPcap before the bind, the bind check, the
+timed log with 5 s between actions, Disconnect at the end.)*
 
 Run `powershell -NoProfile -ExecutionPolicy Bypass -File tools\usb-probe\e8b-guided-session.ps1 -LogFile e8b-actions.txt`
 from the repository root and follow it. In order it does: the SD backup gate (name required; the owner
@@ -362,6 +369,72 @@ E8 log on 2026-10-30, both run without an error).*
 **D. Not E8's business, recorded for completeness:** E9, the passive USBPcap capture of SmartSoft writing (the runbook above,
 CLAUDE.md), is the only path to a write mode. Nothing in E8 clears any other message: SC-1's clearance (poll and listed fetch,
 read-only) is unchanged.
+
+### Next capture (proposed by the E8b analysis, 2026-10-30)
+
+Safety rules 1–7 above are unchanged. Everything in A is an owner question or console action that sends nothing; B is a third read-only
+session of our software (E8c; SC-1's two messages only, nothing else is cleared); C is tooling; D points to E9. **E9 (the runbook above) is
+the only path to a write mode; E8b clears no message.** Source: [E8b record](captures/2026-10-30-e8b-second-read-only-session.md) "Next
+capture to take" and the owner's late statements ([captures/2026-10-30-e8b-owner-statements.txt](captures/2026-10-30-e8b-owner-statements.txt)).
+
+**A. Owner, zero risk:**
+
+1. ~~The raw capture's removal from the pushed history (Anomaly 1), the owner's decision.~~ **Done (reported by the coordinator,
+   2026-10-30):** at the owner's request ("rewrite please") the raw USBPcap root-hub capture was removed from the pushed history; the
+   committed `.pcap` is the console-only split (device address 10).
+2. STACK: ~~what did you press at about 20:45:31 (448 s)?~~ **Answered in part (E8b statements, answer 1):** "I pressed it twice back
+   then. Sorry for that." He dates it around 20:46:20, whereas the data's only unlogged STACK activity is at 20:45:31 (447.985 s), 49 s
+   earlier, and the console listed nothing at all between 489.7 s and 504.7 s (20:46:12.8–20:46:27.8; curator check over the log), so nothing was
+   reported at 20:46:20 (the time is his estimate or another action). **Still open:** does a short press switch the
+   stack on and a second press off; when does "Jump to step" appear; what does holding STACK do with the stack on (F117)?
+3. The sequence on fader 21 was probably still running on the console (fader at zero). **Answered in part:** the owner's way of stopping
+   a sequence is the fader ("I am usually run the sequence by moving the fader up or down to stop it"); the data show that this does
+   not stop the stepping (F129). **Still open:** how does one stop a running sequence (bump 21, CLEAR × 4 with the fader up, STACK, a
+   page change), and what stopped it in E8 at about 16:29:26?
+4. The crossfaders: **answered in part:** the left one is A and the right one is B (E8b statements, answer 2). **Still open:** where do A
+   and B stand at rest, and which way was each moved first (H80)?
+5. The `+` on the LCD right of channel 12 (H77): **answered: the owner does not know it** ("I am not sure what that is either"); the
+   console manual's text has no such sign (text search, 2026-10-30).
+6. The console's mode and bank before the power-off (it came up in memory mode with the 25-48 labels): **not answered.**
+7. GO and PAUSE: the owner calls the key with the play icon under crossfader A the "play button" and does not know the word GO
+   (E8b statements, answer 4); his account (two presses, step 14 to 1, then 1 to 2) stands. His description of the stack section (a
+   statement, never a fact): with STACK lit the console is in stack mode; PLAY steps to the next step, is lit while the transition
+   runs and dimmed when it is done; the crossfaders do the same by hand and PLAY blinks while a crossfader is between 0 and 100 % and
+   both are not at 100 % (this matches block 50, H64); **PAUSE** pauses in the middle of a transition (PLAY and PAUSE lit), a second
+   PAUSE goes back to the previous step and PLAY resumes. **No PAUSE press exists in any capture: PAUSE is an open item for a later
+   capture (B below), not a fact.**
+
+**B. E8c, a third read-only session of our software** (SC-1's two messages, the same setup as E8b, the pcap split to the console's address
+before the commit), only for what still needs one:
+
+- H71's separating case: memory fader 2 at full and BUMPS at a quarter, then the bump held (a bump below the fader's level); and CLEAR × 3
+  with a bump held. Also BLACKOUT in memory mode with a memory fader up: F126 predicts that the record stays and only the level objects
+  drop (a prediction, not an observation).
+- The second half of the E8 plan's power-on item, not in the E8b script: Disconnect and Connect again without a power cycle (the read-only
+  analogue of F94's sessions 2 and 3; nothing pending is expected).
+- H76 / H63: STACK on, GO from step 3 to 4 and 5, a GOTO to a known step; GO with STACK off for comparison (E3b).
+- **PAUSE (new, from the owner's description):** with STACK lit, GO, PAUSE in the middle of a transition, PAUSE again, then GO to resume,
+  each press with a logged stamp and the lit keys noted, to see what the console reports (PlaybackInfo record 5, LED block 50 and the
+  PAUSE LED, the LCD); the presses are the owner's own, nothing is sent by us.
+- The running sequence: stop it the owner's way, logged (question 3).
+- H77: a channel in bank 25-48 up, view switched to 1-24. H78: two power cycles in different modes, with H65 (b) and (c) (power on, move
+  one fader / press SOLO, connect).
+- From the E3b list, still open: SOLO with another output up, several stable MASTER positions (H60), BLACKOUT with the MASTER below full
+  and a level up (F114's masking with levels).
+- H74 (RATE / Fade) only if the owner wants it (its test uses the wheel, which the owner's scope decision above rules out for experiments);
+  H75 cannot be forced read-only; the floors (H67) need a configuration change (owner decision).
+
+**C. Tooling (zero risk):** commit the E8b ad-hoc scripts under `tools/protocol-analyzer/e8b/` (read-only; most import `hsp_summary.py` like
+the E8 ones, take `<repo> <jsonl>` and print by seq): `xcheck.py` (the backend log against the usbpcap JSONL, URB by URB, with the split
+reads and the clock offsets), `tshark_xcheck.py`, `census_usbpcap.py`, `objtable.py`, `cadence.py`, `pbinfo.py`, `pb_stats.py`,
+`pb_rate.py`, `fader_bytes.py`, `fdr_at.py`, `cst_led.py`, `cmp_first.py`, `blk2548.py` and `logtimes.py`; add the normalization command of
+the E8b record to the analyzer README. The `WinUsbHspPipe` comment that marks WinUSB's control requests at open as an ASSUMPTION (SC-1 item 5)
+is answered for this PC (F123): a code-comment update for the coordinator, not a documentation change.
+
+**D. E9** (passive USBPcap capture of SmartSoft writing) stays the only path to a write mode. For E9: put the ETC driver back on interface 1;
+split the pcap to the console's address before committing; expect PlaybackInfo to be listed continuously while the sequence runs (it was
+still stepping when E8b ended); the stack stands at cue 3.0 with STACK off. **E8b clears no message:** SC-1's clearance (poll and listed
+fetch, read-only) is unchanged.
 
 ## Hardware evidence requested
 
