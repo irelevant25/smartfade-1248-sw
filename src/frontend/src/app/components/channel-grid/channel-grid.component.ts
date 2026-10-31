@@ -12,6 +12,9 @@ interface FaderView {
   pending: boolean;
   /** 0..255, what the console says the channel is doing; lights the bump button. */
   output: number;
+  /** The device takes no level for this fader (a read-only console, or one cleared for other faders only). */
+  readOnly: boolean;
+  bumpDisabled: boolean;
 }
 
 interface Bank {
@@ -52,6 +55,8 @@ export class ChannelGridComponent {
     const channels = this._state.channels();
     const draft = this.editing();
     const readOnly = this.readOnly();
+    const bumpsDisabled = this.bumpsDisabled();
+    const writable = (control: string) => this._state.writable(control);
     const bankSize = this._state.capabilities().physicalFaders;
     const banks: Bank[] = [];
     for (let start = 0; start < channels.length; start += bankSize) {
@@ -63,14 +68,18 @@ export class ChannelGridComponent {
               actual: undefined,
               pending: false,
               output: channel.output,
+              readOnly: false,
+              bumpDisabled: bumpsDisabled || !writable(`channelBump:${channel.channel}`),
             }
           : {
               channel: channel.channel,
               // a read-only console reports levels only: the thumb follows the report
-              desired: readOnly ? channel.actual : channel.desired,
+              desired: readOnly || !writable(`channelFader:${channel.channel}`) ? channel.actual : channel.desired,
               actual: channel.actual,
               pending: channel.pending,
               output: channel.output,
+              readOnly: readOnly || !writable(`channelFader:${channel.channel}`),
+              bumpDisabled: bumpsDisabled || !writable(`channelBump:${channel.channel}`),
             },
       );
       banks.push({ first: start + 1, last: start + faders.length, faders });

@@ -101,6 +101,13 @@ export interface ConsoleStateDto {
    * the corresponding controls must be disabled.
    */
   supportedCommands?: string[];
+  /**
+   * The individual controls the device accepts commands for ("channelFader:N", "channelBump:N", "memoryFader:N",
+   * "memoryBump:N", "master", "bumps", "solo", "blackout", "independent:N", "go", ...), or null when every control of
+   * a supported command's kind is accepted (the simulator). A real console cleared for a few controls names exactly
+   * those: the UI enables nothing else.
+   */
+  writableControls?: string[] | null;
   /** Exactly 48 entries. */
   channels: ChannelStateDto[];
   masters: MastersDto;

@@ -13,7 +13,9 @@ namespace SmartFade.Application;
 /// BUMPS zero, Blackout and SOLO off, no memory recorded), not console state.
 /// <see cref="IndependentsReported"/> says whether IND 1 / IND 2 in the masters are the device's word;
 /// <see cref="MemoryPage"/> is the console's selected memory page when the device reports one, else null;
-/// <see cref="Keys"/> the key LEDs a real console reports, null until reported (the simulator never does).
+/// <see cref="Keys"/> the key LEDs a real console reports, null until reported (the simulator never does);
+/// <see cref="WritableControls"/> the controls the device accepts commands for, null when every control of a
+/// supported command's kind is accepted (<see cref="DeviceControls"/>).
 /// </summary>
 public sealed record ConsoleState(
     ConnectionState Connection,
@@ -34,4 +36,5 @@ public sealed record ConsoleState(
     IReadOnlyList<string>? Lcd,
     CrossfaderState? Crossfader,
     string? ShowFileName,
-    string? FirmwareVersion);
+    string? FirmwareVersion,
+    IReadOnlySet<string>? WritableControls = null);

@@ -16,6 +16,7 @@ public sealed class ConsoleStateStore
     private readonly object _gate = new();
     private readonly ConsoleCapabilities _capabilities;
     private readonly DeviceCommands _supportedCommands;
+    private readonly IReadOnlySet<string>? _writableControls;
     private readonly byte[] _desired;
     private readonly byte[] _actual;
     private readonly byte[] _output;
@@ -37,10 +38,11 @@ public sealed class ConsoleStateStore
     private IReadOnlyList<string>? _lcd;
     private CrossfaderState? _crossfader;
 
-    public ConsoleStateStore(ConsoleCapabilities capabilities, ConnectionState initialConnection, DeviceCommands supportedCommands)
+    public ConsoleStateStore(ConsoleCapabilities capabilities, ConnectionState initialConnection, DeviceCommands supportedCommands, IReadOnlySet<string>? writableControls = null)
     {
         _capabilities = capabilities;
         _supportedCommands = supportedCommands;
+        _writableControls = writableControls;
         _desired = new byte[capabilities.Channels];
         _actual = new byte[capabilities.Channels];
         _output = new byte[capabilities.Channels];
@@ -88,7 +90,8 @@ public sealed class ConsoleStateStore
                 _lcd,
                 _crossfader,
                 _showFileName,
-                _firmwareVersion);
+                _firmwareVersion,
+                _writableControls);
         }
     }
 

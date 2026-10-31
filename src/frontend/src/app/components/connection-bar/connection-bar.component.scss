@@ -27,6 +27,12 @@
 }
 
 // The mode badge is the most prominent element of the page on purpose.
+.bar__mode--live {
+  margin-left: 8px;
+  background: var(--sf-alert, #c0392b);
+  color: #fff;
+}
+
 .bar__mode {
   display: inline-flex;
   align-items: center;

@@ -52,6 +52,15 @@ export class MemoryGridComponent {
   protected readonly copySource = this._edit.copySource;
   protected readonly readOnly = computed(() => !this._state.supports('setMemoryLevel'));
   protected readonly bumpsDisabled = computed(() => !this._state.supports('bumpMemory'));
+
+  /** A device cleared for a few memory faders or bumps only (docs/api.md `writableControls`) enables just those. */
+  protected faderReadOnly(memory: MemoryStateDto): boolean {
+    return this.readOnly() || !this._state.writable(`memoryFader:${memory.number}`);
+  }
+
+  protected bumpDisabledFor(memory: MemoryStateDto): boolean {
+    return (this.bumpsDisabled() || !this._state.writable(`memoryBump:${memory.number}`)) && !this.armedFor(memory);
+  }
   /** Until the console delivered memories, every memory shown is a placeholder (unrecorded, no label). */
   protected readonly reported = this._state.memoriesReported;
   /** Some memories delivered, others still placeholders (a read-only console sends them one at a time). */

@@ -186,6 +186,27 @@ describe('ChannelGridComponent', () => {
     });
   });
 
+  describe('with a device cleared for a few controls (live control, SC-2)', () => {
+    beforeEach(() => {
+      state.applyConsoleStateChanged(
+        createSampleState({
+          supportedCommands: ['setChannelLevel', 'bumpChannel'],
+          writableControls: ['channelFader:1', 'channelBump:7'],
+        }),
+      );
+      fixture.detectChanges();
+    });
+
+    it('moves only channel fader 1 and enables only bump 7, as the device reports', () => {
+      expect(sliders()[0].disabled).toBe(false);
+      expect(sliders().slice(1).every((slider) => slider.disabled)).toBe(true);
+      expect(element().querySelectorAll('.fader--readonly')).toHaveLength(47);
+      const bumps = bumpButtons();
+      expect(bumps[6].disabled).toBe(false);
+      expect(bumps.filter((_, index) => index !== 6).every((button) => button.disabled)).toBe(true);
+    });
+  });
+
   describe('moving focus with the arrow keys', () => {
     it('Right moves to the next channel and Left back', () => {
       sliders()[2].focus();

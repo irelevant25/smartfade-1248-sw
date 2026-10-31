@@ -4,6 +4,11 @@
   <span class="bar__mode" [attr.data-tone]="mode().tone" [attr.title]="mode().hint">
     {{ mode().label }}
   </span>
+  @if (liveControl()) {
+    <span class="bar__mode bar__mode--live" data-tone="alert" title="Live control (safety check SC-2): the controls the console reports as writable send events to the real console; everything else stays read-only.">
+      Live control
+    </span>
+  }
 
   <div class="bar__status" [attr.data-tone]="status().tone" role="status">
     <span class="bar__lamp" aria-hidden="true"></span>

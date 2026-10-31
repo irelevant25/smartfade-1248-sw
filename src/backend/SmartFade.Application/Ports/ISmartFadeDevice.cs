@@ -26,6 +26,14 @@ public interface ISmartFadeDevice
 
     DeviceCommands SupportedCommands { get; }
 
+    /// <summary>
+    /// The individual controls the device accepts commands for (<see cref="DeviceControls"/> names), or null when
+    /// every control of a supported command's kind is accepted (the simulator). A device cleared for a few controls
+    /// only (the real console under SC-2) names exactly those; the UI enables nothing else, and the device still
+    /// refuses the rest itself.
+    /// </summary>
+    IReadOnlySet<string>? WritableControls => null;
+
     /// <summary>Raised whenever the device reports a change of its actual state.</summary>
     event EventHandler<DeviceStateChange>? StateChanged;
 

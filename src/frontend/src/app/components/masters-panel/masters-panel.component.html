@@ -15,7 +15,7 @@
         class="masters__toggle masters__solo"
         [class.masters__solo--on]="masters().solo"
         [attr.aria-pressed]="masters().solo"
-        [disabled]="!enabled() || !supports('setSolo')"
+        [disabled]="!enabled() || !supports('setSolo') || !writable('solo')"
         [attr.title]="
           observedOnly()
             ? 'SOLO as read from its LED (an inferred reading)'
@@ -29,7 +29,7 @@
         label="BUMPS"
         [desired]="masters().bumps"
         [disabled]="!enabled()"
-        [readOnly]="!supports('setBumps')"
+        [readOnly]="!supports('setBumps') || !writable('bumps')"
         (levelChange)="setBumps($event)"
       />
     </div>
@@ -42,7 +42,7 @@
         [class.masters__blackout--blink]="blackoutBlinks()"
         [class.masters__toggle--unknown]="blackoutUnknown()"
         [attr.aria-pressed]="blackoutUnknown() ? null : masters().blackout"
-        [disabled]="!enabled() || !supports('setBlackout')"
+        [disabled]="!enabled() || !supports('setBlackout') || !writable('blackout')"
         [attr.title]="
           blackoutUnknown()
             ? 'Not reported by the console yet'
@@ -60,7 +60,7 @@
         label="MASTER"
         [desired]="masters().master"
         [disabled]="!enabled()"
-        [readOnly]="!supports('setMaster')"
+        [readOnly]="!supports('setMaster') || !writable('master')"
         (levelChange)="setMaster($event)"
       />
     </div>
@@ -75,7 +75,7 @@
         [class.masters__ind--on]="masters().independent1"
         [class.masters__toggle--unknown]="independentsUnknown()"
         [attr.aria-pressed]="independentsUnknown() ? null : masters().independent1"
-        [disabled]="!enabled() || !supports('setIndependent')"
+        [disabled]="!enabled() || !supports('setIndependent') || !writable('independent:1')"
         [attr.title]="
           independentsUnknown()
             ? 'Not reported by the console yet'
@@ -93,7 +93,7 @@
         [class.masters__ind--on]="masters().independent2"
         [class.masters__toggle--unknown]="independentsUnknown()"
         [attr.aria-pressed]="independentsUnknown() ? null : masters().independent2"
-        [disabled]="!enabled() || !supports('setIndependent')"
+        [disabled]="!enabled() || !supports('setIndependent') || !writable('independent:2')"
         [attr.title]="
           independentsUnknown()
             ? 'Not reported by the console yet'

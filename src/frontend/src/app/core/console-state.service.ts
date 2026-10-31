@@ -211,6 +211,7 @@ export class ConsoleStateService {
   private readonly _firmwareVersion = signal<string | undefined>(undefined);
   private readonly _lastError = signal<ErrorDto | undefined>(undefined);
   private readonly _supportedCommands = signal<readonly string[]>([]);
+  private readonly _writableControls = signal<ReadonlySet<string> | undefined>(undefined);
   private readonly _mastersReported = signal(false);
   private readonly _channelsReported = signal(false);
   private readonly _outputsReported = signal(false);
@@ -244,6 +245,8 @@ export class ConsoleStateService {
   readonly lastError = this._lastError.asReadonly();
   /** Hub commands the connected device accepts; empty for a read-only device (hardware mode). */
   readonly supportedCommands = this._supportedCommands.asReadonly();
+  /** The controls the device accepts commands for; undefined when every control of a supported command's kind is accepted. */
+  readonly writableControls = this._writableControls.asReadonly();
   /** False until the device reported the masters: what the masters show before that is a placeholder. */
   readonly mastersReported = this._mastersReported.asReadonly();
   readonly channelsReported = this._channelsReported.asReadonly();
@@ -303,6 +306,11 @@ export class ConsoleStateService {
         ? state.supportedCommands.filter((name): name is string => typeof name === 'string')
         : [],
     );
+    this._writableControls.set(
+      Array.isArray(state.writableControls)
+        ? new Set(state.writableControls.filter((name): name is string => typeof name === 'string'))
+        : undefined,
+    );
     this._mastersReported.set(Boolean(state.mastersReported));
     this._channelsReported.set(Boolean(state.channelsReported));
     this._outputsReported.set(Boolean(state.outputsReported));
@@ -332,6 +340,15 @@ export class ConsoleStateService {
   /** Whether the connected device accepts a hub command (docs/api.md `supportedCommands`). */
   supports(command: string): boolean {
     return this._supportedCommands().includes(command);
+  }
+
+  /**
+   * Whether the device accepts commands for one control (docs/api.md `writableControls`): true when the device
+   * names no list, else only for the controls it names.
+   */
+  writable(control: string): boolean {
+    const controls = this._writableControls();
+    return controls === undefined || controls.has(control);
   }
 
   /** connectionStateChanged */

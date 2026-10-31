@@ -15,7 +15,8 @@ public static class ServiceCollectionExtensions
             return new ConsoleStateStore(
                 device.Capabilities,
                 new ConnectionState(ConnectionStatus.Disconnected, device.Mode, device.Description),
-                device.SupportedCommands);
+                device.SupportedCommands,
+                device.WritableControls);
         });
         services.AddSingleton<ConsoleService>();
         return services;

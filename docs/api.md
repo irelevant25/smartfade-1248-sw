@@ -95,6 +95,15 @@ interface ConsoleStateDto {
                                                     // "bumpMemory", "recordMemory", "storeMemory", "setIndependent",
                                                     // "clearChannels", "clearMemories"); a real console may report
                                                     // none (H6 open): the UI disables the rest
+  writableControls: string[] | null;                // the individual controls the device accepts commands for, or null
+                                                    // when every control of a supported command's kind is accepted (the
+                                                    // simulator). Names: "channelFader:N" / "channelBump:N" (N = 1..48),
+                                                    // "memoryFader:N" / "memoryBump:N" (N = memory number 1..288),
+                                                    // "master", "bumps", "solo", "blackout", "independent:1|2", "go",
+                                                    // "fadersMems", "faders1To24", "recMem", "editMem", "copy", "clear".
+                                                    // A device cleared for a few controls (the real console under SC-2)
+                                                    // names exactly those; the UI enables nothing else and the device
+                                                    // still refuses the rest itself
   channels: ChannelStateDto[];                      // exactly 48 entries
   masters: MastersDto;
   outputs: number[];                                // 512 DMX output levels 0..255 (simulator model; real: OBSERVED object)

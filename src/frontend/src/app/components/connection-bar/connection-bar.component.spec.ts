@@ -82,6 +82,20 @@ describe('ConnectionBarComponent', () => {
       expect(badge().dataset['tone']).toBe('warn');
     });
 
+    it('shows LIVE CONTROL beside the mode only for a hardware device that accepts commands', () => {
+      expect(element().querySelector('.bar__mode--live')).toBeNull(); // the simulator
+
+      const hardware = { ...createSampleState().connection, mode: 'hardware' as const };
+      state.applyConsoleStateChanged(createSampleState({ connection: hardware, supportedCommands: [] }));
+      fixture.detectChanges();
+      expect(element().querySelector('.bar__mode--live')).toBeNull(); // read-only (SC-1)
+
+      state.applyConsoleStateChanged(createSampleState({ connection: hardware, supportedCommands: ['setMaster'], writableControls: ['master'] }));
+      fixture.detectChanges();
+      expect(element().querySelector('.bar__mode--live')?.textContent?.trim()).toBe('Live control');
+      expect(text('.bar__mode')).toBe('Hardware');
+    });
+
     it('shows the status and the device', () => {
       expect(text('.bar__status-label')).toBe('Connected');
       expect(text('.bar__status-detail')).toBe('Simulated SmartFade 1248');

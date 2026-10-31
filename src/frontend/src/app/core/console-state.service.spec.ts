@@ -204,6 +204,20 @@ describe('ConsoleStateService', () => {
       expect(service.supportedCommands()).toHaveLength(13);
     });
 
+    it('enables every control unless the device names the writable ones', () => {
+      expect(service.writable('channelFader:1')).toBe(true); // nothing reported: no control is excluded by name
+
+      service.applyConsoleStateChanged(createSampleState());
+      expect(service.writable('channelFader:2')).toBe(true); // the simulator names no list
+
+      service.applyConsoleStateChanged(createSampleState({ writableControls: ['channelFader:1', 'master'] }));
+      expect(service.writable('channelFader:1')).toBe(true);
+      expect(service.writable('channelFader:2')).toBe(false);
+      expect(service.writable('master')).toBe(true);
+      expect(service.writable('bumps')).toBe(false);
+      expect(service.writableControls()?.size).toBe(2);
+    });
+
     it('treats a read-only device as supporting nothing', () => {
       service.applyConsoleStateChanged(createSampleState({ supportedCommands: [] }));
       expect(service.supports('setChannelLevel')).toBe(false);

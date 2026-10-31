@@ -24,6 +24,11 @@ export class ConnectionBarComponent {
   protected readonly view = this._views.view;
 
   protected readonly mode = computed(() => describeMode(this._state.mode()));
+  /**
+   * The real console with live control switched on (safety check SC-2): the hardware device reports commands only
+   * then, and the UI says so as loudly as the mode itself (SC-2 item 6).
+   */
+  protected readonly liveControl = computed(() => this._state.mode() === 'hardware' && this._state.supportedCommands().length > 0);
   protected readonly status = computed(() =>
     describeStatus(this._connection.status(), this._state.connection()),
   );

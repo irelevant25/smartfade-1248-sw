@@ -24,6 +24,8 @@ export class MastersPanelComponent {
   protected readonly masters = this._state.masters;
   protected readonly enabled = this._channels.enabled;
   protected readonly supports = (command: string) => this._state.supports(command);
+  /** A device cleared for some of the masters only (docs/api.md `writableControls`) enables just those. */
+  protected readonly writable = (control: string) => this._state.writable(control);
   /** Until the device reported the masters, what they show is a placeholder, not console state. */
   protected readonly mastersReported = this._state.mastersReported;
   /**

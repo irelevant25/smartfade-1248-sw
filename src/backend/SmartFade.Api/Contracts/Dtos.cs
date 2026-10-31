@@ -54,7 +54,8 @@ public sealed record ConsoleStateDto(
     IReadOnlyList<string>? Lcd,
     CrossfaderDto? Crossfader,
     string? ShowFileName,
-    string? FirmwareVersion);
+    string? FirmwareVersion,
+    IReadOnlyList<string>? WritableControls);
 
 public sealed record OutputsDto(IReadOnlyList<int> Outputs);
 

@@ -97,7 +97,8 @@ public static class DtoMapper
             state.Lcd,
             state.Crossfader is { } crossfader ? ToDto(crossfader) : null,
             state.ShowFileName,
-            state.FirmwareVersion);
+            state.FirmwareVersion,
+            state.WritableControls?.Order(StringComparer.Ordinal).ToArray());
 
     public static OutputsDto ToOutputsDto(IReadOnlyList<byte> outputs) =>
         new(outputs.Select(b => (int)b).ToArray());
