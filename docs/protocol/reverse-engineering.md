@@ -238,7 +238,7 @@ logged by the guide:
 | D5 | (optional) Insert a Direct cue at the end, label "T" | InsertStep with step type 2, then StepContent (4) with levels and a label block | H94, H98, H12 |
 | E1 | KOTLIK: insert after step 7, Memory 01/09 | InsertStep (32) with `a` = 0, then Sequence (2, 0, 0), whole, 144 bytes (8 steps) | H96, H98 |
 | E2 | Change that step's Up time | Sequence (2, 0, 0), whole, 144 bytes | H94 |
-| E3 | Run mode Loop → One Shot | Sequence (2, 0, 0): body[3] 0 → 1 | H95 |
+| E3 | Run mode Loop → One Shot (in SmartSoft the mode is the bare word "Loop" in the header of the sequence's step list, no label; a click on it opens the popup Loop / One Shot / Manual: INFERRED from the binary, smartsoft-analysis.md S11.16 row 7, and found that way by the owner during E12) | Sequence (2, 0, 0): body[3] 0 → 1 | H95 |
 | E4 | Label KOTLIK → KOTLIX | Sequence (2, 0, 0): the label block changes | H95 |
 | F1 | Mem Edit: memory 01/09, channel 5 to 100 % | Memory (0, 0, 8), 90 bytes, channel 5 = 0xFF (the layout of F143) | H99 |
 | F2 | Page tab: memory 01/09 name "T" | Memory (0, 0, 8), 90 bytes, label "T" | H99 |
