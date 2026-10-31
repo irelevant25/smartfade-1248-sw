@@ -1,7 +1,7 @@
 import { TestBed } from '@angular/core/testing';
 import { ShowFilePageComponent } from './show-file-page.component';
 import type { ShowFileDto } from '../../core/show-file.models';
-import { ShowFileService } from '../../core/show-file.service';
+import { nextCueNumber, ShowFileService } from '../../core/show-file.service';
 
 const label = (line1 = '', text = line1) => ({ text, line1, line2: '', line3: '' });
 
@@ -183,5 +183,62 @@ describe('ShowFilePageComponent', () => {
     const stack = service.edited()!.mainStack!;
     expect(stack.steps[0]).toMatchObject({ number: '1.0', followOn: '1:30', memoryPage: 11, memoryFader: 2, memoryNumber: 267, upTime: '5.0' });
     expect(service.edited()!.sequences[0].steps[0].upTime).toBe('2.5');
+  });
+
+  it("inserts and removes steps, numbers them as the console's files do, and keeps a step's channels equal to its memory's", async () => {
+    await openFile(sampleShow());
+    const fixture = TestBed.createComponent(ShowFilePageComponent);
+    fixture.detectChanges();
+    const root = fixture.nativeElement as HTMLElement;
+    const click = (label: string) => {
+      root.querySelector<HTMLButtonElement>(`button[aria-label="${label}"]`)!.click();
+      fixture.detectChanges();
+    };
+    const field = (label: string) => root.querySelector<HTMLInputElement>(`input[aria-label="${label}"]`)!;
+    const service = TestBed.inject(ShowFileService);
+
+    // a cue after 1.0 takes 1.1 (2.0 follows), copies memory 1 with its channels; after the last cue the next whole number
+    click('Insert a step after cue 1.0');
+    click('Insert a step after cue 2.0');
+    let stack = service.edited()!.mainStack!.steps;
+    expect(stack.map((s) => s.number)).toEqual(['1.0', '1.1', '2.0', '3.0']);
+    expect(stack[1]).toMatchObject({ memoryNumber: 1, cueParams: 1, upTime: '5.0', channels: [{ channel: 7, percent: 100 }, { channel: 8, percent: 100 }] });
+
+    // changing the memory replaces the channels with the new memory's (265 has channel 37) and a sequence step's number
+    field('Memory of cue 1.1').value = '265';
+    field('Memory of cue 1.1').dispatchEvent(new Event('change'));
+    fixture.detectChanges();
+    expect(service.edited()!.mainStack!.steps[1]).toMatchObject({ number: '1.1', memoryNumber: 265, channels: [{ channel: 37, percent: 100 }] });
+    click('Insert a step after sequence 0 step 265.0');
+    field('Memory of sequence 0 step 265.0').value = '1';
+    field('Memory of sequence 0 step 265.0').dispatchEvent(new Event('change'));
+    fixture.detectChanges();
+    const sequence = service.edited()!.sequences[0].steps;
+    expect(sequence.map((s) => s.number)).toEqual(['1.0', '265.0']);
+    expect(sequence[0].channels).toEqual([{ channel: 7, percent: 100 }, { channel: 8, percent: 100 }]);
+
+    // the memory cannot be removed from a step; no number fits between 1.0 and 1.1
+    field('Memory of cue 1.0').value = '';
+    field('Memory of cue 1.0').dispatchEvent(new Event('change'));
+    fixture.detectChanges();
+    expect(field('Memory of cue 1.0').value).toBe('1');
+    click('Insert a step after cue 1.0');
+    expect(root.querySelector('.show__notice')?.textContent).toContain('no free cue number');
+    expect(service.edited()!.mainStack!.steps).toHaveLength(4);
+
+    // removing keeps the other numbers
+    click('Remove cue 1.1');
+    stack = service.edited()!.mainStack!.steps;
+    expect(stack.map((s) => s.number)).toEqual(['1.0', '2.0', '3.0']);
+    expect(root.querySelector('.show__dirty')).not.toBeNull();
+  });
+
+  it('numbers a new cue from its neighbours as the files do', () => {
+    expect(nextCueNumber(undefined, undefined)).toBe('1.0');
+    expect(nextCueNumber('14.0', undefined)).toBe('15.0');
+    expect(nextCueNumber('10.0', '11.0')).toBe('10.1');
+    expect(nextCueNumber('10.1', '10.2')).toBeUndefined();
+    expect(nextCueNumber('199.9', undefined)).toBeUndefined();
+    expect(nextCueNumber(undefined, '2.0')).toBe('1.0');
   });
 });

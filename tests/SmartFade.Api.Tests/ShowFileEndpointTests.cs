@@ -104,7 +104,7 @@ public class ShowFileEndpointTests
         var dto = (await (await client.PostAsync("/api/showfile/parse?name=Ostrov.asc", upload)).Content.ReadFromJsonAsync<ShowFileDto>())!;
 
         var steps = dto.MainStack!.Steps.ToList();
-        steps[0] = steps[0] with { UpTime = "3.5", DownDelay = "2", FollowOn = "1:30", MemoryPage = 11, MemoryFader = 2, MemoryNumber = 267 };
+        steps[0] = steps[0] with { UpTime = "3.5", DownDelay = "2", FollowOn = "1:30", MemoryPage = 11, MemoryFader = 2, MemoryNumber = 267, Channels = dto.Memories.Single(m => m.Number == 267).Channels };   // a memory step repeats its memory's channels
         var edited = await client.PostAsJsonAsync("/api/showfile/render", dto with { MainStack = dto.MainStack with { Steps = steps } });
         Assert.Equal(HttpStatusCode.OK, edited.StatusCode);
         var text = System.Text.Encoding.Latin1.GetString(await edited.Content.ReadAsByteArrayAsync());
@@ -120,6 +120,55 @@ public class ShowFileEndpointTests
         var refused = await client.PostAsJsonAsync("/api/showfile/render", dto with { MainStack = dto.MainStack with { Steps = steps } });
         Assert.Equal(HttpStatusCode.BadRequest, refused.StatusCode);
         Assert.Contains("up time '3,5'", (await refused.Content.ReadFromJsonAsync<ErrorDto>())?.Message, StringComparison.Ordinal);
+    }
+
+
+    [Fact]
+    public async Task Renders_an_inserted_cue_and_sequence_step_and_refuses_shapes_the_console_never_wrote()
+    {
+        using var factory = new WebApplicationFactory<Program>().WithWebHostBuilder(b => b.UseSetting("Device:Mode", "Simulated"));
+        using var client = factory.CreateClient();
+        using var upload = new ByteArrayContent(await File.ReadAllBytesAsync(OstrovSample));
+        var dto = (await (await client.PostAsync("/api/showfile/parse?name=Ostrov.asc", upload)).Content.ReadFromJsonAsync<ShowFileDto>())!;
+        var memory = dto.Memories.Single(m => m.Number == 265);
+
+        // a cue 1.1 after cue 1.0 referencing memory 265 (page 12, fader 1), with the memory's channels repeated
+        var template = dto.MainStack!.Steps[0];
+        var cue = template with { Number = "1.1", MemoryPage = 11, MemoryFader = 0, MemoryNumber = 265, CueParams = 1, Channels = memory.Channels, Label = null };
+        var steps = dto.MainStack.Steps.ToList();
+        steps.Insert(1, cue);
+        var sequenceSteps = dto.Sequences[0].Steps.ToList();
+        sequenceSteps.Add(sequenceSteps[0] with { Number = "265.0", MemoryPage = 11, MemoryFader = 0, MemoryNumber = 265, Channels = memory.Channels });
+        var sequences = dto.Sequences.ToList();
+        sequences[0] = sequences[0] with { Steps = sequenceSteps };
+        var edited = await client.PostAsJsonAsync("/api/showfile/render", dto with { MainStack = dto.MainStack with { Steps = steps }, Sequences = sequences });
+        Assert.Equal(HttpStatusCode.OK, edited.StatusCode);
+        var text = System.Text.Encoding.Latin1.GetString(await edited.Content.ReadAsByteArrayAsync());
+        var inserted = text[text.IndexOf("CUE  1.1", StringComparison.Ordinal)..text.IndexOf("CUE  2.0", StringComparison.Ordinal)];
+        Assert.Contains("$$MEMORY 11 0", inserted, StringComparison.Ordinal);
+        Assert.Contains("$$CUEPARAMS 1", inserted, StringComparison.Ordinal);
+        Assert.Contains("CHAN " + string.Join(' ', memory.Channels.Select(c => $"{c.Channel}/{c.Percent}")), inserted, StringComparison.Ordinal);
+        Assert.Equal(dto.Sequences[0].Steps.Count + 1, System.Text.RegularExpressions.Regex.Matches(text, @"^\$CUE ", System.Text.RegularExpressions.RegexOptions.Multiline).Count);
+
+        async Task<string> Refusal(ShowFileDto body)
+        {
+            var refused = await client.PostAsJsonAsync("/api/showfile/render", body);
+            Assert.Equal(HttpStatusCode.BadRequest, refused.StatusCode);
+            return (await refused.Content.ReadFromJsonAsync<ErrorDto>())!.Message;
+        }
+
+        // the inserted cue numbered below its predecessor
+        steps[1] = cue with { Number = "0.5" };
+        Assert.Contains("rise through the stack", await Refusal(dto with { MainStack = dto.MainStack with { Steps = steps } }), StringComparison.Ordinal);
+
+        // a memory step whose channels do not repeat its memory's
+        steps[1] = cue with { Channels = new[] { new ChannelPercentDto(1, 50) } };
+        Assert.Contains("must repeat memory 265", await Refusal(dto with { MainStack = dto.MainStack with { Steps = steps } }), StringComparison.Ordinal);
+
+        // a sequence step whose number is not its memory's
+        sequenceSteps[^1] = sequenceSteps[^1] with { Number = "9.0" };
+        sequences[0] = sequences[0] with { Steps = sequenceSteps };
+        Assert.Contains("numbered by its memory (265.0)", await Refusal(dto with { Sequences = sequences }), StringComparison.Ordinal);
     }
 
     private static string FindRepositoryRoot()

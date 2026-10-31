@@ -34,7 +34,7 @@
     @if (show.mainStack; as stack) {
       <h3 class="show__section">Stack ({{ stack.steps.length }} steps)</h3>
       <table class="show__table">
-        <thead><tr><th>Cue</th><th>Memory</th><th>Up</th><th>Up delay</th><th>Down</th><th>Down delay</th><th>Follow-on</th><th>Channels</th><th>Label</th></tr></thead>
+        <thead><tr><th>Cue</th><th>Memory</th><th>Up</th><th>Up delay</th><th>Down</th><th>Down delay</th><th>Follow-on</th><th>Channels</th><th>Label</th><th class="show__rowbtns"></th></tr></thead>
         <tbody>
           @for (step of stack.steps; track $index) {
             <tr>
@@ -50,16 +50,20 @@
               <td><input type="text" class="show__edit" [value]="step.followOn" [attr.aria-label]="'Follow-on of cue ' + step.number" (change)="setTime('stack', $index, 'followOn', $event)" /></td>
               <td class="show__chans" [attr.title]="channelsText(step.channels)">{{ step.channels.length }}</td>
               <td>{{ labelText(step.label) }}</td>
+              <td class="show__rowbtns"><button type="button" class="show__rowbtn" [attr.aria-label]="'Insert a step after cue ' + step.number" title="Insert a step after this cue" (click)="insertStep('stack', $index)">+</button><button type="button" class="show__rowbtn" [attr.aria-label]="'Remove cue ' + step.number" title="Remove this cue" (click)="removeStep('stack', $index)">×</button></td>
             </tr>
           }
         </tbody>
       </table>
+      @if (stack.steps.length === 0) {
+        <button type="button" class="show__rowbtn show__rowbtn--first" aria-label="Add the first step to the stack" (click)="insertStep('stack', -1)">Add the first step</button>
+      }
     }
 
     @for (sequence of show.sequences; track sequence.index) {
       <h3 class="show__section">Sequence {{ sequence.index }}{{ sequence.label ? ' "' + labelText(sequence.label) + '"' : '' }} ({{ sequence.steps.length }} steps)</h3>
       <table class="show__table">
-        <thead><tr><th>Step</th><th>Memory</th><th>Up</th><th>Down</th><th>Follow-on</th><th>Channels</th></tr></thead>
+        <thead><tr><th>Step</th><th>Memory</th><th>Up</th><th>Down</th><th>Follow-on</th><th>Channels</th><th class="show__rowbtns"></th></tr></thead>
         <tbody>
           @for (step of sequence.steps; track $index; let stepIndex = $index) {
             <tr>
@@ -69,13 +73,20 @@
               <td><input type="text" class="show__edit" [value]="step.downTime" [attr.aria-label]="'Down time of sequence ' + sequence.index + ' step ' + step.number" (change)="setTime(seqIndex(sequence), stepIndex, 'downTime', $event)" /></td>
               <td><input type="text" class="show__edit" [value]="step.followOn" [attr.aria-label]="'Follow-on of sequence ' + sequence.index + ' step ' + step.number" (change)="setTime(seqIndex(sequence), stepIndex, 'followOn', $event)" /></td>
               <td class="show__chans" [attr.title]="channelsText(step.channels)">{{ step.channels.length }}</td>
+              <td class="show__rowbtns"><button type="button" class="show__rowbtn" [attr.aria-label]="'Insert a step after sequence ' + sequence.index + ' step ' + step.number" title="Insert a step after this one" (click)="insertStep(seqIndex(sequence), stepIndex)">+</button><button type="button" class="show__rowbtn" [attr.aria-label]="'Remove sequence ' + sequence.index + ' step ' + step.number" title="Remove this step" (click)="removeStep(seqIndex(sequence), stepIndex)">×</button></td>
             </tr>
           }
         </tbody>
       </table>
+      @if (sequence.steps.length === 0) {
+        <button type="button" class="show__rowbtn show__rowbtn--first" [attr.aria-label]="'Add the first step to sequence ' + sequence.index" (click)="insertStep(seqIndex(sequence), -1)">Add the first step</button>
+      }
     }
 
-    <p class="show__hint">Steps: the fade times, delays and follow-on take the console's own forms (seconds with one decimal, or m:ss); the memory is 1..288 or empty. Step numbers stay as the file wrote them.</p>
+    @if (stepNotice(); as notice) {
+      <p class="show__notice" role="status">{{ notice }}</p>
+    }
+    <p class="show__hint">Steps: the fade times, delays and follow-on take the console's own forms (seconds with one decimal, or m:ss); the memory is 1..288 and sets the step's channel list (and a sequence step's number) from that memory, as the console's own files do. + adds a step after a row as a copy of its memory and times (a new cue takes the next free number below 200), × removes a step; existing numbers stay as the file wrote them.</p>
 
     <h3 class="show__section">Memories ({{ show.memories.length }} recorded)</h3>
     <table class="show__table">

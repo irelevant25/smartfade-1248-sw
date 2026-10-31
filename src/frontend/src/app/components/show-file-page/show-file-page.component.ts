@@ -1,4 +1,4 @@
-import { ChangeDetectionStrategy, Component, computed, inject } from '@angular/core';
+import { ChangeDetectionStrategy, Component, computed, inject, signal } from '@angular/core';
 import type { ChannelPercentDto, LabelDto, SequenceDto, StepDto } from '../../core/show-file.models';
 import { ShowFileService, TIME_PATTERN, type StepHome } from '../../core/show-file.service';
 
@@ -23,6 +23,9 @@ export class ShowFilePageComponent {
   protected readonly dirty = this._files.dirty;
   protected readonly busy = this._files.busy;
   protected readonly error = this._files.error;
+  private readonly _stepNotice = signal<string | undefined>(undefined);
+  /** Why the last step insertion did nothing, if it did nothing. */
+  protected readonly stepNotice = this._stepNotice.asReadonly();
 
   protected readonly patchedCount = computed(() => this.edited()?.patch.filter((p) => p.channel !== 0).length ?? 0);
   protected readonly namedChannels = computed(() => this.file()?.channels.filter((c) => !isEmpty(c.label)) ?? []);
@@ -70,7 +73,7 @@ export class ShowFilePageComponent {
     }
   }
 
-  /** The memory cell of a step: 1..288, or empty for none; else the input is restored. */
+  /** The memory cell of a step: 1..288 (a step always has one); else the input is restored. */
   protected setMemory(home: StepHome, index: number, event: Event): void {
     const input = event.target as HTMLInputElement;
     const text = input.value.trim();
@@ -78,6 +81,16 @@ export class ShowFilePageComponent {
     if (!this._files.setStep(home, index, { memoryNumber: number })) {
       input.value = String(this.stepOf(home, index)?.memoryNumber ?? '');
     }
+  }
+
+  /** Inserts a step after the row (a copy of its memory and times) and tells the user when no cue number fits. */
+  protected insertStep(home: StepHome, afterIndex: number): void {
+    this._stepNotice.set(this._files.insertStep(home, afterIndex) ? undefined : 'No step was added: no free cue number fits there (one decimal, below 200).');
+  }
+
+  protected removeStep(home: StepHome, index: number): void {
+    this._stepNotice.set(undefined);
+    this._files.removeStep(home, index);
   }
 
   /** The position of a sequence in the file's list: the service addresses steps by it. */

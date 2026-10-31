@@ -81,8 +81,11 @@ export class ShowFileService {
 
   /**
    * Step edit: the fade times, the delays, the follow-on and the referenced memory of an existing step. Times
-   * must look like the console's (TIME_PATTERN); the memory is 1..288 or none. The step number is never changed.
-   * Returns false, and changes nothing, when a value is refused.
+   * must look like the console's (TIME_PATTERN); the memory is 1..288 and cannot be removed (every step the
+   * console's files write with $$CUEPARAMS 1 has one: 908 of 908 in 34 files). A memory step repeats its memory's
+   * channel list (894 of 894 when the memory is in the file, none when it is not), so a memory change replaces
+   * the channels, and a sequence step takes the memory's number as its own (383 of 383). Stack cue numbers are
+   * never changed here. Returns false, and changes nothing, when a value is refused.
    */
   setStep(
     home: StepHome,
@@ -104,38 +107,82 @@ export class ShowFileService {
         return false;
       }
     }
-    let memory: Pick<StepDto, 'memoryPage' | 'memoryFader' | 'memoryNumber'> = {
-      memoryPage: step.memoryPage,
-      memoryFader: step.memoryFader,
-      memoryNumber: step.memoryNumber,
-    };
+    let memory: Partial<StepDto> = {};
     if ('memoryNumber' in change) {
-      if (memoryNumber === null) {
-        memory = { memoryPage: null, memoryFader: null, memoryNumber: null };
-      } else if (
-        typeof memoryNumber === 'number' &&
-        Number.isInteger(memoryNumber) &&
-        memoryNumber >= 1 &&
-        memoryNumber <= 12 * MEMORIES_PER_PAGE
-      ) {
-        memory = {
-          memoryPage: Math.floor((memoryNumber - 1) / MEMORIES_PER_PAGE),
-          memoryFader: (memoryNumber - 1) % MEMORIES_PER_PAGE,
-          memoryNumber,
-        };
-      } else {
+      if (typeof memoryNumber !== 'number' || !Number.isInteger(memoryNumber) || memoryNumber < 1 || memoryNumber > 12 * MEMORIES_PER_PAGE) {
+        return false;
+      }
+      memory = memoryFields(edited, memoryNumber, home === 'stack' ? step.number : undefined);
+    }
+    this.replaceSteps(edited, home, sequence, withStep(sequence.steps, index, { ...step, ...times, ...memory }));
+    return true;
+  }
+
+  /**
+   * Inserts a step after `afterIndex` (-1 = at the front) of the stack or a sequence, as a copy of its neighbour's
+   * memory and times, so that the user then changes the memory in the row. A stack cue gets the next free number
+   * (one decimal, below 200) between its neighbours; a sequence step gets its memory's number. Returns false when
+   * there is nothing to copy, no free cue number, or the stack is full.
+   */
+  insertStep(home: StepHome, afterIndex: number): boolean {
+    const edited = this._edited();
+    const sequence = home === 'stack' ? edited?.mainStack : edited?.sequences[home];
+    if (!edited || !sequence || afterIndex < -1 || afterIndex >= sequence.steps.length) {
+      return false;
+    }
+    const previous = sequence.steps[afterIndex];
+    const next = sequence.steps[afterIndex + 1];
+    const template = previous ?? next;
+    const memoryNumber = template?.memoryNumber ?? edited.memories[0]?.number ?? 1;
+    const times = template
+      ? { upTime: template.upTime, upDelay: template.upDelay, downTime: template.downTime, downDelay: template.downDelay, followOn: template.followOn }
+      : home === 'stack'
+        ? { upTime: '5.0', upDelay: '0', downTime: '5.0', downDelay: '0', followOn: '0' }
+        : { upTime: '1.0', upDelay: '0', downTime: '1.0', downDelay: '0', followOn: '0' };
+    let number: string | undefined;
+    if (home === 'stack') {
+      number = nextCueNumber(previous?.number, next?.number);
+      if (number === undefined) {
         return false;
       }
     }
+    const step: StepDto = {
+      number: number ?? `${memoryNumber}.0`,
+      memoryPage: null,
+      memoryFader: null,
+      memoryNumber: null,
+      cueParams: 1,
+      ...times,
+      channels: [],
+      label: null,
+      ...memoryFields(edited, memoryNumber, number),
+    };
     const steps = sequence.steps.slice();
-    steps[index] = { ...step, ...times, ...memory };
+    steps.splice(afterIndex + 1, 0, step);
+    this.replaceSteps(edited, home, sequence, steps);
+    return true;
+  }
+
+  /** Removes a step; the other steps keep their numbers (the console's files never renumber). */
+  removeStep(home: StepHome, index: number): boolean {
+    const edited = this._edited();
+    const sequence = home === 'stack' ? edited?.mainStack : edited?.sequences[home];
+    if (!edited || !sequence || index < 0 || index >= sequence.steps.length) {
+      return false;
+    }
+    const steps = sequence.steps.slice();
+    steps.splice(index, 1);
+    this.replaceSteps(edited, home, sequence, steps);
+    return true;
+  }
+
+  private replaceSteps(edited: ShowFileDto, home: StepHome, sequence: SequenceDto, steps: StepDto[]): void {
     const next: SequenceDto = { ...sequence, steps };
     this._edited.set(
       home === 'stack'
         ? { ...edited, mainStack: next }
         : { ...edited, sequences: edited.sequences.map((s, i) => (i === home ? next : s)) },
     );
-    return true;
   }
 
   revert(): void {
@@ -194,4 +241,53 @@ function saveBlob(blob: Blob, name: string): void {
   anchor.click();
   anchor.remove();
   URL.revokeObjectURL(url);
+}
+
+/**
+ * The fields a memory reference sets on a step: page and fader (0-based, 24 per page), the number, $$CUEPARAMS 1,
+ * the memory's channel list copied (or none when the memory is not in the file), and, for a sequence step
+ * (no `stackNumber`), the step number = the memory number as the console's files write it (`265.0`).
+ */
+function memoryFields(show: ShowFileDto, memoryNumber: number, stackNumber: string | undefined): Partial<StepDto> {
+  const memory = show.memories.find((m) => m.number === memoryNumber);
+  return {
+    memoryPage: Math.floor((memoryNumber - 1) / MEMORIES_PER_PAGE),
+    memoryFader: (memoryNumber - 1) % MEMORIES_PER_PAGE,
+    memoryNumber,
+    cueParams: 1,
+    channels: memory ? memory.channels.map((c) => ({ ...c })) : [],
+    number: stackNumber ?? `${memoryNumber}.0`,
+  };
+}
+
+function withStep(steps: StepDto[], index: number, step: StepDto): StepDto[] {
+  const copy = steps.slice();
+  copy[index] = step;
+  return copy;
+}
+
+/**
+ * The next free stack cue number between two neighbours, in the console's form (one decimal, `1.0`..`199.9`,
+ * rising through the stack in every file): after the last cue the next whole number, between two cues the
+ * previous plus a tenth when that is still below the next; undefined when no number fits.
+ */
+export function nextCueNumber(previous: string | undefined, next: string | undefined): string | undefined {
+  const tenths = (text: string | undefined) => (text === undefined ? undefined : Math.round(Number(text) * 10));
+  const prev = tenths(previous);
+  const after = tenths(next);
+  if (prev !== undefined && Number.isNaN(prev)) {
+    return undefined;
+  }
+  let candidate: number;
+  if (prev === undefined) {
+    candidate = after === undefined ? 10 : Math.min(10, after - 1);
+  } else if (after === undefined) {
+    candidate = (Math.floor(prev / 10) + 1) * 10;
+  } else {
+    candidate = prev + 1;
+  }
+  if (candidate < 1 || candidate > 1999 || (after !== undefined && candidate >= after)) {
+    return undefined;
+  }
+  return `${Math.floor(candidate / 10)}.${candidate % 10}`;
 }

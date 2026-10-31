@@ -177,6 +177,38 @@
   width: 44px;
 }
 
+.show__rowbtns {
+  white-space: nowrap;
+  width: 1%;
+}
+
+.show__rowbtn {
+  min-width: 22px;
+  margin-left: 2px;
+  padding: 0 5px;
+  border: 1px solid var(--sf-border);
+  border-radius: 3px;
+  background: #1a2026;
+  color: var(--sf-text);
+  font: 0.8rem var(--sf-font-mono);
+  cursor: pointer;
+
+  &:hover {
+    border-color: var(--sf-accent);
+  }
+}
+
+.show__rowbtn--first {
+  margin: 4px 0 8px;
+  padding: 2px 8px;
+}
+
+.show__notice {
+  margin: 6px 0;
+  color: var(--sf-warn, #e0b341);
+  font-size: 0.8rem;
+}
+
 .show__dirty {
   font: 600 0.6875rem var(--sf-font-ui);
   letter-spacing: 0.08em;
