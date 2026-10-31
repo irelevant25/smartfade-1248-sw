@@ -212,6 +212,15 @@ dotnet test SmartFade.sln                        # xUnit; the Protocol golden te
 dotnet run --project src/backend/SmartFade.Api   # http://localhost:5160, simulated console (mock mode)
 ```
 
+ASC show files (library `src/backend/SmartFade.ShowFile.Asc`, no hardware dependency; its tests also round-trip
+every show in the git-ignored `smartfade-sd-card-backup/` when that folder exists):
+
+```
+dotnet run --project tools/asc-converter -- inspect "smartsoft-source-materials/example lighting output file - Ostrov - 16.09.2026.asc"
+dotnet run --project tools/asc-converter -- roundtrip <file.asc>      # exit 0 = read and render give the same bytes
+dotnet run --project tools/asc-converter -- render <file.asc> <new.asc>   # never overwrites
+```
+
 Frontend (Angular 22, Node 22):
 
 ```

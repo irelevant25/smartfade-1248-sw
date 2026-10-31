@@ -1,0 +1,10 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+    <Description>Reader and writer for SmartFade / SmartSoft .asc show files (USITT ASCII with ETC's $ keywords). No hardware dependencies.</Description>
+  </PropertyGroup>
+
+</Project>

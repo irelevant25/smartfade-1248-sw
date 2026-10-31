@@ -1,0 +1,17 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <TargetFramework>net10.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+    <RootNamespace>SmartFade.AscConverter</RootNamespace>
+    <AssemblyName>asc-converter</AssemblyName>
+    <Description>Command line for SmartFade .asc show files: inspect a file, check that it round-trips byte for byte.</Description>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\..\src\backend\SmartFade.ShowFile.Asc\SmartFade.ShowFile.Asc.csproj" />
+  </ItemGroup>
+
+</Project>

@@ -38,7 +38,7 @@ SmartFade.Domain         pure model: ChannelLevel, Memory, Step, Sequence, Stack
         (optional, separate path)
         └── SmartFade.Devices.Midi        MIDI subset (GO/GM/bumps…) after E4/E5 (future)
 
-SmartFade.ShowFile.Asc   ASC parser library (no hardware deps) ← tools/asc-converter CLI
+SmartFade.ShowFile.Asc   ASC parser library (no hardware deps) ← tools/asc-converter CLI   *(built 2026-10-31, see "ASC show files as built")*
 SmartFade.Infrastructure SQLite settings/show storage (later)
 ```
 
@@ -234,6 +234,21 @@ Decisions taken while building:
   colour with every control read-only. The first live session is experiment E8 (runbook in
   `docs/protocol/reverse-engineering.md`), still waiting for the owner's go *(E8 ran on 2026-10-30:
   861 s, no fault; record in `docs/protocol/captures/`; the readings it gave are shown by the UI)*.
+
+## ASC show files as built (2026-10-31)
+
+`src/backend/SmartFade.ShowFile.Asc` is the planned `SmartFade.ShowFile.Asc` library: `AscReader`
+reads a `.asc` file into a `ShowFile` model (header, main stack, sequences with steps, memories,
+patch, independents, channel and page labels, settings, unknown lines kept verbatim), keeping
+numbers and times as the file wrote them; `AscWriter` renders a model with the engine's own layout
+rules (docs/formats/asc-format.md, "Writer rules learned") and `RenderVerbatim` writes a read file
+back byte for byte. No project of the solution other than its tests references it yet; the thin CLI
+`tools/asc-converter` (`inspect`, `roundtrip`, `render` to a new file, never overwriting) is the
+first consumer. The round-trip tests cover the committed Ostrov sample and, on the owner's PC, every
+show in `smartfade-sd-card-backup/` (33 of 33 byte-identical on 2026-10-31). It has no hardware
+dependency and sends nothing anywhere; the E6 round trip (save on the console, change in our
+software, load from the SD card) is the experiment that would make its model trustworthy for
+editing.
 
 ## Phase 2 proposal: live control after E9b and SC-2 (2026-10-31, not implemented)
 

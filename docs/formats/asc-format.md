@@ -325,7 +325,42 @@ in an E2-style capture the wire side can be compared too.
   fader positions, live levels, snapshots? UNKNOWN). *(Update 2026-10-30: two saves of the same show are
   byte-identical although the console's history between them differed (F104); see the limit in "Cross-check".)*
 - Plan: the parser keeps every line's raw text and position. A later writer can be tested
-  with "parse → write → byte-compare" on every sample.
+  with "parse → write → byte-compare" on every sample. *(Done 2026-10-31: see "Writer rules learned" above; 33 of 33 files
+  byte-identical.)*
+
+## Writer rules learned from the files (2026-10-31, OBSERVED on 33 files)
+
+`SmartFade.ShowFile.Asc` (`src/backend/SmartFade.ShowFile.Asc`, reader and writer, no hardware
+dependency; CLI `tools/asc-converter`) reads a file into a model that keeps numbers and times as text
+and renders it again. On 2026-10-31 the committed Ostrov sample and all 32 `.asc` files in the owner's
+`smartfade-sd-card-backup/` (7 console-written LF files, 25 SmartSoft-written CRLF files, 3.0.1 and
+3.0.2) rendered **byte-identical** after a read, so the rules below describe the engine's writer for
+every file seen. They come from the files, not from a specification.
+
+- Bytes are read and written as Latin-1 (one byte, one character), so any non-ASCII label passes
+  through unchanged; the line ending (LF or CRLF) is detected and preserved per file.
+- Header: `MANUFACTURER`, `CONSOLE`, `$SOFTWAREVERSION`, `IDENT`, blank, `CLEAR ALL`, blank.
+- `! Main Sequence`, the `$SEQUENCE` line, a blank, then each step followed by one blank; an
+  optional label block (`Text`, `$$Text 1..3`) sits between the header's blank and the steps, itself
+  followed by a blank. `! Sequences` follows directly; each sequence as the main stack; the section
+  ends with one extra blank.
+- Step: `CUE` / `$CUE` + the number right-aligned in 4 characters (`CUE  1.0`, `$CUE 265.0`);
+  `$$MEMORY p f`; `$$CUEPARAMS n`; `UP` and `DOWN` with the time left-aligned in 6 and the delay in 5
+  characters (`UP 5.0   0    `); `FOLLOWON` with the time in 5 (`FOLLOWON 1:30 `); `CHAN` lines of at
+  most 8 `c/l ` pairs, each pair followed by a space; the optional label block.
+- `! Memories`: `GROUP n`, `CHAN` lines, the label block, then **two** blanks per memory; one extra
+  blank after the section.
+- `! Patch`: `PATCH 1 ` + five `d/c/l ` triples per line (two on the last), one blank after the section.
+- `! Independents`: `$INDEPENDENT n a b c d`, the label block, one blank per record; one extra blank
+  after the section.
+- `! Channel Info`: `$CHANNEL n`, the label block, one blank per record; **no** extra blank.
+- `! Pages`: `$PAGE n`, the label block, **two** blanks per page; no extra blank.
+- `! Settings`: the `SET` lines, a blank, `ENDDATA ` (trailing space), a final line ending.
+- Label block: `Text ` + text, `$$Text 1 ` + line 1, `$$Text 2 ` + line 2, `$$Text 3 ` + line 3,
+  each verbatim (empty labels leave the trailing space).
+
+The reader keeps every unrecognised line as an `UnknownRecord` with a warning (none occurred in the
+33 files); the writer cannot place unknown records, so a file with any is not guaranteed to round-trip.
 
 ## Unknown data policy
 
