@@ -1,0 +1,57 @@
+E12b, the second SmartSoft session editing the patch and the stack / sequences (passive USBPcap capture): owner statements (2026-10-31)
+
+Context (recorded by the assistant): the owner ran tools/usb-probe/e12b-guided-session.ps1 (the trimmed version of commit
+05b6e70) from 22:26:27 to 22:59:44 local time (CET, UTC+1); the action log 2026-10-31-e12b-actions.txt (sha256
+f82ba2eddfe4b40734efe43d52a6124ab6b17141a01a4afc90ac8d7efdc29140) holds every step with the PC clock and the owner's
+typed answers. Decisions: power cycled y, DMX 100 free y, acceptance y, optional H (the console's own menus) n, so no
+console-side Insert / Delete / Step Timing was made. USBPcapCMD wrote the raw root-hub capture to e12b.pcap in the
+repository root (the guide's absolute path), 1 101 137 231 bytes. Our software was not involved; SmartSoft 3.0.43 drove
+every edit, two SmartSoft sessions in one capture (the third session of E12 was dropped on purpose).
+
+SD files (all copied by the owner into smartfade-sd-card-backup/): SHOW14.ASC, the backup before the session (22:27:44),
+SHOW15.ASC, the EDITED show saved on the console at 22:52:12 with every test change in place, and SHOW16.ASC, the save
+after the restores (22:59:24). SHOW14 and SHOW16 both have sha256 559636399c1d82e0f95e737c961bfee31f88962fe8c486bbc6eba7f7d2177a90
+(byte-identical to each other and to SHOW13, SHOW12, SHOW09, SHOW07 and SHOW04): the show data after E12b equals the show
+data before it. SHOW15 (sha256 07f88be1da9c0a46692c7b3205ddb430866cd63e338ea17ef200917068bd4196, 16 486 bytes) differs
+from SHOW14 in exactly the edited objects (for the asc-format analyst): the point cue "CUE 12.1" with "$$MEMORY 0 0",
+"$$CUEPARAMS 1" and memory 1's channels; the Direct cue "CUE 13.1" with "$$CUEPARAMS 2", the default times, no CHAN line
+and the label "Text ?AJ12345678901234" / "$$Text 1 &#268;AJ123" / "$$Text 2 456789" / "$$Text 3 01234"; the channel step
+"CUE 13.2" with "$$CUEPARAMS 0", "UP 3.0", no memory line and "CHAN 47/100"; "$SEQUENCE 0 2 0 256 256" (KOTLIK in Manual:
+field b = 2) with two added steps written as "$CUE  1.0" / "$$MEMORY 0 0" / "$$CUEPARAMS 1" / memory 1's channels; the
+patch line "100/47/100"; page 12 "Text T" / "$$Text 1 T".
+
+The owner's chat message after the session (quoted): "1. done (I have also added new ASC files crated in that process to
+the smartfade-sd-card-backup)".
+
+The owner's typed answers (from the action log, quoted):
+- C3 IND 1 values before: "button mode is LATCH, GM is NO"; after the button-mode change: "BUMP, double click"; after the GM
+  change: "YES". (So the IND panel's button mode reads LATCH / BUMP and its GM setting NO / YES; the button-mode change
+  took a double click.)
+- D5 (the Direct cue): "13.1, I click on the 14.0 to insert a new one, I could click on empty (the last one) which would add
+  a new one with 15.0, the new created one has content "Cue"". So "Insert step" on a row inserts BEFORE that row (13.1
+  before 14.0), and an empty row after the last cue inserts after it (E12's D1 gave 15.0 that way).
+- D5 label: "ČAJ12345678901234, but I pressed next and payuse and play multiple times because the only way how could I
+  change the label was to see it in the list of steps but I could only see couple of them from the last one, which is 14.0
+  to 1, 2, 3, 4... maybe 9 I do not know, but I could move the list so I go to the panel, press stack, then press and hold
+  PAUSE and press PLAY and release PAUSE to go one step back and then in the smartsoft I saw the step created by me 13.1
+  and I could change the label". So SmartSoft uppercased the "č" (the file holds &#268;, "Č") and kept 17 of the 18
+  characters, and between 22:40 and 22:43 the owner pressed SmartSoft's next / PAUSE / PLAY several times and, on the
+  console, STACK, then PAUSE held with PLAY (one step back): stack playback moved in that interval (GO / PAUSE events, a
+  crossfade), not logged as steps; the "D extra actions = n" answer does not cover it.
+- D6 (the channel step): "13.2, dropdown with all channels and I selected the 47" (no level field was mentioned; the file
+  shows CHAN 47/100 and UP 3.0 after the time edit).
+- D2 (the point cue): "12.1, I right clicked on 13.0, yes the dialog's cue number field was enabled".
+- E1 (KOTLIK insert at step 3): "3, before, and it changed the number of step I clicked on to instert a new one to 4 and
+  all others increment by 1 as well". E1b (insert at the last step): "8, before, and it changed the number of step I
+  clicked on to instert a new one to 9". So in a sequence "Insert step" inserts BEFORE the clicked step and renumbers the
+  rest.
+- F3: page "12" renamed (no slip this time).
+- G1 after the restart: "yes". I2 (the move): "13.3, this number was offered by the dialog, I move it between 13.2 and 14.0
+  but I am not sure if that is what you wanted" (the guide asked for a place between the last original cue and the Direct
+  cue; the point cue went between the channel step 13.2 and 14.0 as 13.3: fine for MoveStep). I4: "yes". Extra actions in
+  C, D, E and I: "n" each.
+
+Reading for the analyst (by the assistant, not promoting anything): the unlogged playback between 22:40:06 and 22:43:16
+(SmartSoft's next / PAUSE / PLAY and the console's STACK and PAUSE + PLAY) is the one deviation; everything else followed
+the trimmed guide. The optional console-side menus (H106) were not exercised, so a console-side insert or delete stays
+untested. Owner statements never promote a fact by themselves; the capture and the SD files are the evidence.
