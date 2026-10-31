@@ -121,4 +121,26 @@ describe('CrossfaderComponent', () => {
     expect(clear.disabled).toBe(true);
     expect(element().querySelector('.xfade__note')?.textContent).toContain('Observed from the console');
   });
+
+  it('shows the main playback a read-only device reports on the A and B faders', () => {
+    TestBed.inject(ConsoleStateService).applyConsoleStateChanged(
+      createSampleState({
+        supportedCommands: [],
+        connection: { status: 'connected', mode: 'hardware', deviceDescription: 'SmartFade 1248, read-only' },
+        crossfader: { step: 0, live: 250, next: 5 },
+      }),
+    );
+    fixture.detectChanges();
+    const sliders = Array.from(element().querySelectorAll<HTMLInputElement>('input[type="range"]'));
+
+    expect(sliders[0].valueAsNumber).toBe(5); // A: 255 - Live
+    expect(sliders[1].valueAsNumber).toBe(5); // B: Next
+    expect(element().querySelectorAll('.fader--readonly')).toHaveLength(2); // shown, never movable
+    expect(element().querySelector('.xfade__note')?.textContent).toContain('next step 1');
+
+    TestBed.inject(ConsoleStateService).applyCrossfaderChanged({ step: 1, live: 255, next: 0 });
+    fixture.detectChanges();
+    expect(sliders[0].valueAsNumber).toBe(0);
+    expect(element().querySelector('.xfade__note')?.textContent).toContain('next step 2');
+  });
 });

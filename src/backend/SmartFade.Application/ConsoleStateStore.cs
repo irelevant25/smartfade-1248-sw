@@ -34,6 +34,8 @@ public sealed class ConsoleStateStore
     private bool _independentsReported;
     private int? _memoryPage;
     private PanelKeys? _keys;
+    private IReadOnlyList<string>? _lcd;
+    private CrossfaderState? _crossfader;
 
     public ConsoleStateStore(ConsoleCapabilities capabilities, ConnectionState initialConnection, DeviceCommands supportedCommands)
     {
@@ -83,6 +85,8 @@ public sealed class ConsoleStateStore
                 _independentsReported,
                 _memoryPage,
                 _keys,
+                _lcd,
+                _crossfader,
                 _showFileName,
                 _firmwareVersion);
         }
@@ -118,6 +122,8 @@ public sealed class ConsoleStateStore
                 _independentsReported = false;
                 _memoryPage = null;
                 _keys = null;
+                _lcd = null;
+                _crossfader = null;
                 for (var i = 0; i < _memories.Length; i++)
                 {
                     _memories[i] = _memories[i] with { Reported = false };   // kept for display, no longer the console's word
@@ -225,6 +231,16 @@ public sealed class ConsoleStateStore
             if (change.Keys is { } keys)
             {
                 _keys = keys;
+            }
+
+            if (change.Lcd is { } lcd)
+            {
+                _lcd = lcd;
+            }
+
+            if (change.Crossfader is { } crossfader)
+            {
+                _crossfader = crossfader;
             }
 
             if (change.ShowFileName is { } fileName)

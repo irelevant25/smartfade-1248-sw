@@ -31,7 +31,7 @@ namespace SmartFade.Devices.Usb;
 ///   is deleted, F107); body[2] = 0x01 keeps its UNKNOWN meaning (H39). The playback level is not
 ///   reported.
 /// </summary>
-[Evidence(EvidenceStatus.Observed, "F59, F60, F67, F71, F72, F73, F82, F83, F87, F95, F96, F97, F100, F103, F112, F113, F114, F115, F116, F117", "display-only decoding; INFERRED: SOLO (F100), BLACKOUT (F114), IND 1 / IND 2 identity (F115, H72), the key LEDs' identities (H72), recorded flags (F107 from a Memory object; F84 / F8 from the LED map), fader position not reported; HYPOTHESIS: H40 label byte order, H25 page / fader, H71 memory fader bytes")]
+[Evidence(EvidenceStatus.Observed, "F59, F60, F67, F71, F72, F73, F82, F83, F87, F95, F96, F97, F100, F103, F112, F113, F114, F115, F116, F117, F130", "display-only decoding; LCD text (F86) and the main playback (F130, H76, H80) as readings; INFERRED: SOLO (F100), BLACKOUT (F114), IND 1 / IND 2 identity (F115, H72), the key LEDs' identities (H72), recorded flags (F107 from a Memory object; F84 / F8 from the LED map), fader position not reported; HYPOTHESIS: H40 label byte order, H25 page / fader, H71 memory fader bytes")]
 public sealed class ConsoleStateAssembler
 {
     private readonly ConsoleCapabilities _capabilities;
@@ -50,6 +50,7 @@ public sealed class ConsoleStateAssembler
     private bool _pageReported;
     private bool _functionScreen;
     private PanelKeys? _keys;
+    private CrossfaderState? _crossfader;
     private string? _showFileName;
     private string? _firmwareVersion;
 
@@ -108,9 +109,9 @@ public sealed class ConsoleStateAssembler
             case HspObjectId.Independents:
                 return ApplyIndependents(IndependentsObject.Decode(body.Span));
             case HspObjectId.DisplayContent:
-                DisplayLines = DisplayContentObject.Decode(body.Span).Lines;
-                _functionScreen = IsFunctionScreen(DisplayLines);
-                return null;
+                return ApplyDisplay(DisplayContentObject.Decode(body.Span).Lines);
+            case HspObjectId.PlaybackInfo:
+                return ApplyPlayback(PlaybackInfoObject.Decode(body.Span));
             default:
                 return null;
         }
@@ -352,6 +353,33 @@ public sealed class ConsoleStateAssembler
         }
 
         return changed is null ? null : new DeviceStateChange(Memories: changed);
+    }
+
+    /// <summary>The LCD's two lines as text (F86, layout VERIFIED in part; bar glyphs rendered as block characters, H49): a change is reported, a repeat is not.</summary>
+    private DeviceStateChange? ApplyDisplay(IReadOnlyList<string> lines)
+    {
+        var changed = !lines.SequenceEqual(DisplayLines);
+        DisplayLines = lines;
+        _functionScreen = IsFunctionScreen(lines);
+        return changed ? new DeviceStateChange(Lcd: lines) : null;
+    }
+
+    /// <summary>Record 5 of PlaybackInfo, the main playback: the stack step (bytes 0-1, H76), Live (byte 2) and Next (byte 3) (F130 OBSERVED; structure F101).</summary>
+    private DeviceStateChange? ApplyPlayback(PlaybackInfoObject playback)
+    {
+        if (playback.Main is not { } main)
+        {
+            return null;
+        }
+
+        var state = new CrossfaderState(main.Step, main.Live, main.Next);
+        if (state == _crossfader)
+        {
+            return null;
+        }
+
+        _crossfader = state;
+        return new DeviceStateChange(Crossfader: state);
     }
 
     /// <summary>The LCD titles of the views that reuse the memory LEDs for something else (F113, F116; OBSERVED texts, E8).</summary>

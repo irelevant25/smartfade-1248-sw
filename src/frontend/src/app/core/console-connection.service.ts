@@ -171,6 +171,8 @@ export class ConsoleConnectionService {
     hub.on('mastersChanged', (masters) => this._state.applyMastersChanged(masters));
     hub.on('memoriesChanged', (memories) => this._state.applyMemoriesChanged(memories));
     hub.on('outputsChanged', (update) => this._state.applyOutputsChanged(update));
+    hub.on('lcdChanged', (lines) => this._state.applyLcdChanged(lines));
+    hub.on('crossfaderChanged', (crossfader) => this._state.applyCrossfaderChanged(crossfader));
     hub.on('errorOccurred', (error) => {
       this._state.applyErrorOccurred(error);
       // A rejected command leaves optimistic values behind; the backend's state is the truth.

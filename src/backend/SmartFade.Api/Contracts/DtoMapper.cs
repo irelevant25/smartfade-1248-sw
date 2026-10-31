@@ -63,6 +63,8 @@ public static class DtoMapper
     public static MastersDto ToDto(Masters masters) =>
         new(masters.Master, masters.Bumps, masters.Blackout, masters.Solo, masters.Independent1, masters.Independent2);
 
+    public static CrossfaderDto ToDto(CrossfaderState crossfader) => new(crossfader.Step, crossfader.Live, crossfader.Next);
+
     public static PanelKeysDto ToDto(PanelKeys keys) =>
         new(ToDto(keys.Stack), ToDto(keys.Clear), ToDto(keys.Copy), ToDto(keys.RecSeq), ToDto(keys.Magic), ToDto(keys.RecMem), ToDto(keys.EditMem), ToDto(keys.Blackout), ToDto(keys.Solo));
 
@@ -92,6 +94,8 @@ public static class DtoMapper
             state.IndependentsReported,
             state.MemoryPage,
             state.Keys is { } keys ? ToDto(keys) : null,
+            state.Lcd,
+            state.Crossfader is { } crossfader ? ToDto(crossfader) : null,
             state.ShowFileName,
             state.FirmwareVersion);
 

@@ -43,6 +43,12 @@ public sealed class ConsoleService : IDisposable
 
     public event Action<IReadOnlyList<MemoryState>>? MemoriesChanged;
 
+    /// <summary>The console's LCD text (two lines) as reported by a real console.</summary>
+    public event Action<IReadOnlyList<string>>? LcdChanged;
+
+    /// <summary>The main playback (crossfader pair and stack step) as reported by a real console.</summary>
+    public event Action<CrossfaderState>? CrossfaderChanged;
+
     /// <summary>Raised with the full state after a connection change and after a snapshot from the device.</summary>
     public event Action<ConsoleState>? StateChanged;
 
@@ -358,6 +364,16 @@ public sealed class ConsoleService : IDisposable
         if (outputs is not null)
         {
             OutputsChanged?.Invoke(outputs);
+        }
+
+        if (change.Lcd is { } lcd)
+        {
+            LcdChanged?.Invoke(lcd);
+        }
+
+        if (change.Crossfader is { } crossfader)
+        {
+            CrossfaderChanged?.Invoke(crossfader);
         }
     }
 

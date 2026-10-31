@@ -4,6 +4,7 @@ import type {
   ChannelStateDto,
   ConnectionDto,
   ConsoleStateDto,
+  CrossfaderDto,
   ErrorDto,
   MastersDto,
   MemoryStateDto,
@@ -21,6 +22,8 @@ export interface ConsoleHubEvents {
   mastersChanged: [masters: MastersDto];
   memoriesChanged: [memories: MemoryStateDto[]];
   outputsChanged: [update: OutputsChangedDto];
+  lcdChanged: [lines: string[]];
+  crossfaderChanged: [crossfader: CrossfaderDto];
   errorOccurred: [error: ErrorDto];
 }
 

@@ -24,6 +24,9 @@ public sealed record MastersDto(int Master, int Bumps, bool Blackout, bool Solo,
 public sealed record KeyLedDto(string Light, bool Blinking);
 
 /// <summary>The key LEDs a real console reports (null in the state until it does; the simulator never does).</summary>
+/// <summary>The main playback as a real console reports it: the stack step (0-based, H76), Live and Next 0..255 (F130).</summary>
+public sealed record CrossfaderDto(int Step, int Live, int Next);
+
 public sealed record PanelKeysDto(KeyLedDto Stack, KeyLedDto Clear, KeyLedDto Copy, KeyLedDto RecSeq, KeyLedDto Magic, KeyLedDto RecMem, KeyLedDto EditMem, KeyLedDto Blackout, KeyLedDto Solo);
 
 /// <summary>A memory as the console addresses it: page 1..12, fader 1..24; Number = 24 × (page − 1) + fader.</summary>
@@ -48,6 +51,8 @@ public sealed record ConsoleStateDto(
     bool IndependentsReported,
     int? MemoryPage,
     PanelKeysDto? Keys,
+    IReadOnlyList<string>? Lcd,
+    CrossfaderDto? Crossfader,
     string? ShowFileName,
     string? FirmwareVersion);
 

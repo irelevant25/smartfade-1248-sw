@@ -23,7 +23,9 @@ public sealed record DeviceStateChange(
     string? FirmwareVersion = null,
     IndependentStates? Independents = null,
     int? MemoryPage = null,
-    PanelKeys? Keys = null);
+    PanelKeys? Keys = null,
+    IReadOnlyList<string>? Lcd = null,
+    CrossfaderState? Crossfader = null);
 
 /// <summary>The on / off state of IND 1 and IND 2, reported on its own when a device learns it apart from the masters.</summary>
 public sealed record IndependentStates(bool Independent1, bool Independent2);

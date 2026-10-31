@@ -31,5 +31,7 @@ public sealed record ConsoleState(
     bool IndependentsReported,
     int? MemoryPage,
     PanelKeys? Keys,
+    IReadOnlyList<string>? Lcd,
+    CrossfaderState? Crossfader,
     string? ShowFileName,
     string? FirmwareVersion);

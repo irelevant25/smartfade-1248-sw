@@ -35,6 +35,8 @@ public sealed class ConsoleEventsBroadcaster : BackgroundService
         _console.MastersChanged += OnMastersChanged;
         _console.MemoriesChanged += OnMemoriesChanged;
         _console.OutputsChanged += OnOutputsChanged;
+        _console.LcdChanged += OnLcdChanged;
+        _console.CrossfaderChanged += OnCrossfaderChanged;
         _console.StateChanged += OnStateChanged;
         _console.ErrorOccurred += OnErrorOccurred;
 
@@ -80,6 +82,8 @@ public sealed class ConsoleEventsBroadcaster : BackgroundService
             _console.MastersChanged -= OnMastersChanged;
             _console.MemoriesChanged -= OnMemoriesChanged;
             _console.OutputsChanged -= OnOutputsChanged;
+            _console.LcdChanged -= OnLcdChanged;
+            _console.CrossfaderChanged -= OnCrossfaderChanged;
             _console.StateChanged -= OnStateChanged;
             _console.ErrorOccurred -= OnErrorOccurred;
         }
@@ -106,6 +110,10 @@ public sealed class ConsoleEventsBroadcaster : BackgroundService
         Send("memoriesChanged", memories.Select(m => DtoMapper.ToDto(m, _console.Capabilities)).ToArray());
 
     private void OnStateChanged(ConsoleState state) => Send("consoleStateChanged", DtoMapper.ToDto(state));
+
+    private void OnLcdChanged(IReadOnlyList<string> lines) => Send("lcdChanged", lines);
+
+    private void OnCrossfaderChanged(CrossfaderState crossfader) => Send("crossfaderChanged", DtoMapper.ToDto(crossfader));
 
     private void OnErrorOccurred(string message) => Send("errorOccurred", new ErrorDto(message, "device_error"));
 

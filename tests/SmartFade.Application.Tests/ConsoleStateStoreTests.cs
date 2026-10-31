@@ -104,4 +104,21 @@ public class ConsoleStateStoreTests
         Assert.False(cleared.IndependentsReported);
         Assert.Null(cleared.MemoryPage);
     }
+
+    [Fact]
+    public void The_LCD_and_the_crossfader_are_kept_until_the_connection_ends()
+    {
+        var store = Connected();
+        Assert.Null(store.GetState().Lcd);
+        Assert.Null(store.GetState().Crossfader);
+
+        Apply(store, new DeviceStateChange(Lcd: new[] { "Live:14.0 Next: 1.0 ", "Mem:01/01 Mem:01/01 " }, Crossfader: new CrossfaderState(0, 0xFA, 0x05)));
+        var state = store.GetState();
+        Assert.Equal("Live:14.0 Next: 1.0 ", state.Lcd?[0]);
+        Assert.Equal(new CrossfaderState(0, 0xFA, 0x05), state.Crossfader);
+
+        store.SetConnection(new ConnectionState(ConnectionStatus.Disconnected, DeviceMode.Hardware, "test"));
+        Assert.Null(store.GetState().Lcd);
+        Assert.Null(store.GetState().Crossfader);
+    }
 }

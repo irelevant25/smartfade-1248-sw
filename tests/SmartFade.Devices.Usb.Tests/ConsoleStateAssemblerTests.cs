@@ -213,6 +213,38 @@ public class ConsoleStateAssemblerTests
         Assert.Equal(0, content.Levels.Where((_, i) => i != 4).Sum(l => (int)l));   // every other channel at zero
     }
 
+    private static readonly Lazy<Dictionary<int, ObjectReceived>> E8B = new(() => ObjectsOf("2026-10-30-e8b-second-read-only-session.jsonl"));
+
+    [Fact]
+    public void The_crossfader_follows_PlaybackInfo_record_5()
+    {
+        // E8b seq 58658: GO with STACK lit starts a 5-s fade, record 5 reads 00 00 FA 05 ...; seq 59036: the fade is over,
+        // 01 01 FF 00 (F130; the step as the Next step's index, H76)
+        var assembler = new ConsoleStateAssembler(ConsoleCapabilities.SmartFade1248);
+
+        var start = assembler.Apply(E8B.Value[58658])?.Crossfader;
+        Assert.Equal(new CrossfaderState(0, 0xFA, 0x05), start);
+
+        var done = assembler.Apply(E8B.Value[59036])?.Crossfader;
+        Assert.Equal(new CrossfaderState(1, 0xFF, 0x00), done);
+        Assert.Null(assembler.Apply(E8B.Value[59036]));   // unchanged: nothing to report
+    }
+
+    [Fact]
+    public void The_LCD_lines_are_reported_as_text()
+    {
+        // E8 seq 24967: "Live:14.0 Next: 1.0" and "Mem:01/01 Mem:01/01" after STACK was pressed (F117; layout F86)
+        var assembler = new ConsoleStateAssembler(ConsoleCapabilities.SmartFade1248);
+
+        var lcd = assembler.Apply(E8.Value[24967])?.Lcd;
+
+        Assert.NotNull(lcd);
+        Assert.Equal(2, lcd!.Count);
+        Assert.StartsWith("Live:14.0 Next: 1.0", lcd[0]);
+        Assert.Contains("Mem:01/01", lcd[1]);
+        Assert.Null(assembler.Apply(E8.Value[24967]));   // unchanged: nothing to report
+    }
+
     [Fact]
     public void The_key_LEDs_follow_the_record_functions_and_STACK()
     {

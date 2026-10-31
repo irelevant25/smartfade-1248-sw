@@ -125,6 +125,10 @@ export interface ConsoleStateDto {
   memoryPage?: number | null;
   /** The key LEDs a real console reports (hardware mode); null until reported, always null for the simulator. */
   keys?: PanelKeysDto | null;
+  /** The console's LCD, two lines (a real console only); kept for the contract, not shown by the UI (owner, 2026-10-31). */
+  lcd?: string[] | null;
+  /** The main playback a real console reports (PlaybackInfo record 5); null until reported, always null for the simulator. */
+  crossfader?: CrossfaderDto | null;
   showFileName?: string | null;
   firmwareVersion?: string | null;
 }
@@ -150,6 +154,17 @@ export interface PanelKeysDto {
   /** The BLACKOUT and SOLO LEDs, for their blink (BLACKOUT blinks while the MASTER is below full). */
   blackout: KeyLedDto;
   solo: KeyLedDto;
+}
+
+/**
+ * The console's main playback as reported (F130, observed): the stack step (0-based, read as the Next
+ * step, hypothesis H76), Live and Next 0..255. Under the manual crossfaders A follows Live and B
+ * follows Next (hypothesis H80); A gives 100 % Live when down.
+ */
+export interface CrossfaderDto {
+  step: number;
+  live: number;
+  next: number;
 }
 
 export interface OutputsChangedDto {

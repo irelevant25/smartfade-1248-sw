@@ -19,6 +19,7 @@ import {
   type MemoryStateDto,
   type OutputsChangedDto,
   PanelKeysDto,
+  CrossfaderDto,
 } from './console.models';
 import { clampLevel } from './level';
 
@@ -124,6 +125,20 @@ function sanitizeKeys(dto: PanelKeysDto | null | undefined): PanelKeysDto | unde
   return keys as PanelKeysDto;
 }
 
+function sanitizeLcd(lines: readonly string[] | null | undefined): readonly string[] | undefined {
+  if (!Array.isArray(lines) || lines.length === 0) {
+    return undefined;
+  }
+  return lines.map((line) => (typeof line === 'string' ? line : ''));
+}
+
+function sanitizeCrossfader(dto: CrossfaderDto | null | undefined): CrossfaderDto | undefined {
+  if (!dto || typeof dto !== 'object' || !Number.isInteger(dto.step) || dto.step < 0) {
+    return undefined;
+  }
+  return { step: dto.step, live: clampLevel(dto.live), next: clampLevel(dto.next) };
+}
+
 /** The address comes from the DTO; the number is derived, so that it can never disagree. */
 function sanitizeMemory(dto: MemoryStateDto): MemoryStateDto {
   return {
@@ -203,6 +218,8 @@ export class ConsoleStateService {
   private readonly _independentsReported = signal(false);
   private readonly _memoryPage = signal<number | undefined>(undefined);
   private readonly _keys = signal<PanelKeysDto | undefined>(undefined);
+  private readonly _lcd = signal<readonly string[] | undefined>(undefined);
+  private readonly _crossfader = signal<CrossfaderDto | undefined>(undefined);
 
   private readonly _channelRequests = new Map<number, Request<number>>();
   private readonly _memoryRequests = new Map<number, Request<number>>();
@@ -238,6 +255,10 @@ export class ConsoleStateService {
   readonly memoryPage = this._memoryPage.asReadonly();
   /** The key LEDs a real console reports (hardware mode), else undefined: the keys then follow the UI's own logic. */
   readonly keys = this._keys.asReadonly();
+  /** The console's LCD lines (a real console only); not shown by the UI, kept for the contract. */
+  readonly lcd = this._lcd.asReadonly();
+  /** The main playback a real console reports (hardware mode), else undefined. */
+  readonly crossfader = this._crossfader.asReadonly();
 
   /** Status of the console itself (not of the link to the backend). */
   readonly deviceStatus = computed<ConnectionStatus>(
@@ -294,6 +315,18 @@ export class ConsoleStateService {
         : undefined,
     );
     this._keys.set(sanitizeKeys(state.keys));
+    this._lcd.set(sanitizeLcd(state.lcd));
+    this._crossfader.set(sanitizeCrossfader(state.crossfader));
+  }
+
+  /** lcdChanged */
+  applyLcdChanged(lines: string[]): void {
+    this._lcd.set(sanitizeLcd(lines));
+  }
+
+  /** crossfaderChanged */
+  applyCrossfaderChanged(crossfader: CrossfaderDto): void {
+    this._crossfader.set(sanitizeCrossfader(crossfader));
   }
 
   /** Whether the connected device accepts a hub command (docs/api.md `supportedCommands`). */

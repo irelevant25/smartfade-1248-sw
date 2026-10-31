@@ -72,6 +72,10 @@ interface MemoryStateDto {                          // one memory as the console
 
 interface KeyLedDto { light: 'off' | 'dim' | 'full'; blinking: boolean; }   // one key LED: its first blink phase, and whether the phases differ
 
+interface CrossfaderDto {                           // PlaybackInfo record 5 (F130, OBSERVED): the stack step (0-based; read as the Next step, H76),
+  step: number; live: number; next: number;         // Live and Next 0..255 (A follows Live, B follows Next under the manual crossfaders, H80)
+}
+
 interface PanelKeysDto {                            // STACK and CLEAR (crossfader section), the record keys; SNAPSHOT and RATE have no identified LED
   stack: KeyLedDto; clear: KeyLedDto; copy: KeyLedDto; recSeq: KeyLedDto; magic: KeyLedDto; recMem: KeyLedDto; editMem: KeyLedDto;
   blackout: KeyLedDto; solo: KeyLedDto;             // the LED blocks 53 / 52, for the blink (block 53 blinks while the MASTER is below full, F85)
@@ -108,6 +112,9 @@ interface ConsoleStateDto {
                                                     // (hardware mode: ConsoleStatus, F113); null for the simulator (the UI chooses)
   keys: PanelKeysDto | null;                        // the key LEDs a real console reports (hardware mode, LedStatus; F116, F117,
                                                     // key identities INFERRED, H72); null until reported, always null for the simulator
+  lcd: string[] | null;                             // the console's LCD, two lines of 20 characters (bar glyphs as block characters;
+                                                    // F86); null until a real console reported it, always null for the simulator
+  crossfader: CrossfaderDto | null;                 // the main playback as reported (F130): null until reported, always null for the simulator
   showFileName?: string;                            // e.g. "SHOW04.ASC" when known
   firmwareVersion?: string;                         // e.g. "3.0.2.9.0.43" when known
 }
@@ -163,6 +170,8 @@ Server → client:
 | `mastersChanged` | `MastersDto` | master, bumps, blackout or solo changed |
 | `memoriesChanged` | `MemoryStateDto[]` (one or more memories) | a memory fader moved, or a memory was recorded, stored or deleted |
 | `outputsChanged` | `{ outputs: number[] }` | DMX output levels changed (coalesced, at most ~30 per second) |
+| `lcdChanged` | `string[]` (two lines) | a real console's LCD text changed (hardware mode only) |
+| `crossfaderChanged` | `CrossfaderDto` | a real console's main playback record changed: a GO fade, a manual crossfade, a stack step (hardware mode only) |
 | `errorOccurred` | `ErrorDto` | to the caller when a command was rejected; to all clients when the device reported an error or a queued command failed |
 
 Browser requests must come from one of the configured local origins (`Security:AllowedOrigins`,
