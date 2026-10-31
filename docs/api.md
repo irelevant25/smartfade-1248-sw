@@ -187,6 +187,7 @@ future hardware mode (no web page may ever drive a console without the owner's a
 | `GET /api/console/state` | `ConsoleStateDto` |
 | `POST /api/console/connect` | `ConnectionDto` |
 | `POST /api/console/disconnect` | `ConnectionDto` |
+| `POST /api/showfile/parse?name=<file name>` | `ShowFileDto`: the `.asc` file sent as the request body, parsed by `SmartFade.ShowFile.Asc` (read-only; nothing is stored, nothing reaches a console). `400` with `invalid_argument` for an empty body or a body above 4 MB. The DTO carries the header fields, the main stack and the sequences with their steps (numbers and times as the file wrote them, the referenced memory as page / fader / number), the memories with page and fader derived from the number (24 per page), the 512 patch entries, the independents, the channel and page labels, the settings, the count of unknown lines kept verbatim and the reader's warnings; every field's meaning has the status docs/formats/asc-format.md gives it |
 
 ## Rules carried by the contract
 

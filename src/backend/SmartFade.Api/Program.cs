@@ -91,6 +91,28 @@ app.MapPost("/api/console/disconnect", async (ConsoleService console, Cancellati
     return DtoMapper.ToDto(console.GetState().Connection);
 });
 
+// The show-file page: a .asc file chosen in the browser is parsed by SmartFade.ShowFile.Asc and returned
+// as a DTO. Read-only: nothing is stored and nothing reaches a console. The body is the file itself.
+app.MapPost("/api/showfile/parse", async (HttpRequest request, string? name, CancellationToken cancellationToken) =>
+{
+    const int maxBytes = 4 * 1024 * 1024;   // a show file is about 20 KB; this is a sanity limit, not a format one
+    using var buffer = new MemoryStream();
+    await request.Body.CopyToAsync(buffer, cancellationToken);
+    if (buffer.Length == 0)
+    {
+        return Results.BadRequest(new ErrorDto("The request body must be the .asc file.", "invalid_argument"));
+    }
+
+    if (buffer.Length > maxBytes)
+    {
+        return Results.BadRequest(new ErrorDto("The file is larger than a show file can be.", "invalid_argument"));
+    }
+
+    var bytes = buffer.ToArray();
+    var read = SmartFade.ShowFile.Asc.AscReader.Read(bytes);
+    return Results.Ok(ShowFileMapper.ToDto(string.IsNullOrWhiteSpace(name) ? "show.asc" : name.Trim(), bytes.Length, read));
+});
+
 app.MapHub<ConsoleHub>("/hubs/console");
 
 if (usbMode)

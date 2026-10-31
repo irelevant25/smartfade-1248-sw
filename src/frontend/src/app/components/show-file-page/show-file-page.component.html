@@ -1,0 +1,130 @@
+<section class="show sf-panel" aria-labelledby="show-title">
+  <div class="show__head">
+    <h2 id="show-title" class="sf-panel-title">Show file</h2>
+    <label class="show__pick sf-key">
+      {{ file() ? 'Open another' : 'Open a .asc file' }}
+      <input type="file" accept=".asc,.ASC" class="show__input" (change)="pick($event)" [disabled]="busy()" />
+    </label>
+    @if (file()) {
+      <button type="button" class="sf-key" (click)="close()">Close</button>
+    }
+    <p class="show__hint">Read-only: the file is parsed by the backend and shown here; nothing is written and nothing reaches the console.</p>
+  </div>
+
+  @if (error(); as problem) {
+    <p class="show__error" role="alert">{{ problem }}</p>
+  }
+
+  @if (file(); as show) {
+    <dl class="show__facts">
+      <div><dt>File</dt><dd>{{ show.name }}</dd></div>
+      <div><dt>Size</dt><dd>{{ show.bytes }} bytes, {{ show.lines }} lines, {{ show.lineEnding === 'crlf' ? 'CRLF' : 'LF' }}</dd></div>
+      <div><dt>Console</dt><dd>{{ show.manufacturer }} {{ show.console }}, software {{ show.softwareVersion }}</dd></div>
+      <div><dt>Patched</dt><dd>{{ patchedCount() }} of {{ show.patch.length }} DMX addresses</dd></div>
+      @if (show.unknownLines > 0 || show.warnings.length > 0) {
+        <div class="show__fact--warn"><dt>Reader</dt><dd>{{ show.unknownLines }} unknown lines kept, {{ show.warnings.length }} warnings</dd></div>
+      }
+    </dl>
+
+    @if (show.mainStack; as stack) {
+      <h3 class="show__section">Stack ({{ stack.steps.length }} steps)</h3>
+      <table class="show__table">
+        <thead><tr><th>Cue</th><th>Memory</th><th>Up</th><th>Down</th><th>Follow-on</th><th>Channels</th><th>Label</th></tr></thead>
+        <tbody>
+          @for (step of stack.steps; track $index) {
+            <tr>
+              <td class="show__num">{{ step.number }}</td>
+              <td>{{ memoryRef(step) }}</td>
+              <td class="show__num">{{ step.upTime }}@if (step.upDelay !== '0') { <span class="show__delay">+{{ step.upDelay }}</span> }</td>
+              <td class="show__num">{{ step.downTime }}@if (step.downDelay !== '0') { <span class="show__delay">+{{ step.downDelay }}</span> }</td>
+              <td class="show__num">{{ step.followOn }}</td>
+              <td class="show__chans" [attr.title]="channelsText(step.channels)">{{ step.channels.length }}</td>
+              <td>{{ labelText(step.label) }}</td>
+            </tr>
+          }
+        </tbody>
+      </table>
+    }
+
+    @for (sequence of show.sequences; track sequence.index) {
+      <h3 class="show__section">Sequence {{ sequence.index }}{{ sequence.label ? ' "' + labelText(sequence.label) + '"' : '' }} ({{ sequence.steps.length }} steps)</h3>
+      <table class="show__table">
+        <thead><tr><th>Step</th><th>Memory</th><th>Up</th><th>Down</th><th>Follow-on</th><th>Channels</th></tr></thead>
+        <tbody>
+          @for (step of sequence.steps; track $index) {
+            <tr>
+              <td class="show__num">{{ step.number }}</td>
+              <td>{{ memoryRef(step) }}</td>
+              <td class="show__num">{{ step.upTime }}</td>
+              <td class="show__num">{{ step.downTime }}</td>
+              <td class="show__num">{{ step.followOn }}</td>
+              <td class="show__chans" [attr.title]="channelsText(step.channels)">{{ step.channels.length }}</td>
+            </tr>
+          }
+        </tbody>
+      </table>
+    }
+
+    <h3 class="show__section">Memories ({{ show.memories.length }} recorded)</h3>
+    <table class="show__table">
+      <thead><tr><th>Memory</th><th>Page</th><th>Fader</th><th>Label</th><th>Channels</th></tr></thead>
+      <tbody>
+        @for (memory of show.memories; track memory.number) {
+          <tr>
+            <td class="show__num">{{ memory.number }}</td>
+            <td class="show__num">{{ memory.page }}</td>
+            <td class="show__num">{{ memory.fader }}</td>
+            <td>{{ labelText(memory.label) }}</td>
+            <td class="show__chans">{{ channelsText(memory.channels) }}</td>
+          </tr>
+        }
+      </tbody>
+    </table>
+
+    <h3 class="show__section">Patch (DMX address → channel; dimmed = unpatched)</h3>
+    <div class="show__patch" role="table" aria-label="Patch">
+      @for (row of patchRows(); track $index) {
+        <div class="show__patch-row" role="row">
+          @for (entry of row; track entry.dmx) {
+            <span
+              class="show__patch-cell"
+              role="cell"
+              [class.show__patch-cell--empty]="entry.channel === 0"
+              [attr.title]="'DMX ' + entry.dmx + (entry.channel ? ' → channel ' + entry.channel + ' at ' + entry.level + ' %' : ': unpatched')"
+            >
+              <span class="show__patch-dmx">{{ entry.dmx }}</span>
+              <span class="show__patch-ch">{{ entry.channel || '·' }}</span>
+            </span>
+          }
+        </div>
+      }
+    </div>
+
+    <h3 class="show__section">Labels and independents</h3>
+    <dl class="show__facts">
+      <div><dt>Channel labels</dt><dd>@if (namedChannels().length) {@for (c of namedChannels(); track c.number) {<span class="show__chip">{{ c.number }} {{ labelText(c.label) }}</span>}} @else {none}</dd></div>
+      <div><dt>Page labels</dt><dd>@if (namedPages().length) {@for (p of namedPages(); track p.number) {<span class="show__chip">{{ p.number }} {{ labelText(p.label) }}</span>}} @else {none}</dd></div>
+      @for (independent of show.independents; track independent.number) {
+        <div><dt>IND {{ independent.number }}</dt><dd>{{ independent.a }} {{ independent.b }} {{ independent.c }} {{ independent.d }} {{ labelText(independent.label) }}</dd></div>
+      }
+    </dl>
+
+    <h3 class="show__section">Settings</h3>
+    <dl class="show__facts">
+      @for (setting of show.settings; track setting.key) {
+        <div><dt>{{ setting.key }}</dt><dd>{{ setting.value }}</dd></div>
+      }
+    </dl>
+
+    @if (show.warnings.length) {
+      <h3 class="show__section">Reader warnings</h3>
+      <ul class="show__warnings">
+        @for (warning of show.warnings; track $index) {
+          <li>line {{ warning.line }}: {{ warning.message }}</li>
+        }
+      </ul>
+    }
+  } @else if (!error()) {
+    <p class="show__empty">Choose one of your show files (the SD card's SHOWnn.ASC or a SmartSoft save) to see its stack, sequences, memories, patch and labels.</p>
+  }
+</section>

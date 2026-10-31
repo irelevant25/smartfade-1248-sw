@@ -1,6 +1,7 @@
 import { ChangeDetectionStrategy, Component, computed, inject } from '@angular/core';
 import { ConsoleConnectionService } from '../../core/console-connection.service';
 import { ConsoleStateService } from '../../core/console-state.service';
+import { ViewService, type AppView } from '../../core/view.service';
 import { canConnect, canDisconnect, describeMode, describeStatus } from './connection-view';
 
 /**
@@ -17,6 +18,10 @@ import { canConnect, canDisconnect, describeMode, describeStatus } from './conne
 export class ConnectionBarComponent {
   private readonly _state = inject(ConsoleStateService);
   private readonly _connection = inject(ConsoleConnectionService);
+  private readonly _views = inject(ViewService);
+
+  /** Which page is shown: the console or the show-file viewer (E10). */
+  protected readonly view = this._views.view;
 
   protected readonly mode = computed(() => describeMode(this._state.mode()));
   protected readonly status = computed(() =>
@@ -54,5 +59,9 @@ export class ConnectionBarComponent {
 
   protected dismissError(): void {
     this._state.clearError();
+  }
+
+  protected show(view: AppView): void {
+    this._views.show(view);
   }
 }

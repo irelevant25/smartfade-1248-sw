@@ -105,6 +105,37 @@
   gap: 8px;
 }
 
+// The page switch: the console (default) and the show-file viewer.
+.bar__views {
+  display: flex;
+  gap: 2px;
+  padding: 2px;
+  border: 1px solid var(--sf-border-strong);
+  border-radius: 6px;
+}
+
+.bar__view {
+  appearance: none;
+  padding: 4px 10px;
+  border: 0;
+  border-radius: 4px;
+  background: transparent;
+  color: var(--sf-text-dim);
+  font: 600 0.75rem var(--sf-font-ui);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  cursor: pointer;
+
+  &:hover {
+    color: var(--sf-text);
+  }
+}
+
+.bar__view--current {
+  background: rgba(63, 208, 224, 0.18);
+  color: var(--sf-accent);
+}
+
 .bar__error {
   display: flex;
   align-items: center;

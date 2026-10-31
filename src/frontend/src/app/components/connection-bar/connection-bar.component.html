@@ -13,6 +13,15 @@
     }
   </div>
 
+  <nav class="bar__views" aria-label="Pages">
+    <button type="button" class="bar__view" [class.bar__view--current]="view() === 'console'" [attr.aria-pressed]="view() === 'console'" (click)="show('console')">
+      Console
+    </button>
+    <button type="button" class="bar__view" [class.bar__view--current]="view() === 'show-file'" [attr.aria-pressed]="view() === 'show-file'" (click)="show('show-file')">
+      Show file
+    </button>
+  </nav>
+
   <div class="bar__actions">
     <button type="button" class="sf-key" [disabled]="!connectEnabled()" (click)="connect()">
       Connect

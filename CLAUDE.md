@@ -162,7 +162,9 @@ S11.15, INFERRED): SmartSoft's only live-control message is ConsoleEvent (id 20,
 edits are whole-object writes, sending a show replaces the console's show and System (id 39) carries erase
 commands, so our code must never send either of the last two; the E9 runbook (`reverse-engineering.md`) scripts the
 Simulator actions, a label rename and an optional memory edit. After E8 the owner switched interface 1 back to the
-ETC driver. **Owner scope decisions (2026-10-30, `reverse-engineering.md` "Owner decisions on scope"):** no wheel
+ETC driver. **E10 step 1 built 2026-10-31:** `SmartFade.ShowFile.Asc` (reader and writer, 33 of 33 files byte-identical
+after a round trip), the `tools/asc-converter` CLI, and the UI's show-file page (page switch in the bar; `POST
+/api/showfile/parse`, read-only). **Owner scope decisions (2026-10-30, `reverse-engineering.md` "Owner decisions on scope"):** no wheel
 support and no settings edits, ever; a write mode means the live controls plus recording through the
 console's own REC MEM / EDIT MEM / COPY as key presses (E9 captures both); E10 is imagined as editor pages
 (patch, stack / sequences) with show save / load as `.asc` files on the PC (E6 round trip; the USB show

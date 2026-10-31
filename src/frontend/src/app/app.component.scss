@@ -39,6 +39,12 @@
   grid-row: 1 / span 2;
 }
 
+.shell__show {
+  grid-column: 1 / -1;
+  grid-row: 1 / span 2;
+  min-height: 0;
+}
+
 .shell__outputs {
   padding: 10px;
 }

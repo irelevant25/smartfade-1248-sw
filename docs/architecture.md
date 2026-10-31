@@ -250,6 +250,17 @@ dependency and sends nothing anywhere; the E6 round trip (save on the console, c
 software, load from the SD card) is the experiment that would make its model trustworthy for
 editing.
 
+## Show-file page as built (2026-10-31, E10 step 1)
+
+The UI has a page switch in the connection bar: the console (default) and the show-file viewer. The
+viewer (`src/frontend/src/app/components/show-file-page`) opens a `.asc` file chosen in the browser,
+posts its bytes to `POST /api/showfile/parse` (the Api project references `SmartFade.ShowFile.Asc`
+and maps the parsed model to `ShowFileDto`, docs/api.md), and shows the stack and the sequences with
+their steps, the memories, the 512-address patch, the labels, the independents, the settings and
+the reader's warnings, read-only. Nothing is stored and nothing reaches a console; the console page
+and its SignalR link are untouched by it. The next E10 steps (owner's order): patch editing saved as
+a new file, then the stack and sequence editor, each validated by the E6 round trip on the console.
+
 ## Phase 2 proposal: live control after E9b and SC-2 (2026-10-31, not implemented)
 
 E9 (2026-10-30) was the first capture of a PC writing to the console. It showed, for one session,
