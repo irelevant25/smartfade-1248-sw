@@ -698,6 +698,8 @@ settings, wheel or page action in SmartSoft): a second capture after its own pow
 SmartSoft's and the console's behaviour, with the A3 looks removed from the look-only steps (or logged as actions) and these additions,
 each restored in place:
 
+**E12b guide (written 2026-10-31, evening, parse-checked; not run):** `tools/usb-probe/e12b-guided-session.ps1`, run from the repository root with `-LogFile e12b-actions.txt`. Besides E12's steps it adds, each restored in place: D6 a channel step (channel 47, type 0), D5 a Direct cue inserted with channel fader 5 at half (a level in it) and labelled `čAJ123456789012345` (a "č" and a full third line, H40), E1 / E1b inserts at step 3 and at the end of KOTLIK with the landing place logged (H102, H103), E3b the Manual run mode after One Shot, S an SD save of the edited show (the file forms; a third SD number), C3 the IND values named by the owner before and after each change (H44, H93), and in the optional H the console's own Step Timing on the Direct cue and its Insert / Delete step menus in the stack and in KOTLIK (H106). E12's lessons are built in: no looks outside the steps and never the IND panel, PLAY or PAUSE outside their steps (a look is a write, F158), no memory-step label (E12's D4 is gone), the right-clicked row and the landing place logged at every insert, a "did you click anything else" question after every section, the USBPcap output path absolute, and the console returned to channel mode at the end. The owner questions A1–A8 above are asked in chat, not by the script.
+
 - a **channel step** (type 0) in the stack (H12, H98);
 - **Manual** (run mode 2) on KOTLIK and back (H95);
 - an insert and a delete at **another index** of KOTLIK (H102, H103);

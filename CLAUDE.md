@@ -253,7 +253,7 @@ StepContent; F156), seen only after SmartSoft's step commands and in its downloa
 cleared nothing:** SC-1's poll and listed fetch remain the only messages cleared for a read-only session, SC-2's decisions are unchanged (Patch
 and Independents class F, "Never"; Memory class D, NO-GO), the stack, sequence, page and step-command writes are in no class, and our code never
 sends any of them. Next: "Next capture (proposed by the E12 analysis, 2026-10-31)" in `reverse-engineering.md` (the owner questions; E12b, the
-repeat).
+repeat, whose guided script `tools/usb-probe/e12b-guided-session.ps1` is written and parse-checked, not run).
 
 ## Commands
 
@@ -313,8 +313,9 @@ refuses to start, and it is run only as the E8 runbook says (backup first). The 
 owner's PC.
 **Live control (SC-2 classes A and B1, the owner's implementation; not before the re-check and E11's go):**
 `dotnet run --project src/backend/SmartFade.Api -- --Device:Mode=Usb --Device:Usb:ConfirmDate=yyyy-MM-dd --Device:Usb:LiveControlDate=yyyy-MM-dd`
-(both dates today, or the backend refuses to start; set without `Device:Mode=Usb`, or with a timing setting slower than
-its default, it refuses too) adds the whitelisted
+(both dates today, or the backend refuses to start; set without `Device:Mode=Usb`, or with one of the five cadence settings
+(poll interval, poll after fetch, fetch delay, poll after write, write interval) slower than its default, it refuses too; the
+reply timeout is not bounded) adds the whitelisted
 ConsoleEvents (channel fader 1, MASTER, BUMPS, bump 7, memory bump 1, SOLO, BLACKOUT) behind the record-function
 interlock, shows LIVE CONTROL beside HARDWARE and names the writable controls to the UI; everything else stays as
 in the read-only mode. Run only as the SC-2 E11 script says (backup first, USBPcap in parallel). After a Data write

@@ -44,7 +44,7 @@ public sealed class UsbDeviceOptions
         public const int WriteInterval = 46;
     }
 
-    /// <summary>The default settings (ms): SmartSoft's measured medians, rounded (OBSERVED, the sources above); live control never runs slower than these.</summary>
+    /// <summary>The default settings (ms): SmartSoft's measured cadence, rounded (OBSERVED, the sources above): the medians, except the write interval, which is the observed write-to-write minimum rounded up (44.77 / 45.55 ms in E9 / E9b; the median was 61.7 / 62.1 ms); live control never runs slower than these.</summary>
     public static class Defaults
     {
         public const int PollInterval = 31;

@@ -221,7 +221,8 @@ public sealed class HspReadLoop
                 // Nothing to wait for when this is the kind waited for (a write's slot also covers a fetch's and a
                 // poll's with the default settings); a held or dropped write leaves the fetch or poll its own floors.
                 // While a write is held, the transfer that takes its slot has waited for the write's timing, a few ms
-                // after its own (30 ms after the poll rather than 21 ms after the payload): slower, never faster.
+                // after its own (30 ms after the poll rather than 28 ms after the payload, the default fetch delay whose
+                // floor is 21 ms): slower, never faster.
                 await WaitForSlotAsync(next.Kind).ConfigureAwait(false);
             }
 
