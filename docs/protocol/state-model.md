@@ -63,6 +63,14 @@ the memory (F145, F146); a label write is stored and returned verbatim (F144). T
 VERIFIED as SmartSoft's and the console's behaviour (F131–F134, F138). VERIFIED never clears a message for sending; the causality
 statements remain INFERRED; nothing in E9b's writes is cleared.
 
+**Update 2026-10-31, evening (E12,** [record](captures/2026-10-31-e12-smartsoft-patch-stack-edits.md)**).** SmartSoft editing the patch, the independents, the stack, a
+sequence, a memory and page names (three sessions in one passive capture after a console power cycle, 70 PC data writes, our
+software sent nothing; decoded by the `capture-analyst` on Opus 5.5 at the owner's request) held the phases below again and showed
+how the stored show changes over USB: whole-object writes that the console stores without listing anything, step commands that it
+answers with lists of what they changed, a two-phase insert, Sequence records with c ≠ 0 and bodies whose length follows the show,
+and the console's own menu edits listed at every wheel detent (F151–F158). F143 and F147 are VERIFIED and F144 and F146 VERIFIED in
+part (E9b + E12). VERIFIED never clears a message for sending; nothing in E12's writes is cleared.
+
 ## Session phases seen (SmartSoft, firmware 3.0.2.9.0.43)
 
 | Phase | What happened | When (E2) | Fact |
@@ -155,6 +163,19 @@ console power cycle, **427 PC data writes**; JSONL `seq` and frames `fN` of the 
 | 5. Download | 48.54–55.82 s, 157 fetches, the last payload seq 808 (f1616) | 1049.45–1056.77 s (the last payload seq 65477) and 1146.30–1153.59 s (seq 70864) |
 | 6. Steady state | 241 lists in all; **386 further PC writes** besides the pair (349 ConsoleEvent kind 0 and 36 kind 1 events from the Simulator, one ChannelText "Čaj"); the console acts on a key press at once and reports the changed objects in the next list (F134); a physical fader takes over from a PC-set level at once (F141) | session 2: 2 lists and one write, the ChannelText "restore" (seq 68752 / 68753), nothing listed after it; session 3: 72 lists and 34 further writes (17 MASTER events, 16 key events, **the Memory (0) write**, seq 92052 / 92053, nothing listed after it); the console's own recordings and EDIT MEM listed Memory and System (5, 5, 0) objects without any PC write (F142, F147) |
 | 7. End | 1031.501 s: an idle poll / reply (seq 64679 / 64680), 2.4–3.8 s after the log's "close" step started; no closing message | 1128.263 s and 1671.072 s likewise (F64) |
+
+The same phases in E12 (2026-10-31, afternoon; SmartSoft Online editing the patch, the stack, a sequence, a memory and page names,
+three sessions in one passive USBPcap capture after a console power cycle, **70 PC data writes**; JSONL `seq` and frames `fN` of the
+committed console-only split):
+
+| Phase | Session 1 (4.63–2189.83 s, after the power cycle) | Sessions 2 (2203.22–3066.00 s) and 3 (3079.52–3150.63 s), restarts |
+|---|---|---|
+| 1. First poll | all-zero first poll (f11); the second reply announces the 2-record power-on list [22, 21] (seq 10, f20, pseq 0x00) | nothing pending: the first list is [37], after the System write (f277858, f388378) |
+| 3. Handshake A | System `09 00 00` after reply header #40, 36 idle replies before (seq 91 / 92, 5.934 s) → [37] (seq 95) → "3.0.2.9.0.43" (seq 99) | the same at #40, 40 idle replies before (2204.502 s, 3080.798 s) |
+| 4. Handshake B | System `07 00 00` after #79 (seq 174 / 175, 7.210 s) → the 157-record list (seq 178, f356) | the same at #79 → **161 records** (seq 139012, after the edits) and 157 records (seq 194272, after the restores; F157) |
+| 5. Download | 157 fetches, to 14.48 s | 161 and 157 fetches |
+| 6. Steady state | 45 further writes (Independents, GO, step commands and their contents, Patch, StepContent, Sequence, Memory, Page; the A3 events unlogged); lists only after the step commands and the console's own actions, none after an object write; nothing at all listed from 1382.08 s to the end of the session | session 2: the console's own patch and step-timing menu edits (no PC write for 350 s), then 19 restore writes; session 3: idle |
+| 7. End | 2189.828 s: an idle poll / reply; no closing message | 3065.997 s and 3150.632 s likewise (F64) |
 
 ## Model implied by the observations
 
@@ -292,6 +313,26 @@ console power cycle, **427 PC data writes**; JSONL `seq` and frames `fN` of the 
   memory must treat the stored level as the output level at the moment of recording, not the fader position.
 - **A label write is stored verbatim and survives restarts and power cycles** (E9b, F144): the only way to read the exact bytes back is a
   download after SmartSoft's System `07 00 00`; the SD file does not carry them.
+- **Editing the stored show over USB is whole-object writes plus step commands, and the console acknowledges neither** (E12,
+  F151, F153): an object write (patch, independents, step, sequence, page, memory) is followed by no listing; a step command
+  (InsertStep, DeleteStep, MoveStep, id 42) is followed on the next poll by a list of the objects it changed, a report of the
+  effect, not an acknowledgement (no list names the command). The stored show changes at once (download 2 equals the last
+  writes). OBSERVED once, not cleared.
+- **An insert is a two-step transaction** (E12, F152): the console creates a default step at once and SmartSoft completes it with
+  the content write after fetching that default; in between the stack holds a step nobody meant (type 0, memory index 0), and a
+  lost second phase would leave it there (INFERRED).
+- **A step's index is not its identity** (E12, F151): inserts and deletes shift the indices after them, and the console lists the
+  shifted StepContent records (from the new index to the end after an insert); a mirror must key steps by the console's current
+  index and re-read what is listed.
+- **Object lengths follow the show's content, and a list record can carry c ≠ 0 outside System** (E12, F156, F157): a Sequence is
+  10 + 38 + 12 n bytes, a type-2 StepContent 148 bytes, and Sequence (2, 0, 0, 6) was listed after SmartSoft's commands; the full
+  list grows with the recorded memories and steps (161 records). A decoder must take the length from the object; SC-1's read
+  session faults instead (a safe stop, INFERRED from the code).
+- **The console's own menu edits reach the PC at every wheel detent** (E12, F155): a Blind patch by dimmer changes the patch, and
+  lists it, at each detent; Step Timing lists the step and SequenceMain at each value. A follower sees intermediate states that
+  the user never confirmed.
+- **SmartSoft's editors are not read-only** (E12, F158): looking in a tab can send live keys (GO, FADERS MEMS) and unchanged
+  rewrites; one of them left the console in memory mode.
 
 ## Show content seen in the download (decoded, `SHOW04.ASC`)
 
@@ -303,7 +344,7 @@ download carries, in terms of the show model:
 |---|---|---|---|
 | Patch (DMX -> channel) | Patch (5) | 512/512 | proportional level (UNKNOWN where) |
 | 16 memories with levels and labels | Memory (0), slot (a, b), number 24a + b + 1 | 16/16, 768/768 levels | page / fader meaning (E6) |
-| 1 sequence + the main stack | Sequence (2), SequenceMain (3), StepContent (4) | steps 26/26 incl. Up / Down / third time (FOLLOWON) | sequence step numbers differ wire vs file (H43) |
+| 1 sequence + the main stack | Sequence (2), SequenceMain (3), StepContent (4) | steps 26/26 incl. Up / Down / third time (FOLLOWON) | sequence step numbers differ wire vs file (H43) *(E12 2026-10-31: the stored objects changed by SmartSoft's writes and read back in download 2; a type-2 "State" step carries its own levels and label, 148 bytes; F153, F156)* |
 | 2 Independents | Independents (12) | 2/2 | field meaning; live levels (ChannelLevels body[49], [50] were 0) *(E8 2026-10-30: record byte 0 = the on state and ChannelLevels body[49], [50] = the levels moved with the IND keys, F115; the other fields are still open)* |
 | MIDI and other settings | SystemSettings (41) | run of six `SET` values at body[6..11] | per-key mapping, default times (H45) *(E3b: body[12..15] = the default Up / Down times shown on the LCD, F102; not in the file as far as F104 shows)* |
 | Labels (pages, channels, memories, sequences, independents) | text block in each object | all compared objects | byte order HYPOTHESIS, two readings fit the same bytes (H40, F73) |
@@ -321,4 +362,4 @@ in another mode, console power-up while connected, whether the 157-object list i
 depends on a show-changed flag; whether the initial pending list (F56) depends on what happened
 before the session. *(E3 2026-10-29: it differed after a console power cycle, F80, so it depends on something about the
 console's state or history; the cause is not isolated. The 157-record list was byte-identical in both
-sessions, but both sessions had the same show.)* *(E3b 2026-10-30: the pending list differed again after a third history, F94; after a restart nothing was pending, H65. The 157-record list was byte-identical in five sessions, all with the same show.)* *(E9, 2026-10-30, late evening: a SmartSoft session with PC writes ran 28 minutes, about 85 minutes after a session of another host (E8b) and with no power cycle; the pending list at connect held 25 records (F94), and the 157-record list was byte-identical in a sixth session. Still open: what happens when a write is not answered, whether a host that never sent the System pair may write events (H66), and a session that ends between a key press and its release.)* *(E9b, 2026-10-31: three more SmartSoft sessions after a console power cycle repeated the start-up (the pending list at connect held 3 records after the power-on and nothing after the two restarts, F94) and the 157-record list was byte-identical in nine sessions. Still open besides the above: the console's reaction to a host that never sent the System pair (H66), an EDIT MEM selection of a memory other than memory 1 on the console's own key (c ≠ 0, H83), whether an emptied memory is named in the next 157-record list (H87), and what the console does with a physical fader movement that nobody made (H88).)*
+sessions, but both sessions had the same show.)* *(E3b 2026-10-30: the pending list differed again after a third history, F94; after a restart nothing was pending, H65. The 157-record list was byte-identical in five sessions, all with the same show.)* *(E9, 2026-10-30, late evening: a SmartSoft session with PC writes ran 28 minutes, about 85 minutes after a session of another host (E8b) and with no power cycle; the pending list at connect held 25 records (F94), and the 157-record list was byte-identical in a sixth session. Still open: what happens when a write is not answered, whether a host that never sent the System pair may write events (H66), and a session that ends between a key press and its release.)* *(E9b, 2026-10-31: three more SmartSoft sessions after a console power cycle repeated the start-up (the pending list at connect held 3 records after the power-on and nothing after the two restarts, F94) and the 157-record list was byte-identical in nine sessions. Still open besides the above: the console's reaction to a host that never sent the System pair (H66), an EDIT MEM selection of a memory other than memory 1 on the console's own key (c ≠ 0, H83), whether an emptied memory is named in the next 157-record list (H87), and what the console does with a physical fader movement that nobody made (H88).)* *(E12, 2026-10-31: three more SmartSoft sessions after a power cycle repeated the start-up (the power-on list [22, 21], nothing after the restarts) and the 157-record list twice, with a 161-record list after the edits (F157). Still open besides the above: a console-side insert / delete / move and whether it lists c ≠ 0 records (H102, H106); InsertStep's c for a sequence (H103) and id 42 beyond one renumber; what triggers InsertStep's phase 2 (H105); the console's playback of One Shot and Manual; the SD form of edited objects.)*

@@ -104,9 +104,12 @@ public sealed class HspReadSession
     public const int MaxQueuedWrites = 8;
 
     /// <summary>
-    /// Body length of every object the console delivered, one length per id in every capture
-    /// (F67 for the ids of E2 and E3; InputLevels 19 from E3 alone, F81, OBSERVED once). A body of
-    /// another length has never been observed and faults the session.
+    /// Body length of every object the console delivered, one length per id in the read-only captures
+    /// E2 to E9b (F67 for the ids of E2 and E3; InputLevels 19 from E3 alone, F81, OBSERVED once). E12
+    /// (2026-10-31, OBSERVED once, F156) saw other lengths, but only after SmartSoft's step commands and in
+    /// its following download: a Sequence (2) of 144 bytes and a type-2 StepContent (4) of 148 bytes, plus
+    /// Sequence list records with c not 0. A body of another length faults the session, a safe stop; whether
+    /// a read-only session should accept those shapes is an SC-1 review question, not decided here.
     /// </summary>
     public static readonly IReadOnlyDictionary<int, int> ObservedBodyLengths = new Dictionary<int, int>
     {

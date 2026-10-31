@@ -53,10 +53,10 @@ or copy its contents into source code. Derived extractions go to `analysis/extra
 | Source inventory + hashes | `docs/source-materials.md` |
 | Hardware facts | `docs/hardware/smartfade-1248.md` |
 | Protocol knowledge base (status vocabulary, facts, hypotheses, evidence matrix) | `docs/protocol/` |
-| Observed framing, commands, responses, session model (from E2, E3, E3b, E8, E8b, E9 and E9b; VERIFIED = reproduced behaviour, never clearance to send; the write messages are VERIFIED only as SmartSoft's behaviour where E9b reproduced E9, the rest OBSERVED once, and none is cleared) | `docs/protocol/packet-format.md`, `commands.md`, `responses.md`, `state-model.md` |
+| Observed framing, commands, responses, session model (from E2, E3, E3b, E8, E8b, E9, E9b and E12; VERIFIED = reproduced behaviour, never clearance to send; the write messages are VERIFIED only as SmartSoft's behaviour where E9b reproduced E9 or E12 reproduced E9b, the rest OBSERVED once (E12's step commands and edit writes among them), and none is cleared) | `docs/protocol/packet-format.md`, `commands.md`, `responses.md`, `state-model.md` |
 | Third-party reference compared with our 1248 evidence (ConsoleLink, SmartFade ML, evidence class 5) | `docs/protocol/consolelink-analysis.md` |
 | Capture records, evidence files, capture format | `docs/protocol/captures/`, `tools/protocol-analyzer/` |
-| SmartSoft binary analysis (framing S11; write paths S11.15; GUI edits of the patch and the stack / sequences S11.16, INFERRED, never seen on the bus) | `docs/protocol/smartsoft-analysis.md` |
+| SmartSoft binary analysis (framing S11; write paths S11.15; GUI edits of the patch and the stack / sequences S11.16, INFERRED, each row annotated with E12's outcome) | `docs/protocol/smartsoft-analysis.md` |
 | MIDI analysis | `docs/protocol/midi-spec-analysis.md` |
 | Experiments, runbooks (E8, E8b, E9, E12), safety rules, capture format | `docs/protocol/reverse-engineering.md` |
 | Hardware safety checks: what is cleared for sending, under which conditions | `docs/protocol/safety-checks.md` |
@@ -237,7 +237,23 @@ done by Claude (its attempt on 2026-10-31 was stopped by its safety system, like
 pass evaluates them with the committed analyzer tools, the record names them.** The researcher's static findings stay as recorded
 (`docs/protocol/smartsoft-analysis.md` S11.16; H91-H101 HYPOTHESIS, the test run and its outcome not recorded; the DOCUMENTED manual facts
 F148-F150): none OBSERVED or VERIFIED, none cleared, and our code never sends any of these messages (SC-2 class F, "Never", for the Patch and
-Independents writes; the VERIFIED count stays 61).
+Independents writes; the VERIFIED count stays 61). *(Superseded in part the same evening, text kept: the decoding was then done by the
+`capture-analyst` agent on Opus 5.5 at the owner's request, see "E12 analysed" below; the sentence on Claude's own stopped attempt stands.)*
+**E12 analysed 2026-10-31, evening**, by the `capture-analyst` agent on Opus 5.5 at the owner's request (read-only tools
+`tools/protocol-analyzer/e12/`; the record's section "Analysis"), and applied by the knowledge-base curator: SmartSoft's edits of the patch, the
+independents, stack steps, a sequence, pages and memories are whole-object writes in the console's layouts (a type-2 "Direct cue" step excepted:
+100 bytes against the console's 148), stored by the console and answered by no listing. Its step commands InsertStep (32), DeleteStep (34),
+MoveStep (35) and id 42 carry `[a][b][c]` bodies (a = 48 for the stack, 0 for KOTLIK), the console answers each with a list of the affected
+objects, and an insert runs in two phases with the step type in the second; the console also lists its own patch and step-timing menu edits at
+every wheel detent. **65 facts are VERIFIED** (F143 and F147 added, F144 and F146 in part; E9b + E12, never clearance to send); F151-F159 and
+H102-H106 were added, H91, H93, H97, H99 and H14 CONFIRMED, H92, H94-H96, H101 and H87 in part, H98's sub-reading "the step type travels in
+the command" REJECTED (all OBSERVED once). **SC-1 relevance (documentation only; no code changed):** E12 shows list records and object lengths
+that would stop a read-only session of ours with a fault, a safe stop (Sequence records with c ≠ 0, a 144-byte Sequence, a 148-byte type-2
+StepContent; F156), seen only after SmartSoft's step commands and in its download; a console-side insert or delete is untested (H106). **E12
+cleared nothing:** SC-1's poll and listed fetch remain the only messages cleared for a read-only session, SC-2's decisions are unchanged (Patch
+and Independents class F, "Never"; Memory class D, NO-GO), the stack, sequence, page and step-command writes are in no class, and our code never
+sends any of them. Next: "Next capture (proposed by the E12 analysis, 2026-10-31)" in `reverse-engineering.md` (the owner questions; E12b, the
+repeat).
 
 ## Commands
 

@@ -126,6 +126,15 @@ recorded in the Stack steps", so the stack's `b` = 2 may be something else. The 
 sequence and 48 for the stack, row 3) agrees with the HYPOTHESIS on `a` above. Both readings are tested by the planned capture
 E12 (reverse-engineering.md), not by an SD save; nothing here is a reason to write `b` in a file other than as read.
 
+**Update 2026-10-31, evening (E12; OBSERVED once, SmartSoft's writes and the console's stored objects; no SD save of an edited object
+was made):** for a sequence, `b` (Sequence body[3]) is the run mode as SmartSoft writes it, 0 Loop and 1 One Shot (W41, W56 of the
+E12 record), and the console stored 1 (download 2); the file form of One Shot (`$SEQUENCE 0 1 …`?) was not observed, because the show
+was restored before the only save (`SHOW13.ASC` = `SHOW12.ASC`). SmartSoft showed no run-mode control for the stack and wrote no
+SequenceMain, so the stack's `b` = 2 is still unexplained (the console manual's "the Stack run mode is determined by the wait times",
+known-facts F149). On the wire the step commands carry `a` = 48 for the stack and 0 for KOTLIK (F151), as the HYPOTHESIS on `a` above
+says for those two values; another page or slot is untested. `c`, `d`, `e` stayed 0, 256, 256 in every Sequence write. Nothing here
+is a reason to write `b` other than as read; the repeat E12b plans an SD save while edited (reverse-engineering.md).
+
 Sequence label: `Text KOTLIK` + `$$Text 1 KOTLIK` / `$$Text 2 ` / `$$Text 3 ` directly after the header.
 
 ### Step record (`CUE` in main stack, `$CUE` in sequences)
@@ -145,9 +154,9 @@ Text …/$$Text 1..3        ← optional (present in demo stack steps)
 |---|---|---|---|
 | Cue number (see also "Sequence step numbers" below) | `1.0`…`14.0`, `10.1`…`10.6` (stack); `265.0`…`271.0`, `46.0`, `19.0`…`24.0` (sequences) | Stack: cue number with point cues (max 199.9, engine string "Cue number >199.9"). Sequences: the number **equals the memory number** (265 = page 12 fader 1) or the channel number (`46.0` with `CHAN 46/100`) | INFERRED. Update 2026-10-28: for memory-referencing sequence steps `$CUE` = 24p + f + 1 of `$$MEMORY p f` in 348 of 348 steps over SHOW01..99 and the 23 named shows (SHOW04: 265.0..271.0 = `$$MEMORY 11 0..6`; the 2 remaining steps in Husle-04.asc have no `$$MEMORY`). **But the console sends 1.0..7.0 for SHOW04's sequence on the wire** (OBSERVED, one capture), so the file number is not what the protocol carries |
 | `$$MEMORY p f` | `0 0`…`0 12`, `11 0`…`11 6` | memory = p×24 + f + 1 → matches `GROUP` content in 26/26 cases | INFERRED (H13, strong). Update: **OBSERVED** for the numbering (E2 cross-check: 16/16 memories, 26/26 step records); 0-based page/fader as the console's physical page and fader is **OPEN** (E6 probe 1) |
-| `$$CUEPARAMS` | 0, 1, 2 | 0 = channel step (single channel, no `$$MEMORY`), 1 = memory step (has `$$MEMORY`), 2 = stack-only state (no `$$MEMORY`, own CHAN list, has Text) | HYPOTHESIS (H12) |
+| `$$CUEPARAMS` | 0, 1, 2 | 0 = channel step (single channel, no `$$MEMORY`), 1 = memory step (has `$$MEMORY`), 2 = stack-only state (no `$$MEMORY`, own CHAN list, has Text) | HYPOTHESIS (H12) *(E12, 2026-10-31: on the wire, step record byte 2 = 2 is the console's "State" (LCD "XF Step:>14.1 State") and SmartSoft's "Direct cue", a stack step with its own levels and label (148 bytes on the console), and 1 a memory step; 0 untested; no SD save of a type-2 step of our console yet; known-facts F154)* |
 | `UP t d` / `DOWN t d` | t ∈ {0, 0.4, 0.5, 1.0, 2.0, 3.0, 5.0}, d always 0 | seconds, one decimal. d = delay | INFERRED |
-| `FOLLOWON t` | `0`, `1.0`, `10`, `11`, `21`, `50`, `58`, `1:30` | seconds, integer or one decimal, `m:ss` ≥ 60 s. 0 = none | INFERRED (H14). E2: on the wire FOLLOWON is the third u16 BE time after UP and DOWN, in tenths of a second, 26/26 steps (SHOW04 line 75 `FOLLOWON 1:30` = 900 tenths = `03 84`; `58` = `02 44`; `50` = `01 F4`). **OBSERVED** for position and unit; that the console calls it "Wait" is **UNKNOWN** (H14 name part, E6 probe 3) |
+| `FOLLOWON t` | `0`, `1.0`, `10`, `11`, `21`, `50`, `58`, `1:30` | seconds, integer or one decimal, `m:ss` ≥ 60 s. 0 = none | INFERRED (H14). E2: on the wire FOLLOWON is the third u16 BE time after UP and DOWN, in tenths of a second, 26/26 steps (SHOW04 line 75 `FOLLOWON 1:30` = 900 tenths = `03 84`; `58` = `02 44`; `50` = `01 F4`). **OBSERVED** for position and unit; that the console calls it "Wait" is **UNKNOWN** (H14 name part, E6 probe 3) *(E12, 2026-10-31: the console's Step Timing screen calls this time "W" ("U 3.0 D 4.0 W 2.0" for the value SmartSoft wrote under its label "Wait"); H14 CONFIRMED, OBSERVED once, known-facts F154)* |
 | `CHAN c/l` | c 1–48 seen, l 7–100 | channel / level percent integer. Channels at 0 omitted | INFERRED. E2: the console holds the level as an 8-bit value, 0xFF = 100 %; across all 53 non-zero levels of SHOW04 raw = ceil(pct × 255 / 100) fits 53/53 (round(pct × 2.55) fails 7/53, e.g. 17 % = 0x2C = 44). The percentage is therefore a **derived** value (raw to pct by rounding or truncation, both fit 53/53; **rounding direction UNKNOWN**). A reader cannot recover the raw byte beyond ceil(pct × 2.55) and a writer must derive pct from raw. **OBSERVED** (one show) |
 
 Note: a memory-referencing step **duplicates** the memory's channel levels in its `CHAN`
@@ -267,7 +276,7 @@ comparison with the file is still one show and one file, so the rows below keep 
 | Labels | 3 × 6 UTF-16 code units, BE by structure | OBSERVED (match), INFERRED (byte order) *(update 2026-10-29: byte order HYPOTHESIS, two readings, see "Text block" above; the console returns the same label blocks in E3, F73)* |
 | Sequence step numbers | wire 1.0..7.0, file `$CUE 265.0..271.0` (lines 175, 183, 191, 199, 207, 215, 223) | OBSERVED, see below |
 | Step records | cue, CUEPARAMS, memory index, UP, DOWN, FOLLOWON match 19/19 (main) and memory index, CUEPARAMS, UP, DOWN, FOLLOWON 7/7 (sequence). Wire memory index = 24p + f (264 for `$$MEMORY 11 0`), the file shows p and f separately | OBSERVED |
-| FOLLOWON | third time, tenths of a second | OBSERVED; name "Wait" UNKNOWN |
+| FOLLOWON | third time, tenths of a second | OBSERVED; name "Wait" UNKNOWN *(E12, 2026-10-31: the console names it "W", H14 CONFIRMED, F154)* |
 | `$INDEPENDENT` | 4-byte record `00 FF 00 01` | OBSERVED |
 | `SET` | six values at SystemSettings body[6..11] | OBSERVED (position only) |
 

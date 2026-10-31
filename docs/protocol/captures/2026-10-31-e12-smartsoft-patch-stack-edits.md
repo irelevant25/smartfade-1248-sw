@@ -573,6 +573,8 @@ sequence, of id 42 beyond one renumber; Manual (run mode 2), a channel step (typ
 the console stores a type-2 label (deleted before a download); the console's own insert / delete / move; DMX output effects (DMX
 100–102 unconnected, no level raised during the patch edits); the SD file form of any edited object.
 
+*(Applied by the curator on 2026-10-31, evening: `known-facts.md` (F143, F147 VERIFIED; F144, F146 VERIFIED in part; F151–F159), `hypotheses.md` (H91–H101 verdicts; H102–H106).)*
+
 ### Owner questions (zero risk; statements never promote)
 
 1. **A3** (15:44:03–15:47:44): did you open the IND panel (an unchanged Independents write at 15:44:03.5), click **PLAY** in the

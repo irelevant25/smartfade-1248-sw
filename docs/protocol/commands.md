@@ -10,7 +10,8 @@ Evidence: [E2 record](captures/2026-10-28-e2-smartsoft-connect.md) and, since 20
 the [E3 record](captures/2026-10-29-e3-console-actions.md) and, since 2026-10-30, the
 [E3b record](captures/2026-10-30-e3b-live-objects.md) and, since the late evening of 2026-10-30, the
 [E9 record](captures/2026-10-30-e9-smartsoft-writes.md) (SmartSoft's data writes beyond the System pair) and, since 2026-10-31, the
-[E9b record](captures/2026-10-31-e9b-smartsoft-writes-repeat.md) (the repeat of E9).
+[E9b record](captures/2026-10-31-e9b-smartsoft-writes-repeat.md) (the repeat of E9) and, since the evening of 2026-10-31, the
+[E12 record](captures/2026-10-31-e12-smartsoft-patch-stack-edits.md) (SmartSoft editing the patch and the stack / sequences).
 
 **Update 2026-10-29 (E3).** The second SmartSoft session, after a console power cycle, sent the same
 four kinds of message (poll, fetch, the two System writes) and nothing else: no ConsoleEvent, no show
@@ -71,6 +72,15 @@ console were seen to behave so in two sessions, **never that we may send the mes
 codes 0x37, 0x3B, 0x47 and 0x48, and the Memory (0) row (OBSERVED once). **E9b clears no message:** SC-1's poll and listed fetch
 remain the only messages cleared, no type-1 data header is encoded anywhere in the solution *(Superseded 2026-10-31, later the same day: the owner implemented SC-2's whitelist in `HspOutbound` and `HspReadSession`, sent only by a session with live control switched on for the day (`Device:Usb:LiveControlDate`); reviewed under SC-2 item 10, NEEDS CHANGES at the first pass, see safety-checks.md; nothing is cleared for sending before E11 on the owner's go.)*, and SC-2 is the gate for any write.
 
+**Update 2026-10-31, evening (E12).** E12 ([record](captures/2026-10-31-e12-smartsoft-patch-stack-edits.md)) was a SmartSoft session in which the owner edited the patch, the
+independents, the stack, the sequence KOTLIK, memory 9 and page names in SmartSoft's tabs (three sessions in one passive capture
+after a console power cycle; our software sent nothing; decoded by the `capture-analyst` on Opus 5.5 at the owner's request): 70
+data writes, the System pair × 3 (SmartSoft's tenth to twelfth sessions), three key pairs (GO, FADERS MEMS and a new code 0x3A),
+the first **step commands** (InsertStep 32, DeleteStep 34, MoveStep 35, id 42) and the first **Patch, Independents, StepContent,
+Sequence and Page writes**, plus five Memory writes. They are recorded with their bytes in the section "PC → console data writes
+seen in E12" below, each **OBSERVED once and NOT CLEARED**; the Memory write's layout is now VERIFIED as SmartSoft's behaviour
+(F143, E9b + E12). **E12 clears no message:** SC-1's poll and listed fetch remain the only messages cleared; SC-2's classes are unchanged (Patch and Independents class F, "Never"; Memory class D, NO-GO); the step commands and the Sequence, SequenceMain, StepContent and Page writes are in no class; no encoder for any of them exists, and our code never sends them.
+
 | Message | Bytes as seen | Count in E2 (E3) | Effect observed | Status | Facts |
 |---|---|---|---|---|---|
 | Poll | 12-byte header, w0 = 0 (first poll f11: all zero) | 3 001 (E3: 9 692) (E3b: 25 824) | Console answers with a type-3 or type-4 reply header | **VERIFIED 2026-10-29** as SmartSoft's behaviour (E2 + E3; was OBSERVED) | F52, F53 |
@@ -99,11 +109,11 @@ CLEARED. "OBSERVED (one session)" in the first paragraph is the E9 wording, kept
 | Message | Bytes as seen | Count in E9 | Effect observed | Status | Facts |
 |---|---|---|---|---|---|
 | Data: ConsoleEvent (ID 20), kind 0 (fader) | header `01 00 08 00` + stale words; payload `[pseq] 04 00 14 00 [index] [value] [previous]`. First event: header seq 9664 (f19327) `01 00 08 00 00 00 00 00 00 00 00 00`, payload seq 9665 (f19329) `02 04 00 14 00 00 05 00` | 332 (index 0x00: 84, 0x06: 70, 0x30: 86, 0x31: 92) (E9b: 366; index 0x00: 135, 0x04: 93, 0x30: 73, 0x31: 65) | Sets the control with that index at once, from the first event: FaderInfo, ChannelLevels, OutputLevels, an LED block and an LCD cell follow as for the panel; inside EDIT MEM it edits the selected memory's level (stored by the next EDIT MEM); no acknowledgement | **VERIFIED 2026-10-31 as SmartSoft's behaviour** for the layout, the value scale, the previous-byte rule and the indices 0x00, 0x30, 0x31 (E9 + E9b; was OBSERVED); indices 0x06 and 0x04 OBSERVED once each; NOT CLEARED | F131, F132, F134, F135, F141 |
-| Data: ConsoleEvent (ID 20), kind 1 (key), press | header `01 00 07 00` + stale words; payload `[pseq] 03 00 14 01 [code] 01`. Example: bump 7, header seq 19054 (f38107) `01 00 07 00 00 00 00 00 00 00 00 00`, payload seq 19055 (f38109) `56 03 00 14 01 06 01` | 32 (E9b: 26) | The console acts on the press (bumps flash, BLACKOUT and SOLO toggle, GO starts a fade, FADERS keys switch mode, the record keys open their function) | **VERIFIED 2026-10-31 as SmartSoft's behaviour** for the layout and the nine codes that E9b repeated (E9 + E9b; was OBSERVED); the other codes OBSERVED; NOT CLEARED | F133, F134 |
-| Data: ConsoleEvent (ID 20), kind 1 (key), release | the same header; payload `[pseq] 03 00 14 01 [code] 00`, a separate write 46 ms to 5.80 s after the press. Example: seq 19435 / 19436 (f38871) `57 03 00 14 01 06 00` | 32 (E9b: 26) | Ends a held bump (its output goes off); a session that ends between a press and its release is untested | **VERIFIED 2026-10-31 as SmartSoft's behaviour** (E9 + E9b; was OBSERVED); a session that ends between a press and its release is untested; NOT CLEARED | F133 |
+| Data: ConsoleEvent (ID 20), kind 1 (key), press | header `01 00 07 00` + stale words; payload `[pseq] 03 00 14 01 [code] 01`. Example: bump 7, header seq 19054 (f38107) `01 00 07 00 00 00 00 00 00 00 00 00`, payload seq 19055 (f38109) `56 03 00 14 01 06 01` | 32 (E9b: 26) (E12: 3: GO, FADERS MEMS, 0x3A) | The console acts on the press (bumps flash, BLACKOUT and SOLO toggle, GO starts a fade, FADERS keys switch mode, the record keys open their function) | **VERIFIED 2026-10-31 as SmartSoft's behaviour** for the layout and the nine codes that E9b repeated (E9 + E9b; was OBSERVED); the other codes OBSERVED; NOT CLEARED | F133, F134 |
+| Data: ConsoleEvent (ID 20), kind 1 (key), release | the same header; payload `[pseq] 03 00 14 01 [code] 00`, a separate write 46 ms to 5.80 s after the press. Example: seq 19435 / 19436 (f38871) `57 03 00 14 01 06 00` | 32 (E9b: 26) (E12: 3) | Ends a held bump (its output goes off); a session that ends between a press and its release is untested | **VERIFIED 2026-10-31 as SmartSoft's behaviour** (E9 + E9b; was OBSERVED); a session that ends between a press and its release is untested; NOT CLEARED | F133 |
 | Data: ChannelText (ID 9), a label | header `01 00 2B 00` + stale words; payload `[pseq] 27 00 09 [channel − 1] 03 06 [36 bytes]` (the whole 39-byte object). Channel 7: seq 57437 (f114873) `1A 27 00 09 06 03 06` + 36 × `00` (the unchanged empty label); seq 57881 (f115761) `1B 27 00 09 06 03 06 01 0C 00 61 00 6A` + 30 × `00` ("Čaj", UTF-16BE); seq 60605 (f121209) `1C 27 00 09 06 03 06 00 00 00 61 00 6A` + 30 × `00` (the "restore", residue behind a zeroed first unit) | 3 (E9b: 2, byte-identical to E9's "Čaj" and "restore") | Replaces the channel's label (show data); nothing was listed back | **VERIFIED 2026-10-31 as SmartSoft's behaviour** for the write (E9 + E9b; was OBSERVED); the console stores it verbatim (F144, OBSERVED); NOT CLEARED | F138, F144 |
-| Data: Memory (ID 0), a whole memory (E9b, from SmartSoft's Mem Edit tab) | header `01 00 5E 00` + stale words (w1 = 94); payload `[pseq] 5A 00 00 [page − 1][slot − 1] 01 30 [48 level bytes] 03 06 [36 label bytes]`. E9b: header seq 92052 (f184103) `01 00 5E 00 00 00 00 00 00 00 00 00`, payload seq 92053 (f184105) `23 5A 00 00 00 08 01 30 00 00 00 00 FF` + 43 × `00` + `03 06` + 36 × `00` (memory 9 of page 1, channel 5 = 0xFF) | 0 (E9b: 1) | Replaces the memory's levels and label (show data); nothing was listed back; the console applied it (memory fader 9 raised to full gave channel 5 = 0xFF). The layout differs from the console's own 138-byte Memory body (body[3] = 0x60, 96 levels), and what the console stored for channels 49–96 is UNKNOWN (F143) | OBSERVED (once, E9b), **NOT CLEARED, not reversible by the protocol** without the exact old body | F143, H87 |
-| Data: System (ID 39), body `09 00 00` / `07 00 00` | as in the table above; E9: header seq 137 (f273) + payload seq 138 (f275) `00 03 00 27 09 00 00`, header seq 220 (f439) + payload seq 221 (f441) `01 03 00 27 07 00 00` | 2 (78.262 s, 79.510 s) (E9b: 6, three pairs at 47.260 / 48.525 s, 1048.164 / 1049.431 s and 1145.018 / 1146.283 s) | as above (list [37] / the 157-record list) | **VERIFIED as SmartSoft's behaviour only** (sixth session in E9, the seventh to ninth in E9b; never clearance) | F58, F92 |
+| Data: Memory (ID 0), a whole memory (E9b, from SmartSoft's Mem Edit tab) | header `01 00 5E 00` + stale words (w1 = 94); payload `[pseq] 5A 00 00 [page − 1][slot − 1] 01 30 [48 level bytes] 03 06 [36 label bytes]`. E9b: header seq 92052 (f184103) `01 00 5E 00 00 00 00 00 00 00 00 00`, payload seq 92053 (f184105) `23 5A 00 00 00 08 01 30 00 00 00 00 FF` + 43 × `00` + `03 06` + 36 × `00` (memory 9 of page 1, channel 5 = 0xFF) | 0 (E9b: 1) (E12: 5) | Replaces the memory's levels and label (show data); nothing was listed back; the console applied it (memory fader 9 raised to full gave channel 5 = 0xFF). The layout differs from the console's own 138-byte Memory body (body[3] = 0x60, 96 levels), and what the console stored for channels 49–96 is UNKNOWN (F143) | OBSERVED (once, E9b), **NOT CLEARED, not reversible by the protocol** without the exact old body **VERIFIED 2026-10-31, evening, as SmartSoft's behaviour for the layout** (E9b + E12: five more writes, W27, W44–W46, W66, all `[pseq] 5A 00 00 00 08 01 30 …`, w1 = 94, from a Mem Edit cell and from name edits; the console stored W46, download 2); still **NOT CLEARED** (SC-2 class D) | F143, H87 |
+| Data: System (ID 39), body `09 00 00` / `07 00 00` | as in the table above; E9: header seq 137 (f273) + payload seq 138 (f275) `00 03 00 27 09 00 00`, header seq 220 (f439) + payload seq 221 (f441) `01 03 00 27 07 00 00` | 2 (78.262 s, 79.510 s) (E9b: 6, three pairs at 47.260 / 48.525 s, 1048.164 / 1049.431 s and 1145.018 / 1146.283 s) (E12: 6, three pairs at 5.934 / 7.210 s, 2204.502 / 2205.779 s and 3080.798 / 3082.090 s) | as above (list [37] / the 157-record list) | **VERIFIED as SmartSoft's behaviour only** (sixth session in E9, the seventh to ninth in E9b; never clearance) **E12:** the tenth to twelfth sessions, byte-identical, after reply headers #40 / #79 of each | F58, F92 |
 
 Fader indices seen (kind 0; no other index was observed, and none may be derived):
 
@@ -135,6 +145,7 @@ Key codes seen (kind 1; each named by a logged Simulator step and a timed press;
 | 0x37 | FADERS 25-48 (E9b) | 1 | seq 51616 / 51617 (f103233) `7D 03 00 14 01 37 01` | 56 (`00 0A 00 …` → `00 FF 00 00 FF 00`; block 55 → `00 0A 00 …`) |
 | 0x38 | CLEAR | 3 | seq 80937 / 80938 (f161875) `7D 03 00 14 01 38 01` | 57 |
 | 0x39 | FADERS MEMS | 3 (E9b: 3) | seq 39471 / 39472 (f78943) `12 03 00 14 01 39 01` | 58 |
+| 0x3A | UNKNOWN (E12; sent once from a SmartSoft edit tab during the owner's search for the run mode, unlogged; H104 proposes PAUSE) | 1 | seq 98766 / 98767 (f197533) `23 03 00 14 01 3A 01` | none: block 59 stayed `0A` × 6 and nothing was listed for the rest of the session |
 | 0x3B | STACK (E9b) | 2 | seq 47229 / 47230 (f94459) `71 03 00 14 01 3B 01` | 60 (`46 46 00 46 46 00` → `FF FF 00 FF FF 00`) |
 | 0x3E | COPY | 1 | seq 82233 / 82234 (f164467) `7F 03 00 14 01 3E 01` | 63 |
 | 0x41 | REC MEM | 1 (E9b: 2) | seq 73005 / 73006 (f146011) `73 03 00 14 01 41 01` | 66 |
@@ -156,6 +167,40 @@ payload frame: 0x00 seq 24888 (f49777), 0x06 seq 11391 (f22783), 0x08 seq 79052 
 (f44329), 0x34 seq 19740 (f39481), 0x36 seq 26916 (f53833), 0x39 seq 24814 (f49629), 0x41 seq 78966 (f157933). "Not observed" above
 holds for E9; E9b observed one Memory whole-object write after all, see the Memory row above: show data, not reversible by the
 protocol, not part of the owner's write mode, not cleared.)*
+
+*(E12, 2026-10-31, evening: code 0x3A was sent once from SmartSoft's edit tabs; no LED block changed, so H82 is not tested by it;
+GO 0x31 and FADERS MEMS 0x39 again lit blocks 50 and 58. Still no code may be derived. "Not observed … any other object write"
+above holds for E9 and E9b: E12 observed SmartSoft's Patch, Independents, StepContent, Sequence and Page writes and its step
+commands, in the section below; "never to be tried" stands for our code.)*
+
+## PC → console data writes seen in E12 (2026-10-31; OBSERVED, one capture; NOT CLEARED)
+
+Source: the [E12 record](captures/2026-10-31-e12-smartsoft-patch-stack-edits.md) ("Inventory of the PC → console writes", "The step commands and what the console did
+with them (H96, H97, H98)", "Whole-object writes against the console's own bodies"), the committed console-only capture
+`captures/2026-10-31-e12-smartsoft-patch-stack-edits.pcap` and its normalization `.jsonl` (`seq` = the JSONL record number, `fN` =
+the frame of the split that carries the data; the curator re-checked the bytes below with read-only scripts). The writes are
+**SmartSoft's own**, made while the owner edited in its tabs; our software sent nothing. **Every row is OBSERVED (one capture) unless
+marked and NOT CLEARED** (no encoder for any of them exists; `HspOutbound` encodes ConsoleEvent only). Framing as in the E9 section
+(F131): header `01 00 [w1 LE] [w2 … w5 stale]`, payload `[pseq][u16 LE len = w1 − 4][id][body]`; **the payload carries no qualifier
+fields**: the object's identity is in its body (F153). Wn = the n-th data write of the capture.
+
+| Message | Bytes as seen | Count in E12 | Effect observed | Status | Facts |
+|---|---|---|---|---|---|
+| Data: InsertStep (ID 32) | header `01 00 08 00` + stale words; payload `[pseq] 04 00 20 [a] [b] [c u16 BE]`, a = 0x30 (stack) or 0 (KOTLIK), b = the new step's index, c = its cue number × 10 (stack). W6: payload seq 30121 (f60241) `05 04 00 20 30 13 00 96` (index 19, 15.0); W19: seq 65956 (f131911) `12 04 00 20 30 11 00 79` (a point cue, 12.1); W30: seq 87584 (f175167) `1D 04 00 20 00 06 00 50` (KOTLIK index 6, c = 8.0 for a step that became 7.0) | 5 | The console creates a default step at the index (stack: type 0, memory index 0, 5.0 / 5.0) and lists SequenceMain and StepContent from the index to the end, or Sequence (2, 0, 0, 6) for KOTLIK, on the next poll; SmartSoft fetches it and writes the content (phase 2) as its next OUT transfer, 109–161 ms after the command; the step type is in phase 2, not here | OBSERVED (once); **NOT CLEARED**, in no SC-2 class | F151, F152, F156 |
+| Data: DeleteStep (ID 34) | header `01 00 08 00`; payload `[pseq] 04 00 22 [a] [b] 00 00`. W8: seq 30466 (f60931) `07 04 00 22 30 13 00 00`; W57: seq 169120 (f338239) `09 04 00 22 00 06 00 00` | 5 | The step at index b is removed; the console lists SequenceMain and StepContent of that index (a record of zeros if it was the last) or Sequence (2, 0, 0, 6) | OBSERVED (once); **NOT CLEARED**, in no SC-2 class | F151, F156 |
+| Data: MoveStep (ID 35) | header `01 00 07 00`; payload `[pseq] 03 00 23 [a] [from] [to]`. W58: seq 175911 (f351821) `0A 03 00 23 30 11 14` | 1 | The step moves from index 17 to 20; the console lists SequenceMain and StepContent 17–21 | OBSERVED (once); **NOT CLEARED**, in no SC-2 class | F151 |
+| Data: id 42 (no name in the engine's table) | header `01 00 08 00`; payload `[pseq] 04 00 2A [a] [b] [c u16 BE]`. W59: seq 175916 (f351831) `0B 04 00 2A 30 14 00 8E`, 47 ms after MoveStep | 1 | Index 20 got cue 14.2 (INFERRED from this one sample: id 42 renumbers a step); the console then listed [3, 4:20, 4:21] | OBSERVED (once); **NOT CLEARED**, in no SC-2 class | F15, F151 |
+| Data: StepContent (ID 4) | 13-byte body `[index][12-byte step record]` (w1 = 17), or for a type-2 "Direct cue" 100 bytes `[index][record][30][48 levels][03 06][36 label bytes]` (w1 = 104). W18: seq 61504 (f123007) `11 0D 00 04 13 00 96 01 00 08 00 00 32 00 32 00 00` (index 19, 15.0, memory 9 of page 1, 5.0 / 5.0); W7: seq 30134 (f60267) `06 64 00 04 13 00 96 02 …` (type 2) | 11 (6 × 13 bytes, 5 × 100 bytes) | Replaces the step; stored by the console (download 2; a type-2 step as 148 bytes with `[60][96 levels]`); nothing listed | OBSERVED (once); **NOT CLEARED**, in no SC-2 class | F152, F153, F154, F159 |
+| Data: Sequence (ID 2) | the whole object `[page][slot][steps][b][c u16][d u16][e u16][38-byte text block][steps × 12]`, 144 bytes for 8 steps (w1 = 148). W41: seq 123369 (f246737) `28 90 00 02 00 00 08 01 00 00 01 00 01 00 03 06 …` (body[3] = 1, One Shot) | 13 | Replaces the sequence (a step's content and times, the run mode, the label); stored (download 2); nothing listed | OBSERVED (once); **NOT CLEARED**, in no SC-2 class | F153, F154 |
+| Data: Page (ID 8) | `[page − 1][03 06][36 label bytes]`, 39 bytes (w1 = 43). W47: seq 137545 (f275089) `2E 27 00 08 00 03 06 00 54` + 34 × `00` (page 1, "T") | 6 | Replaces the page name; stored (download 2); nothing listed | OBSERVED (once); **NOT CLEARED**, in no SC-2 class | F153 |
+| Data: Independents (ID 12) | the whole object, 85 bytes `[02]` + 2 × `[a][b][c][d][03 06][36]` (w1 = 89). W11: seq 54129 (f108257) `0A 55 00 0C 02 00 FF 01 01 03 06 …` (IND 1's button mode, record byte 2 = 01) | 7 | Replaces both records (button mode in byte 2, GM in byte 3; the values' meaning UNKNOWN); nothing listed; restored before a download | OBSERVED (once); **NOT CLEARED**, SC-2 class F, "Never" | F153, F154 |
+| Data: Patch (ID 5) | the whole object, `02 00` + 512 entries, 514 bytes (w1 = 518). W9: seq 43919 (f87837) `08 02 02 05 02 00 01 02 03 …` (DMX 100 = 0x2F) | 4 | Replaces the patch (only the dragged entry differs); stored (download 2 = W10); nothing listed | OBSERVED (once); **NOT CLEARED**, SC-2 class F, "Never" | F153, F154 |
+
+Not seen in E12: InsertPointQStep (33); PatchDevice / UnpatchDevice / RepatchDevice (29–31) in either direction; SequenceMain (3) or
+ChannelText (9) writes; ConsoleEvent kinds 0 and 2; any System write other than the pair; anything on interface 0. The step commands
+change show data and leave the console's stack in an intermediate state between the two phases of an insert (INFERRED: a lost phase 2
+keeps the default step); none of them is reversible except by the inverse command with exact knowledge of the console's state, or by
+the SD backup.
 
 Observations that matter for safety:
 
@@ -204,3 +249,8 @@ Observations that matter for safety:
   wins between a PC fader and a physical fader, so a PC event overrides a hand on the fader and the other way round, without a warning
   from either side (F141). The console accepted events and object writes in every SmartSoft session, all of which had sent the System
   pair; whether it accepts them from a host that never sent it (H66) is UNKNOWN and only sending could tell, which nothing clears.
+- **E12 (2026-10-31).** SmartSoft's editors write whole objects of its own copy (Patch, Independents, StepContent, Sequence, Page,
+  Memory) and send step commands; the console acknowledges no object write and answers a step command only with lists of the
+  objects it changed (F151, F153). An insert is two writes, and SmartSoft's editors also sent live keys (GO, FADERS MEMS, 0x3A) and
+  unchanged rewrites that the owner did not log (F158). All of it changes show data, none of it is cleared, and our code never
+  sends any of it.

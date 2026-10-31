@@ -423,5 +423,15 @@ mode, a write outside the observed placement, a retry.
   at least once. Nothing of it is cleared by E12; a later check, SC-3 or its own, judges those writes per class, and the
   "never" of class F for Patch and Independents below stands until then (the show upload, the erase commands, the
   wheel, FileName and the settings stay never by the owner's decisions).
+  *(Note 2026-10-31, evening, no decision changed: E12 was run that afternoon and analysed that evening by the
+  `capture-analyst` agent on Opus 5.5 at the owner's request ([record](captures/2026-10-31-e12-smartsoft-patch-stack-edits.md),
+  known-facts F151–F159). It observed SmartSoft's Patch, Independents, StepContent, Sequence, Page and Memory writes and the
+  step commands InsertStep, DeleteStep, MoveStep and id 42 once (the Memory write's layout is now VERIFIED as SmartSoft's
+  behaviour, F143, E9b + E12) and cleared none of them: the stack, sequence, page, memory and step-command writes remain
+  uncleared, and a later check, after the repeat E12b, decides. Class D (Memory, NO-GO) and class F (Patch and Independents,
+  "Never") stand; the step commands and the Sequence, SequenceMain, StepContent and Page writes are still in no class. For SC-1,
+  documentation only and INFERRED from the code: E12 showed Sequence records with c ≠ 0 and 144- / 148-byte Sequence /
+  StepContent bodies after SmartSoft's step commands and in its download; each would end a read-only session of ours with its
+  fault, a safe stop like the one described for F137 (F156, H106).)*
 - **E11's result** promotes nothing by itself; a second write session of ours (E11b) is needed before any
   write fact about our own host context becomes VERIFIED.
