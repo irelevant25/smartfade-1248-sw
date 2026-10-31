@@ -1,0 +1,145 @@
+2026-10-31 15:35:54.650 START guided E12 session (PC clock, local time)
+2026-10-31 15:36:45.048 starting position set (owner)
+2026-10-31 15:36:49.634 owner answer: power cycled = y
+2026-10-31 15:37:24.210 backup taken: SHOW12.ASC (copy it into smartfade-sd-card-backup/ after the session)
+2026-10-31 15:37:34.593 owner answer: dmx 100-102 free = y
+2026-10-31 15:37:45.004 owner answer: memory 9 empty = y
+2026-10-31 15:38:02.785 owner answer: dry run done = y
+2026-10-31 15:38:15.196 owner answer: acceptance of test changes = y
+2026-10-31 15:38:26.434 owner answer: opt c3 = y
+2026-10-31 15:38:38.870 owner answer: opt d2 = y
+2026-10-31 15:38:43.798 owner answer: opt d5 = y
+2026-10-31 15:38:53.779 owner answer: opt f3 = y
+2026-10-31 15:39:26.789 owner answer: opt h = y
+2026-10-31 15:39:26.998 memory integrity: off
+2026-10-31 15:39:28.313 interface 1 driver service: ETCHSP (ETC's driver)
+2026-10-31 15:39:46.799 usbpcap running (owner)
+2026-10-31 15:39:48.394 smartsoft start #1 (Start-Process by the script)
+2026-10-31 15:40:00.758 smartsoft online #1 (owner)
+2026-10-31 15:41:00.774 wait 60 s done (A1 baseline: SmartSoft online, nothing touched (download 1))
+2026-10-31 15:41:08.393 a2 patch tab opened
+2026-10-31 15:41:38.403 wait 30 s done (a2 patch tab open, untouched)
+2026-10-31 15:41:48.537 a2 stack seq tab opened
+2026-10-31 15:42:18.556 wait 30 s done (a2 stack seq tab open, untouched)
+2026-10-31 15:42:28.736 a2 page tab opened
+2026-10-31 15:42:58.751 wait 30 s done (a2 page tab open, untouched)
+2026-10-31 15:43:03.854 a2 mem edit tab opened
+2026-10-31 15:43:33.862 wait 30 s done (a2 mem edit tab open, untouched)
+2026-10-31 15:45:03.938 owner answer: a3 patch level control = Yes, On top there are channels and under it is output matrix with 512 addresses and the one which are mapped are green and which are not are black.
+2026-10-31 15:46:18.468 owner answer: a3 stack run mode popup = I do not see any. I see only PLAY and PAUSE buttons/bumps there.
+2026-10-31 15:49:01.361 owner answer: a3 direct cue option = Yes, it offer Direct cue, Channel selection or Memory selection (its a radio button), the channel has dropdown for selecting a channel 1-48, the memory has dropdown for selection a memory 1-24 twelve times (per each page), the direct cue has input for cue number but its disabled even if I selected a cue so I do not know how it works.
+2026-10-31 15:49:19.363 b1 fader 5 to half
+2026-10-31 15:49:24.967 b1 fader 5 at half
+2026-10-31 15:49:34.985 wait 10 s done (b1 fader 5 at half)
+2026-10-31 15:49:50.938 b1 console rec mem bump 9
+2026-10-31 15:50:05.944 wait 15 s done (after b1 record)
+2026-10-31 15:50:09.624 b1 fader 5 to zero
+2026-10-31 15:50:12.887 b1 fader 5 at zero
+2026-10-31 15:50:27.898 wait 15 s done (after b1)
+2026-10-31 15:50:37.605 owner answer: memory 9 recorded = y
+2026-10-31 15:51:08.311 c1 patch channel 47 to dmx 100
+2026-10-31 15:51:20.590 c1 patch done
+2026-10-31 15:51:35.601 wait 15 s done (after c1)
+2026-10-31 15:52:21.681 owner answer: c1 result = I see nothing on LCD of the console. The DMX 100 cell in patch tab in smartsoft is green, nothing else.
+2026-10-31 15:52:28.865 c2 patch ind 1 to dmx 101
+2026-10-31 15:52:35.542 c2 patch done
+2026-10-31 15:52:50.550 wait 15 s done (after c2)
+2026-10-31 15:53:32.550 owner answer: c2 result = It is new green only. Nothing else. Unfortunately. Not very user friendly.
+2026-10-31 15:53:55.619 c3 ind 1 button mode changed
+2026-10-31 15:54:10.625 wait 15 s done (after c3 button mode)
+2026-10-31 15:54:15.978 c3 ind 1 button mode restored
+2026-10-31 15:54:30.996 wait 15 s done (after c3 button mode restored)
+2026-10-31 15:54:43.450 c3 ind 1 gm changed
+2026-10-31 15:54:58.466 wait 15 s done (after c3 gm)
+2026-10-31 15:55:02.551 c3 ind 1 gm restored
+2026-10-31 15:55:17.557 wait 15 s done (after c3 gm restored)
+2026-10-31 15:55:40.392 d1 insert step after last cue
+2026-10-31 15:55:57.063 d1 inserted
+2026-10-31 15:56:12.079 wait 15 s done (after d1)
+2026-10-31 15:56:23.968 owner answer: d1 cue number = 15.0
+2026-10-31 15:56:53.150 d2 insert point cue
+2026-10-31 15:57:14.736 d2 inserted
+2026-10-31 15:57:29.753 wait 15 s done (after d2)
+2026-10-31 15:58:00.048 owner answer: d2 cue number = I clicked on 13.0, insert it and the 12.1 was added.
+2026-10-31 15:58:15.992 d3 up time
+2026-10-31 15:58:31.003 wait 15 s done (after d3 up)
+2026-10-31 15:58:38.048 d3 down time
+2026-10-31 15:58:53.055 wait 15 s done (after d3 down)
+2026-10-31 15:59:04.818 d3 wait time
+2026-10-31 15:59:19.827 wait 15 s done (after d3 wait)
+2026-10-31 15:59:37.350 owner answer: d3 third time name = Wait
+2026-10-31 16:00:04.811 d4 step label T
+2026-10-31 16:00:19.826 wait 15 s done (after d4)
+2026-10-31 16:00:32.923 d5 direct cue inserted and labelled
+2026-10-31 16:00:47.934 wait 15 s done (after d5)
+2026-10-31 16:01:42.766 owner answer: d5 cue number = I was not able to change the label. The labels are from selected memory label or channel label. I do not see any way to change a step label. The number of a new cue is 14.1
+2026-10-31 16:02:23.769 e1 insert sequence step
+2026-10-31 16:02:48.892 e1 inserted
+2026-10-31 16:03:03.912 wait 15 s done (after e1)
+2026-10-31 16:03:13.886 owner answer: e1 step number = 7
+2026-10-31 16:03:28.360 e2 sequence step up time
+2026-10-31 16:03:43.368 wait 15 s done (after e2)
+2026-10-31 16:12:07.063 e3 run mode one shot
+2026-10-31 16:12:22.076 wait 15 s done (after e3)
+2026-10-31 16:12:46.648 e4 sequence label kotlix
+2026-10-31 16:13:01.658 wait 15 s done (after e4)
+2026-10-31 16:14:00.095 owner answer: e console lcd = - (btw the name could not be KOTLIKX because it allows only 6 characters so I rename it to KOTLIX)
+2026-10-31 16:14:23.406 f1 mem edit channel 5 to 100
+2026-10-31 16:14:38.418 wait 15 s done (after f1)
+2026-10-31 16:15:06.884 f2 memory 9 name T
+2026-10-31 16:15:21.902 wait 15 s done (after f2)
+2026-10-31 16:15:50.807 f3 page 12 name T
+2026-10-31 16:16:05.823 wait 15 s done (after f3)
+2026-10-31 16:16:08.883 smartsoft close #1 start
+2026-10-31 16:16:15.305 smartsoft closed #1
+2026-10-31 16:16:25.320 wait 10 s done (between sessions 1 and 2)
+2026-10-31 16:16:27.010 smartsoft start #2 (Start-Process by the script)
+2026-10-31 16:16:41.560 smartsoft online #2 (owner)
+2026-10-31 16:17:11.577 wait 30 s done (G1 download 2: the console's own bodies of every test object)
+2026-10-31 16:17:40.846 owner answer: g1 after restart = yes
+2026-10-31 16:18:01.883 h console patch dmx 102 blind
+2026-10-31 16:18:16.891 wait 15 s done (after h patch)
+2026-10-31 16:19:19.111 h console unpatch dmx 102
+2026-10-31 16:19:34.119 wait 15 s done (after h unpatch)
+2026-10-31 16:19:56.826 h console step timing
+2026-10-31 16:20:11.829 wait 15 s done (after h step timing)
+2026-10-31 16:21:48.394 owner answer: h smartsoft followed = looks like it follow it
+2026-10-31 16:22:16.798 i1 page 12 name cleared
+2026-10-31 16:22:31.803 wait 15 s done (after i1 page name)
+2026-10-31 16:23:31.908 i1 sequence label restored
+2026-10-31 16:23:46.920 wait 15 s done (after i1 label)
+2026-10-31 16:23:52.383 i1 run mode loop
+2026-10-31 16:24:07.399 wait 15 s done (after i1 run mode)
+2026-10-31 16:24:12.166 i1 delete sequence step
+2026-10-31 16:24:27.173 wait 15 s done (after i1 delete)
+2026-10-31 16:25:57.476 i2 move point cue
+2026-10-31 16:26:12.482 wait 15 s done (after i2 move)
+2026-10-31 16:26:18.331 owner answer: i2 moved cue number = 14.2
+2026-10-31 16:26:23.098 i2 delete point cue
+2026-10-31 16:26:38.111 wait 15 s done (after i2 delete point cue)
+2026-10-31 16:26:43.259 i2 delete d1 cue
+2026-10-31 16:26:58.268 wait 15 s done (after i2 delete d1)
+2026-10-31 16:28:00.094 i2 delete direct cue
+2026-10-31 16:28:15.099 wait 15 s done (after i2 delete direct cue)
+2026-10-31 16:28:52.669 i3 memory 9 name cleared
+2026-10-31 16:29:07.673 wait 15 s done (after i3 name)
+2026-10-31 16:29:17.688 i3 console rec mem empty bump 9
+2026-10-31 16:29:32.699 wait 15 s done (after i3 empty)
+2026-10-31 16:29:37.114 owner answer: memory 9 empty again = y
+2026-10-31 16:29:52.049 i4 unpatch dmx 101
+2026-10-31 16:30:07.058 wait 15 s done (after i4 dmx 101)
+2026-10-31 16:30:14.124 i4 unpatch dmx 100
+2026-10-31 16:30:29.134 wait 15 s done (after i4 dmx 100)
+2026-10-31 16:30:40.909 owner answer: i4 patch restored = I think so
+2026-10-31 16:30:44.983 smartsoft close #2 start
+2026-10-31 16:30:51.491 smartsoft closed #2
+2026-10-31 16:31:01.500 wait 10 s done (between sessions 2 and 3)
+2026-10-31 16:31:03.316 smartsoft start #3 (Start-Process by the script)
+2026-10-31 16:31:17.136 smartsoft online #3 (owner)
+2026-10-31 16:31:47.147 wait 30 s done (J1 download 3: everything should equal download 1)
+2026-10-31 16:32:10.103 owner answer: j1 restored view = y
+2026-10-31 16:32:15.357 smartsoft close #3 start
+2026-10-31 16:32:19.450 smartsoft closed #3
+2026-10-31 16:32:27.659 usbpcap stopped (owner)
+2026-10-31 16:32:51.583 after-session save: SHOW13.ASC (copy it into smartfade-sd-card-backup/ with the backup)
+2026-10-31 16:32:51.585 END guided E12 session

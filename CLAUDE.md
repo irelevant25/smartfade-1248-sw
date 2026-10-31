@@ -222,12 +222,17 @@ the same day; majors 3, 4, 5 fixed the same day, majors 1, 2 and 6 and the minor
 slot wait, an undecodable LED / status / FaderInfo report ends a live session, the interlock is replayed over E9 and E9b, the
 incomplete-write latch is kept on disk); nothing is sent before the re-check passes and the owner gives the go for E11. Next: "Next capture (proposed by the
 E9b analysis, 2026-10-31)" in `reverse-engineering.md`, and E9c / E11 as SC-2 lists them.
-**E12 planned 2026-10-31, not run** (a passive capture of SmartSoft Online editing the patch and the stack / sequences: SmartSoft drives, USBPcap
-records, our software is not involved; E9c / E9d stay reserved by SC-2 and E11 is the first live-control session of our software): the runbook is
-in `docs/protocol/reverse-engineering.md` ("E12 runbook"), the guided script `tools/usb-probe/e12-guided-session.ps1` is written and parse-checked (the owner's decisions asked first, every change restored, an SD save for the byte comparison at the end), and the
-researcher's static findings are recorded in `docs/protocol/smartsoft-analysis.md` S11.16, the hypotheses H91-H101 (tests = E12) and the DOCUMENTED
-manual facts F148-F150: all INFERRED or DOCUMENTED, none ever seen on the bus, none cleared, and our code never sends any of these messages (SC-2
-class F, "Never", for the Patch and Independents writes; the VERIFIED count stays 61).
+**E12 run 2026-10-31, afternoon** (a passive capture of SmartSoft Online editing the patch and the stack / sequences: SmartSoft drives, USBPcap
+records, our software is not involved; E9c / E9d stay reserved by SC-2 and E11 is the first live-control session of our software; planned the same
+day, runbook in `docs/protocol/reverse-engineering.md` "E12 runbook", guided script `tools/usb-probe/e12-guided-session.ps1`): the record
+`docs/protocol/captures/2026-10-31-e12-smartsoft-patch-stack-edits.md` with the console-only split, the normalized JSONL, the action log and the
+owner's statements; 70 PC -> console writes by SmartSoft, 0 framing errors, three SmartSoft sessions, every edit restored (`SHOW13.ASC` =
+`SHOW12.ASC` byte for byte). **The record holds provenance, completeness and structure only: the decoding of those writes against H91-H101 is not
+done by Claude (its attempt on 2026-10-31 was stopped by its safety system, like the encoder's, and must not be repeated); the owner or a later
+pass evaluates them with the committed analyzer tools, the record names them.** The researcher's static findings stay as recorded
+(`docs/protocol/smartsoft-analysis.md` S11.16; H91-H101 HYPOTHESIS, the test run and its outcome not recorded; the DOCUMENTED manual facts
+F148-F150): none OBSERVED or VERIFIED, none cleared, and our code never sends any of these messages (SC-2 class F, "Never", for the Patch and
+Independents writes; the VERIFIED count stays 61).
 
 ## Commands
 

@@ -116,6 +116,12 @@ patch, stack, sequence or page edit exists in E2–E9b), so nothing is OBSERVED 
 passive capture **E12** as their test ([reverse-engineering.md](reverse-engineering.md) "E12 runbook"; SmartSoft Online drives the edits,
 USBPcap records, our software is not involved; planned, not run). The VERIFIED count stays 61, **nothing is cleared for sending**, and our
 code never sends any of these messages (SC-2 class F, "Never", for the Patch and Independents writes).
+**Update 2026-10-31, evening (E12 run):** the E12 capture is committed ([captures/2026-10-31-e12-smartsoft-patch-stack-edits.md](captures/2026-10-31-e12-smartsoft-patch-stack-edits.md): the console-only
+split of device address 27, the normalized JSONL with the action log, the owner's statements; 70 PC → console writes by SmartSoft, 0 framing
+errors, three SmartSoft sessions with downloads of 157 / 161 / 157 records, `SHOW13.ASC` = `SHOW12.ASC` byte for byte, so every edit was restored).
+The record holds provenance, completeness and structure only: the decoding of the writes against H91–H101 is not recorded (the assistant's
+attempt was stopped by its safety system and is not repeated; the owner or a later pass evaluates them with the committed analyzer tools). **No
+status change: H91–H101 stay HYPOTHESIS, the VERIFIED count stays 61, nothing is cleared for sending.**
 
 ## Version landscape
 

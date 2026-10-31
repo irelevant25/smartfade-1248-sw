@@ -1,0 +1,73 @@
+E12, SmartSoft editing the patch and the stack / sequences (passive USBPcap capture): owner statements (2026-10-31)
+
+Context (recorded by the assistant): the owner ran tools/usb-probe/e12-guided-session.ps1 (commit 7f91015;
+fe7b91b changed only the wording of steps E3 and I1 afterwards) from 15:35:54 to 16:32:51 local time (CET,
+UTC+1); the action log 2026-10-31-e12-actions.txt (sha256
+2ae5e4045f5834deadd9c5a3549b82d276cfb6ab14f67a8586b384cabb136800) holds every step with the PC clock and
+the owner's typed answers (the decisions first: power cycled y, DMX 100-102 free y, memory 9 empty y, dry run
+done y, acceptance of test changes y, optional steps C3, D2, D5, F3 and H all y). USBPcapCMD was started by
+the owner in an elevated PowerShell whose working folder was C:\Windows\System32, so the raw root-hub capture
+landed there as e12.pcap (2 003 901 408 bytes, sha256
+92c13b05b1fc14dce40963484aeb6f4dfe362d5e603712b85edcccb9e39c68ae); the assistant copied it byte for byte
+into the repository root (e12.pcap, git-ignored, same hash) for the split to the console's device address.
+Our software was not involved; SmartSoft 3.0.43 drove every edit, three SmartSoft sessions in one capture.
+
+Backup and after-session save: SHOW12.ASC (logged "backup taken" at 15:37:24) and SHOW13.ASC (logged
+"after-session save" at 16:32:51), both copied by the owner into smartfade-sd-card-backup/. Both have sha256
+559636399c1d82e0f95e737c961bfee31f88962fe8c486bbc6eba7f7d2177a90: byte-identical to each other and to
+SHOW09.ASC (the restore after E9b), SHOW07.ASC and SHOW04.ASC. So the show data after E12 equals the show
+data before it; every test change of the session was restored.
+
+Statement during the session (quoted; between the log lines "wait 15 s done (after e2)" 16:03:43 and "e3 run
+mode one shot" 16:12:07): "I am in the middle of guided session and it asked me this: E3: KOTLIK's run mode:
+change it from Loop to ONE SHOT (the popup). But I do not know where to change the run mode of KOTLIK
+sequence." The assistant found in SmartSoft.exe (x86_probe, INFERRED) that the run mode is shown only as the
+bare word Loop / One Shot / Manual by a text item of the Stack/Seq Edit content zone and that a click on it
+opens a QMenu with the three entries, and told the owner to look for the word "Loop" in the header of
+KOTLIK's step list. The owner: "I see it now." The log then shows e3 at 16:12:07.
+
+Statements after the session (quoted in full):
+
+"Okay I am done with E12 guided session.
+
+Task I1: I1 (only if F3 was done): PAGE tab: clear page 12's name (empty) and confirm.
+
+I made a mistake previously and rename page 1 not page 12 so in this step I rename the step 12 to T and
+then delete it and then delete page 1 name and then reame page 12 to T again and remove it again.
+
+Task: I2 (only if D5 was done): right-click the Direct cue I was not able to change the label. The labels
+are from selected memory label or channel label. I do not see any way to change a step label. The number of
+a new cue is 14.1 > Delete step > confirm.
+
+I find out how to give a label to Direct cue. So I added it in this step and then deleted the label and
+then deleted the Direct cue step.
+
+Notes: I have already coppied SHOW12.ASC and SHOW13.ASC from the session to the smartfade-sd-card-backup. I
+am also implemented the 3 points you have gave/mentioned (1. The freshness check runs too early., 2. A
+broken LED report is ignored instead of blocking. and 3. Missing tests.). You can check the changes via git
+diff for changed files or however you want."
+
+Reading of these statements for the analyst (by the assistant, not promoting anything):
+- Step F3 (log "f3 page 12 name T" 16:15:50): the owner renamed PAGE 1, not page 12, to "T". Page 1's name
+  was empty in SHOW12 (the $PAGE 1 block carries an empty Text line), like page 12's.
+- Step I1 (log "i1 page 12 name cleared" 16:22:16, one log line for the whole sequence): page 12 -> "T",
+  page 12 -> empty, page 1 -> empty, page 12 -> "T", page 12 -> empty. So the capture should hold Page writes
+  for page 1 (index 0) at F3 and I1 and for page 12 (index 11) at I1, several of them; expected object Page
+  (8, page), H99 / H100 as the runbook lists them. SHOW13 = SHOW12 shows both names empty again.
+- Step D5 (log "d5 direct cue inserted and labelled" 16:00:32): the Direct cue was inserted as cue 14.1 but
+  NOT labelled in D5 (the owner found no way then). The guide's I2 prompt quoted the owner's D5 answer where
+  it expected a cue number, hence the odd task text above. In I2 (log "i2 delete direct cue" 16:28:00, one
+  log line) the owner first found how to label a Direct cue, set the label, cleared it, then deleted the
+  step. So the StepContent write with a label for a type-2 step (H97, S11.16 row 8) is expected inside I2,
+  not D5, followed by one with the label cleared and then DeleteStep.
+- The guide's other answers are in the log: A3 "stack run mode popup: I do not see any. I see only PLAY and
+  PAUSE buttons/bumps there" (H95: no run-mode popup for the stack); A3 "direct cue option: ... the direct
+  cue has input for cue number but its disabled even if I selected a cue"; D1 new cue 15.0; D2 "I clicked on
+  13.0, insert it and the 12.1 was added" (the point cue went after 12.0, not where the guide expected); D3
+  third time named "Wait"; E1 new step number 7; E4 "the name could not be KOTLIKX because it allows only 6
+  characters so I rename it to KOTLIX"; I2 moved point cue became 14.2; H (console menus) "looks like it
+  follow it"; I4 "I think so"; J1 restored view y.
+- The owner's implementation note (the three review points) concerns the live-control write path
+  (commit bf1aa4e), not E12.
+
+Owner statements never promote a fact by themselves; the capture and the SD files are the evidence.
