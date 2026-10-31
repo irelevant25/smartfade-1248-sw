@@ -29,8 +29,8 @@ bus that nothing else was sent and that no control transfer reached the console 
 tied the independents' and BLACKOUT's keys to their LEDs with timed presses, and also cleared nothing further. E9 (the same night) observed
 SmartSoft's first PC -> console writes (ConsoleEvent fader and key events and a channel label, 401 writes in all) and cleared nothing: they
 are OBSERVED in one session (E9b, the repeat, made the framing and the main fader and key events VERIFIED as SmartSoft's and the console's
-behaviour, never clearance, and cleared nothing either), no data header is encoded anywhere in the solution, and a safety check SC-2 is the gate
-before any write of ours. That session also changed memory 7 of page 1 by mistake; the owner restored it by hand on 2026-10-31, and `SHOW09.ASC`, saved afterwards, equals the pre-E9 backup byte for byte.
+behaviour, never clearance, and cleared nothing either), no data header is encoded anywhere in the solution, and safety check SC-2 (2026-10-31, [safety-checks.md](docs/protocol/safety-checks.md)) is the gate
+before any write of ours: a conditional GO for building and reviewing a live-control encoder bounded to the fader indices 0x00 / 0x30 / 0x31 and eight live key codes, with the first write session E11 on the owner's go, and a NO-GO for the record keys from the PC (SC-3 later), ChannelText and Memory writes and the System pair; it clears nothing for sending until its conditions are met. That session also changed memory 7 of page 1 by mistake; the owner restored it by hand on 2026-10-31, and `SHOW09.ASC`, saved afterwards, equals the pre-E9 backup byte for byte.
 
 ## Run it
 

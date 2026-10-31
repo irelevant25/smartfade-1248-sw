@@ -209,3 +209,122 @@ the same day, in commit bc93144:
 | "(host-side policy, no bus traffic)" at the ALLOW_PARTIAL_READS call carried no status. | Marked ASSUMPTION, covered by H68's USBPcap at Connect. |
 | Trivial: `WithoutDevicePath` kept the first backslash of a device path; `IHspPipe.Description` said "for the UI". | Both corrected. |
 | **Accepted, recorded:** one `memoriesReported` flag covers 288 memories that arrive one object at a time; after the first Memory object the other 287 would show as empty at level 0, a value no object reports. A Memory object outside SmartSoft's download (which follows the uncleared System write `07 00 00`) was never observed in E2, E3 or E3b, and E8 has no memory action. | Not changed for E8 (the runbook says to note the time if it happens). To be fixed with a reported flag per memory before hardware mode is used beyond E8. **Fixed later the same day (commit 91e452f):** `MemoryState.Reported` per memory (false for a placeholder, true once the console delivered it, cleared with the connection), carried as `MemoryStateDto.reported`; the memory grid dims undelivered memories and says so; tests in `ConsoleStateStoreTests` and the memory-grid spec. |
+
+## SC-2 (2026-10-31): PC → console writes, per message class
+
+**Scope.** The five write classes SmartSoft was seen to send in E9 and E9b
+([E9 record](captures/2026-10-30-e9-smartsoft-writes.md), [E9b record](captures/2026-10-31-e9b-smartsoft-writes-repeat.md),
+each with a section "Input for a future safety check (SC-2)"), judged for a **future write mode of
+`SmartFade.Devices.Usb`** whose purpose is the owner's: the live controls and, later, recording through the
+console's own REC MEM / EDIT MEM / COPY keys (owner decisions of 2026-10-30, `reverse-engineering.md`). Nothing
+is encoded yet. SC-1's poll and listed fetch are the only messages cleared at the time of this check.
+
+| Class | Message | Status in `known-facts.md` | Decision |
+|---|---|---|---|
+| A | ConsoleEvent (20) kind 0, fader event: header `01 00 08 00` + stale words, payload `[pseq] 04 00 14 00 [index] [value] [previous]` | F131 VERIFIED (framing, per-session counter, no acknowledgement); F132 VERIFIED for the layout, the raw level and the previous-byte rule, **for indices 0x00 (channel fader 1), 0x30 (MASTER), 0x31 (BUMPS)**; 0x06 (fader 7, E9 only) and 0x04 (fader 5, E9b only) OBSERVED once; every other index never seen ("index = fader − 1" HYPOTHESIS, three points); F134 VERIFIED (the console answers as for the panel) for fader 1, MASTER, BUMPS; F135 in part (takes effect at once); F141 (last mover wins) OBSERVED | **GO (conditional) for indices 0x00, 0x30, 0x31 only**: build and review an encoder, then a first write session **E11** on the owner's go. NO-GO for every other index |
+| B1 | ConsoleEvent kind 1, key event, **live keys**: header `01 00 07 00` + stale words, payload `[pseq] 03 00 14 01 [code] [01 press / 00 release]` | F133 VERIFIED for the layout and for codes **0x00 bump 1, 0x06 bump 7, 0x08 bump 9, 0x31 GO, 0x33 SOLO, 0x34 BLACKOUT, 0x36 FADERS 1-24, 0x39 MEMS** (and 0x41 REC MEM, class B2); 0x09 bump 10, 0x38 CLEAR, 0x3E COPY, 0x42 EDIT MEM OBSERVED (E9 only); 0x37 FADERS 25-48, 0x3B STACK, 0x47 IND 1, 0x48 IND 2 OBSERVED once (E9b); F134 VERIFIED for bump 7, memory bump 1, BLACKOUT, SOLO, MEMS, 1-24, GO with STACK unlit | **GO (conditional) for the eight live codes above only**, as press / release pairs; NO-GO for every other code |
+| B2 | ConsoleEvent kind 1, **record keys**: REC MEM 0x41, EDIT MEM 0x42, COPY 0x3E, CLEAR 0x38 | 0x41 VERIFIED as SmartSoft's behaviour; the other three OBSERVED once; effects F136 (in part), F145, F146: REC MEM + bump stores the post-MASTER look, REC MEM of an empty look empties the memory, EDIT MEM / COPY change show data; **not reversible by the protocol** (re-record, or restore from the SD card); E9 changed memory 7 by a mistaken bump (F139) | **NO-GO** now. Deferred to **SC-3**: it needs the owner's explicit written acceptance per key, a second capture for 0x42 / 0x3E / 0x38 (and for 0x09 if bump 10 is to be used), and the conditions under "Path to a wider clearance" |
+| C | ChannelText (9) write: header `01 00 2B 00`, payload `[pseq] 27 00 09 [ch − 1] 03 06 [36 bytes]` | F138 VERIFIED (the write); F144 OBSERVED (stored verbatim, returned after a power cycle); show data; reversible only by writing the exact old 36 bytes, which only the download after the uncleared System `07 00 00` delivers | **NO-GO** (out of the owner's scope; not reversible from a read-only session) |
+| D | Memory (0) whole-object write: header `01 00 5E 00`, payload `[pseq] 5A 00 00 [page − 1][slot − 1] 01 30 [48 levels] 03 06 [36 bytes]` | F143 OBSERVED once; layout unlike the console's own 138-byte body (96 levels, 0x60); channels 49–96 after such a write UNKNOWN; show data; not reversible | **NO-GO**, and outside the owner's write mode by decision (recording goes through the console's keys) |
+| E | System (39) pair `09 00 00`, `07 00 00` | F58 VERIFIED as SmartSoft's behaviour only; meaning UNKNOWN (H30); System (39) is the carrier of the erase commands (F121, S11.15); starts the 157-record download; not needed by a session (H66 CONFIRMED for reads) | **NO-GO** |
+| F | Show upload, System erase, page select, wheel, FileName, Patch, Independents, SystemSettings | Never observed from a PC except as listed in S11.15; destructive or out of scope (F121, owner decisions 2026-10-30) | **Never** |
+
+### Decision: GO (conditional) for classes A and B1 as bounded above; NO-GO for B2, C, D, E; never for F
+
+The GO is for **building and reviewing** an encoder limited to the three fader indices and the eight live key
+codes, and for **one first write session, E11**, once every condition below is met and the owner gives the go
+on the day. **Until then nothing may be sent**: this check clears no byte for sending today, and no type-1
+header is encoded anywhere in the solution at the time of writing. E11 is an experiment like E8 was: two
+things in it are unobserved (items 2 and 11 below) and the session ends on the first deviation.
+
+| # | Item | Status (classes A and B1) | Evidence |
+|---|---|---|---|
+| 1 | Evidence status | **Yes for the bytes of the whitelisted indices and codes; the placement in the loop proceeds at INFERRED / OBSERVED with the owner's go** | F131 (427 of 427 writes in E9b follow the framing, the counter from 0x00 per session, +1 per data payload; no acknowledgement in 2 + 3 sessions), F132 (layout and the previous-byte rule in 332 + 366 fader events; indices 0x00, 0x30, 0x31 in both captures), F133 (116 key events; the eight codes in both captures), F134 (the console's answer equals the panel's for those controls, byte for byte for bump 7 and memory bump 1), F135 in part (seq 8051, 13153, 16315, 39747). "One write per loop iteration, between a poll reply and the next poll" is INFERRED from the captures, like SC-1's cadence was. Everything OBSERVED once (0x04, 0x06, 0x09, 0x37, 0x38, 0x3B, 0x3E, 0x42, 0x47, 0x48) is outside the whitelist |
+| 2 | Side effects understood | **Yes for the messages; the host context is new** | A fader event sets the control at once to the value (F135, F141: fader 1 0x00 → 0xEC at seq 39747, MASTER 0x86 → 0xF3 at seq 82071); the outputs follow through the patch and the MASTER (F96), BUMPS sets the bump level (F97). The eight live keys toggle or switch exactly as the panel's keys do (F134); BLACKOUT zeroes every intensity (F125); GO with STACK lit was seen only from the panel (E8b), from a PC event only with STACK unlit. **Unobserved:** whether the console accepts events from a host that never sent SmartSoft's System pair (H66 for writes) can only be learned by sending; the first event of E11 answers it, and a console that ignores it ends the session without a retry. A fader event inside an armed record function edits a memory (E9): guarded by condition 6 |
+| 3 | Backup | **Condition** | The owner saves the show to the SD card right before E11 and the guided script records the name (SHOW10.ASC or the next free name). |
+| 4 | Rig | **Condition** | The DOTZ BAR 1.4 on DMX 5–16 (owner, 2026-10-30), nothing on DMX IN, no dimmers; the owner's live-output decision for the MASTER and BLACKOUT events (both change the whole output, as the panel's controls do). |
+| 5 | Firmware path untouched | **Yes** | Bulk transfers on interface 1 only, as in SC-1; no control transfer, no HID, no SFDownloader, no "Firmware Upgrade"; the Zadig bind is the owner's action (H68 answered in E8b: EP0 traffic only at the bind). |
+| 6 | Mode gating | **Condition (to build)** | A **separate write mode** on top of the read-only one: `Device:Mode=Usb`, `Device:Usb:ConfirmDate=<today>` **and** a new write switch with its own date (`Device:Usb:LiveControl=<today>` or equivalent), all three or the backend refuses to start; `Simulated` stays the default; any other value refuses to start; the UI badge reads HARDWARE and a second badge in the alert colour says LIVE CONTROL; `supportedCommands` names only the whitelisted controls and the contract gains a per-control list so the UI enables fader 1, MASTER, BUMPS, bumps 1 / 7 / 9, GO, SOLO, BLACKOUT, MEMS and FADERS 1-24 and nothing else. The read-only mode stays exactly as reviewed for SC-1. |
+| 7 | No blind retries | **Condition (to build)** | A write is sent once. A transfer failure, a timeout or a reply the session has not seen ends the session in the Error state with its reason; no write is ever re-sent; the UI shows the fault and the console's last reported state. A key press whose release could not be sent is reported as such (condition 5 below). |
+| 8 | Logging on | **Yes, built; plus a condition** | Every OUT transfer, writes included, goes to the session's capture-format JSONL as today (`Device:Usb:CaptureLogDirectory`), written before the console is opened; E11 also runs USBPcap in parallel, bound before Zadig as in E8b, and its console-only split is committed with the record. |
+| 9 | Versions recorded | **Condition** | Firmware (Menu > Diagnostics), Windows build, cable, backend version and git commit in the E11 record. |
+| 10 | Review done | **Condition** | `protocol-safety-reviewer` over the exact encoder, the whitelist, the gating and the golden tests before E11; its findings fixed or recorded here, as for SC-1. |
+| 11 | Passive first | **Yes** | E9 and E9b (2026-10-30 and 2026-10-31) show SmartSoft producing every whitelisted event and the console answering it; our software has never produced one. |
+
+### Conditions for building the encoder (classes A and B1)
+
+1. **One encoder, one whitelist.** The type-1 header and the two payload layouts are produced by `HspOutbound`
+   only, from typed inputs: a fader index drawn from an enum of exactly {0x00 channel fader 1, 0x30 MASTER,
+   0x31 BUMPS} and a key code from an enum of exactly {0x00, 0x06, 0x08, 0x31, 0x33, 0x34, 0x36, 0x39}. No
+   arithmetic derives an index or a code from a fader or key number (H82 and "index = fader − 1" stay
+   hypotheses and are not used); every other value is unrepresentable, and the boundary refuses it.
+2. **Golden tests over the committed captures.** As `HspReadSessionTests` does for SC-1, the E9 and E9b replays
+   hand the encoder SmartSoft's event (index or code, value, press / release) at each write and compare the
+   produced transfer byte for byte with the capture: header, stale words, `pseq` (0x00 at the first data payload
+   of a session, +1 per data payload), the previous byte (0x00 for the first event of an index in the session,
+   then the last value this host sent for that index), and the placement (between a poll reply and the next
+   poll, never between a fetch and its poll, at most one write per loop iteration). Only bytes from
+   `docs/protocol/captures/` may appear in these tests.
+3. **The previous byte is this host's own last value**, never a value read from the console (F132: SmartSoft's
+   rule; the console's use of the byte is UNKNOWN and nothing else was observed).
+4. **Press and release are one operation.** A key event is sent as a press followed by its release from the same
+   code path; a bump is a tap in E11 (no held bump). The release is the device layer's duty, not the UI's: it is
+   sent even if the UI stops, and before the pipe closes on a session end when the pipe is alive. Residual risk,
+   stated for the owner: a process killed between a press and its release leaves the console with a held key
+   until the key is pressed on the panel (INFERRED, untested; the E9b record's SC-2 input lists it as untested).
+5. **No write while a record function is armed or unknown.** A write is sent only when the console's most recent
+   PanelKeys report shows REC MEM, EDIT MEM and COPY off (LED blocks 66, 67, 63 as decoded today) and that
+   report is younger than two poll periods; otherwise the write is refused and the UI says why. Residual race,
+   stated: a panel EDIT MEM plus a bump within one poll period of a PC fader event could edit a memory (E9's
+   mistaken edit was this path, from the PC side).
+6. **The UI shows the console's reported level, never an assumed position** (F141: last mover wins without
+   notice; H89: SmartSoft's own fader jumped the output because its control started from its own position).
+   A PC fader starts from the reported level before it may move, so the first event cannot jump the output
+   by more than the user's own drag.
+7. **Cadence as observed.** Writes are placed where SmartSoft placed them and the SC-1 floors hold for every
+   transfer; the read loop keeps fetching what the console lists after an event (FaderInfo, LedStatus,
+   ConsoleStatus, PlaybackInfo: F134), so the UI shows the effect from the console, not from the command.
+8. **Nothing else.** No System pair, no ChannelText, no Memory, no record key, no index or code outside the
+   whitelist, no write of any kind in the read-only mode, no write before the session has seen the console's
+   first list and the LED state.
+
+### Conditions for E11 (the first write session) and what to record
+
+- Backup to the SD card first, the name in the log; USBPcap from before the Zadig bind; the guided script
+  logs every owner action with the time; firmware, Windows build, cable, backend commit recorded.
+- The owner gives the go on the day after reading this section, and accepts in writing: H66 for writes is
+  unknown (the console may ignore the events: the session then ends and nothing is retried); the last-mover
+  behaviour (the console's state and a physical fader can disagree until someone moves it); the lost-release
+  residual risk (condition 4); MASTER and BLACKOUT events change the whole live output like the panel does.
+- Script, read-only first: connect, idle 60 s (the read side as in E8). Then, one at a time, with the console's
+  answer watched in the UI and 10 s between steps: channel fader 1 to a low level and back to zero (H66
+  answered here: no FaderInfo change within two poll periods means stop); bump 1 tap; SOLO on and off; MEMS
+  and FADERS 1-24; BLACKOUT on and off; BUMPS to a mid level and back to full; MASTER to a mid level and
+  back to full (the owner's choice to include it); GO with STACK unlit once; disconnect at an idle point.
+- Record: every write with its `pseq` and the console's answer (FaderInfo record 1, body[193], body[194], the
+  LED blocks, ConsoleStatus, PlaybackInfo), the bus against the backend's log byte for byte (as E8b), any
+  deviation and the time it ended the session, and the physical fader positions at the end. Afterwards: an
+  SD save, compared with the backup byte for byte (no show data may have changed).
+
+### What SC-2 does not clear
+
+Every fader index except 0x00, 0x30, 0x31 (so channel faders 2–24, bank 25-48 and every memory fader);
+every key code except the eight live codes (so bump 10, CLEAR, COPY, EDIT MEM, REC MEM, FADERS 25-48, STACK,
+IND 1, IND 2 and anything never seen); the record functions from the PC (SC-3); ChannelText and Memory
+writes; the System pair and any System write; anything in class F. A held bump, a write in the read-only
+mode, a write outside the observed placement, a retry.
+
+### Path to a wider clearance
+
+- **E9c, passive (SmartSoft's Console Simulator, USBPcap, our software not involved):** every channel fader of
+  bank 1-24 moved once (seen so far: faders 1, 5, 7), every bump pressed, the keys seen once (CLEAR, COPY,
+  EDIT MEM on an empty memory and left with CLEAR, FADERS 25-48, STACK, IND 1, IND 2, bump 10) and a bump in
+  bank 25-48. Indices and codes already OBSERVED once become VERIFIED with E9c as the second session; those
+  first seen in E9c need one more capture (E9d). No derivation replaces a capture.
+- **SC-3 (record keys from the PC):** after E9c, and only with the owner's written acceptance of each key
+  (REC MEM, EDIT MEM, COPY, CLEAR), an SD backup immediately before every session that enables them, a UI
+  confirmation step before a record key is armed, and the same guard against a stray bump as the panel has
+  (a record function is left with CLEAR when nothing is selected within a bound). F136, F145, F146 describe
+  the effects; none is reversible by the protocol.
+- **E11's result** promotes nothing by itself; a second write session of ours (E11b) is needed before any
+  write fact about our own host context becomes VERIFIED.

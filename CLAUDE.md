@@ -25,9 +25,13 @@ console's firmware.
   seen behaving that way in two independent sessions; it never clears a message for sending.
   No PC → console message (poll, fetch or data) may be sent by our code until it has been
   observed from SmartSoft on the 1248, understood, shown to be harmless and cleared by
-  `/hardware-safety-check`. As of 2026-10-30, SC-1 (`docs/protocol/safety-checks.md`) clears exactly
-  two, for a read-only session: the poll and the fetch of a record the console listed. Nothing else
-  is cleared, and nothing else is encoded anywhere in the solution.
+  `/hardware-safety-check`. As of 2026-10-31, SC-1 (`docs/protocol/safety-checks.md`) clears exactly
+  two, for a read-only session: the poll and the fetch of a record the console listed. SC-2 (2026-10-31)
+  is a conditional GO for building and reviewing a live-control encoder bounded to the fader indices
+  0x00, 0x30, 0x31 and eight live key codes, with the first write session E11 on the owner's go; it
+  clears nothing for sending until its conditions are met, and it is a NO-GO for the record keys, the
+  label and memory writes and the System pair. Nothing else is cleared, and no type-1 header is
+  encoded anywhere in the solution yet.
 - Never touch the console bootloader / firmware update path.
 - Never retry commands with side effects blindly.
 - Golden protocol tests may only use bytes from a committed capture in `docs/protocol/captures/`.
@@ -200,7 +204,12 @@ post-MASTER level (F145, H85 REJECTED, the simulator changed accordingly) and, w
 the key codes 0x37 (FADERS 25-48), 0x3B (STACK), 0x47 / 0x48 (IND 1 / IND 2) were seen once each; H84 CONFIRMED, H81's first clause CONFIRMED for channel mode,
 H78 contradicted in its prediction (cause UNKNOWN). **E9b cleared nothing: SC-1's poll and listed fetch remain the only messages cleared, no type-1 data header is
 encoded anywhere in the solution, and the safety check SC-2 is the gate for any write** (its input: the E9b record's "Input for a future safety check (SC-2),
-updated after E9b"). Next: "Next capture (proposed by the E9b analysis, 2026-10-31)" in `reverse-engineering.md`.
+updated after E9b"). **SC-2 ran the same day** (`docs/protocol/safety-checks.md`): a conditional GO for class A (fader events, indices 0x00 / 0x30 / 0x31
+only) and class B1 (eight live key codes: bumps 1 / 7 / 9, GO, SOLO, BLACKOUT, FADERS 1-24, MEMS) to build and review an encoder with golden tests over E9 and
+E9b and to run the first write session E11 on the owner's go, under a separate write switch, a typed whitelist, press / release as one operation, no write while
+a record function is armed, no retries; NO-GO for the record keys from the PC (SC-3, after the owner's written acceptance per key and a second capture E9c),
+for ChannelText and Memory writes and for the System pair; never for the paths of F121. Nothing is encoded or sent yet. Next: "Next capture (proposed by the
+E9b analysis, 2026-10-31)" in `reverse-engineering.md`, and E9c / E11 as SC-2 lists them.
 
 ## Commands
 
