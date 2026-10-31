@@ -250,7 +250,7 @@ dependency and sends nothing anywhere; the E6 round trip (save on the console, c
 software, load from the SD card) is the experiment that would make its model trustworthy for
 editing.
 
-## Show-file page as built (2026-10-31, E10 step 1)
+## Show-file page as built (2026-10-31, E10 steps 1 to 3)
 
 The UI has a page switch in the connection bar: the console (default) and the show-file viewer. The
 viewer (`src/frontend/src/app/components/show-file-page`) opens a `.asc` file chosen in the browser,
@@ -261,9 +261,17 @@ the reader's warnings. **Step 2 (same day): the patch is editable** in the page'
 0..96 per DMX address), "Download as new file" posts the edited DTO to `POST /api/showfile/render`,
 which maps it back to the model (`ShowFileMapper.ToModel`), checks the patch ranges (`ShowFileRules`)
 and returns the rendered bytes under `<name>-edited.asc`; the browser saves them, the original is
-never written, and "Revert" restores the parsed file. Nothing is stored on the backend and nothing
-reaches a console; the console page and its SignalR link are untouched. Next (owner's order): the
-stack and sequence editor, and the E6 round trip on the console to validate an edited file.
+never written, and "Revert" restores the parsed file. **Step 3 (same day): the steps are editable** in
+the stack and in the sequences: the fade times, the delays, the follow-on and the referenced memory
+(1..288, or none) of an existing step are inputs in the table cells; the step numbers stay as the file
+wrote them, and steps are neither added nor removed. The UI accepts only the forms the console's own
+files use for a time (seconds with at most one decimal, or m:ss; OBSERVED on 33 files,
+docs/formats/asc-format.md) and restores the cell otherwise; `ShowFileRules` repeats the checks on the
+backend (times, memory page 0..11 with fader 0..23 or none, CueParams 0..2) and the render answers
+`400` for anything else, so no file leaves the backend with a value the console was never seen to write.
+Nothing is stored on the backend and nothing reaches a console; the console page and its SignalR link
+are untouched. Next (owner's order): the E6 round trip on the console to validate an edited file;
+adding and removing steps only if the owner asks for it.
 
 ## Phase 2 proposal: live control after E9b and SC-2 (2026-10-31, not implemented)
 
