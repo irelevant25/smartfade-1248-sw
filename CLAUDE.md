@@ -187,8 +187,9 @@ are CONFIRMED (OBSERVED once); F131-F140 and H81-H86 were added; **53 facts are 
 Live control is the ConsoleEvent message (fader indices 0x00, 0x06, 0x30 = MASTER, 0x31 = BUMPS; 13 key codes, each its LED block number - 1,
 H82); the console answers like for the panel and acknowledges nothing; the record functions driven from the PC change show data and are not
 reversible by the protocol. **E9 cleared nothing: SC-1's poll and listed fetch remain the only messages cleared, no type-1 data header is encoded
-anywhere in the solution, and the repeat E9b plus a safety check SC-2 are the gate for any write.** Open owner item: memory 7 of page 1 was
-probably changed by E9 and is not yet checked (F139). Next: "Next capture (proposed by the E9 analysis, 2026-10-30)" in `reverse-engineering.md`.
+anywhere in the solution, and the repeat E9b plus a safety check SC-2 are the gate for any write.** The owner item on memory 7 of page 1
+(changed by E9, F139) was closed 2026-10-31: `SHOW08.ASC` confirmed the change, the owner restored it by hand, and `SHOW09.ASC` equals the
+pre-E9 backup `SHOW07.ASC` byte for byte. Next: "Next capture (proposed by the E9 analysis, 2026-10-30)" in `reverse-engineering.md`.
 
 ## Commands
 

@@ -96,8 +96,8 @@ and 0x31 = BUMPS; kind 1 for a key, `[01][code][01 on press, 00 on release]`, 13
 for the panel and acknowledges nothing (F134). The record functions driven from key codes change show data, are not reversible
 by the protocol, and the console lists the new Memory object by itself (F136); a label is a whole-object ChannelText write
 (F138). Not observed from the PC: a Memory whole-object write, any other object write, ConsoleEvent kind 2 (the wheel), a page
-select, a show upload and a System erase (F121). One open owner item: memory 7 of page 1 was probably changed by E9 and has not
-been checked (F139).
+select, a show upload and a System erase (F121). The one owner item, memory 7 of page 1 changed by E9, was closed on 2026-10-31: `SHOW08.ASC`
+confirmed the change, the owner restored it by hand, and `SHOW09.ASC` equals the pre-E9 backup byte for byte (F139).
 
 Protocol-known values: `No` · `Documented (MIDI)` · `Partially observed` · `Observed` · `Verified`.
 

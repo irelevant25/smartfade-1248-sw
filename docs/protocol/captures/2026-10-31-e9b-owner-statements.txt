@@ -57,3 +57,10 @@ GROUP 10, so the owner's hand fixes after E9 (memory 1, memories 9 and 10) hold 
 memory 9 was removed again. Restore target given to the owner: channel 7 out of memory 7 (level 0),
 channel 15 left as it is (8 % in the file, 0x15 in the Memory object), label unchanged; then a save
 to the SD card for a check. Not yet restored at the time of writing.
+
+Later the same morning (about 09:45):
+Owner: "Okay I change it and saved to the SHOW09.ASC and move it to the smartfade-sd-card-backup."
+Check (assistant): SHOW09.ASC is byte-identical to SHOW07.ASC (cmp, 15 944 bytes), so GROUP 7 reads
+"CHAN 15/8" again and the whole show equals the pre-E9 backup: E9's and E9b's traces in the show data
+are gone. Our reader and writer round-trip SHOW09.ASC byte for byte as well (asc-converter roundtrip).
+The file cannot show the bytes of channel 7's label block (F139), so that detail stays as recorded.

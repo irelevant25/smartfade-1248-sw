@@ -252,7 +252,7 @@ writes**; JSONL `seq` and frames `fN` of the committed console-only split):
 - **A list can name a record with c ≠ 0** (E9, F137): System (5, 5, slot − 1) at an EDIT MEM selection. A decoder must not assume
   c = 0; SC-1's read-only session treats such a record as a fault and stops (a safe stop, H83).
 - **Show data changes through the console's own functions** (E9, F139): memories and labels changed during the session, the SD backup
-  is the only undo, and the console's state after a session is not the state before it (memory 7 of page 1 is an open owner item).
+  is the only undo, and the console's state after a session is not the state before it (memory 7 of page 1, changed by E9, had to be restored by hand; `SHOW09.ASC`, 2026-10-31, shows it done).
 
 ## Show content seen in the download (decoded, `SHOW04.ASC`)
 

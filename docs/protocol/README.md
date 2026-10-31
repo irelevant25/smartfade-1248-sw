@@ -94,7 +94,7 @@ console part), H6 (for the paths used) and H24 (kinds 0 and 1) CONFIRMED (OBSERV
 unchanged and now applies to the write messages too: VERIFIED is necessary, not sufficient, **E9 clears no message**, no type-1 data
 header is encoded anywhere in the solution, and SC-1's two messages remain the only ones cleared; a future SC-2, after the repeat E9b,
 is the gate for the write messages ([safety-checks.md](safety-checks.md)). The owner's answers of 2026-10-31 are statements and never
-promote; one open owner item remains: memory 7 of page 1 was probably changed by E9 and has not been checked (F139).
+promote; the one open owner item, memory 7 of page 1 changed by E9, was closed on 2026-10-31: the owner restored it by hand and `SHOW09.ASC` equals the pre-E9 backup `SHOW07.ASC` byte for byte (F139).
 
 ## Version landscape
 

@@ -407,7 +407,10 @@ from the console's own listing.
 - **Owner action needed (zero risk): check memory 7 of page 1.** Its channel 7 should not be at full (`GROUP 7` of
   `SHOW07.ASC` holds only `CHAN 15/8`). Either look at it on the console (EDIT MEM, bump 7: channel 7's bump would light;
   leave with CLEAR) or save the show to the SD card and compare `GROUP 7` with `SHOW07.ASC`. The same save would show
-  whether memories 9 and 10 are gone and memory 1 is back to `CHAN 7/100 8/100`.
+  whether memories 9 and 10 are gone and memory 1 is back to `CHAN 7/100 8/100`. **Resolved 2026-10-31 (after E9b):**
+  `SHOW08.ASC` confirmed the change (`GROUP 7` = `CHAN 7/100 15/8`, `GROUP 1` = `CHAN 7/100 8/100`, no `GROUP 9` or `GROUP 10`,
+  nothing else different from `SHOW07.ASC` besides the three stack cues that carry memory 7); the owner removed channel 7 from
+  memory 7 by hand and `SHOW09.ASC`, saved afterwards, is byte-identical to `SHOW07.ASC`.
 - The memory 1 complaint is explained: the restore step selected bump 7 (key 0x06) after EDIT MEM, so it edited memory 7
   and left memory 1's channel 7 at 0x7F (the console's LCD read "Edit: 01/07", seq 68364).
 
@@ -587,7 +590,8 @@ Further observations a safety check needs:
 
 1. **The "restore" step edited memory 7, not memory 1** (key 0x06 after EDIT MEM; LCD "Edit: 01/07", seq 68364; Memory
    (0, 6, 0) with channel 7 = 0xFF, seq 68832). Memory 1 was left at 0x7F (the owner noticed and fixed it by hand);
-   **memory 7 probably still holds channel 7 at full** (to be checked by the owner, "Side effects").
+   **memory 7 probably still holds channel 7 at full** (to be checked by the owner, "Side effects"). **Resolved 2026-10-31: it did
+   (`SHOW08.ASC`); restored by hand, `SHOW09.ASC` equals `SHOW07.ASC` byte for byte.**
 2. **The guide's deletion step deleted nothing:** EDIT MEM + bump starts from the stored levels and CLEAR aborts the edit
    (no Memory listed, seq 92792, 96069), as the owner said and as the manual says (F107). Script fixed in 6cb2c07.
 3. **No Memory whole-object write:** both "Mem Edit" steps went through the console's EDIT MEM by key and fader events;

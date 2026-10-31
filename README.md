@@ -27,7 +27,7 @@ bus that nothing else was sent and that no control transfer reached the console 
 tied the independents' and BLACKOUT's keys to their LEDs with timed presses, and also cleared nothing further. E9 (the same night) observed
 SmartSoft's first PC -> console writes (ConsoleEvent fader and key events and a channel label, 401 writes in all) and cleared nothing: they
 are OBSERVED in one session, no data header is encoded anywhere in the solution, and the repeat E9b and a safety check SC-2 are the gate
-before any write of ours. Open owner item: memory 7 of page 1 was probably changed by that session and has not been checked.
+before any write of ours. That session also changed memory 7 of page 1 by mistake; the owner restored it by hand on 2026-10-31, and `SHOW09.ASC`, saved afterwards, equals the pre-E9 backup byte for byte.
 
 ## Run it
 
