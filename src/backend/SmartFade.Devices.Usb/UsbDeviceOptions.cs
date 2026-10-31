@@ -125,7 +125,8 @@ public sealed class UsbDeviceOptions
     /// (<see cref="Defaults"/>): a write then goes about 31 ms after its poll (SmartSoft: 29.81–47.99 ms, E9 and E9b)
     /// with a report at most 62 ms old, and a tap lasts about 46 ms. The reply timeout is bounded too (at most its default,
     /// 500 ms; the second pass of item 10, MINOR C): it caps how long a tap's press can stay unreleased when the console is
-    /// slow to answer the poll between press and release (never observed: within 12 ms in every capture). Null when they all
+    /// slow to answer the poll between press and release (within 12 ms in every capture up to E12; E12b's SD save, F163, is the
+    /// one case where the console answered nothing, for about 0.85 s, and a session of ours ends then). Null when they all
     /// do; else what does not.
     /// </summary>
     public string? LiveControlTimingProblem()

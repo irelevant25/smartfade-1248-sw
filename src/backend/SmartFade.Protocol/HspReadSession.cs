@@ -94,7 +94,12 @@ public enum HspReadSessionState
 [Evidence(EvidenceStatus.Verified, "F131, F132, F133", "write mode, SC-2 (2026-10-31): whitelisted ConsoleEvents; the placement INFERRED from E9 and E9b (828 of 828 writes)")]
 public sealed class HspReadSession
 {
-    /// <summary>The longest reply payload any capture holds: 792 bytes, the 157-record list (F57, E2 f384 / E3 f352 / E3b); anything longer is unobserved.</summary>
+    /// <summary>
+    /// The longest reply payload of the read-only captures E2 to E9b: 792 bytes, the 157-record list (F57, E2 f384 / E3 f352 / E3b).
+    /// E12 and E12b (2026-10-31, OBSERVED) hold longer lists, 812 and 807 bytes, only in the console's download after SmartSoft's
+    /// step commands added stack steps (F157): a read-only session of ours faults on such a payload, a safe stop; whether to
+    /// accept it is an SC-1 review question, not decided here (as for <see cref="ObservedBodyLengths"/>).
+    /// </summary>
     public const int MaxObservedPayloadLength = 792;
 
     /// <summary>

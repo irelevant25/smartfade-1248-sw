@@ -305,6 +305,10 @@ things in it are unobserved (items 2 and 11 below) and the session ends on the f
   LED blocks, ConsoleStatus, PlaybackInfo), the bus against the backend's log byte for byte (as E8b), any
   deviation and the time it ended the session, and the physical fader positions at the end. Afterwards: an
   SD save, compared with the backup byte for byte (no show data may have changed).
+- **No SD save (and no SD load) on the console while our software is connected** (added 2026-11-01 from E12b, F163 / H109; no decision
+  changed): during E12b's SD save the console answered no USB transfer for about 0.85 s, and our reply timeout (500 ms, at most that with
+  live control on) would end the session with a fault, a safe stop; the script's order (Disconnect, then the SD save) stays, and the
+  script forbids a save or load while connected (commit 7789a71). The same holds for a read-only session.
 - **Guided script (written 2026-10-31, evening, parse-checked; not run):** `tools/usb-probe/e11-guided-session.ps1` takes the owner
   through the above in that order and refuses to start the backend unless the re-check's open items are closed and every
   acceptance is answered y; it follows the "E11 script adjustments" below (bump 7 instead of bump 1, MASTER last, SOLO and BLACKOUT
@@ -440,5 +444,14 @@ mode, a write outside the observed placement, a retry.
   documentation only and INFERRED from the code: E12 showed Sequence records with c ≠ 0 and 144- / 148-byte Sequence /
   StepContent bodies after SmartSoft's step commands and in its download; each would end a read-only session of ours with its
   fault, a safe stop like the one described for F137 (F156, H106).)*
+  *(Note 2026-11-01, no decision changed: the repeat **E12b** ran on 2026-10-31, late evening, and was analysed by the `capture-analyst`
+  agent on Opus 5.5 at the owner's request ([record](captures/2026-10-31-e12b-smartsoft-patch-stack-edits-repeat.md), known-facts
+  F160–F165). The writes it saw a second time (the step commands InsertStep, DeleteStep, MoveStep and id 42, and the Patch,
+  Independents, StepContent, Sequence and Page writes) are now VERIFIED as SmartSoft's and the console's behaviour (F151, F152, F156,
+  F157; F153 and F154 in part), which is no clearance: **nothing of E12 or E12b is cleared**, class F (Patch and Independents, "Never")
+  and class D (Memory, NO-GO) stand, the step commands and the Sequence, SequenceMain, StepContent and Page writes are still in no class,
+  and the key codes 0x32 and 0x3A that SmartSoft's stack view sent (F165) are outside class B1's whitelist. Two findings matter for
+  any write of these objects later: a step command on a live stack changes what is live or next at once, without a GO (F164), and the
+  console can be silent on USB while it writes its SD card (F163, H109; the condition added under "Conditions for E11" above).)*
 - **E11's result** promotes nothing by itself; a second write session of ours (E11b) is needed before any
   write fact about our own host context becomes VERIFIED.

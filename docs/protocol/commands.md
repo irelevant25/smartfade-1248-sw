@@ -11,7 +11,8 @@ the [E3 record](captures/2026-10-29-e3-console-actions.md) and, since 2026-10-30
 [E3b record](captures/2026-10-30-e3b-live-objects.md) and, since the late evening of 2026-10-30, the
 [E9 record](captures/2026-10-30-e9-smartsoft-writes.md) (SmartSoft's data writes beyond the System pair) and, since 2026-10-31, the
 [E9b record](captures/2026-10-31-e9b-smartsoft-writes-repeat.md) (the repeat of E9) and, since the evening of 2026-10-31, the
-[E12 record](captures/2026-10-31-e12-smartsoft-patch-stack-edits.md) (SmartSoft editing the patch and the stack / sequences).
+[E12 record](captures/2026-10-31-e12-smartsoft-patch-stack-edits.md) (SmartSoft editing the patch and the stack / sequences) and, since the late evening of 2026-10-31, the
+[E12b record](captures/2026-10-31-e12b-smartsoft-patch-stack-edits-repeat.md) (the repeat of E12).
 
 **Update 2026-10-29 (E3).** The second SmartSoft session, after a console power cycle, sent the same
 four kinds of message (poll, fetch, the two System writes) and nothing else: no ConsoleEvent, no show
@@ -81,6 +82,17 @@ Sequence and Page writes**, plus five Memory writes. They are recorded with thei
 seen in E12" below, each **OBSERVED once and NOT CLEARED**; the Memory write's layout is now VERIFIED as SmartSoft's behaviour
 (F143, E9b + E12). **E12 clears no message:** SC-1's poll and listed fetch remain the only messages cleared; SC-2's classes are unchanged (Patch and Independents class F, "Never"; Memory class D, NO-GO); the step commands and the Sequence, SequenceMain, StepContent and Page writes are in no class; no encoder for any of them exists, and our code never sends them.
 
+**Update 2026-11-01 (E12b).** E12b ([record](captures/2026-10-31-e12b-smartsoft-patch-stack-edits-repeat.md); 2026-10-31, late evening) repeated E12 in a separate capture after
+another console power cycle: two SmartSoft sessions, 62 data writes (the System pair × 2, 14 key press / release pairs, InsertStep × 5,
+DeleteStep × 5, MoveStep and id 42 once each, and Patch, Independents, StepContent, Sequence and Page writes), our software sent
+nothing; decoded by the `capture-analyst` on Opus 5.5 at the owner's request. Where it reproduced E12, the rows of the section "PC →
+console data writes seen in E12" are now **VERIFIED as SmartSoft's and the console's behaviour** (F151, F152, F156, F157; F153 and F154
+in part), **never as clearance**; new and OBSERVED once: a channel step's StepContent (type 0), a 156-byte Sequence (w1 = 160), Manual,
+a label holding U+010C and the key codes **0x32** (PAUSE-like, H107) and 0x3A (a toggle, H108; H104 REJECTED), listed in the section
+"PC → console data writes seen in E12b" below. **E12b clears no message:** SC-1's poll and listed fetch remain the only messages cleared;
+SC-2's classes are unchanged; 0x32 and 0x3A are outside its whitelist; no encoder for any E12 or E12b message exists, and our code
+never sends them.
+
 | Message | Bytes as seen | Count in E2 (E3) | Effect observed | Status | Facts |
 |---|---|---|---|---|---|
 | Poll | 12-byte header, w0 = 0 (first poll f11: all zero) | 3 001 (E3: 9 692) (E3b: 25 824) | Console answers with a type-3 or type-4 reply header | **VERIFIED 2026-10-29** as SmartSoft's behaviour (E2 + E3; was OBSERVED) | F52, F53 |
@@ -139,13 +151,14 @@ Key codes seen (kind 1; each named by a logged Simulator step and a timed press;
 | 0x08 | bump 9 | 4 (E9b: 2) | seq 73995 / 73996 (f147991) `75 03 00 14 01 08 01` | 9 |
 | 0x09 | bump 10 | 2 | seq 84654 / 84655 (f169309) `83 03 00 14 01 09 01` | 10 |
 | 0x31 | GO | 1 (E9b: 1) | seq 43869 / 43870 (f87739) `18 03 00 14 01 31 01` | 50 |
+| 0x32 | UNKNOWN (E12b; sent from SmartSoft's stack view during the owner's unlogged playback; held a running GO fade and ran it back at the next press; H107 proposes PAUSE) | 6 (E12b) | seq 39160 / 39161 (f78321) `09 03 00 14 01 32 01` | 51 (`FF FF FF 0A 0A 0A` while a fade was held, `FF` × 6 while it ran back) |
 | 0x33 | SOLO | 2 (E9b: 2) | seq 36385 / 36386 (f72771) `0E 03 00 14 01 33 01` | 52 |
 | 0x34 | BLACKOUT | 2 (E9b: 2) | seq 33541 / 33542 (f67083) `0A 03 00 14 01 34 01` | 53 |
 | 0x36 | FADERS 1-24 | 2 (E9b: 5) | seq 41448 / 41449 (f82897) `16 03 00 14 01 36 01` | 55 |
 | 0x37 | FADERS 25-48 (E9b) | 1 | seq 51616 / 51617 (f103233) `7D 03 00 14 01 37 01` | 56 (`00 0A 00 …` → `00 FF 00 00 FF 00`; block 55 → `00 0A 00 …`) |
 | 0x38 | CLEAR | 3 | seq 80937 / 80938 (f161875) `7D 03 00 14 01 38 01` | 57 |
 | 0x39 | FADERS MEMS | 3 (E9b: 3) | seq 39471 / 39472 (f78943) `12 03 00 14 01 39 01` | 58 |
-| 0x3A | UNKNOWN (E12; sent once from a SmartSoft edit tab during the owner's search for the run mode, unlogged; H104 proposes PAUSE) | 1 | seq 98766 / 98767 (f197533) `23 03 00 14 01 3A 01` | none: block 59 stayed `0A` × 6 and nothing was listed for the rest of the session |
+| 0x3A | UNKNOWN (E12; sent once from a SmartSoft edit tab during the owner's search for the run mode, unlogged; H104 proposes PAUSE) *(E12b: four pairs from SmartSoft's stack view; a toggle of ConsoleStatus body[6], H108; H104 REJECTED)* | 1 (E12b: 4) | seq 98766 / 98767 (f197533) `23 03 00 14 01 3A 01` (E12b: seq 39849 / 39850, f79699, `19 03 00 14 01 3A 01`) | none: block 59 stayed `0A` × 6 and nothing was listed for the rest of the session (E12, memory mode); E12b, channel mode: 59 (`0A` × 6 ↔ `37 37 FF 0A 0A 0A`) with ConsoleStatus body[6] 0 ↔ 1 |
 | 0x3B | STACK (E9b) | 2 | seq 47229 / 47230 (f94459) `71 03 00 14 01 3B 01` | 60 (`46 46 00 46 46 00` → `FF FF 00 FF FF 00`) |
 | 0x3E | COPY | 1 | seq 82233 / 82234 (f164467) `7F 03 00 14 01 3E 01` | 63 |
 | 0x41 | REC MEM | 1 (E9b: 2) | seq 73005 / 73006 (f146011) `73 03 00 14 01 41 01` | 66 |
@@ -172,6 +185,11 @@ protocol, not part of the owner's write mode, not cleared.)*
 GO 0x31 and FADERS MEMS 0x39 again lit blocks 50 and 58. Still no code may be derived. "Not observed … any other object write"
 above holds for E9 and E9b: E12 observed SmartSoft's Patch, Independents, StepContent, Sequence and Page writes and its step
 commands, in the section below; "never to be tried" stands for our code.)*
+
+*(E12b, 2026-10-31, late evening: SmartSoft's stack view sent GO 0x31 four times, the new code 0x32 six times and 0x3A four times
+during the owner's unlogged playback (W10–W37 of the E12b record); 0x32 lit block 51 and 0x3A block 59, both code + 1, so H82 holds for
+19 codes, and still no code may be derived from it. Their identities are HYPOTHESIS (F165, H107, H108). "Never to be tried" stands for
+our code: neither code is in SC-2's whitelist.)*
 
 ## PC → console data writes seen in E12 (2026-10-31; OBSERVED, one capture; NOT CLEARED)
 
@@ -201,6 +219,37 @@ ChannelText (9) writes; ConsoleEvent kinds 0 and 2; any System write other than 
 change show data and leave the console's stack in an intermediate state between the two phases of an insert (INFERRED: a lost phase 2
 keeps the default step); none of them is reversible except by the inverse command with exact knowledge of the console's state, or by
 the SD backup.
+
+*(E12b, 2026-10-31, late evening: every row above was seen again in a separate capture after another power cycle, with the same body
+forms and the same answers of the console, and is now **VERIFIED as SmartSoft's and the console's behaviour** for the scope named in
+known-facts F151, F152, F153 (in part) and F154 (in part); the Memory row and the unchanged rewrites stay OBSERVED once (E12). It is
+still a record of SmartSoft's messages, never clearance: **NOT CLEARED**, no encoder exists, and our code never sends them.)*
+
+## PC → console data writes seen in E12b (2026-10-31, late evening; the repeat of E12; NOT CLEARED)
+
+Source: the [E12b record](captures/2026-10-31-e12b-smartsoft-patch-stack-edits-repeat.md) ("Inventory of the PC → console writes", "The step commands and what the console did
+with them (H96, H97, H98, H102, H103, H105)", "Whole-object writes against the console's own bodies", "The unlogged playback"), the
+committed console-only capture `captures/2026-10-31-e12b-smartsoft-patch-stack-edits-repeat.pcap` and its normalization `.jsonl`
+(`seq` = the JSONL record number, `fN` = the frame of the split that carries the data; the curator re-checked the bytes below with
+read-only scripts). The writes are **SmartSoft's own**; our software sent nothing. Framing as in the E9 section (F131): every payload is
+`[pseq][u16 LE len = w1 − 4][id][body]` and carries no qualifier fields (F153). Wn = the n-th of E12b's 62 data writes (E12's Wn are
+other writes). Only what E12b adds to the E12 section is listed; the rest is that section's rows seen a second time.
+
+| Message | Bytes as seen | Count in E12b | Effect observed | Status | Facts |
+|---|---|---|---|---|---|
+| Data: StepContent (ID 4), a **channel step** (type 0) | W40: payload seq 54421 (f108841) `27 0D 00 04 13 00 84 00 00 2E 00 00 32 00 32 00 00` (index 19, cue 13.2, record byte 2 = 0, bytes 3–4 = 0x002E for channel 47); W41 the same with Up `00 1E` | 2 | Phase 2 of the InsertStep `30 13 00 84` (W39); the console's LCD named the step "Ch:47" and its SD file wrote `CHAN 47/100` | OBSERVED (once); **NOT CLEARED**, in no SC-2 class | F152, F160 |
+| Data: StepContent (ID 4), type 2 with a label holding U+010C | W38: payload seq 42344 (f84687) `25 64 00 04 12 00 83 02 …` with the label block `03 06 01 0C 00 41 00 4A 00 31 …` (17 code units, the 18th zero) | 1 (and W9 without the label) | Stored verbatim (148 bytes), saved by the console as `$$Text 1 &#268;AJ123` / `456789` / `01234` | OBSERVED (once); **NOT CLEARED**, in no SC-2 class | F161, H40, H110 |
+| Data: Sequence (ID 2), 9 steps | W47: header `01 00 A0 00 02 00 00 00 00 00 07 00` (w1 = 160; stale words of the fetch (2, 0, 0, 7)), payload seq 73714 (f147427) `2E 9C 00 02 00 00 09 00 …` (156 bytes); W49 payload seq 78698 (f157395) `30 9C 00 02 00 00 09 02 …` (body[3] = 2, **Manual**) | 4 of 156 bytes (and W45, 144 bytes) | Stored (download 2 = W49) and saved as `$SEQUENCE 0 2 0 256 256` | 144-byte form VERIFIED as SmartSoft's behaviour (F153 in part); the 156-byte form and Manual OBSERVED (once); **NOT CLEARED**, in no SC-2 class | F153, F154, F162 |
+| Data: ConsoleEvent kind 1, code **0x32** | W10: payload seq 39161 (f78321) `09 03 00 14 01 32 01`; release `… 01 32 00` | 6 pairs | During a GO fade: held the fade (PlaybackInfo record 5 byte 5 = 1), then ran it back (byte 4 = 1); LED block 51 | OBSERVED (once); identity HYPOTHESIS (H107); **NOT CLEARED**, outside SC-2's whitelist | F165 |
+| Data: ConsoleEvent kind 1, code 0x3A | W26: payload seq 39850 (f79699) `19 03 00 14 01 3A 01` | 4 pairs | ConsoleStatus body[6] and LED block 59 toggled, nothing else | OBSERVED (in two captures, the effect once); identity HYPOTHESIS (H108); **NOT CLEARED**, outside SC-2's whitelist | F158, F165 |
+
+The step commands of E12b, for comparison with the E12 rows (all in the shapes of those rows): InsertStep W8 `07 04 00 20 30 12 00 83`
+(seq 24951), W44 `2B 04 00 20 00 02 00 50` (seq 68198, KOTLIK index 2, c = 8.0) and W46 `2D 04 00 20 00 07 00 5A` (seq 73705, index 7,
+c = 9.0); MoveStep W57 `06 03 00 23 30 11 14` (seq 100175, E12's bytes); id 42 W58 `07 04 00 2A 30 14 00 85` (seq 100180, index 20 → cue
+13.3); DeleteStep W61 `0A 04 00 22 30 12 00 00` (seq 105914). Patch W3 `02 02 02 05 02 00 01 02 …` (seq 6344), Independents W4
+`03 55 00 0C 02 00 FF 01 01 03 06 …` (seq 13696, byte 2 = BUMP in SmartSoft's display), Page W50 `31 27 00 08 0B 03 06 00 54` + 34 × `00`
+(seq 81266, page 12 "T"). Not seen in E12b: InsertPointQStep (33), ids 29–31, SequenceMain (3), Memory (0) or ChannelText (9) writes,
+ConsoleEvent kinds 0 and 2, any System write other than the pair, anything on interface 0.
 
 Observations that matter for safety:
 
@@ -254,3 +303,9 @@ Observations that matter for safety:
   objects it changed (F151, F153). An insert is two writes, and SmartSoft's editors also sent live keys (GO, FADERS MEMS, 0x3A) and
   unchanged rewrites that the owner did not log (F158). All of it changes show data, none of it is cleared, and our code never
   sends any of it.
+- **E12b (2026-10-31, late evening).** A step command on a live stack changes what is live or next at once, without a GO (F164), so on
+  a running show SmartSoft's edits change what the next GO plays. During an SD save made on the console the console answered no USB
+  transfer for about 0.85 s: SmartSoft's driver cancelled the pending read after 112 ms and reset both pipes, then SmartSoft carried on
+  (F163, H109). A session of ours would most likely end with a fault on its reply timeout (INFERRED from the code, a safe stop), so no
+  SD save (and no SD load) is made on the console while our software is connected (safety-checks.md "Conditions for E11"). Nothing of
+  E12b is cleared.

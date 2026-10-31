@@ -715,6 +715,8 @@ console does with the changed IND values; whether the console accepts any of the
 third SmartSoft session after the restores (SHOW16 = SHOW14 instead); DMX output effects (no level changed; DMX 100 unconnected). It shows
 SmartSoft's messages and the console's answers, **never that any of them may be sent by us**.
 
+*Applied by the curator 2026-11-01 (known-facts.md "Last updated", hypotheses.md "Update 2026-11-01 (E12b analysed …)"): the seven promotions as proposed (VERIFIED count 65 → 72), F160–F165 and H107–H110 added, H104 and H40's reading B rejected, H40's console-side byte order CONFIRMED (OBSERVED once); every cited figure re-checked; three wordings sharpened there (the level objects in download 2's full list; the first non-zero status on the bulk pipes, E8b's being on EP0 and the HID pipe; the IRP ID, which the driver also used before the read); nothing cleared.*
+
 ### Owner questions (zero risk; statements never promote)
 
 1. **22:40:05–22:40:30:** SmartSoft sent key code 0x32 six times, GO four times and 0x3A four times (around 22:40:15 three times and at

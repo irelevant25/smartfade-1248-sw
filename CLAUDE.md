@@ -53,10 +53,10 @@ or copy its contents into source code. Derived extractions go to `analysis/extra
 | Source inventory + hashes | `docs/source-materials.md` |
 | Hardware facts | `docs/hardware/smartfade-1248.md` |
 | Protocol knowledge base (status vocabulary, facts, hypotheses, evidence matrix) | `docs/protocol/` |
-| Observed framing, commands, responses, session model (from E2, E3, E3b, E8, E8b, E9, E9b and E12; VERIFIED = reproduced behaviour, never clearance to send; the write messages are VERIFIED only as SmartSoft's behaviour where E9b reproduced E9 or E12 reproduced E9b, the rest OBSERVED once (E12's step commands and edit writes among them), and none is cleared) | `docs/protocol/packet-format.md`, `commands.md`, `responses.md`, `state-model.md` |
+| Observed framing, commands, responses, session model (from E2, E3, E3b, E8, E8b, E9, E9b, E12 and E12b; VERIFIED = reproduced behaviour, never clearance to send; the write messages are VERIFIED only as SmartSoft's behaviour where E9b reproduced E9, E12 reproduced E9b or E12b reproduced E12 (E12's step commands and edit writes among them), the rest OBSERVED once, and none is cleared) | `docs/protocol/packet-format.md`, `commands.md`, `responses.md`, `state-model.md` |
 | Third-party reference compared with our 1248 evidence (ConsoleLink, SmartFade ML, evidence class 5) | `docs/protocol/consolelink-analysis.md` |
 | Capture records, evidence files, capture format | `docs/protocol/captures/`, `tools/protocol-analyzer/` |
-| SmartSoft binary analysis (framing S11; write paths S11.15; GUI edits of the patch and the stack / sequences S11.16, INFERRED, each row annotated with E12's outcome) | `docs/protocol/smartsoft-analysis.md` |
+| SmartSoft binary analysis (framing S11; write paths S11.15; GUI edits of the patch and the stack / sequences S11.16, INFERRED, each row annotated with E12's and E12b's outcomes) | `docs/protocol/smartsoft-analysis.md` |
 | MIDI analysis | `docs/protocol/midi-spec-analysis.md` |
 | Experiments, runbooks (E8, E8b, E9, E12), safety rules, capture format | `docs/protocol/reverse-engineering.md` |
 | Hardware safety checks: what is cleared for sending, under which conditions | `docs/protocol/safety-checks.md` |
@@ -253,7 +253,22 @@ StepContent; F156), seen only after SmartSoft's step commands and in its downloa
 cleared nothing:** SC-1's poll and listed fetch remain the only messages cleared for a read-only session, SC-2's decisions are unchanged (Patch
 and Independents class F, "Never"; Memory class D, NO-GO), the stack, sequence, page and step-command writes are in no class, and our code never
 sends any of them. Next: "Next capture (proposed by the E12 analysis, 2026-10-31)" in `reverse-engineering.md` (the owner questions; E12b, the
-repeat, whose guided script `tools/usb-probe/e12b-guided-session.ps1` is written and parse-checked, not run).
+repeat, whose guided script `tools/usb-probe/e12b-guided-session.ps1` is written and parse-checked, not run). *(Superseded in part, text kept:
+E12b was run and analysed the same late evening, see below.)*
+**E12b run and analysed 2026-10-31, late evening** (the repeat of E12, passive, after another console power cycle: two SmartSoft sessions, 62
+PC -> console writes, an SD save of the edited show made on the console, every edit restored, `SHOW16.ASC` = `SHOW14.ASC`; record
+`docs/protocol/captures/2026-10-31-e12b-smartsoft-patch-stack-edits-repeat.md`). The analysis was done by the `capture-analyst` agent on Opus 5.5
+at the owner's request (read-only tools `tools/protocol-analyzer/e12b/`) and applied by the knowledge-base curator on 2026-11-01. Where E12b
+reproduced E12, SmartSoft's step commands, its two-phase insert, the console's lists after them (Sequence records with c = the changed step's
+index) and the stored results are VERIFIED as SmartSoft's and the console's behaviour: **72 facts are VERIFIED** (F151, F152, F156, F157 added,
+F153, F154, F158 in part; never clearance to send). New and OBSERVED once (F160-F165, H107-H110): a channel step; a labelled State step that the
+console stored verbatim and exported as UTF-16BE (H40's byte order CONFIRMED for the console's side); the live stack addressed by index, so a
+step command changes what is live or next without a GO; the key codes 0x32 (PAUSE-like) and 0x3A (a toggle of ConsoleStatus body[6]; H104
+REJECTED). **The console stopped answering USB for about 0.85 s while it saved the show to its SD card** (one read cancelled, both pipes reset;
+F163, H109), so no SD save or load is made on the console while our software is connected (an E11 condition in `safety-checks.md`; our reply
+timeout would end the session, a safe stop). **E12b cleared nothing:** SC-1's poll and listed fetch remain the only messages cleared, SC-2's
+classes are unchanged, 0x32 and 0x3A are outside its whitelist, and our code never sends any of these messages. Next: "Next capture (proposed
+by the E12b analysis, 2026-10-31)" in `reverse-engineering.md` (owner questions, optional passive captures, static checks; no repeat needed).
 
 ## Commands
 

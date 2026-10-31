@@ -82,6 +82,16 @@ inbound framing held (1 260 payloads, byte 1 = 0x00 in all, pseq 0x00 after the 
 carries no qualifier fields**: the object's identity is in its body (F153). The new shapes are OBSERVED once (F151, F153), NOT
 CLEARED, and listed with their bytes in [commands.md](commands.md) "PC → console data writes seen in E12".
 
+**Update 2026-11-01 (E12b,** [record](captures/2026-10-31-e12b-smartsoft-patch-stack-edits-repeat.md)**).** A fourth capture of SmartSoft writes (2026-10-31, late
+evening: the repeat of E12, two sessions after another console power cycle, passive; our software sent nothing) held the framing for
+**62 data writes** of 11 ids, the stale words in all 54 078 poll and data headers, the counter from 0x00 per SmartSoft session, and
+the inbound framing; the shapes E12 saw once are now **VERIFIED as SmartSoft's and the console's behaviour** (F151, F153 in part), a
+156-byte Sequence (w1 = 160) is new and OBSERVED once; NOT CLEARED. It also holds **the first non-zero USBD status on the console's
+bulk pipes in any capture**: during the console's own SD save one reply-header read got no data, was cancelled by the host side after
+111.9 ms (USBD_STATUS_CANCELED, 0 bytes, the classifier's one `in-unexpected` framing error) and was followed by a reset of both pipes
+(USBPcap transfer type 0xFE, URB_FUNCTION_SYNC_RESET_PIPE_AND_CLEAR_STALL on 0x04 and 0x83); SmartSoft's next poll was answered at once,
+with nothing lost, repeated or restarted (F163, H109; section "Not known" below).
+
 ## Transport
 
 | Item | Observed | Fact |
@@ -98,7 +108,7 @@ Every OUT transfer starts as a 12-byte **header**, six u16 LE words:
 | Word | Poll (w0 = 0) | Data (w0 = 1) | Fetch (w0 = 2) |
 |---|---|---|---|
 | w0 | 0 | 1 | 2 |
-| w1 | 0 | payload length (7 in both observed cases, E2 / E3 / E3b; E9: 7, 8 or 43, F131; E9b adds 94 for the Memory write, F143; E12 adds 8 and 7 for the step commands and 17, 43, 89, 104, 148 and 518 for the object writes, F151, F153) | 0 |
+| w1 | 0 | payload length (7 in both observed cases, E2 / E3 / E3b; E9: 7, 8 or 43, F131; E9b adds 94 for the Memory write, F143; E12 adds 8 and 7 for the step commands and 17, 43, 89, 104, 148 and 518 for the object writes, F151, F153; E12b adds 160 for a 156-byte Sequence, F153) | 0 |
 | w2 | stale | stale | object ID |
 | w3, w4, w5 | stale | stale | qualifiers a, b, c |
 
@@ -142,6 +152,12 @@ poll or fetch followed the payload 14.57–17.05 ms later, once 30.60 ms (W67, a
 were at least 46.89 ms apart. A data payload carries no qualifier fields: the identity is in the body (Page body[0], StepContent
 body[0], Sequence body[0..1], Memory body[0..1]; Patch and Independents have none). The Memory layout is VERIFIED as SmartSoft's
 behaviour (F143, E9b + E12); the other new shapes are OBSERVED once. NOT CLEARED.)*
+
+*(E12b, 2026-10-31, late evening: the same shape held for 62 of 62 writes of 11 ids (39 System 4, 20 ConsoleEvent 28 (key pairs, among
+them the new code 0x32), 32 InsertStep 5, 34 DeleteStep 5, 35 MoveStep 1, 42 1, 4 StepContent 5, 2 Sequence 5 (one of 144 bytes, four
+of 156 bytes with w1 = 160), 8 Page 2, 12 Independents 4, 5 Patch 2); header → payload 0.073–0.272 ms (median 0.112), the next poll or
+fetch 14.65–17.07 ms after the payload, writes at least 45.71 ms apart, never two per poll. The step-command and object-write shapes of
+E12 are now VERIFIED as SmartSoft's behaviour (F151; F153 in part); the 156-byte Sequence is OBSERVED once. NOT CLEARED.)*
 
 ## Console → PC
 
@@ -201,6 +217,11 @@ across all ids, 0 gaps (47, 21 and 2 writes: 0x00 … 0x2E, 0x00 … 0x14, 0x00 
 the first payload after the power cycle (seq 10, f20; the fifth power-on seen, F80), four wraps, 0 breaks, continuous across both
 SmartSoft restarts (174 → 175, 75 → 76; F93).
 
+**E12b (2026-10-31, late evening):** the outbound counter started at 0x00 in both SmartSoft sessions and rose by one per data payload
+across all ids, 0 gaps (50 and 12 writes: 0x00 … 0x31, 0x00 … 0x0B). The console's counter: 699 payloads, 0x00 at the first payload
+after the power cycle (seq 10, f20; the sixth power-on seen, F80), two wraps, 0 breaks, continuous across the SmartSoft restart (244 →
+245, seq 85112 → 87214; F93) and across the 853.5 ms without IN data during the console's SD save (238 → 239, seq 84952 → 85013; F163).
+
 ## DirtyObjects (ID 40)
 
 Body: `[u16 BE count]` + count × `[id][u16 BE a][b][c]` (5 bytes each). Each record is fetched
@@ -223,6 +244,10 @@ nine sessions (F57, F94).
 157 records (F157); **two non-System records with c ≠ 0, Sequence (2, 0, 0, 6)** (list body `00 01 02 00 00 00 06`, seq 87587 and
 169123), listed after SmartSoft's InsertStep and DeleteStep on KOTLIK and fetched with their qualifiers (F156); the record format is
 unchanged; no de-duplication (Patch up to seven times in one list, seq 148220, F155).
+**E12b (2026-10-31, late evening):** 141 lists, **558 records = 558 fetches in order**, no re-fetch; the full list 157 / 160 records (the
+160-record list is an 807-byte payload; F157); **four Sequence records with c ≠ 0**, (2, 0, 0, 2) twice and (2, 0, 0, 7) twice (seq
+68201, 73708, 94586, 95753), each c the index of the step SmartSoft's command changed (F156; H102 CONFIRMED in two sessions); FileName
+(36) listed by the console after its own SD save, in [36, 21, 22] (seq 85013, F163); the record format unchanged.
 
 ## Timing seen from SmartSoft
 
@@ -243,7 +268,7 @@ median 31.08 ms (n = 52 456, min 29.01, max 77.37), fetch to next poll median 15
 28.72 ms (min 20.41): the cadence of E2–E3b reproduced (F62). **Writes:** data header to its payload 0.05–0.32 ms (median 0.10), payload
 to the next OUT transfer 14.51–16.46 ms (median 15.43; E3b 14.58–15.82 after its six writes), consecutive writes at least 44.8 ms apart
 (median 61.0 ms within a burst): SmartSoft's host-side behaviour, OBSERVED once, not a console limit and not a timing for our code
-(F131). **E9b (SmartSoft again, 2026-10-31):** poll to next poll median 31.12 ms (n = 50 339, min 21.60, max 79.00), fetch to next poll median 15.48 ms (min 10.49), payload completion to fetch median 28.72 ms (min 20.39): the cadence reproduced (F62); 17 idle intervals were below 29 ms, the lowest 21.60 ms (seq 90886 → 90888) while the owner worked in SmartSoft's Mem Edit tab, closer to SC-1's floor for our sender (21 ms) than in any earlier capture, which does not change that floor (it is ours, never derived as SmartSoft's minimum). **Writes:** data header to payload 0.067–0.254 ms (median 0.118), payload to the next OUT transfer 14.69–16.23 ms (median 15.44), consecutive writes at least 45.55 ms apart (median 61.81 ms within a burst): SmartSoft's host-side behaviour, VERIFIED as behaviour (F131), not a console limit and not a timing for our code. **E12 (SmartSoft again, 2026-10-31):** idle poll intervals down to 20.446 ms (11 below 21.0 ms, 34 below 21.6 ms, at 19 moments in all three sessions; seq 122076 … 122080), below E2–E3b's 20.59 and E9b's 21.60 ms, and a fetch's completion to the next poll down to 10.255 ms (F62: ≥ 10.30 ms): SmartSoft's host-side timing, cause UNKNOWN; SC-1's floors for our sender (21 ms, 11 ms) are ours, stay above both, and nothing here changes SC-1 or SC-2. **Writes:** header to payload 0.077–0.230 ms (median 0.129), payload to the next OUT transfer 14.57–17.05 ms (median 15.79; once 30.60 ms after W67), writes at least 46.89 ms apart (OBSERVED, SmartSoft's behaviour, not a timing for our code).
+(F131). **E9b (SmartSoft again, 2026-10-31):** poll to next poll median 31.12 ms (n = 50 339, min 21.60, max 79.00), fetch to next poll median 15.48 ms (min 10.49), payload completion to fetch median 28.72 ms (min 20.39): the cadence reproduced (F62); 17 idle intervals were below 29 ms, the lowest 21.60 ms (seq 90886 → 90888) while the owner worked in SmartSoft's Mem Edit tab, closer to SC-1's floor for our sender (21 ms) than in any earlier capture, which does not change that floor (it is ours, never derived as SmartSoft's minimum). **Writes:** data header to payload 0.067–0.254 ms (median 0.118), payload to the next OUT transfer 14.69–16.23 ms (median 15.44), consecutive writes at least 45.55 ms apart (median 61.81 ms within a burst): SmartSoft's host-side behaviour, VERIFIED as behaviour (F131), not a console limit and not a timing for our code. **E12 (SmartSoft again, 2026-10-31):** idle poll intervals down to 20.446 ms (11 below 21.0 ms, 34 below 21.6 ms, at 19 moments in all three sessions; seq 122076 … 122080), below E2–E3b's 20.59 and E9b's 21.60 ms, and a fetch's completion to the next poll down to 10.255 ms (F62: ≥ 10.30 ms): SmartSoft's host-side timing, cause UNKNOWN; SC-1's floors for our sender (21 ms, 11 ms) are ours, stay above both, and nothing here changes SC-1 or SC-2. **Writes:** header to payload 0.077–0.230 ms (median 0.129), payload to the next OUT transfer 14.57–17.05 ms (median 15.79; once 30.60 ms after W67), writes at least 46.89 ms apart (OBSERVED, SmartSoft's behaviour, not a timing for our code). **E12b (SmartSoft again, 2026-10-31, late evening):** idle poll intervals down to 20.539 ms (6 below 21.0 ms) and a fetch's completion to the next poll down to 10.193 ms: SmartSoft's host-side timing again, SC-1's floors for our sender (21 ms, 11 ms) stay above both. **Writes:** header to payload 0.073–0.272 ms (median 0.112), payload to the next OUT transfer 14.65–17.07 ms (median 16.09), writes at least 45.71 ms apart; key press to release 45.71–94.49 ms (14 pairs), no write between a press and its release. **Replies:** reply-header reads took a median 1.9 ms and at most 6.6 ms at the 99.9th percentile, except two in the console's save menu: 31.8 ms (seq 83531) and the read cancelled after 111.9 ms (seq 85008), with a poll-to-poll interval of 821.3 ms around it (F163). None of this is a timing for our code; SC-1's reply timeout (500 ms) is ours.
 
 ## Not known
 
@@ -263,7 +288,7 @@ packet-level behaviour below the URB level stays unknown.)* *(Update 2026-10-30,
 SmartSoft's outbound sequence byte or the previous byte of a fader event (it never complained, F131, F132); whether it accepts data
 writes from a host that never sent the System pair (our read-only session sends neither, H66; the answer can only be learned by
 sending, which nothing clears); what it does with a key press whose release never comes (a session ending between the two is
-untested); whether a page other than 1 changes the System (5, 5, c) records (H83). *(Update 2026-10-31, E9b:)* a page other than 1 does not change the System (5, 5, 0) record for memory 1 (page 12 gave the same record, F142); still open: c ≠ 0 from the console's own EDIT MEM key, what the console stored for the Memory body's channels 49–96 after a 48-level write (F143, H87), and whether the console reads the previous byte of a fader event at all (F132). *(Update 2026-10-31, E12:)* what the console does with a lost phase 2 of InsertStep or a lost id 42 (INFERRED: the default step stays, a moved step stays out of cue order); what InsertStep's c means for a sequence (H103) and id 42 beyond one renumber; whether the console lists c ≠ 0 records after its own step commands (H102, H106); how it handles a malformed or short body of the new object writes.
+untested); whether a page other than 1 changes the System (5, 5, c) records (H83). *(Update 2026-10-31, E9b:)* a page other than 1 does not change the System (5, 5, 0) record for memory 1 (page 12 gave the same record, F142); still open: c ≠ 0 from the console's own EDIT MEM key, what the console stored for the Memory body's channels 49–96 after a 48-level write (F143, H87), and whether the console reads the previous byte of a fader event at all (F132). *(Update 2026-10-31, E12:)* what the console does with a lost phase 2 of InsertStep or a lost id 42 (INFERRED: the default step stays, a moved step stays out of cue order); what InsertStep's c means for a sequence (H103) and id 42 beyond one renumber; whether the console lists c ≠ 0 records after its own step commands (H102, H106); how it handles a malformed or short body of the new object writes. *(Update 2026-11-01, E12b:)* "behaviour on timeout" above is no longer unseen: during the console's own SD save a pending reply-header read got no data, the host side (ETC's driver, INFERRED) cancelled it after 111.9 ms and reset both pipes, and the next poll was answered at once with nothing lost or repeated (F163). Still UNKNOWN: how long the console stays silent while it writes its SD card and what it does with a poll that arrives meanwhile (H109); whether a session of ours, which would end on its 500 ms reply timeout, could have waited it out (INFERRED from the code: most likely not).
 
 ## CL-ML cross-check (class 5, not 1248 evidence)
 

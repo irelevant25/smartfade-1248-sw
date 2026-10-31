@@ -135,6 +135,13 @@ known-facts F149). On the wire the step commands carry `a` = 48 for the stack an
 says for those two values; another page or slot is untested. `c`, `d`, `e` stayed 0, 256, 256 in every Sequence write. Nothing here
 is a reason to write `b` other than as read; the repeat E12b plans an SD save while edited (reverse-engineering.md).
 
+**Update 2026-11-01 (E12b; OBSERVED once, the console's own SD save of an edited show):** `b` = 2 (Manual) is now seen in a
+console-written file: after SmartSoft set KOTLIK to Manual (Sequence body[3] = 2, the console's body at seq 87433 of the
+[E12b record](../protocol/captures/2026-10-31-e12b-smartsoft-patch-stack-edits-repeat.md)), the console saved `$SEQUENCE 0 2 0 256 256` (`SHOW15.ASC`, known-facts F162),
+with the two steps SmartSoft added as `$CUE  1.0` / `$$MEMORY 0 0` (numbered by their memory, "Sequence step numbers" below). The file
+form of One Shot (`b` = 1) is still unseen, the stack's `b` = 2 still unexplained, and what the console plays in either mode untested
+(H95). Nothing here is a reason to write `b` other than as read.
+
 Sequence label: `Text KOTLIK` + `$$Text 1 KOTLIK` / `$$Text 2 ` / `$$Text 3 ` directly after the header.
 
 ### Step record (`CUE` in main stack, `$CUE` in sequences)
@@ -198,6 +205,14 @@ In the 2.0.0 demo `Text` = full label and `$$Text` = the label wrapped at 6 char
 (`Backlights` → `Backli`/`ghts`). In the 3.0.2 Ostrov file `Text` = line 1 only
 (`RYBAR` + `DOM`). **The relation between `Text` and `$$Text` is version-dependent.
 Preserve all four values.** Trailing space after the line number is always present.
+
+**Update 2026-11-01 (E12b; OBSERVED once):** the console's own SD save of a step label it had stored from SmartSoft (`SHOW15.ASC`,
+`CUE 13.1`): the stored block `03 06 01 0C 00 41 00 4A 00 31 00 32 00 33 …` (seq 87517 of the
+[E12b record](../protocol/captures/2026-10-31-e12b-smartsoft-patch-stack-edits-repeat.md)) became `$$Text 1 &#268;AJ123` / `$$Text 2 456789` / `$$Text 3 01234`, so the console
+reads the 18 code units as UTF-16BE in three lines of six (reading A); reading B would make the first character U+000C (known-facts
+F73, F161; hypotheses H40, reading B rejected for the 1248). The console writes a character outside ASCII as an HTML numeric entity
+(`&#268;` = U+010C, Č) and `?` for it in the derived `Text` line ("Label and memory rules learned from the files" below). The
+6-character third line is still untested (SmartSoft's step-label field keeps 17 characters, H110).
 
 ### `PATCH 1 d/c/l …`
 
@@ -394,7 +409,7 @@ lines; the show-file page's editor and `ShowFileRules` (docs/api.md) keep an edi
 | A memory step whose memory is in the file repeats the memory's `CHAN` list exactly (same pairs, same order) | 894 of 894 | OBSERVED |
 | A memory step whose memory is not in the file (never recorded or emptied) has no `CHAN` line | 14 of 14 | OBSERVED |
 | A step that carries a label block (`Text`, `$$Text 1..3`) ends with two blank lines, like memories and pages; a step without one ends with one | 1 of 1 (SHOW15.ASC, the State step `CUE 13.1`; 1 073 steps without a label end with one) | OBSERVED once; `AscWriter.StepLines` renders it so, and SHOW15 round-trips byte for byte |
-| A State step saved by the console has no `CHAN` line although SmartSoft's write carried 48 levels, and its `UP` / `DOWN` / `FOLLOWON` are the defaults; a channel step inserted from SmartSoft has `CHAN n/100` | 1 of 1 each (SHOW15.ASC) | OBSERVED once; what the console plays for a State step is UNKNOWN (E12b's analysis) |
+| A State step saved by the console has no `CHAN` line although SmartSoft's write carried 48 levels, and its `UP` / `DOWN` / `FOLLOWON` are the defaults; a channel step inserted from SmartSoft has `CHAN n/100` | 1 of 1 each (SHOW15.ASC) | OBSERVED once; what the console plays for a State step is UNKNOWN (E12b's analysis) *(Corrected 2026-11-01 from the E12b analysis, the rule's text kept: the 48 levels of SmartSoft's write were all zero (W9 and W38 of the [E12b record](../protocol/captures/2026-10-31-e12b-smartsoft-patch-stack-edits-repeat.md); the console's 148-byte body, seq 87517, holds 96 zero levels), so the missing `CHAN` line fits a step without any level; whether the console saves a State step's non-zero levels as a `CHAN` line is untested. The channel step's record holds the channel (bytes 3–4 = channel − 1) and no level, and the file writes 100 (INFERRED; known-facts F160, F161).)* |
 | Most common time triples (UP, DOWN, FOLLOWON) | stack: `5.0 0`, `5.0 0`, `0` (204 of 525); sequences: `1.0 0`, `1.0 0`, `0` (234 of 385) | OBSERVED (the editor copies a neighbour's times and uses these only for an empty stack or sequence) |
 
 What the console does with a file that breaks one of these shapes is UNKNOWN (the SD load path is the only
@@ -408,7 +423,7 @@ Counted like the step rules above, over the same 34 console-written files; the s
 | Rule | Count | Status |
 |---|---|---|
 | The `Text` line of a label block is derived from its three `$$Text n` lines: line 1, then line 2 only when line 1 has 6 characters, then line 3 only when line 2 has 6 too (`NOC 3` / `MORE` → `Text NOC 3`; `LAFIAO` / `GULA` → `Text LAFIAOGULA`; `BLUE 2` / `HVIRZD` → `Text BLUE 2HVIRZD`) | 4 282 of 4 282 blocks (memories, sequences, steps, channels, pages, independents) | OBSERVED; consistent with H40's reading of the 18-unit block as three lines read up to the first 0 |
-| A label line has at most 6 characters | 12 843 of 12 846 lines; the 3 others (KAIMO final 13-06-19.asc, lines 545, 563, 581, a memory label's line 3) read `&#268;ERVEN`: the console writes a character outside ASCII as an HTML numeric entity (`&#268;` = Č), which counts as one character on the console | OBSERVED (the entity form in one file; how the console reads an entity back from the SD card is UNTESTED) |
+| A label line has at most 6 characters | 12 843 of 12 846 lines; the 3 others (KAIMO final 13-06-19.asc, lines 545, 563, 581, a memory label's line 3) read `&#268;ERVEN`: the console writes a character outside ASCII as an HTML numeric entity (`&#268;` = Č), which counts as one character on the console | OBSERVED (the entity form in one file; how the console reads an entity back from the SD card is UNTESTED) *(E12b, 2026-11-01: `SHOW15.ASC`, saved on the console itself, writes `&#268;` for the U+010C it stored (known-facts F161), so the entity form is the console's (OBSERVED once); KAIMO's writer, SmartSoft or a console, is unknown ("Text block" above). Curator note, the count unchanged: KAIMO's three blocks are channel labels (`$CHANNEL 4`, `7` and `10`; their `Text` lines 545, 563 and 581, the `$$Text 3` lines 548, 566 and 584), not a memory label.)* |
 | Label bytes are printable ASCII (0x20–0x7E); no other byte occurs in any label line | 12 846 of 12 846 lines | OBSERVED |
 | In the derived `Text` line the console writes `?` for a character it writes as an entity in the `$$Text n` lines, and a line whose six characters include an entity counts as full (the derivation continues into lines 2 and 3) | 1 of 1 (SHOW15.ASC, E12b: `$$Text 1 &#268;AJ123` / `456789` / `01234` → `Text ?AJ12345678901234`); in the KAIMO file the entity sits in line 3 and never reaches the `Text` line | OBSERVED once; `ShowFileRules.LabelText` and the editor's `labelText` derive the line so |
 | A memory's `CHAN` pairs name channels 1..48 only, in rising order, each once, at 1..100 % (a channel at 0 is not written) | 4 860 of 4 860 pairs, 496 of 496 memories | OBSERVED |
