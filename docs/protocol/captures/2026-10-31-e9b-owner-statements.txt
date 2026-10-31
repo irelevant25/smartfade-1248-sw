@@ -1,0 +1,31 @@
+E9b, repeat of E9 (passive USBPcap capture of SmartSoft writing): owner statements (2026-10-31)
+
+Context (recorded by the assistant): the owner ran tools/usb-probe/e9b-guided-session.ps1 (commit
+3ce3900) from 08:34:59 to 09:05:29 local time; the action log 2026-10-31-e9b-actions.txt holds every
+step with the PC clock and the owner's typed answers (the E9 questions first). The raw root-hub capture
+(e9b.pcap in the repository root, 27 895 136 bytes, sha256
+0a07109d2add9639fd00f72200e3fae46834a8741cc74319f11e58fe74262ef8, not committed) was split to the
+console's device address 21 and committed as 2026-10-31-e9b-smartsoft-writes-repeat.pcap (208 876
+frames). Our software was not involved.
+
+Backup: SHOW08.ASC, saved on the SD card before the session and copied into smartfade-sd-card-backup/
+(sha256 079dc11502e048c895243d4727b75871ef5e4692861b874c9fbcf81524ccb8dc). It differs from SHOW07.ASC
+in four lines: GROUP 7 (page 1 memory 7, label "NOC 3") now carries "CHAN 7/100 15/8" instead of
+"CHAN 15/8", and the three stack steps that reference that memory ($$MEMORY 0 6) repeat the extra
+"7/100" in their CHAN lines. That is E9's mistaken edit (bump 7 after EDIT MEM in the restore step):
+memory 7 holds channel 7 at full. The owner's answer in the guide ("It was in memory 1 if I am not
+wrong not memory 7 and in memory 1 I fixed it") is recorded as given; the file shows memory 7 changed.
+Everything else of the show is unchanged since SHOW04 (the B7 steps of E9b came after the save).
+
+Statements given after the session (quoted): "In B7 after I stored the 50% value of fader 5 in memory
+9, I move fader channel 5 back to 0. Its just my habbit. After saving I move everything down usually."
+So in step B7 the physical fader 5 went to zero right after the recording, before the Mem Edit tab
+change; that move is not in the log.
+
+In the guide (from the action log): memory 9 was empty at the start, recorded in H85, deleted by the
+REC MEM-of-an-empty-look method ("memory 9 empty again = y"), recorded again in B7, and the Mem Edit
+tab cell change to 100 % was checked on the console ("the channel 5 is stored there at 100% not about
+50%"), then memory 9 was deleted again (y). The label test: channel 7 had no label; after the rename and
+a SmartSoft restart SmartSoft showed "Čaj"; after the restore and another restart it showed none. H81:
+the physical fader took over at once when moved ("instantly go to the value of the physical fader");
+the Simulator's fader 5 took effect at once. The console was powered off since E9.

@@ -1,0 +1,138 @@
+2026-10-31 08:34:59.192 START guided E9b session (PC clock, local time)
+2026-10-31 08:35:31.383 backup taken: SHOW08.ASC (copy it into smartfade-sd-card-backup/ after the session)
+2026-10-31 08:36:18.276 owner answer: memory 7 state = It was in memory 1 if I am not wrong not memory 7 and in memory 1 I fixed it
+2026-10-31 08:36:31.594 owner answer: e9 mem edit window = simulator
+2026-10-31 08:36:44.975 owner answer: e9 drop at 279 s = n
+2026-10-31 08:36:55.172 owner answer: e9 fader move at 290 s = y
+2026-10-31 08:36:59.587 owner answer: console powered off since E9 = y
+2026-10-31 08:36:59.695 memory integrity: off
+2026-10-31 08:37:00.650 interface 1 driver service: ETCHSP (ETC's driver)
+2026-10-31 08:37:30.577 usbpcap running (owner)
+2026-10-31 08:38:04.138 starting position set (owner)
+2026-10-31 08:38:11.407 owner answer: memory 9 empty = y
+2026-10-31 08:38:13.104 smartsoft start #1 (Start-Process by the script)
+2026-10-31 08:38:30.688 smartsoft online #1 (owner)
+2026-10-31 08:39:30.705 wait 60 s done (baseline: SmartSoft online, nothing touched)
+2026-10-31 08:39:41.428 simulator opened
+2026-10-31 08:40:01.434 wait 20 s done (simulator open, untouched)
+2026-10-31 08:40:14.002 sim fader 1 up start
+2026-10-31 08:40:19.144 sim fader 1 at full
+2026-10-31 08:40:34.151 wait 15 s done (sim fader 1 at full)
+2026-10-31 08:40:38.098 sim fader 1 down start
+2026-10-31 08:40:42.918 sim fader 1 at zero
+2026-10-31 08:40:57.924 wait 15 s done (after sim fader 1)
+2026-10-31 08:41:03.841 sim bump 7 press
+2026-10-31 08:41:11.262 sim bump 7 release
+2026-10-31 08:41:26.271 wait 15 s done (after sim bump 7)
+2026-10-31 08:41:31.254 sim master to half start
+2026-10-31 08:41:37.769 sim master at half
+2026-10-31 08:41:52.786 wait 15 s done (sim master at half)
+2026-10-31 08:41:55.682 sim master to full start
+2026-10-31 08:41:59.960 sim master at full
+2026-10-31 08:42:14.969 wait 15 s done (after sim master)
+2026-10-31 08:42:18.994 sim bumps to zero start
+2026-10-31 08:42:23.732 sim bumps at zero
+2026-10-31 08:42:38.747 wait 15 s done (sim bumps at zero)
+2026-10-31 08:42:45.235 sim bumps to full start
+2026-10-31 08:42:50.007 sim bumps at full
+2026-10-31 08:43:05.012 wait 15 s done (after sim bumps)
+2026-10-31 08:43:10.488 sim blackout on
+2026-10-31 08:43:25.498 wait 15 s done (sim blackout on)
+2026-10-31 08:43:28.482 sim blackout off
+2026-10-31 08:43:43.497 wait 15 s done (after sim blackout)
+2026-10-31 08:43:48.332 sim solo on
+2026-10-31 08:44:03.335 wait 15 s done (sim solo on)
+2026-10-31 08:44:05.232 sim solo off
+2026-10-31 08:44:20.235 wait 15 s done (after sim solo)
+2026-10-31 08:44:29.141 sim mems and memory bump 1 press
+2026-10-31 08:44:36.739 sim memory bump 1 release
+2026-10-31 08:44:51.751 wait 15 s done (after sim memory bump)
+2026-10-31 08:45:01.390 sim channel mode again
+2026-10-31 08:45:16.408 wait 15 s done (after sim channel mode)
+2026-10-31 08:45:24.936 sim go stack unlit
+2026-10-31 08:45:34.936 sim go done
+2026-10-31 08:45:49.951 wait 15 s done (after sim go)
+2026-10-31 08:46:05.406 h81 sim fader 1 full
+2026-10-31 08:46:11.313 h81 sim fader 1 at full
+2026-10-31 08:46:21.321 wait 10 s done (h81 sim fader at full, physical at zero)
+2026-10-31 08:46:30.019 h81 physical fader 1 to half
+2026-10-31 08:46:35.832 h81 physical fader 1 at half
+2026-10-31 08:46:45.846 wait 10 s done (h81 physical half)
+2026-10-31 08:47:40.000 owner answer: h81 physical takes over? = when I started moving the physical fader, it instantly go to the value of the physical fader which is from 0% to UP until I reached about 50%
+2026-10-31 08:47:51.120 h81 physical fader 1 full then zero
+2026-10-31 08:47:58.873 h81 physical fader 1 at zero
+2026-10-31 08:48:08.886 wait 10 s done (after h81 physical)
+2026-10-31 08:48:15.686 h81 sim fader 1 to zero
+2026-10-31 08:48:25.001 h81 sim fader 1 at zero
+2026-10-31 08:48:35.014 wait 10 s done (h81 both at zero)
+2026-10-31 08:48:56.874 h81 physical 5 half, sim 5 from zero
+2026-10-31 08:49:11.435 h81 sim fader 5 at full
+2026-10-31 08:49:23.917 owner answer: h81 pickup = at once
+2026-10-31 08:49:35.350 h81 cleanup
+2026-10-31 08:49:46.209 h81 cleanup done
+2026-10-31 08:50:01.226 wait 15 s done (after h81)
+2026-10-31 08:50:07.350 sim stack on
+2026-10-31 08:50:17.366 wait 10 s done (sim stack on)
+2026-10-31 08:50:22.484 sim stack off
+2026-10-31 08:50:32.488 wait 10 s done (after sim stack)
+2026-10-31 08:50:40.385 sim ind 1 on off
+2026-10-31 08:50:50.406 wait 10 s done (after sim ind 1)
+2026-10-31 08:50:53.353 sim ind 2 on off
+2026-10-31 08:51:03.363 wait 10 s done (after sim ind 2)
+2026-10-31 08:51:15.338 sim bank 25-48 and back
+2026-10-31 08:51:30.346 wait 15 s done (after sim bank)
+2026-10-31 08:52:01.254 console edit mem select 1 clear
+2026-10-31 08:52:14.488 console edit mem left
+2026-10-31 08:52:29.504 wait 15 s done (after console edit mem page 1)
+2026-10-31 08:52:59.426 console page 12 edit mem select 1 clear
+2026-10-31 08:53:14.866 console edit mem left page 12
+2026-10-31 08:53:24.876 wait 10 s done (after console edit mem page 12)
+2026-10-31 08:53:32.515 console page 1
+2026-10-31 08:53:47.517 wait 15 s done (after page 1)
+2026-10-31 08:54:02.511 owner answer: channel 7 label before = -
+2026-10-31 08:54:12.106 channel 7 label to Caj with caron
+2026-10-31 08:54:27.115 wait 15 s done (label changed)
+2026-10-31 08:54:34.904 smartsoft close #1 start
+2026-10-31 08:54:42.153 smartsoft closed #1
+2026-10-31 08:54:52.160 wait 10 s done (between sessions 1 and 2)
+2026-10-31 08:54:54.070 smartsoft start #2 (Start-Process by the script)
+2026-10-31 08:55:06.464 smartsoft online #2 (owner)
+2026-10-31 08:55:36.466 wait 30 s done (session 2 download)
+2026-10-31 08:55:47.109 owner answer: label after restart = Čaj
+2026-10-31 08:55:52.553 channel 7 label restored
+2026-10-31 08:56:07.562 wait 15 s done (label restored)
+2026-10-31 08:56:13.123 smartsoft close #2 start
+2026-10-31 08:56:17.518 smartsoft closed #2
+2026-10-31 08:56:27.526 wait 10 s done (between sessions 2 and 3)
+2026-10-31 08:56:30.848 smartsoft start #3 (Start-Process by the script)
+2026-10-31 08:56:42.982 smartsoft online #3 (owner)
+2026-10-31 08:57:12.994 wait 30 s done (session 3 download)
+2026-10-31 08:57:20.104 owner answer: label after second restart = -
+2026-10-31 08:57:25.258 simulator opened again
+2026-10-31 08:57:40.261 wait 15 s done (simulator open again)
+2026-10-31 08:58:03.483 h85 fader 5 half, master half
+2026-10-31 08:58:12.689 h85 set
+2026-10-31 08:58:22.693 wait 10 s done (h85 set)
+2026-10-31 08:58:42.430 h85 rec mem bump 9
+2026-10-31 08:58:57.443 wait 15 s done (after record into memory 9)
+2026-10-31 08:59:12.727 owner answer: memory 9 recorded = y
+2026-10-31 08:59:31.328 h85 reset
+2026-10-31 08:59:42.241 h85 reset done
+2026-10-31 08:59:52.250 wait 10 s done (h85 reset)
+2026-10-31 08:59:59.726 h86 delete 9 by rec mem
+2026-10-31 09:00:14.733 wait 15 s done (after delete 9)
+2026-10-31 09:00:21.662 owner answer: memory 9 empty again = y
+2026-10-31 09:00:36.560 owner answer: mem edit tab decision = y
+2026-10-31 09:00:50.138 b7 record memory 9
+2026-10-31 09:01:05.146 wait 15 s done (b7 recorded)
+2026-10-31 09:02:03.039 b7 mem edit tab cell change
+2026-10-31 09:02:18.047 wait 15 s done (b7 cell changed)
+2026-10-31 09:03:31.843 owner answer: b7 console reaction = There is nothing to reace because the memory fader is not up. But I check it manually on CONSOLE by rising the memory fader 9 to max and yes, the cchannel 5 is stored there at 100% not about 50%.
+2026-10-31 09:03:46.650 b7 delete 9
+2026-10-31 09:04:01.653 wait 15 s done (b7 deleted)
+2026-10-31 09:04:08.427 owner answer: b7 memory 9 empty = y
+2026-10-31 09:04:38.442 wait 30 s done (end of actions)
+2026-10-31 09:05:15.383 smartsoft close #3 start
+2026-10-31 09:05:20.204 smartsoft closed #3
+2026-10-31 09:05:28.997 usbpcap stopped (owner)
+2026-10-31 09:05:28.999 END guided E9b session
