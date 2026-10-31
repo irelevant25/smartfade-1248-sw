@@ -44,3 +44,16 @@ registered a change from the panel maybe so it registered 50% again." Reading (a
 moved the Simulator's MASTER back to full in H85, yet the console's MASTER ended at about 50 %; what
 set it back is for the capture to tell (a physical MASTER move, the console re-reading the physical
 fader, or a PC event): FaderInfo body[194] over time against the kind-0 events of index 0x30.
+
+After the session (2026-10-31, about 09:35, in chat, after the step-3 work):
+Owner: "Memory 7 of page 1, what value should channel 7 has there?" and "master is on 100% already".
+Reading (assistant): the console's MASTER is back at full; the MASTER-at-50 % note above describes
+the end of the capture only. Memory 7 was answered from the SD card backups, not from memory:
+SHOW04 to SHOW07.ASC (SHOW07 = the pre-E9 backup) all write GROUP 7 ("NOC 3" / "MORE") as
+"CHAN 15/8" only; SHOW08.ASC (saved after E9b) writes "CHAN 7/100 15/8". The only other lines that
+differ between SHOW07 and SHOW08 are the three cue CHAN lines in the stack that carry memory 7's
+content. GROUP 1 ("OPONA") reads "CHAN 7/100 8/100" in both and neither file has a GROUP 9 or
+GROUP 10, so the owner's hand fixes after E9 (memory 1, memories 9 and 10) hold and E9b's own
+memory 9 was removed again. Restore target given to the owner: channel 7 out of memory 7 (level 0),
+channel 15 left as it is (8 % in the file, 0x15 in the Memory object), label unchanged; then a save
+to the SD card for a check. Not yet restored at the time of writing.
