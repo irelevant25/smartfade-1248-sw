@@ -31,10 +31,13 @@ if (!usbMode && !string.Equals(deviceMode, "Simulated", StringComparison.Ordinal
 }
 
 // Live control (SC-2 item 6): a separate write switch with its own date, only on top of the USB mode confirmed for
-// today; set for another day or without that mode, the backend refuses to start. Absent, the USB device is read-only.
+// today and with the timings no slower than SmartSoft's; set for another day, without that mode or with slower
+// timings, the backend refuses to start. Absent, the USB device is read-only.
+var liveControlDate = builder.Configuration["Device:Usb:LiveControlDate"];
 SmartFade.Devices.Usb.ServiceCollectionExtensions.ValidateLiveControlDate(
-    builder.Configuration["Device:Usb:LiveControlDate"], usbMode, DateOnly.FromDateTime(DateTime.Now));
-var liveControl = usbMode && !string.IsNullOrWhiteSpace(builder.Configuration["Device:Usb:LiveControlDate"]);
+    liveControlDate, usbMode, DateOnly.FromDateTime(DateTime.Now),
+    string.IsNullOrWhiteSpace(liveControlDate) ? null : builder.Configuration.GetSection(UsbDeviceOptions.SectionName).Get<UsbDeviceOptions>() ?? new UsbDeviceOptions());
+var liveControl = usbMode && !string.IsNullOrWhiteSpace(liveControlDate);
 
 var allowedOrigins = builder.Configuration.GetSection("Security:AllowedOrigins").Get<string[]>()
     ?? new[] { "http://localhost:4200", "http://localhost:5160", "http://127.0.0.1:5160" };

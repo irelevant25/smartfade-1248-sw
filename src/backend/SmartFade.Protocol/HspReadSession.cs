@@ -83,7 +83,11 @@ public enum HspReadSessionState
 /// <item>nothing is sent before this session has received the console's first list and its LED state (condition 8),
 /// and at the moment a new write would go the session asks the gate (the device's interlock of condition 5) and then
 /// the write's own condition (the console state its control was seen in), each of which may send it, hold it or drop
-/// it; a release completes a press they let through and is not held back.</item>
+/// it; a release completes a press they let through and is not held back;</item>
+/// <item>a caller that waits before it sends (the read loop keeps the cadence floors) first asks
+/// <see cref="PeekNextKind"/>, waits for that kind's slot and only then calls <see cref="Next"/>: the gate and the
+/// write's condition are then asked after the wait, right before the write goes, so the console's report they judge
+/// cannot age during the wait (SC-2 condition 5; the first review of SC-2 item 10, major 1).</item>
 /// </list>
 /// </summary>
 [Evidence(EvidenceStatus.Verified, "F51, F52, F53, F54, F55, F57", "cleared by SC-1 (2026-10-30): poll and listed fetch only")]
@@ -240,10 +244,34 @@ public sealed class HspReadSession
     public string? LastDropReason { get; private set; }
 
     /// <summary>
-    /// The next transfer: at the first transfer after a completed poll exchange a queued write (or an owed release),
-    /// else the next listed record's fetch, else a poll (always a poll right after a fetch).
+    /// The kind of transfer <see cref="Next"/> would hand over now, without changing anything and without asking the
+    /// gate: Data when this is a write slot and a write could go in it (an owed release that is due, or a queued write
+    /// still to be asked about), else Fetch or Poll. A caller that waits before it sends waits for this kind's slot and
+    /// then calls <see cref="Next"/>, passing whether the wait was a write's.
     /// </summary>
-    public HspOutboundTransfer Next()
+    public HspMessageType PeekNextKind()
+    {
+        if (State != HspReadSessionState.ReadyToSend)
+        {
+            throw new InvalidOperationException($"Nothing may be sent while the session is {State}.");
+        }
+
+        if (IsWriteSlot && HasWriteCandidate())
+        {
+            return HspMessageType.Data;
+        }
+
+        return _pending.Count > 0 && !_pollDueAfterFetch ? HspMessageType.Fetch : HspMessageType.Poll;
+    }
+
+    /// <summary>
+    /// The next transfer: at the first transfer after a completed poll exchange a queued write (or an owed release),
+    /// else the next listed record's fetch, else a poll (always a poll right after a fetch). With
+    /// <paramref name="writeSlotMet"/> false (the caller waited for a fetch's or a poll's slot, as
+    /// <see cref="PeekNextKind"/> said) no write goes in this slot, not even one queued meanwhile: its gate would be asked
+    /// before the wait it still needs. A write slot passed that way is gone; the write waits for the next poll exchange.
+    /// </summary>
+    public HspOutboundTransfer Next(bool writeSlotMet = true)
     {
         if (State != HspReadSessionState.ReadyToSend)
         {
@@ -252,9 +280,9 @@ public sealed class HspReadSession
 
         // SC-2 condition 7, placement: between a poll reply and the next poll, never between a fetch and its poll, at
         // most one write per poll. The slot is the first transfer after a completed exchange, and it closes with it.
-        var writeSlot = _writeSlotOpen && !_pollDueAfterFetch && _outstandingFetch is null;
+        var writeSlot = IsWriteSlot;
         _writeSlotOpen = false;
-        if (writeSlot && TakeWrite() is { } write)
+        if (writeSlot && writeSlotMet && TakeWrite() is { } write)
         {
             return write;
         }
@@ -303,9 +331,11 @@ public sealed class HspReadSession
     /// Queues a fader event (SC-2 class A). A value still queued for the same fader is replaced, keeping its place;
     /// the previous byte is fixed when the event is sent (the last value this session sent, condition 3).
     /// <paramref name="condition"/>, asked without the session's lock at the moment the event would go, sends, holds or
-    /// drops it (the console state its control needs).
+    /// drops it (the console state its control needs); it must not change anything, since it may be asked at slots
+    /// where the write then does not go. <paramref name="sent"/> runs once the event is taken for sending (the caller
+    /// writes it at once), on the session's thread and without the session's lock.
     /// </summary>
-    public void QueueFader(ClearedFader fader, byte value, Func<HspWriteDecision>? condition = null)
+    public void QueueFader(ClearedFader fader, byte value, Func<HspWriteDecision>? condition = null, Action? sent = null)
     {
         if (!Enum.IsDefined(fader))
         {
@@ -318,28 +348,29 @@ public sealed class HspReadSession
             var queued = _queuedWrites.FindIndex(w => w is FaderWrite f && f.Fader == fader);
             if (queued >= 0)
             {
-                _queuedWrites[queued] = new FaderWrite(fader, value, condition);
+                _queuedWrites[queued] = new FaderWrite(fader, value, condition, sent);
                 return;
             }
 
             RequireRoom();
-            _queuedWrites.Add(new FaderWrite(fader, value, condition));
+            _queuedWrites.Add(new FaderWrite(fader, value, condition, sent));
         }
     }
 
     /// <summary>
     /// Queues a key tap (SC-2 class B1): its press, then its release at the next write slot, as one operation
     /// (condition 4). <paramref name="condition"/> is asked before the press as for <see cref="QueueFader"/>; once the
-    /// press is out, the release is owed and nothing holds it back.
+    /// press is out, the release is owed and nothing holds it back. <paramref name="sent"/> runs once the press is taken
+    /// for sending, as for <see cref="QueueFader"/>.
     /// </summary>
-    public void QueueKeyTap(ClearedKey key, Func<HspWriteDecision>? condition = null) => QueuePress(key, tap: true, condition);
+    public void QueueKeyTap(ClearedKey key, Func<HspWriteDecision>? condition = null, Action? sent = null) => QueuePress(key, tap: true, condition, sent);
 
     /// <summary>
     /// The golden tests' path (condition 2): a press whose release waits for <see cref="QueueKeyRelease"/>, so that a
     /// replay can release where SmartSoft released (E9: 46 ms to 5.80 s after the press). Not reachable from the
     /// device, which sends taps only (no held bump, condition 4). A stop or a discard makes the release due at once.
     /// </summary>
-    internal void QueueKeyPress(ClearedKey key) => QueuePress(key, tap: false, condition: null);
+    internal void QueueKeyPress(ClearedKey key) => QueuePress(key, tap: false, condition: null, sent: null);
 
     /// <summary>Makes the release of a press queued with <see cref="QueueKeyPress"/> due (golden tests only).</summary>
     internal void QueueKeyRelease(ClearedKey key)
@@ -432,7 +463,7 @@ public sealed class HspReadSession
         return BuildWrite(HspOutbound.KeyEvent(TakeSequence(), key, pressed: false));
     }
 
-    private void QueuePress(ClearedKey key, bool tap, Func<HspWriteDecision>? condition)
+    private void QueuePress(ClearedKey key, bool tap, Func<HspWriteDecision>? condition, Action? sent)
     {
         if (!Enum.IsDefined(key))
         {
@@ -443,7 +474,7 @@ public sealed class HspReadSession
         {
             RequireAcceptingWrites();
             RequireRoom();
-            _queuedWrites.Add(new KeyPress(key, tap, condition));
+            _queuedWrites.Add(new KeyPress(key, tap, condition, sent));
         }
     }
 
@@ -468,10 +499,28 @@ public sealed class HspReadSession
         }
     }
 
+    /// <summary>A write may go in this transfer: the first after a completed poll exchange, with no fetch waiting for its poll or its object.</summary>
+    private bool IsWriteSlot => _writeSlotOpen && !_pollDueAfterFetch && _outstandingFetch is null;
+
+    /// <summary>What <see cref="TakeWrite"/> would consider: a release that is due, else (no key held) a queued write.</summary>
+    private bool HasWriteCandidate()
+    {
+        if (_writeGate is null)
+        {
+            return false;
+        }
+
+        lock (_writeLock)
+        {
+            return _heldKey is not null ? _releaseDue : _queuedWrites.Count > 0;
+        }
+    }
+
     /// <summary>
     /// The write for this slot, or null: an owed release first; else, once the console's first list and LED state are
     /// in, the oldest queued write, if the gate and then its own condition send it (a hold keeps it queued, a drop
-    /// removes it unsent; either way nothing else goes in this slot).
+    /// removes it unsent; either way nothing else goes in this slot). A write taken here is committed (counter, previous
+    /// byte, held key) and its <c>sent</c> callback runs; the caller writes it at once.
     /// </summary>
     private HspOutboundTransfer? TakeWrite()
     {
@@ -548,18 +597,25 @@ public sealed class HspReadSession
         }
 
         WriteHeldReason = null;
+        HspOutboundTransfer transfer;
         switch (head)
         {
             case FaderWrite fader:
                 // SC-2 condition 3 (F132): this host's own last value of the index, 0x00 before its first event.
                 var previous = _lastSentFaderValues.TryGetValue(fader.Fader, out var last) ? last : (byte)0x00;
                 _lastSentFaderValues[fader.Fader] = fader.Value;
-                return BuildWrite(HspOutbound.FaderEvent(TakeSequence(), fader.Fader, fader.Value, previous));
+                transfer = BuildWrite(HspOutbound.FaderEvent(TakeSequence(), fader.Fader, fader.Value, previous));
+                break;
             case KeyPress keyPress:
-                return BuildWrite(HspOutbound.KeyEvent(TakeSequence(), keyPress.Key, pressed: true));
+                transfer = BuildWrite(HspOutbound.KeyEvent(TakeSequence(), keyPress.Key, pressed: true));
+                break;
             default:
                 throw new InvalidOperationException($"Unknown queued write {head}.");
         }
+
+        // Committed: only now may the owner of the write count it as sent (never at the moment its condition said Send).
+        head.Sent?.Invoke();
+        return transfer;
     }
 
     /// <summary>F131: 0x00 at the session's first data payload, +1 per data payload, wrapping 0xFF → 0x00 (E9b wrapped at seq 39860).</summary>
@@ -774,12 +830,12 @@ public sealed class HspReadSession
         return new HspEvent[] { new UnexpectedTransfer(HspDirection.FromConsole, data, reason) };
     }
 
-    /// <summary>A queued write and the condition it is sent under (null: the gate alone decides).</summary>
-    private abstract record QueuedWrite(Func<HspWriteDecision>? Condition);
+    /// <summary>A queued write, the condition it is sent under (null: the gate alone decides) and what runs once it is taken for sending.</summary>
+    private abstract record QueuedWrite(Func<HspWriteDecision>? Condition, Action? Sent);
 
     /// <summary>A fader event; the previous byte is fixed when it is sent.</summary>
-    private sealed record FaderWrite(ClearedFader Fader, byte Value, Func<HspWriteDecision>? Condition) : QueuedWrite(Condition);
+    private sealed record FaderWrite(ClearedFader Fader, byte Value, Func<HspWriteDecision>? Condition, Action? Sent) : QueuedWrite(Condition, Sent);
 
     /// <summary>A key press; with <paramref name="Tap"/> its release is due at the next write slot, else when the golden test releases it.</summary>
-    private sealed record KeyPress(ClearedKey Key, bool Tap, Func<HspWriteDecision>? Condition) : QueuedWrite(Condition);
+    private sealed record KeyPress(ClearedKey Key, bool Tap, Func<HspWriteDecision>? Condition, Action? Sent) : QueuedWrite(Condition, Sent);
 }

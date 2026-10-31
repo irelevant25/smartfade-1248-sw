@@ -21,6 +21,8 @@
 .show__pick {
   position: relative;
   cursor: pointer;
+  display: inline-flex;
+  align-items: center;
 }
 
 .show__input {

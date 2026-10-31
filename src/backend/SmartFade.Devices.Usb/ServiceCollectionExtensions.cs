@@ -27,11 +27,16 @@ public static class ServiceCollectionExtensions
             var file = Path.Combine(options.CaptureLogDirectory, $"{DateTime.UtcNow:yyyy-MM-dd-HHmmss}-usb-session.jsonl");
             return new TransferLog(file, pipeDescription, backendVersion);
         });
-        services.AddSingleton<UsbSmartFadeDevice>(provider => new UsbSmartFadeDevice(
-            provider.GetRequiredService<IOptions<UsbDeviceOptions>>(),
-            provider.GetRequiredService<Func<IHspPipe>>(),
-            provider.GetRequiredService<Func<string, ITransferSink?>>(),
-            provider.GetRequiredService<Microsoft.Extensions.Logging.ILogger<UsbSmartFadeDevice>>()));
+        services.AddSingleton<UsbSmartFadeDevice>(provider =>
+        {
+            var options = provider.GetRequiredService<IOptions<UsbDeviceOptions>>();
+            return new UsbSmartFadeDevice(
+                options,
+                provider.GetRequiredService<Func<IHspPipe>>(),
+                provider.GetRequiredService<Func<string, ITransferSink?>>(),
+                provider.GetRequiredService<Microsoft.Extensions.Logging.ILogger<UsbSmartFadeDevice>>(),
+                incompleteWriteMarker: new IncompleteWriteMarker(options.Value.CaptureLogDirectory));   // beside the transfer logs; outlives a restart
+        });
         services.AddSingleton<ISmartFadeDevice>(provider => provider.GetRequiredService<UsbSmartFadeDevice>());
         services.AddHostedService<UsbSessionLifetime>();
         return services;
@@ -47,10 +52,11 @@ public static class ServiceCollectionExtensions
     /// <summary>
     /// The start-up check of live control's write switch (SC-2 item 6), next to <see cref="IsConfirmedForToday"/>:
     /// absent, the device is read-only; set, it must name today and come with `Device:Mode=Usb` (whose own
-    /// `Device:Usb:ConfirmDate` check stays as it is), or the backend refuses to start. The device checks the date
-    /// again at Connect and at every command.
+    /// `Device:Usb:ConfirmDate` check stays as it is), and the timing settings in <paramref name="options"/> must not be
+    /// slower than SmartSoft's cadence (<see cref="UsbDeviceOptions.LiveControlTimingProblem"/>), or the backend refuses
+    /// to start. The device checks the date and the timings again at Connect and the date at every command.
     /// </summary>
-    public static void ValidateLiveControlDate(string? liveControlDate, bool usbMode, DateOnly today)
+    public static void ValidateLiveControlDate(string? liveControlDate, bool usbMode, DateOnly today, UsbDeviceOptions? options = null)
     {
         if (string.IsNullOrWhiteSpace(liveControlDate))
         {
@@ -67,6 +73,11 @@ public static class ServiceCollectionExtensions
         {
             throw new InvalidOperationException(
                 $"Device:Usb:LiveControlDate={liveControlDate} is not today ({today:yyyy-MM-dd}): live control is confirmed per day, never left switched on (SC-2 item 6). Leave it out for a read-only session.");
+        }
+
+        if (options?.LiveControlTimingProblem() is { } timing)
+        {
+            throw new InvalidOperationException($"Device:Usb:LiveControlDate is set, but {timing}. Leave those settings at their defaults for live control.");
         }
     }
 

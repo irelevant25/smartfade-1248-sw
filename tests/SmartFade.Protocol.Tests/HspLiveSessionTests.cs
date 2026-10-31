@@ -154,6 +154,137 @@ public class HspLiveSessionTests
         Assert.Equal(file == E9File ? new[] { 16560 } : Array.Empty<int>(), pipe.DeviationsMet);
     }
 
+    /// <summary>
+    /// The converse of the golden replays (the first review of SC-2 item 10, minor: they show where SmartSoft wrote, not
+    /// that the session writes nowhere else). With a write waiting at every moment and a gate that always sends, a
+    /// session replayed over E9 and E9b writes at the first transfer after every completed poll exchange once the
+    /// console's first list and LED state are in, and nowhere else: never between a fetch and its poll, never twice
+    /// before the next poll. The console side is replayed as recorded (SmartSoft's own writes skipped); our writes are
+    /// not answered (F131), so they are taken off the wire before the replay pipe.
+    /// </summary>
+    [Theory]
+    [InlineData(E9File, int.MinValue, 68339)]
+    [InlineData(E9bFile, int.MinValue, 64681)]
+    public void With_a_write_always_waiting_the_session_writes_right_after_each_completed_poll_exchange_and_nowhere_else(string file, int firstSeq, int endSeq)
+    {
+        var capture = file == E9File ? E9 : E9b;
+        var pipe = new ReplayHspPipe(capture.Value, expectWrite: null, firstSeq, endSeq);
+        var session = new HspReadSession(_ => HspWriteDecision.Send);
+        var buffer = new byte[HspReadSession.MaxObservedPayloadLength];
+        var listed = false;
+        var ledsIn = false;
+        var exchangeJustCompleted = false;   // the last transfer completed a poll exchange (its reply read whole)
+        var lastOut = HspMessageType.Poll;
+        var writesSincePoll = 0;
+        var slots = 0;
+        var writes = 0;
+        byte value = 0;
+        pipe.Open();
+        while (!pipe.AtEnd)
+        {
+            session.QueueFader(ClearedFader.Bumps, value++);   // always a write waiting; a newer value replaces the queued one
+            if (exchangeJustCompleted && listed && ledsIn)
+            {
+                slots++;
+            }
+
+            var next = session.Next();
+            if (next.IsWrite)
+            {
+                Assert.True(exchangeJustCompleted, $"a write not right after a completed poll exchange, capture position {pipe.Position}");
+                Assert.Equal(HspMessageType.Poll, lastOut);   // never between a fetch and its poll
+                Assert.Equal(0, writesSincePoll);             // at most one write per poll
+                writesSincePoll++;
+                writes++;
+                exchangeJustCompleted = false;
+                continue;   // not on the replayed wire: the console answers no write (F131)
+            }
+
+            exchangeJustCompleted = false;
+            pipe.Write(next.Bytes);
+            lastOut = next.Kind;
+            if (next.Kind != HspMessageType.Poll)
+            {
+                continue;
+            }
+
+            writesSincePoll = 0;
+            while (session.ExpectedReadLength > 0)
+            {
+                var span = buffer.AsSpan(0, session.ExpectedReadLength);
+                pipe.ReadExactly(span);
+                foreach (var evt in session.Receive(span.ToArray()))
+                {
+                    listed |= evt is DirtyListReceived;
+                    ledsIn |= evt is ObjectReceived { Payload.ObjectId: (int)HspObjectId.LedStatus };
+                }
+
+                Assert.True(session.State != HspReadSessionState.Faulted, $"faulted at capture position {pipe.Position}: {session.Fault}");
+            }
+
+            exchangeJustCompleted = true;
+        }
+
+        Assert.True(writes > 1000, $"{writes} writes");
+        Assert.Equal(slots, writes);   // and every such slot carried one
+        Assert.Equal(writes, session.WritesSent);
+        Assert.Equal(0, pipe.Remaining);
+    }
+
+    [Fact]
+    public void Peeking_asks_nothing_and_a_slot_that_was_not_waited_for_as_a_writes_carries_no_write()
+    {
+        // SC-2 condition 5 (the first review of item 10, major 1): the loop waits for the kind PeekNextKind names and only
+        // then lets the session choose, so the gate is asked after the wait, right before the header.
+        var (session, gate) = LiveSession();
+        ReportLeds(session);
+        session.QueueFader(ClearedFader.Master, 0x10);
+
+        Assert.Equal(HspMessageType.Data, session.PeekNextKind());
+        Assert.Equal(HspMessageType.Data, session.PeekNextKind());   // asking again changes nothing
+        Assert.Equal(0, gate.Asked);
+
+        var poll = session.Next(writeSlotMet: false);                // a caller that waited for a poll's slot only
+        Assert.Equal(HspMessageType.Poll, poll.Kind);
+        Assert.Equal(0, gate.Asked);
+        Assert.Equal(1, session.QueuedWrites);
+        Assert.Equal(0, session.WritesSent);
+        session.Receive(Header(4, 0));
+
+        Assert.Equal(HspMessageType.Data, session.PeekNextKind());
+        var write = session.Next(writeSlotMet: true);
+
+        Assert.True(write.IsWrite);
+        Assert.Equal(1, gate.Asked);
+        Assert.Equal(HspMessageType.Poll, session.PeekNextKind());   // one write per poll
+    }
+
+    [Fact]
+    public void A_writes_sent_callback_runs_once_it_is_taken_for_sending_and_never_for_a_hold_or_a_drop()
+    {
+        // The first review of SC-2 item 10, minor: what follows a send (a SOLO / BLACKOUT tap waiting for its LED) must
+        // not run when a condition merely allowed the write.
+        var (session, gate) = LiveSession();
+        ReportLeds(session);
+        var sent = new List<string>();
+        gate.Decision = HspWriteDecision.Hold("the console's last report is older than two poll periods");
+        session.QueueKeyTap(ClearedKey.Solo, sent: () => sent.Add("SOLO"));
+
+        Assert.Equal(HspMessageType.Poll, session.Next().Kind);      // held
+        Assert.Empty(sent);
+        session.Receive(Header(4, 0));
+        gate.Decision = HspWriteDecision.Drop("REC MEM is lit or blinking");
+        session.QueueFader(ClearedFader.Bumps, 0x10, sent: () => sent.Add("BUMPS"));
+        Assert.Equal(HspMessageType.Poll, session.Next().Kind);      // the tap dropped unsent
+        Assert.Empty(sent);
+        session.Receive(Header(4, 0));
+        gate.Decision = HspWriteDecision.Send;
+
+        Assert.True(session.Next().IsWrite);                         // the BUMPS event
+        Assert.Equal(new[] { "BUMPS" }, sent);
+        Assert.Equal(1, session.WritesDropped);
+    }
+
     [Fact]
     public void A_read_only_session_accepts_no_write()
     {

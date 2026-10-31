@@ -13,9 +13,9 @@ public sealed class HspSessionFaultException : Exception
 }
 
 /// <summary>
-/// A Data header went out and its payload did not: the console holds a header announcing bytes that never came, a
-/// state no capture shows (what it takes as the payload next is UNKNOWN). Nothing is retried, and the device refuses
-/// to connect again until the backend restarts.
+/// A Data header went out, or may have (its transfer failed), and its payload did not: the console may hold a header
+/// announcing bytes that never came, a state no capture shows (what it takes as the payload next is UNKNOWN). Nothing
+/// is retried, and the device refuses to connect again (<see cref="IncompleteWriteMarker"/>).
 /// </summary>
 public sealed class HspIncompleteWriteException : IOException
 {
@@ -52,11 +52,14 @@ public sealed class TransferLogException : IOException
 /// payload at once, both logged like every other transfer, and reads nothing back (F131: no acknowledgement); the
 /// next transfer is the usual poll or fetch. A write takes the poll's slot and keeps SmartSoft's spacing (OBSERVED minimums, E9 and E9b, `write_rules.py` 2026-10-31:
 /// at least 29.81 ms after the poll, 20.53 ms after the last payload, 44.77 ms after the previous write; the next
-/// transfer at least 14.51 ms after it), with the floors of <see cref="UsbDeviceOptions.Floors"/>. A stop sends
-/// nothing new: queued writes that have not started are dropped, a press already sent gets its release, and the loop
-/// returns only after the poll exchange that follows the last write. When the session ends any other way than by a
-/// pipe error (a fault, or an error in an event handler) with a key held, the release is still sent before the loop
-/// ends if no exchange is open (SC-2 condition 4); otherwise <see cref="ReleaseAfterFault"/> says it could not be.
+/// transfer at least 14.51 ms after it), with the floors of <see cref="UsbDeviceOptions.Floors"/>. The loop waits for
+/// a write's slot before the session chooses the write (<see cref="HspReadSession.PeekNextKind"/>), so the gate and the
+/// write's own condition answer right before its header goes out, never before a wait (SC-2 condition 5). A stop sends
+/// nothing new, also when it comes during a write's wait: queued writes that have not started are dropped, a press already
+/// sent gets its release, and the loop returns only after the poll exchange that follows the last write. When the
+/// session ends any other way than by a pipe error (a fault, or an error in an event handler) with a key held, the
+/// release is still sent before the loop ends if no exchange is open (SC-2 condition 4); otherwise
+/// <see cref="ReleaseAfterFault"/> says it could not be.
 /// </para>
 /// </summary>
 public sealed class HspReadLoop
@@ -73,6 +76,7 @@ public sealed class HspReadLoop
     private long? _lastPayload;
     private long? _lastWrite;
     private ClearedKey? _releaseInFlight;
+    private ClearedKey? _pressInFlight;
 
     public HspReadLoop(
         IHspPipe pipe,
@@ -103,10 +107,13 @@ public sealed class HspReadLoop
     /// <summary>Queued writes that the stop request dropped before they started (a stop sends nothing new).</summary>
     public int WritesDroppedAtStop { get; private set; }
 
-    /// <summary>After a session that ended with a key held: whether its release was sent or why it could not be; null otherwise.</summary>
+    /// <summary>
+    /// After a session that ended with a key held, or with a key's press or release still being written: what became of
+    /// it (its release sent, or why it could not be, or that the press itself did not complete); null otherwise.
+    /// </summary>
     public string? ReleaseAfterFault { get; private set; }
 
-    /// <summary>Set when a Data header went out and its payload did not, in any path (the device then refuses to connect again).</summary>
+    /// <summary>Set when a Data header went out, or may have, and its payload did not, in any path (the device then refuses to connect again).</summary>
     public string? IncompleteWrite { get; private set; }
 
     /// <summary>Raised for every event the session decoded, on the loop's thread.</summary>
@@ -127,6 +134,12 @@ public sealed class HspReadLoop
             {
                 // The session already counts the key as released; the console may never have had the release.
                 ReleaseAfterFault = $"the release of {inFlight} was being written when the session failed ({ex.Message}): {inFlight} may still be held, press it on the panel";
+            }
+            else if (_pressInFlight is { } pressing)
+            {
+                // The press itself did not complete: whether the console took it is UNKNOWN, and a press on the panel would
+                // toggle or trigger the key again if it did; no release follows a press that may never have arrived.
+                ReleaseAfterFault = $"the press of {pressing} was being written when the session failed ({ex.Message}): whether the console took it is UNKNOWN; look at the console before touching {pressing} on the panel, where a press would toggle or trigger it again";
             }
             else if (ex is not (HspPipeException or HspIncompleteWriteException or TransferLogException))
             {
@@ -175,7 +188,18 @@ public sealed class HspReadLoop
                 }
             }
 
-            var next = Session.Next();
+            // SC-2 condition 5 (review of item 10, major 1): the slot is waited for first, and only then does the session
+            // choose, asking the gate and the write's own condition; between their answer and the header nothing waits.
+            var expected = Session.PeekNextKind();
+            await WaitForSlotAsync(expected).ConfigureAwait(false);
+            if (expected == HspMessageType.Data && stop.IsCancellationRequested && !stopping)
+            {
+                // A stop that came during a write's wait is handled first: no new write is chosen after it (an owed
+                // release still goes). A poll or fetch waited for goes as before (SC-1).
+                continue;
+            }
+
+            var next = Session.Next(writeSlotMet: expected == HspMessageType.Data);
             if (Session.WriteHeldReason != notedHold)
             {
                 notedHold = Session.WriteHeldReason;
@@ -192,13 +216,21 @@ public sealed class HspReadLoop
                 WriteDropped?.Invoke(Session.LastDropReason ?? "dropped");
             }
 
-            await WaitForSlotAsync(next.Kind).ConfigureAwait(false);
+            if (!next.IsWrite)
+            {
+                // Nothing to wait for when this is the kind waited for (a write's slot also covers a fetch's and a
+                // poll's with the default settings); a held or dropped write leaves the fetch or poll its own floors.
+                // While a write is held, the transfer that takes its slot has waited for the write's timing, a few ms
+                // after its own (30 ms after the poll rather than 21 ms after the payload): slower, never faster.
+                await WaitForSlotAsync(next.Kind).ConfigureAwait(false);
+            }
 
             try
             {
                 if (next.IsWrite)
                 {
                     // SC-2 conditions 7 and 8: the header, then its payload, both logged; nothing is read back (F131).
+                    // Its slot was met before the session chose it (writeSlotMet), and no transfer has happened since.
                     WriteData(next, pendingRecords);
                     continue;
                 }
@@ -265,16 +297,30 @@ public sealed class HspReadLoop
     /// <summary>
     /// A Data transfer: the header, then the payload at once (OBSERVED: SmartSoft's payload followed its header after 0.05–0.32 ms,
     /// E9), with no disk write between them. A payload that fails after its header was sent ends the session with that
-    /// said: the console then holds a header whose payload never came, and nothing is retried (SC-2 item 7).
+    /// said: the console then holds a header whose payload never came, and nothing is retried (SC-2 item 7). A header
+    /// whose own transfer fails is counted the same way: whether a failed transfer reached the console is UNKNOWN (a
+    /// timeout can fail a transfer the device has taken), so the worse case is assumed.
     /// </summary>
     private void WriteData(HspOutboundTransfer write, List<(bool ToConsole, byte[] Data, DateTimeOffset Started, DateTimeOffset Completed)> records)
     {
         var payload = write.Payload ?? throw new InvalidOperationException("A Data transfer came without its payload.");
 
-        // A key release (kind 1, state 0, F133) is in flight until both transfers are out.
-        _releaseInFlight = payload.Length == 7 && payload[4] == 0x01 && payload[6] == 0x00 ? (ClearedKey)payload[5] : null;
+        // A key event (kind 1, F133), a release (state 0) or a press (state 1), is in flight until both transfers are out.
+        var keyEvent = payload.Length == 7 && payload[4] == 0x01;
+        _releaseInFlight = keyEvent && payload[6] == 0x00 ? (ClearedKey)payload[5] : null;
+        _pressInFlight = keyEvent && payload[6] == 0x01 ? (ClearedKey)payload[5] : null;
         var started = _clock.GetUtcNow();
-        _pipe.Write(write.Bytes);
+        try
+        {
+            _pipe.Write(write.Bytes);
+        }
+        catch (Exception ex)
+        {
+            var failed = $"the Data header {Convert.ToHexString(write.Bytes)} failed ({ex.Message}); whether it reached the console is UNKNOWN, and its {payload.Length}-byte payload was not sent";
+            IncompleteWrite = failed;
+            throw new HspIncompleteWriteException(failed, ex);
+        }
+
         records.Add((true, write.Bytes, started, _clock.GetUtcNow()));
 
         started = _clock.GetUtcNow();
@@ -292,6 +338,7 @@ public sealed class HspReadLoop
         records.Add((true, payload, started, _clock.GetUtcNow()));
         _lastWrite = _clock.GetTimestamp();
         _releaseInFlight = null;
+        _pressInFlight = null;
     }
 
     /// <summary>Best effort when the session ends with a key held: sends the release when the session allows it, and records the outcome; never throws.</summary>

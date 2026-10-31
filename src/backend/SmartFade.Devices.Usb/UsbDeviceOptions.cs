@@ -44,20 +44,34 @@ public sealed class UsbDeviceOptions
         public const int WriteInterval = 46;
     }
 
+    /// <summary>The default settings (ms): SmartSoft's measured medians, rounded (OBSERVED, the sources above); live control never runs slower than these.</summary>
+    public static class Defaults
+    {
+        public const int PollInterval = 31;
+
+        public const int PollAfterFetch = 15;
+
+        public const int FetchDelay = 28;
+
+        public const int PollAfterWrite = 15;
+
+        public const int WriteInterval = 46;
+    }
+
     /// <summary>Idle poll cadence; SmartSoft's median was 31 ms.</summary>
-    public int PollIntervalMilliseconds { get; set; } = 31;
+    public int PollIntervalMilliseconds { get; set; } = Defaults.PollInterval;
 
     /// <summary>Delay between a fetch and the poll that follows it; SmartSoft's median was 15 ms.</summary>
-    public int PollAfterFetchMilliseconds { get; set; } = 15;
+    public int PollAfterFetchMilliseconds { get; set; } = Defaults.PollAfterFetch;
 
     /// <summary>Delay between a received payload and the next fetch; SmartSoft's median was 28 ms.</summary>
-    public int FetchDelayMilliseconds { get; set; } = 28;
+    public int FetchDelayMilliseconds { get; set; } = Defaults.FetchDelay;
 
     /// <summary>Delay between a write and the poll or fetch after it; SmartSoft's median was 15.4 ms (E9, E9b).</summary>
-    public int PollAfterWriteMilliseconds { get; set; } = 15;
+    public int PollAfterWriteMilliseconds { get; set; } = Defaults.PollAfterWrite;
 
     /// <summary>Least time from one write to the next; SmartSoft's writes in a burst were a median 61.8 ms apart (E9b), and one write per poll cycle (31 + 15 ms) gives 46 ms.</summary>
-    public int WriteIntervalMilliseconds { get; set; } = 46;
+    public int WriteIntervalMilliseconds { get; set; } = Defaults.WriteInterval;
 
     /// <summary>How long a reply may take before the session is abandoned (the console answered within 12 ms in every capture).</summary>
     public int ReplyTimeoutMilliseconds { get; set; } = 500;
@@ -99,4 +113,33 @@ public sealed class UsbDeviceOptions
     public TimeSpan WriteInterval => TimeSpan.FromMilliseconds(Math.Max(WriteIntervalMilliseconds, Floors.WriteInterval));
 
     public TimeSpan ReplyTimeout => TimeSpan.FromMilliseconds(Math.Clamp(ReplyTimeoutMilliseconds, 50, 10_000));
+
+    /// <summary>
+    /// Live control runs at SmartSoft's cadence or faster down to the floors, never slower (the first review of SC-2
+    /// item 10, minor: the write timings had no upper bound). The interlock accepts a report younger than two poll
+    /// periods, a write waits for the poll, the last payload and the previous write, and a tap lasts until the next
+    /// write slot, so each of these settings must stay at or below its default, SmartSoft's median
+    /// (<see cref="Defaults"/>): a write then goes about 31 ms after its poll (SmartSoft: 29.81–47.99 ms, E9 and E9b)
+    /// with a report at most 62 ms old, and a tap lasts about 46 ms. Null when they do; else what does not.
+    /// </summary>
+    public string? LiveControlTimingProblem()
+    {
+        var over = new List<string>();
+        Check(nameof(PollIntervalMilliseconds), PollIntervalMilliseconds, Defaults.PollInterval);
+        Check(nameof(PollAfterFetchMilliseconds), PollAfterFetchMilliseconds, Defaults.PollAfterFetch);
+        Check(nameof(FetchDelayMilliseconds), FetchDelayMilliseconds, Defaults.FetchDelay);
+        Check(nameof(PollAfterWriteMilliseconds), PollAfterWriteMilliseconds, Defaults.PollAfterWrite);
+        Check(nameof(WriteIntervalMilliseconds), WriteIntervalMilliseconds, Defaults.WriteInterval);
+        return over.Count == 0
+            ? null
+            : $"live control runs no slower than SmartSoft's measured cadence (the defaults): {string.Join(", ", over)}";
+
+        void Check(string name, int value, int limit)
+        {
+            if (value > limit)
+            {
+                over.Add($"Device:Usb:{name}={value}, at most {limit}");
+            }
+        }
+    }
 }

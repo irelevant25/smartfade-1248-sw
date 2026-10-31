@@ -33,8 +33,8 @@ console's firmware.
   label and memory writes and the System pair. Nothing else is cleared. The owner implemented SC-2's
   whitelist on 2026-10-31 (`HspOutbound`, `HspReadSession`, `UsbSmartFadeDevice`), sent only by a session
   with `Device:Usb:LiveControlDate` = today on top of the read-only mode; the first safety review (SC-2
-  item 10) found changes still open, so nothing may be sent before they are fixed, re-checked and the
-  owner gives the go for E11. Claude never writes that code (see "Current state").
+  item 10) found changes, fixed the same day and not yet re-checked, so nothing may be sent before the
+  re-check passes and the owner gives the go for E11. Claude never writes that code (see "Current state").
 - Never touch the console bootloader / firmware update path.
 - Never retry commands with side effects blindly.
 - Golden protocol tests may only use bytes from a committed capture in `docs/protocol/captures/`.
@@ -218,8 +218,9 @@ E9b and to run the first write session E11 on the owner's go, under a separate w
 a record function is armed, no retries; NO-GO for the record keys from the PC (SC-3, after the owner's written acceptance per key and a second capture E9c),
 for ChannelText and Memory writes and for the System pair; never for the paths of F121. **The owner implemented classes A and B1 the same
 day** (the SC-2 "Implementation" section): the first `protocol-safety-reviewer` pass (item 10) found NEEDS CHANGES (one blocker, fixed as tags
-the same day; majors 1, 2 and 6 and several minors open on the owner's side; majors 3, 4, 5 fixed the same day); nothing is sent before the
-re-check passes and the owner gives the go for E11. Next: "Next capture (proposed by the
+the same day; majors 3, 4, 5 fixed the same day, majors 1, 2 and 6 and the minors later that day: the write is chosen after its
+slot wait, an undecodable LED / status / FaderInfo report ends a live session, the interlock is replayed over E9 and E9b, the
+incomplete-write latch is kept on disk); nothing is sent before the re-check passes and the owner gives the go for E11. Next: "Next capture (proposed by the
 E9b analysis, 2026-10-31)" in `reverse-engineering.md`, and E9c / E11 as SC-2 lists them.
 **E12 planned 2026-10-31, not run** (a passive capture of SmartSoft Online editing the patch and the stack / sequences: SmartSoft drives, USBPcap
 records, our software is not involved; E9c / E9d stay reserved by SC-2 and E11 is the first live-control session of our software): the runbook is
@@ -286,10 +287,13 @@ refuses to start, and it is run only as the E8 runbook says (backup first). The 
 owner's PC.
 **Live control (SC-2 classes A and B1, the owner's implementation; not before the re-check and E11's go):**
 `dotnet run --project src/backend/SmartFade.Api -- --Device:Mode=Usb --Device:Usb:ConfirmDate=yyyy-MM-dd --Device:Usb:LiveControlDate=yyyy-MM-dd`
-(both dates today, or the backend refuses to start; set without `Device:Mode=Usb` it refuses too) adds the whitelisted
+(both dates today, or the backend refuses to start; set without `Device:Mode=Usb`, or with a timing setting slower than
+its default, it refuses too) adds the whitelisted
 ConsoleEvents (channel fader 1, MASTER, BUMPS, bump 7, memory bump 1, SOLO, BLACKOUT) behind the record-function
 interlock, shows LIVE CONTROL beside HARDWARE and names the writable controls to the UI; everything else stays as
-in the read-only mode. Run only as the SC-2 E11 script says (backup first, USBPcap in parallel).
+in the read-only mode. Run only as the SC-2 E11 script says (backup first, USBPcap in parallel). After a Data write
+that did not complete, the device refuses to connect until the backend restarts and `INCOMPLETE-WRITE.txt` in
+`Device:Usb:CaptureLogDirectory` is removed by the owner, after reading the transfer log.
 
 ## Working style
 

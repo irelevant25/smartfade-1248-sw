@@ -19,13 +19,15 @@ namespace SmartFade.Devices.Usb;
 /// mode or bank 25-48) as taps (press, then release; condition 4). Bump 9, channel bump 1 and memory bump 7 are
 /// whitelisted codes never seen in such a state and are not sent. Every command is refused, with its reason, while
 /// REC MEM, EDIT MEM, COPY or REC SEQ is lit, blinking or unreported (condition 5) and before the console has reported
-/// what the control needs (conditions 6, 8); a queued write is asked again at the moment it would go (the gate, then
-/// its own state) and dropped unsent if the console's state no longer allows it. Every transfer is logged to a capture
-/// file in our normalized format. Any error ends the session in the Error state with its reason; nothing is retried. A
-/// stop waits for the session to reach an idle point (a fetch is never left without its poll, a press never without
-/// its release, a write never without the poll after it), and Connect is refused while a session is still running, or
-/// after a Data header went out without its payload. The pipe comes from a factory so that tests run the same device
-/// over a committed capture (<see cref="ReplayHspPipe"/>) and never over hardware.
+/// what the control needs (conditions 6, 8); a queued write is asked again at the moment it would go, after its slot
+/// wait and right before its header (the gate, then its own state), and dropped unsent if the console's state no longer
+/// allows it. In a live session a key-LED, fader-mode or FaderInfo report that does not decode ends the session. Every
+/// transfer is logged to a capture file in our normalized format. Any error ends the session in the Error state with its
+/// reason; nothing is retried. A stop waits for the session to reach an idle point (a fetch is never left without its
+/// poll, a press never without its release, a write never without the poll after it), and Connect is refused while a
+/// session is still running, or after a Data header went out (or may have) without its payload: until the backend
+/// restarts, and while the <see cref="IncompleteWriteMarker"/> it was given exists. The pipe comes from a factory so
+/// that tests run the same device over a committed capture (<see cref="ReplayHspPipe"/>) and never over hardware.
 /// </summary>
 [Evidence(EvidenceStatus.Verified, "F51, F52, F53, F54, F55, F57", "the read-only session as SC-1 cleared it (2026-10-30)")]
 [Evidence(EvidenceStatus.Verified, "F131, F132, F133, F134", "live control, SC-2 classes A and B1 (2026-10-31): the whitelisted ConsoleEvents as SmartSoft's and the console's behaviour; a conditional GO, nothing sent before E11 on the owner's go")]
@@ -46,6 +48,12 @@ public sealed class UsbSmartFadeDevice : ISmartFadeDevice, IAsyncDisposable
 
     private static readonly IReadOnlySet<string> NoControls = new HashSet<string>();
 
+    /// <summary>The objects live control's interlocks read (key LEDs, fader mode and page, the MASTER): in a live session one that does not decode ends it.</summary>
+    private static readonly IReadOnlySet<int> InterlockObjects = new HashSet<int>
+    {
+        (int)HspObjectId.LedStatus, (int)HspObjectId.ConsoleStatus, (int)HspObjectId.FaderInfo,
+    };
+
     private readonly object _gate = new();
     private readonly UsbDeviceOptions _options;
     private readonly Func<IHspPipe> _pipeFactory;
@@ -53,6 +61,7 @@ public sealed class UsbSmartFadeDevice : ISmartFadeDevice, IAsyncDisposable
     private readonly ILogger<UsbSmartFadeDevice> _logger;
     private readonly TimeProvider _clock;
     private readonly Func<TimeSpan, CancellationToken, Task>? _delay;
+    private readonly IncompleteWriteMarker? _marker;
     private readonly Dictionary<ClearedKey, KeyLed> _togglesAwaitingLed = new();
     private readonly HashSet<ClearedKey> _togglesSent = new();
     private ConnectionStatus _status = ConnectionStatus.Disconnected;
@@ -66,13 +75,18 @@ public sealed class UsbSmartFadeDevice : ISmartFadeDevice, IAsyncDisposable
     private int _generation;
     private bool _stopTimedOut;
 
+    /// <param name="incompleteWriteMarker">
+    /// Where an incomplete write is recorded so that it outlives the process (the backend passes one beside the transfer
+    /// logs); null keeps the latch in memory only, until the process ends.
+    /// </param>
     public UsbSmartFadeDevice(
         IOptions<UsbDeviceOptions> options,
         Func<IHspPipe> pipeFactory,
         Func<string, ITransferSink?> logFactory,
         ILogger<UsbSmartFadeDevice> logger,
         TimeProvider? clock = null,
-        Func<TimeSpan, CancellationToken, Task>? delay = null)
+        Func<TimeSpan, CancellationToken, Task>? delay = null,
+        IncompleteWriteMarker? incompleteWriteMarker = null)
     {
         _options = options.Value;
         _pipeFactory = pipeFactory;
@@ -80,6 +94,7 @@ public sealed class UsbSmartFadeDevice : ISmartFadeDevice, IAsyncDisposable
         _logger = logger;
         _clock = clock ?? TimeProvider.System;
         _delay = delay;
+        _marker = incompleteWriteMarker;
         Capabilities = ConsoleCapabilities.SmartFade1248;
         _assembler = new ConsoleStateAssembler(Capabilities);
     }
@@ -142,11 +157,11 @@ public sealed class UsbSmartFadeDevice : ISmartFadeDevice, IAsyncDisposable
                 return Task.CompletedTask;
             }
 
-            if (_incompleteWrite is { } incomplete)
+            if (IncompleteWriteRefusal() is { } refusal)
             {
                 // The console may still wait for a payload; a new session's first poll would arrive in its place (never observed).
-                _logger.LogWarning("Connect refused: {Reason}", incomplete);
-                ConnectionChanged?.Invoke(this, new ConnectionState(_status, Mode, Description, $"{incomplete}. Read the transfer log before anything else; nothing connects again until the backend restarts (SC-1's E8 rule: never power-cycle the console to \"fix\" it)."));
+                _logger.LogWarning("Connect refused: {Reason}", refusal);
+                ConnectionChanged?.Invoke(this, new ConnectionState(_status, Mode, Description, refusal));
                 return Task.CompletedTask;
             }
 
@@ -167,11 +182,19 @@ public sealed class UsbSmartFadeDevice : ISmartFadeDevice, IAsyncDisposable
             return Task.CompletedTask;
         }
 
-        // Live control is decided per session (SC-2 item 6): only when its own switch names today too; stale, the session is read-only.
+        // Live control is decided per session (SC-2 item 6): only when its own switch names today too and the timings stay
+        // within SmartSoft's cadence; otherwise the session is read-only.
         var liveControl = IsLiveControlConfirmed();
         if (!liveControl && !string.IsNullOrWhiteSpace(_options.LiveControlDate))
         {
-            _logger.LogWarning("Live control is confirmed for {LiveControlDate}, today is {Today}: this session is read-only", _options.LiveControlDate, today);
+            if (_options.LiveControlTimingProblem() is { } timing)
+            {
+                _logger.LogWarning("Live control refused ({Problem}): this session is read-only", timing);
+            }
+            else
+            {
+                _logger.LogWarning("Live control is confirmed for {LiveControlDate}, today is {Today}: this session is read-only", _options.LiveControlDate, today);
+            }
         }
 
         IHspPipe pipe;
@@ -484,10 +507,14 @@ public sealed class UsbSmartFadeDevice : ISmartFadeDevice, IAsyncDisposable
         }
     }
 
-    /// <summary>True when live control's switch and hardware mode both name today (SC-2 item 6): the switch expires by itself.</summary>
+    /// <summary>
+    /// True when live control's switch and hardware mode both name today (SC-2 item 6: the switch expires by itself) and
+    /// the timings are within SmartSoft's cadence (<see cref="UsbDeviceOptions.LiveControlTimingProblem"/>; the start-up
+    /// check refuses such settings, this keeps a device built any other way read-only).
+    /// </summary>
     private bool IsLiveControlConfirmed()
     {
-        if (string.IsNullOrWhiteSpace(_options.LiveControlDate))
+        if (string.IsNullOrWhiteSpace(_options.LiveControlDate) || _options.LiveControlTimingProblem() is not null)
         {
             return false;
         }
@@ -495,6 +522,37 @@ public sealed class UsbSmartFadeDevice : ISmartFadeDevice, IAsyncDisposable
         var today = DateOnly.FromDateTime(_clock.GetLocalNow().DateTime);
         return ServiceCollectionExtensions.IsConfirmedForToday(_options.LiveControlDate, today)
             && ServiceCollectionExtensions.IsConfirmedForToday(_options.ConfirmDate, today);
+    }
+
+    /// <summary>
+    /// Why Connect is refused after a Data write that did not complete: this process's latch (until the backend
+    /// restarts), else the marker on disk (until the owner removes it); a marker that cannot be read refuses too. Null
+    /// when nothing stands in the way.
+    /// </summary>
+    private string? IncompleteWriteRefusal()
+    {
+        const string Rule = "SC-1's E8 rule: never power-cycle the console to \"fix\" it";
+        if (_incompleteWrite is { } incomplete)
+        {
+            var file = _marker is null ? string.Empty : $" and {_marker.FilePath} is removed";
+            return $"{incomplete}. Read the transfer log before anything else; nothing connects again until the backend restarts{file} ({Rule}).";
+        }
+
+        if (_marker is null)
+        {
+            return null;
+        }
+
+        try
+        {
+            return _marker.Read() is { } text
+                ? $"{_marker.FilePath} records a Data write that did not complete: {text.Trim()}. Read the transfer log of that session before anything else; nothing connects while the file exists, and only the owner removes it ({Rule})."
+                : null;
+        }
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
+        {
+            return $"The incomplete-write marker {_marker.FilePath} could not be read ({ex.Message}); nothing connects until it can be ({Rule}).";
+        }
     }
 
     /// <summary>The running session with live control; read-only's refusal when live control is off, a refusal when no such session runs.</summary>
@@ -529,14 +587,14 @@ public sealed class UsbSmartFadeDevice : ISmartFadeDevice, IAsyncDisposable
         return Task.CompletedTask;
     }
 
-    /// <summary>Queues a tap behind the interlocks, as <see cref="QueueLiveFader"/>; <paramref name="onDrop"/> runs if it is dropped unsent.</summary>
-    private Task QueueLiveTap(HspReadSession session, ClearedKey key, Func<string?> state, Action? onDrop = null)
+    /// <summary>Queues a tap behind the interlocks, as <see cref="QueueLiveFader"/>.</summary>
+    private Task QueueLiveTap(HspReadSession session, ClearedKey key, Func<string?> state)
     {
         lock (_gate)
         {
             RequireRunning(session);
             Refuse(RecordFunctionArmed(_assembler.Keys) ?? state());
-            session.QueueKeyTap(key, () => Recheck(session, state, holdWhileFaderInfoListed: false, onDrop));
+            session.QueueKeyTap(key, () => Recheck(session, state, holdWhileFaderInfoListed: false));
         }
 
         return Task.CompletedTask;
@@ -552,11 +610,12 @@ public sealed class UsbSmartFadeDevice : ISmartFadeDevice, IAsyncDisposable
     }
 
     /// <summary>
-    /// A queued write's own condition, asked on the session's thread at the moment it would go (after the gate): the
-    /// console state its control needs, as it was required when the write was accepted. A change since (a mode, page or
-    /// LED changed on the panel) drops it unsent; FaderInfo listed and not fetched holds channel fader 1 (the MASTER).
+    /// A queued write's own condition, asked on the session's thread at the moment it would go (after the gate, right
+    /// before the header): the console state its control needs, as it was required when the write was accepted. A
+    /// change since (a mode, page or LED changed on the panel) drops it unsent; FaderInfo listed and not fetched holds
+    /// channel fader 1 (the MASTER). It changes nothing: what follows a send or a drop is the session's to report.
     /// </summary>
-    private HspWriteDecision Recheck(HspReadSession session, Func<string?> state, bool holdWhileFaderInfoListed, Action? onDrop = null, Action? onSend = null)
+    private HspWriteDecision Recheck(HspReadSession session, Func<string?> state, bool holdWhileFaderInfoListed)
     {
         if (holdWhileFaderInfoListed && session.IsListedAndUnfetched(HspObjectId.FaderInfo))
         {
@@ -566,14 +625,7 @@ public sealed class UsbSmartFadeDevice : ISmartFadeDevice, IAsyncDisposable
         lock (_gate)
         {
             var reason = ReferenceEquals(_liveSession, session) ? state() : "the live-control session is ending";
-            if (reason is null)
-            {
-                onSend?.Invoke();
-                return HspWriteDecision.Send;
-            }
-
-            onDrop?.Invoke();
-            return HspWriteDecision.Drop(reason);
+            return reason is null ? HspWriteDecision.Send : HspWriteDecision.Drop(reason);
         }
     }
 
@@ -584,7 +636,8 @@ public sealed class UsbSmartFadeDevice : ISmartFadeDevice, IAsyncDisposable
     /// `FF FF FF …` for SOLO, `00 00 FF …` for BLACKOUT); blinking (BLACKOUT blinks while the MASTER is below full, F85),
     /// dim or unreported refuses. A tap still queued when the LED changes (the panel toggled it) is dropped, since it
     /// would undo that; a second toggle waits until the console has reported the first one's LED change, or until the
-    /// first tap was dropped or discarded without going out.
+    /// first tap was dropped or discarded without going out. A tap counts as sent only once the session has taken its
+    /// press for sending (its <c>sent</c> callback), never when its condition merely allowed it.
     /// </summary>
     private Task Toggle(ClearedKey key, bool wish, Func<PanelKeys, KeyLed> ledOf, string name)
     {
@@ -614,12 +667,22 @@ public sealed class UsbSmartFadeDevice : ISmartFadeDevice, IAsyncDisposable
                 NotInChannelBank1To24(name)
                 ?? (_assembler.Keys is { } keys && ledOf(keys) == before ? null : $"{name} changed on the console since the request; the tap would undo it");
 
-            session.QueueKeyTap(key, () => Recheck(session, StateNow, holdWhileFaderInfoListed: false, () => _togglesAwaitingLed.Remove(key), () => _togglesSent.Add(key)));
+            // A drop or a discard is forgotten through ForgetUnsentToggles (the loop's WriteDropped, AfterLedReport).
+            session.QueueKeyTap(key, () => Recheck(session, StateNow, holdWhileFaderInfoListed: false), sent: () => ToggleSent(key));
             _togglesAwaitingLed[key] = before;
             _togglesSent.Remove(key);
         }
 
         return Task.CompletedTask;
+    }
+
+    /// <summary>The press of a SOLO / BLACKOUT tap was taken for sending: its LED change is now what the next toggle waits for.</summary>
+    private void ToggleSent(ClearedKey key)
+    {
+        lock (_gate)
+        {
+            _togglesSent.Add(key);
+        }
     }
 
     /// <summary>False for a steady off LED, true for a steady full one, null for anything else.</summary>
@@ -715,23 +778,13 @@ public sealed class UsbSmartFadeDevice : ISmartFadeDevice, IAsyncDisposable
     }
 
     /// <summary>
-    /// The session's gate (SC-2 condition 5), asked on the session's thread each time a queued write could go: it holds
-    /// the write while LedStatus or ConsoleStatus is listed and not fetched or the console's last report (a poll reply)
-    /// is older than two poll periods, and drops it when a record function reads armed, live control has expired or the
-    /// session is ending.
+    /// The session's gate (SC-2 condition 5), asked on the session's thread each time a queued write could go, after
+    /// the write's slot wait and right before its header (<see cref="HspReadSession.PeekNextKind"/>): it drops the write
+    /// when the session is ending or live control has expired, and otherwise applies <see cref="Interlock"/> to the
+    /// console's latest key LEDs and the age of its last report.
     /// </summary>
     private HspWriteDecision LiveWriteGate(HspReadSession session)
     {
-        if (session.IsListedAndUnfetched(HspObjectId.LedStatus))
-        {
-            return HspWriteDecision.Hold("the console listed new key LEDs that are not fetched yet (SC-2 condition 5)");
-        }
-
-        if (session.IsListedAndUnfetched(HspObjectId.ConsoleStatus))
-        {
-            return HspWriteDecision.Hold("the console listed a new fader mode or page (ConsoleStatus) that is not fetched yet");
-        }
-
         lock (_gate)
         {
             if (!ReferenceEquals(_liveSession, session))
@@ -745,21 +798,45 @@ public sealed class UsbSmartFadeDevice : ISmartFadeDevice, IAsyncDisposable
             }
 
             // "Younger than two poll periods" (condition 5) read as: a poll reply, the console's report of what changed,
-            // came within two poll periods, and it did not list LedStatus (held above). INFERRED from F57 (VERIFIED: a list
-            // names what changed) and F116 (VERIFIED: a record screen opens and closes with exactly one LedStatus payload,
-            // 28 of 28 and 4 of 4); not observed as a rule of the console.
-            if (_lastReportStamp is not { } stamp || _clock.GetElapsedTime(stamp) > 2 * _options.PollInterval)
-            {
-                return HspWriteDecision.Hold("the console's last report is older than two poll periods (SC-2 condition 5)");
-            }
-
-            if (_assembler.Keys is null)
-            {
-                return HspWriteDecision.Hold("the console has not reported its key LEDs yet");
-            }
-
-            return RecordFunctionArmed(_assembler.Keys) is { } armed ? HspWriteDecision.Drop(armed) : HspWriteDecision.Send;
+            // came within two poll periods, and it did not list LedStatus (held in Interlock). INFERRED from F57 (VERIFIED: a
+            // list names what changed) and F116 (VERIFIED: a record screen opens and closes with exactly one LedStatus
+            // payload, 28 of 28 and 4 of 4); not observed as a rule of the console.
+            var reportFresh = _lastReportStamp is { } stamp && _clock.GetElapsedTime(stamp) <= 2 * _options.PollInterval;
+            return Interlock(session, _assembler.Keys, reportFresh);
         }
+    }
+
+    /// <summary>
+    /// SC-2 condition 5 as the gate applies it, from the session's list state, the console's latest key LEDs
+    /// (<see cref="ConsoleStateAssembler.Keys"/>) and whether its last report is younger than two poll periods: hold
+    /// while LedStatus or ConsoleStatus is listed and not fetched, while the report is older, or before the key LEDs
+    /// were ever reported; drop while a record function reads armed (<see cref="RecordFunctionArmed"/>); else send.
+    /// Internal so that the golden test replays it over E9 and E9b with the session and the assembler fed from the
+    /// captures (SmartSoft's whitelisted writes inside a record function must read armed, the others not).
+    /// </summary>
+    internal static HspWriteDecision Interlock(HspReadSession session, PanelKeys? keys, bool reportFresh)
+    {
+        if (session.IsListedAndUnfetched(HspObjectId.LedStatus))
+        {
+            return HspWriteDecision.Hold("the console listed new key LEDs that are not fetched yet (SC-2 condition 5)");
+        }
+
+        if (session.IsListedAndUnfetched(HspObjectId.ConsoleStatus))
+        {
+            return HspWriteDecision.Hold("the console listed a new fader mode or page (ConsoleStatus) that is not fetched yet");
+        }
+
+        if (!reportFresh)
+        {
+            return HspWriteDecision.Hold("the console's last report is older than two poll periods (SC-2 condition 5)");
+        }
+
+        if (keys is null)
+        {
+            return HspWriteDecision.Hold("the console has not reported its key LEDs yet");
+        }
+
+        return RecordFunctionArmed(keys) is { } armed ? HspWriteDecision.Drop(armed) : HspWriteDecision.Send;
     }
 
     private async Task RunSessionAsync(IHspPipe pipe, ITransferSink log, HspReadSession session, int generation, CancellationToken stop)
@@ -771,7 +848,8 @@ public sealed class UsbSmartFadeDevice : ISmartFadeDevice, IAsyncDisposable
         try
         {
             loop = new HspReadLoop(pipe, session, _options, log, _clock, _delay, _lastPollStamp);
-            loop.EventDecoded += OnEvent;
+            var live = session.CanWrite;
+            loop.EventDecoded += evt => OnEvent(evt, live);
             loop.WriteDropped += reason =>
             {
                 _logger.LogWarning("A queued write was dropped unsent: {Reason}", reason);
@@ -795,10 +873,13 @@ public sealed class UsbSmartFadeDevice : ISmartFadeDevice, IAsyncDisposable
             if (loop?.IncompleteWrite is { } incomplete)
             {
                 // also when the release sent at the end was the incomplete write
+                var latch = $"A Data write did not complete ({WithoutDevicePath(incomplete)})";
                 lock (_gate)
                 {
-                    _incompleteWrite = $"A Data header went out without its payload ({WithoutDevicePath(incomplete)})";
+                    _incompleteWrite = latch;
                 }
+
+                RecordIncompleteWrite(latch, pipe.Description);
             }
 
             // SC-2 item 7: a key press whose release could not be sent is reported as such.
@@ -889,6 +970,27 @@ public sealed class UsbSmartFadeDevice : ISmartFadeDevice, IAsyncDisposable
         }
     }
 
+    /// <summary>
+    /// Puts the incomplete-write latch on disk when the backend gave a marker, so that a restart does not lift it (the
+    /// first review of SC-2 item 10, minor); a marker that cannot be written leaves the latch in memory and says so.
+    /// </summary>
+    private void RecordIncompleteWrite(string latch, string pipeDescription)
+    {
+        if (_marker is null)
+        {
+            return;
+        }
+
+        try
+        {
+            _marker.Write(_clock.GetLocalNow(), $"{latch}; session on {WithoutDevicePath(pipeDescription)}, the last transfers in its transfer log");
+        }
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
+        {
+            _logger.LogError(ex, "The incomplete-write marker {Path} could not be written; the latch holds only until the backend restarts", _marker.FilePath);
+        }
+    }
+
     /// <summary>Messages shown in the UI name no device path (the path is in the log, F42 / E1 keep the identification).</summary>
     private static string WithoutDevicePath(string message)
     {
@@ -902,7 +1004,13 @@ public sealed class UsbSmartFadeDevice : ISmartFadeDevice, IAsyncDisposable
         return end < 0 ? message[..start] + "the console's interface" : message[..start] + "the console's interface" + message[end..];
     }
 
-    private void OnEvent(HspEvent evt)
+    /// <summary>
+    /// One decoded event of the session, on the loop's thread. In a live session (<paramref name="live"/>) a LedStatus,
+    /// ConsoleStatus or FaderInfo that does not decode ends the session (SC-2 item 7; the first review of SC-2 item 10,
+    /// major 2): the interlocks read those objects, and an older reading must never stand for the console's state. A
+    /// read-only session logs it and goes on, as SC-1 reviewed it.
+    /// </summary>
+    private void OnEvent(HspEvent evt, bool live)
     {
         switch (evt)
         {
@@ -925,7 +1033,13 @@ public sealed class UsbSmartFadeDevice : ISmartFadeDevice, IAsyncDisposable
                 }
                 catch (Exception ex) when (ex is InvalidDataException or ArgumentException)
                 {
-                    _logger.LogWarning(ex, "Object {Id} ({Name}) did not decode", received.Payload.ObjectId, HspObjectIds.Name(received.Payload.ObjectId));
+                    var id = received.Payload.ObjectId;
+                    if (live && InterlockObjects.Contains(id))
+                    {
+                        throw new HspSessionFaultException($"{HspObjectIds.Name(id)} did not decode ({ex.Message}): live control's interlocks read it, so the session ends rather than go on with an older reading (SC-2 item 7)");
+                    }
+
+                    _logger.LogWarning(ex, "Object {Id} ({Name}) did not decode", id, HspObjectIds.Name(id));
                     return;
                 }
 

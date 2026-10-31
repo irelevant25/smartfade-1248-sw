@@ -1,3 +1,4 @@
+using System.Runtime.CompilerServices;
 using Microsoft.Extensions.Logging.Abstractions;
 using Microsoft.Extensions.Options;
 using SmartFade.Application.Ports;
@@ -25,7 +26,9 @@ public class UsbSmartFadeDeviceTests
         Func<IHspPipe> pipeFactory,
         UsbDeviceOptions? options = null,
         Func<string, ITransferSink?>? logFactory = null,
-        VirtualClock? clock = null)
+        VirtualClock? clock = null,
+        Func<TimeSpan, CancellationToken, Task>? delay = null,
+        IncompleteWriteMarker? marker = null)
     {
         clock ??= new VirtualClock();
         options ??= new UsbDeviceOptions();
@@ -37,11 +40,12 @@ public class UsbSmartFadeDeviceTests
             logFactory ?? (_ => new DiscardingSink()),
             NullLogger<UsbSmartFadeDevice>.Instance,
             clock,
-            (wait, _) =>
+            delay ?? ((wait, _) =>
             {
                 clock.Advance(wait);
                 return Task.CompletedTask;
-            });
+            }),
+            marker);
     }
 
     private static Task<ConnectionState> WaitForStatus(UsbSmartFadeDevice device, ConnectionStatus status)
@@ -535,27 +539,50 @@ public class UsbSmartFadeDeviceTests
         Assert.Equal(0, device.LastSession!.WritesSent);
     }
 
+    private static readonly Lazy<CaptureFile> E9 = new(() => CaptureFile.Load(TestPaths.Capture("2026-10-30-e9-smartsoft-writes.jsonl")));
+
+    private static readonly Lazy<CaptureFile> E9b = new(() => CaptureFile.Load(TestPaths.Capture("2026-10-31-e9b-smartsoft-writes-repeat.jsonl")));
+
+    /// <summary>The body of the object the console delivered in E9b's payload frame with that JSONL seq.</summary>
+    private static byte[] E9bBody(int seq) => Frame(E9b.Value, seq, CaptureDirection.In)[5..];
+
+    /// <summary>SmartSoft's E9 payload with that JSONL seq, with this session's counter in place of its own.</summary>
+    private static byte[] E9Payload(int seq, byte counter)
+    {
+        var bytes = Frame(E9.Value, seq, CaptureDirection.Out).ToArray();   // a copy: the capture's bytes stay as recorded
+        bytes[0] = counter;
+        return bytes;
+    }
+
     /// <summary>
     /// A live device on a stand-in console that reports the state SmartSoft saw before its first MASTER event of E9b
     /// (header seq 13143, payload 13144): FaderInfo seq 11628 (MASTER and BUMPS at full), ConsoleStatus seq 796 (channel
     /// mode, bank 1-24, page 1) and LedStatus seq 11636 (REC MEM, EDIT MEM, COPY, REC SEQ, SOLO and BLACKOUT off, STACK
-    /// dim), served in that order, so the key LEDs are reported last.
+    /// dim), served in that order, so the key LEDs are reported last. <paramref name="delay"/> replaces the virtual
+    /// clock's plain delay; the transfer log's notes are kept.
     /// </summary>
-    private static (UsbSmartFadeDevice Device, AnsweringPipe Console, TimedPipe Pipe, UsbDeviceOptions Options, Task KeysReported) LiveConsole(bool relistAfterWrites = false)
+    private static LiveRig LiveConsole(
+        bool relistAfterWrites = false,
+        Func<VirtualClock, Func<TimeSpan, CancellationToken, Task>>? delay = null,
+        IncompleteWriteMarker? marker = null,
+        string? liveControlDate = "today",
+        int failDataTransfer = 0,
+        ConsoleFault faultAfterWrite = ConsoleFault.None)
     {
-        var e9b = CaptureFile.Load(TestPaths.Capture("2026-10-31-e9b-smartsoft-writes-repeat.jsonl"));
-        byte[] Body(int seq) => Frame(e9b, seq, CaptureDirection.In)[5..];
         var console = new AnsweringPipe(
-            ((int)HspObjectId.FaderInfo, Body(11628)),
-            ((int)HspObjectId.ConsoleStatus, Body(796)),
-            ((int)HspObjectId.LedStatus, Body(11636)))
+            ((int)HspObjectId.FaderInfo, E9bBody(11628)),
+            ((int)HspObjectId.ConsoleStatus, E9bBody(796)),
+            ((int)HspObjectId.LedStatus, E9bBody(11636)))
         {
             RelistFaderInfoAfterWrites = relistAfterWrites,
+            FailDataTransfer = failDataTransfer,
+            FaultAfterWrite = faultAfterWrite,
         };
         var clock = new VirtualClock();
-        var options = new UsbDeviceOptions { LiveControlDate = Today(clock) };
+        var options = new UsbDeviceOptions { LiveControlDate = liveControlDate == "today" ? Today(clock) : liveControlDate };
         var pipe = new TimedPipe(console, clock);
-        var device = Create(() => pipe, options, clock: clock);
+        var log = new RecordingSink();
+        var device = Create(() => pipe, options, _ => log, clock, delay?.Invoke(clock), marker);
         var keysReported = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
         device.StateChanged += (_, change) =>
         {
@@ -565,7 +592,20 @@ public class UsbSmartFadeDeviceTests
             }
         };
 
-        return (device, console, pipe, options, keysReported.Task);
+        return new LiveRig(device, console, pipe, options, keysReported.Task, clock, log);
+    }
+
+    /// <summary>A device on the stand-in console, with its clock and its transfer log.</summary>
+    private sealed record LiveRig(UsbSmartFadeDevice Device, AnsweringPipe Console, TimedPipe Pipe, UsbDeviceOptions Options, Task KeysReported, VirtualClock Clock, RecordingSink Log)
+    {
+        public void Deconstruct(out UsbSmartFadeDevice device, out AnsweringPipe console, out TimedPipe pipe, out UsbDeviceOptions options, out Task keysReported)
+        {
+            device = Device;
+            console = Console;
+            pipe = Pipe;
+            options = Options;
+            keysReported = KeysReported;
+        }
     }
 
     private static List<(TimeSpan At, bool ToConsole, byte[] Data)> Recorded(TimedPipe pipe)
@@ -681,7 +721,7 @@ public class UsbSmartFadeDeviceTests
         await device.DisconnectAsync(CancellationToken.None);               // returns after the poll exchange that follows the last write
 
         Assert.Equal(0, device.LastSession!.WritesDropped);
-        TimeSpan? lastPoll = null, lastFetch = null, lastPayloadIn = null, lastWriteHeader = null, lastWritePayload = null;
+        TimeSpan? lastPoll = null, lastFetch = null, lastPayloadIn = null, lastWriteHeader = null, lastWritePayload = null, lastReport = null;
         var inboundPayloadDue = 0;
         var outboundPayloadDue = false;
         var fetchAwaitingPoll = false;
@@ -699,6 +739,10 @@ public class UsbSmartFadeDeviceTests
                 else
                 {
                     inboundPayloadDue = data[2] | (data[3] << 8);
+                    if (data[0] == 4)
+                    {
+                        lastReport = at;   // a poll reply: the console's report of what changed (F57)
+                    }
                 }
 
                 continue;
@@ -709,6 +753,15 @@ public class UsbSmartFadeDeviceTests
                 outboundPayloadDue = false;
                 lastWritePayload = at;
                 writes++;
+
+                // SC-2 condition 5 at every header but a release's (condition 4: a release is never held back): the gate
+                // let the write go on a report younger than two poll periods, as of the header (the first review of SC-2
+                // item 10, major 1)
+                if (!(data[4] == 1 && data[6] == 0))
+                {
+                    Assert.True(lastReport is not null && lastWriteHeader - lastReport <= 2 * options.PollInterval, $"write at {lastWriteHeader} on a report from {lastReport}");
+                }
+
                 continue;
             }
 
@@ -745,6 +798,390 @@ public class UsbSmartFadeDeviceTests
         }
 
         Assert.Equal(5, writes);
+    }
+
+    /// <summary>
+    /// A delay that stretches, once, the wait for a write's slot that <paramref name="which"/> picks (asked on the loop's
+    /// thread, where the session lives) by three poll periods, and records the virtual time it ended at.
+    /// </summary>
+    private static Func<VirtualClock, Func<TimeSpan, CancellationToken, Task>> StretchOneWriteSlot(Func<UsbSmartFadeDevice?> device, Func<HspReadSession, bool> which, StrongBox<TimeSpan> stretchedTo)
+    {
+        var once = 1;
+        return clock => (wait, _) =>
+        {
+            if (device()?.LastSession is { State: HspReadSessionState.ReadyToSend } session
+                && session.PeekNextKind() == HspMessageType.Data && which(session) && Interlocked.Exchange(ref once, 0) == 1)
+            {
+                clock.Advance(wait + TimeSpan.FromMilliseconds(3 * UsbDeviceOptions.Defaults.PollInterval));
+                stretchedTo.Value = clock.Now;
+                return Task.CompletedTask;
+            }
+
+            clock.Advance(wait);
+            return Task.CompletedTask;
+        };
+    }
+
+    private static bool IsDataHeader((TimeSpan At, bool ToConsole, byte[] Data) transfer) =>
+        transfer.ToConsole && transfer.Data.Length == 12 && transfer.Data[0] == 1;
+
+    [Fact]
+    public async Task A_write_is_chosen_after_its_slot_wait_and_held_when_the_report_aged_past_two_poll_periods_in_it()
+    {
+        // The first review of SC-2 item 10, major 1: the gate used to answer before the slot wait, so a report judged
+        // fresh could be stale when the header went out. Here the MASTER write's slot wait lasts three poll periods
+        // longer; the gate, asked after it, holds the write (condition 5), a poll goes in that slot, and the write follows
+        // the fresh report.
+        UsbSmartFadeDevice? device = null;
+        var stretchedTo = new StrongBox<TimeSpan>();
+        var rig = LiveConsole(delay: StretchOneWriteSlot(() => device, session => session.HeldKey is null, stretchedTo));
+        device = rig.Device;
+        await device.ConnectAsync(CancellationToken.None);
+        await rig.KeysReported.WaitAsync(Timeout);
+
+        // queued while the loop waits inside a poll, so the first write slot after that poll is the one stretched (a write
+        // queued between the loop's peek and its delay would see a poll's wait stretched instead)
+        await rig.Console.PauseAtNextPoll().WaitAsync(Timeout);
+        await device.SetMasterAsync(0x80, CancellationToken.None);
+        rig.Console.Resume();
+        await rig.Console.DataWritten.Task.WaitAsync(Timeout);
+        await rig.Console.PollAfterData.Task.WaitAsync(Timeout);
+        await device.DisconnectAsync(CancellationToken.None);
+
+        Assert.True(stretchedTo.Value > TimeSpan.Zero);
+        Assert.Equal(1, device.LastSession!.WritesSent);
+        Assert.Equal(0, device.LastSession.WritesDropped);
+        Assert.Contains("write held back: the console's last report is older than two poll periods (SC-2 condition 5)", rig.Log.Notes);
+        var transfers = Recorded(rig.Pipe);
+        var afterStretch = transfers.FindIndex(t => t.ToConsole && t.At >= stretchedTo.Value);
+        Assert.Equal(0, transfers[afterStretch].Data[0]);   // a poll in the slot whose wait outlasted the report, not the write
+        var header = transfers.FindIndex(IsDataHeader);
+        Assert.True(header > afterStretch, $"the write went at {header}, the stretched slot was {afterStretch}");
+
+        // the write's own poll exchange: a poll reply (the console's report) at most two poll periods before the header
+        var poll = transfers.FindLastIndex(header, t => t.ToConsole && t.Data.Length == 12 && t.Data[0] == 0);
+        Assert.False(transfers[poll + 1].ToConsole);
+        Assert.Equal(4, transfers[poll + 1].Data[0]);
+        Assert.True(transfers[header].At - transfers[poll + 1].At <= 2 * rig.Options.PollInterval);
+    }
+
+    [Fact]
+    public async Task A_release_still_goes_when_the_report_aged_past_two_poll_periods_during_its_slot_wait()
+    {
+        // SC-2 condition 4: the release completes a press that went; it is the one write an aged report does not hold back.
+        UsbSmartFadeDevice? device = null;
+        var stretchedTo = new StrongBox<TimeSpan>();
+        var rig = LiveConsole(delay: StretchOneWriteSlot(() => device, session => session.HeldKey is not null, stretchedTo));
+        device = rig.Device;
+        await device.ConnectAsync(CancellationToken.None);
+        await rig.KeysReported.WaitAsync(Timeout);
+
+        await device.BumpChannelAsync(7, pressed: true, CancellationToken.None);
+        await WaitUntil(() => device.LastSession!.WritesSent == 2);
+        await device.DisconnectAsync(CancellationToken.None);
+
+        var transfers = Recorded(rig.Pipe);
+        var afterStretch = transfers.FindIndex(t => t.ToConsole && t.At >= stretchedTo.Value);
+        Assert.True(IsDataHeader(transfers[afterStretch]));   // the release's header, in that very slot
+        Assert.Equal(E9Payload(19436, 0x01), transfers[afterStretch + 1].Data);   // SmartSoft's bump 7 release (E9 seq 19436), this session's second write
+        Assert.Equal(0, device.LastSession!.WritesDropped);
+        Assert.Null(device.LastSession.HeldKey);
+    }
+
+    [Theory]
+    [InlineData((int)HspObjectId.LedStatus, 11636)]
+    [InlineData((int)HspObjectId.FaderInfo, 11628)]
+    public async Task In_a_live_session_a_key_LED_or_FaderInfo_report_that_does_not_decode_ends_the_session(int objectId, int e9bSeq)
+    {
+        // The first review of SC-2 item 10, major 2: the interlocks read these objects, and an older reading must never
+        // stand for the console's state. The body is E9b's with its count byte lowered by one, so that it contradicts its
+        // own length (F67): a shape no capture shows, made here on purpose. (ConsoleStatus cannot fail this way: its
+        // decoder takes any 7 bytes, and a mode or bank value never observed already reads as unknown.)
+        var broken = E9bBody(e9bSeq);
+        broken[0]--;
+        var rig = LiveConsole();
+        var ended = WaitForStatus(rig.Device, ConnectionStatus.Error);
+        await rig.Device.ConnectAsync(CancellationToken.None);
+        await rig.KeysReported.WaitAsync(Timeout);
+
+        rig.Console.Report(objectId, broken);
+        var end = await ended;
+
+        Assert.Contains($"{HspObjectIds.Name(objectId)} did not decode", end.Error, StringComparison.Ordinal);
+        Assert.Equal(2, rig.Console.Served(objectId));
+        Assert.Equal(0, rig.Device.LastSession!.WritesSent);
+    }
+
+    [Fact]
+    public async Task A_read_only_session_logs_a_key_LED_report_that_does_not_decode_and_goes_on()
+    {
+        // The read-only session stays as SC-1 reviewed it: nothing it sends depends on the LEDs.
+        var broken = E9bBody(11636);
+        broken[0]--;
+        var rig = LiveConsole(liveControlDate: null);
+        await rig.Device.ConnectAsync(CancellationToken.None);
+        await rig.KeysReported.WaitAsync(Timeout);
+
+        rig.Console.Report((int)HspObjectId.LedStatus, broken);
+        await WaitUntil(() => rig.Console.Served((int)HspObjectId.LedStatus) == 2);
+        var seen = Recorded(rig.Pipe).Count;
+        await WaitUntil(() => Recorded(rig.Pipe).Count > seen + 6);   // three more poll exchanges
+
+        Assert.Equal(ConnectionStatus.Connected, rig.Device.Status);
+        await rig.Device.DisconnectAsync(CancellationToken.None);
+        Assert.Equal(ConnectionStatus.Disconnected, rig.Device.Status);
+    }
+
+    [Fact]
+    public async Task A_write_is_refused_while_REC_MEM_is_lit_and_one_queued_before_it_lit_never_goes_out()
+    {
+        // SC-2 condition 5 with the console's own LED reports of E9b: seq 11636 (every record key off) and seq 83953 (REC MEM
+        // lit after SmartSoft's REC MEM press). The MASTER write is queued while the loop waits inside a poll whose reply
+        // then lists the new LEDs: the gate holds it while they are not fetched, and their arrival drops it.
+        var rig = LiveConsole();
+        await rig.Device.ConnectAsync(CancellationToken.None);
+        await rig.KeysReported.WaitAsync(Timeout);
+
+        await rig.Console.PauseAtNextPoll().WaitAsync(Timeout);
+        await rig.Device.SetMasterAsync(0x80, CancellationToken.None);         // accepted: every record key still reads off
+        rig.Console.Report((int)HspObjectId.LedStatus, E9bBody(83953));        // REC MEM lights on the panel
+        rig.Console.Resume();
+        await WaitUntil(() => rig.Console.Served((int)HspObjectId.LedStatus) == 2 && rig.Device.LastSession!.QueuedWrites == 0);
+
+        var refused = await Assert.ThrowsAsync<InvalidOperationException>(() => rig.Device.SetMasterAsync(0x40, CancellationToken.None));
+        Assert.Contains("REC MEM is lit", refused.Message, StringComparison.Ordinal);
+        await rig.Device.DisconnectAsync(CancellationToken.None);
+
+        Assert.Equal(0, rig.Device.LastSession!.WritesSent);
+        Assert.DoesNotContain(Recorded(rig.Pipe), IsDataHeader);
+        Assert.Contains("write held back: the console listed new key LEDs that are not fetched yet (SC-2 condition 5)", rig.Log.Notes);
+    }
+
+    [Fact]
+    public async Task A_write_waits_while_the_console_has_listed_key_LEDs_it_has_not_delivered_and_goes_after_them()
+    {
+        // SC-2 condition 5: listed LEDs not fetched yet are LEDs not known yet. The console lists LedStatus again (the same
+        // E9b seq 11636 body); the MASTER write goes only after that object is in.
+        var rig = LiveConsole();
+        await rig.Device.ConnectAsync(CancellationToken.None);
+        await rig.KeysReported.WaitAsync(Timeout);
+
+        await rig.Console.PauseAtNextPoll().WaitAsync(Timeout);
+        await rig.Device.SetMasterAsync(0x80, CancellationToken.None);
+        rig.Console.Report((int)HspObjectId.LedStatus, E9bBody(11636));
+        rig.Console.Resume();
+        await rig.Console.DataWritten.Task.WaitAsync(Timeout);
+        await rig.Console.PollAfterData.Task.WaitAsync(Timeout);
+        await rig.Device.DisconnectAsync(CancellationToken.None);
+
+        Assert.Equal(1, rig.Device.LastSession!.WritesSent);
+        Assert.Contains("write held back: the console listed new key LEDs that are not fetched yet (SC-2 condition 5)", rig.Log.Notes);
+        var transfers = Recorded(rig.Pipe);
+        var ledFetch = transfers.FindLastIndex(t => t.ToConsole && t.Data.Length == 12 && t.Data[0] == 2 && t.Data[4] == (int)HspObjectId.LedStatus);
+        var header = transfers.FindIndex(IsDataHeader);
+        Assert.True(ledFetch > 0 && header > ledFetch, $"the write went at {header}, the LEDs were fetched at {ledFetch}");
+    }
+
+    [Fact]
+    public async Task Live_control_that_expires_at_midnight_inside_a_session_drops_the_queued_write_and_refuses_the_next()
+    {
+        // SC-2 item 6: the switch names a day. The virtual clock (2026-10-30 12:00 UTC) moves twelve hours while a MASTER
+        // write waits; at its slot the gate drops it, and the device is read-only from then on.
+        var rig = LiveConsole();
+        await rig.Device.ConnectAsync(CancellationToken.None);
+        await rig.KeysReported.WaitAsync(Timeout);
+
+        await rig.Console.PauseAtNextPoll().WaitAsync(Timeout);
+        await rig.Device.SetMasterAsync(0x80, CancellationToken.None);
+        rig.Clock.Advance(TimeSpan.FromHours(12));
+        rig.Console.Resume();
+        await WaitUntil(() => rig.Device.LastSession!.WritesDropped == 1);
+
+        Assert.Contains("not confirmed for today", rig.Device.LastSession!.LastDropReason, StringComparison.Ordinal);
+        Assert.Equal(DeviceCommands.None, rig.Device.SupportedCommands);
+        Assert.Empty(rig.Device.WritableControls!);
+        await Assert.ThrowsAsync<NotSupportedException>(() => rig.Device.SetMasterAsync(0x40, CancellationToken.None));
+        await rig.Device.DisconnectAsync(CancellationToken.None);
+
+        Assert.Equal(0, rig.Device.LastSession!.WritesSent);
+        Assert.DoesNotContain(Recorded(rig.Pipe), IsDataHeader);
+    }
+
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public async Task After_a_fault_the_release_of_a_pressed_key_goes_only_when_no_exchange_is_open(bool exchangeOpen)
+    {
+        // SC-2 condition 4 at a session's end. The stand-in console answers the poll after the bump 7 press in a way no
+        // capture shows: a list read whole whose byte 1 is 0x01 (no exchange open: the release goes, then the session
+        // ends), or a header announcing 793 bytes (its payload still due: nothing more is sent and the press is reported).
+        var rig = LiveConsole(faultAfterWrite: exchangeOpen ? ConsoleFault.HeaderTooLong : ConsoleFault.PayloadByte1);
+        var ended = WaitForStatus(rig.Device, ConnectionStatus.Error);
+        await rig.Device.ConnectAsync(CancellationToken.None);
+        await rig.KeysReported.WaitAsync(Timeout);
+
+        await rig.Device.BumpChannelAsync(7, pressed: true, CancellationToken.None);
+        var end = await ended;
+
+        // SmartSoft's bump 7 press and release (E9 seq 19055, 19436) with this session's counter
+        var payloads = Recorded(rig.Pipe).Where(t => t.ToConsole && t.Data.Length != 12).Select(t => t.Data).ToArray();
+        if (exchangeOpen)
+        {
+            Assert.Equal(new[] { E9Payload(19055, 0x00) }, payloads);
+            Assert.Contains("Bump7 was pressed and its release could not be sent", end.Error, StringComparison.Ordinal);
+            Assert.Contains("press Bump7 on the panel", end.Error, StringComparison.Ordinal);
+        }
+        else
+        {
+            Assert.Equal(new[] { E9Payload(19055, 0x00), E9Payload(19436, 0x01) }, payloads);
+            Assert.Contains("the release of Bump7 was sent as the session ended", end.Error, StringComparison.Ordinal);
+        }
+    }
+
+    [Theory]
+    [InlineData(1, "whether it reached the console is UNKNOWN")]   // the Data header's own transfer fails
+    [InlineData(2, "payload was not")]                             // the payload fails after its header went out
+    public async Task A_Data_write_that_does_not_complete_keeps_the_device_from_connecting_also_after_a_restart(int failingTransfer, string said)
+    {
+        // SC-2 item 7 and the first review of item 10 (minors: a failed header was assumed not to have reached the console;
+        // the latch lived in memory only). The marker lives in a folder of this test only.
+        var directory = Path.Combine(Path.GetTempPath(), "smartfade-tests", Guid.NewGuid().ToString("N"));
+        var marker = new IncompleteWriteMarker(directory);
+        try
+        {
+            var rig = LiveConsole(marker: marker, failDataTransfer: failingTransfer);
+            var ended = WaitForStatus(rig.Device, ConnectionStatus.Error);
+            await rig.Device.ConnectAsync(CancellationToken.None);
+            await rig.KeysReported.WaitAsync(Timeout);
+            await rig.Device.SetMasterAsync(0x80, CancellationToken.None);
+            var end = await ended;
+
+            Assert.Contains(said, end.Error, StringComparison.Ordinal);
+            Assert.Contains("A Data write did not complete", marker.Read(), StringComparison.Ordinal);
+            await rig.Device.DisconnectAsync(CancellationToken.None);   // waits for the session task's end
+
+            // the same process: refused before anything is opened
+            var states = new List<ConnectionState>();
+            rig.Device.ConnectionChanged += (_, state) => states.Add(state);
+            await rig.Device.ConnectAsync(CancellationToken.None);
+            Assert.Contains("nothing connects again until the backend restarts", Assert.Single(states).Error, StringComparison.Ordinal);
+            Assert.Equal(ConnectionStatus.Disconnected, rig.Device.Status);
+
+            // a restart: a new device with the same marker refuses too, without opening the console, until the owner removes it
+            var opened = 0;
+            var restarted = Create(() =>
+            {
+                opened++;
+                return new ScriptedPipe(replies: Enumerable.Repeat(Idle(), 100).ToArray());
+            }, marker: marker);
+            var refusals = new List<ConnectionState>();
+            restarted.ConnectionChanged += (_, state) => refusals.Add(state);
+            await restarted.ConnectAsync(CancellationToken.None);
+            Assert.Contains("records a Data write that did not complete", Assert.Single(refusals).Error, StringComparison.Ordinal);
+            Assert.Equal(0, opened);
+
+            File.Delete(marker.FilePath);
+            var connected = WaitForStatus(restarted, ConnectionStatus.Connected);
+            await restarted.ConnectAsync(CancellationToken.None);
+            await connected;
+            Assert.Equal(1, opened);
+            await restarted.DisconnectAsync(CancellationToken.None);
+        }
+        finally
+        {
+            if (Directory.Exists(directory))
+            {
+                Directory.Delete(directory, recursive: true);
+            }
+        }
+    }
+
+    [Theory]
+    [InlineData(1, "the press of Bump7 was being written")]     // the press's header fails
+    [InlineData(2, "the press of Bump7 was being written")]     // the press's payload fails
+    [InlineData(3, "Bump7 may still be held, press it on the panel")]   // the release's header fails
+    [InlineData(4, "Bump7 may still be held, press it on the panel")]   // the release's payload fails
+    public async Task A_key_event_that_does_not_complete_is_reported_for_what_it_was(int failingTransfer, string said)
+    {
+        // A press that did not complete may or may not have reached the console (UNKNOWN): pressing the key on the panel
+        // would toggle or trigger it again if it did, so the report never asks for it. A release that did not complete
+        // leaves the key possibly held: then a press on the panel is what releases it.
+        var rig = LiveConsole(failDataTransfer: failingTransfer);
+        var ended = WaitForStatus(rig.Device, ConnectionStatus.Error);
+        await rig.Device.ConnectAsync(CancellationToken.None);
+        await rig.KeysReported.WaitAsync(Timeout);
+
+        await rig.Device.BumpChannelAsync(7, pressed: true, CancellationToken.None);
+        var end = await ended;
+
+        Assert.Contains(said, end.Error, StringComparison.Ordinal);
+        if (failingTransfer <= 2)
+        {
+            Assert.Contains("whether the console took it is UNKNOWN", end.Error, StringComparison.Ordinal);
+            Assert.DoesNotContain("press Bump7 on the panel", end.Error, StringComparison.Ordinal);
+            Assert.DoesNotContain("press it on the panel", end.Error, StringComparison.Ordinal);
+        }
+
+        var states = new List<ConnectionState>();
+        await rig.Device.DisconnectAsync(CancellationToken.None);
+        rig.Device.ConnectionChanged += (_, state) => states.Add(state);
+        await rig.Device.ConnectAsync(CancellationToken.None);
+        Assert.Contains("A Data write did not complete", Assert.Single(states).Error, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public async Task A_SOLO_tap_goes_out_and_the_next_waits_until_the_console_has_reported_its_LED()
+    {
+        // SC-2 class B1 toggles (F133 / F134). SOLO reads off (E9b seq 11636), so a wish for SOLO on is one tap. The
+        // stand-in console toggles nothing by itself, so the second wish waits until the test reports the LEDs SmartSoft's
+        // SOLO press gave (E9b seq 22172, SOLO full); the tap counts as sent only once its press was taken for sending.
+        var rig = LiveConsole();
+        var soloLit = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        rig.Device.StateChanged += (_, change) =>
+        {
+            if (change.Keys is { Solo.Light: KeyLight.Full })
+            {
+                soloLit.TrySetResult();
+            }
+        };
+        await rig.Device.ConnectAsync(CancellationToken.None);
+        await rig.KeysReported.WaitAsync(Timeout);
+
+        await rig.Device.SetSoloAsync(true, CancellationToken.None);
+        await WaitUntil(() => rig.Device.LastSession!.WritesSent == 2);   // the press and its release
+        var waiting = await Assert.ThrowsAsync<InvalidOperationException>(() => rig.Device.SetSoloAsync(false, CancellationToken.None));
+        Assert.Contains("has not been reported by the console yet", waiting.Message, StringComparison.Ordinal);
+
+        rig.Console.Report((int)HspObjectId.LedStatus, E9bBody(22172));
+        await soloLit.Task.WaitAsync(Timeout);
+        await rig.Device.SetSoloAsync(false, CancellationToken.None);
+        await WaitUntil(() => rig.Device.LastSession!.WritesSent == 4);
+        await rig.Device.DisconnectAsync(CancellationToken.None);
+
+        // SmartSoft's SOLO press and release (E9 seq 36386, 36391), twice, with this session's counter
+        var payloads = Recorded(rig.Pipe).Where(t => t.ToConsole && t.Data.Length != 12).Select(t => t.Data).ToArray();
+        Assert.Equal(new[] { E9Payload(36386, 0x00), E9Payload(36391, 0x01), E9Payload(36386, 0x02), E9Payload(36391, 0x03) }, payloads);
+    }
+
+    [Fact]
+    public void Live_control_needs_timings_no_slower_than_SmartSofts()
+    {
+        // The first review of SC-2 item 10, minor: the write timings had no upper bound. Faster settings end at the floors.
+        Assert.Null(new UsbDeviceOptions().LiveControlTimingProblem());
+        Assert.Null(new UsbDeviceOptions { PollIntervalMilliseconds = 1, WriteIntervalMilliseconds = 1 }.LiveControlTimingProblem());
+        var slow = new UsbDeviceOptions { PollIntervalMilliseconds = 100, WriteIntervalMilliseconds = 500 };
+        var problem = slow.LiveControlTimingProblem();
+        Assert.Contains("PollIntervalMilliseconds=100, at most 31", problem, StringComparison.Ordinal);
+        Assert.Contains("WriteIntervalMilliseconds=500, at most 46", problem, StringComparison.Ordinal);
+
+        var today = new DateOnly(2026, 10, 30);
+        Assert.Throws<InvalidOperationException>(() => ServiceCollectionExtensions.ValidateLiveControlDate("2026-10-30", usbMode: true, today, slow));
+        ServiceCollectionExtensions.ValidateLiveControlDate(null, usbMode: true, today, slow);   // read-only: any cadence above the floors
+
+        var clock = new VirtualClock();
+        slow.LiveControlDate = Today(clock);
+        var device = Create(() => new BlockingPipe(), slow, clock: clock);
+        Assert.Equal(DeviceCommands.None, device.SupportedCommands);   // a device built around the start-up check stays read-only
     }
 
     /// <summary>A sink that keeps nothing: the tests above check the bytes through the pipes, not the log.</summary>
@@ -859,30 +1296,51 @@ public class UsbSmartFadeDeviceTests
 
     /// <summary>
     /// A stand-in console for live control: the first poll is answered with a list of the objects it holds, a fetch with
-    /// that object on the next poll, every other poll idle; Data headers and payloads are taken without an answer (F131).
-    /// The framing is hand-made (F53, F54, F57); the bodies come from a committed capture.
+    /// that object on the next poll, a poll after <see cref="Report"/> with a list of what was reported, every other poll
+    /// idle; Data headers and payloads are taken without an answer (F131). The framing is hand-made (F53, F54, F57); the
+    /// bodies come from a committed capture. A test can hold the loop inside a poll (<see cref="PauseAtNextPoll"/>), fail
+    /// a Data transfer, or answer the first poll after a write in a way no capture shows (<see cref="FaultAfterWrite"/>).
     /// </summary>
     private sealed class AnsweringPipe : IHspPipe
     {
-        private readonly (int Id, byte[] Body)[] _objects;
+        private readonly object _lock = new();
+        private readonly Dictionary<int, byte[]> _bodies = new();
+        private readonly List<int> _dirty = new();
+        private readonly Dictionary<int, int> _served = new();
         private readonly Queue<byte[]> _replies = new();
-        private bool _listed;
+        private readonly ManualResetEventSlim _resume = new(true);
+        private bool _pauseRequested;
         private bool _dataSeen;
         private bool _relist;
+        private bool _payloadDue;
+        private bool _faultArmed;
+        private int _dataTransfers;
         private int? _fetched;
         private byte _sequence;
 
         public AnsweringPipe(params (int Id, byte[] Body)[] objects)
         {
-            _objects = objects;
+            foreach (var (id, body) in objects)
+            {
+                _bodies[id] = body;
+                _dirty.Add(id);   // the first poll lists them in this order
+            }
         }
 
         /// <summary>After each Data payload, the next poll lists FaderInfo again, as the console lists the objects an event changed (F134).</summary>
         public bool RelistFaderInfoAfterWrites { get; init; }
 
+        /// <summary>The Data transfer (1-based, headers and payloads counted together) whose write fails, or 0.</summary>
+        public int FailDataTransfer { get; init; }
+
+        /// <summary>How the first poll after the first Data payload is answered: as usual (None), or in a way no capture shows.</summary>
+        public ConsoleFault FaultAfterWrite { get; init; }
+
         public TaskCompletionSource DataWritten { get; } = new(TaskCreationOptions.RunContinuationsAsynchronously);
 
         public TaskCompletionSource PollAfterData { get; } = new(TaskCreationOptions.RunContinuationsAsynchronously);
+
+        public TaskCompletionSource Paused { get; private set; } = new(TaskCreationOptions.RunContinuationsAsynchronously);
 
         public string Description => "answering console";
 
@@ -892,54 +1350,103 @@ public class UsbSmartFadeDeviceTests
 
         public void Close() => IsOpen = false;
 
-        public void Dispose() => Close();
+        public void Dispose()
+        {
+            Close();
+            _resume.Set();
+        }
+
+        /// <summary>The console's state changed: the next poll that follows no fetch lists the object, and its fetch delivers this body.</summary>
+        public void Report(int id, byte[] body)
+        {
+            lock (_lock)
+            {
+                _bodies[id] = body;
+                if (!_dirty.Contains(id))
+                {
+                    _dirty.Add(id);
+                }
+            }
+        }
+
+        /// <summary>How often the object was delivered.</summary>
+        public int Served(int id)
+        {
+            lock (_lock)
+            {
+                return _served.TryGetValue(id, out var count) ? count : 0;
+            }
+        }
+
+        /// <summary>The next poll waits inside the pipe (its reply not decided yet) until <see cref="Resume"/>; <see cref="Paused"/> says it is there.</summary>
+        public Task PauseAtNextPoll()
+        {
+            lock (_lock)
+            {
+                Paused = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+                _resume.Reset();
+                _pauseRequested = true;
+                return Paused.Task;
+            }
+        }
+
+        public void Resume() => _resume.Set();
 
         public void Write(ReadOnlySpan<byte> data)
         {
-            if (data.Length != 12)
+            var isDataHeader = data.Length == 12 && data[0] == 1;
+            if (isDataHeader || _payloadDue)
             {
+                if (++_dataTransfers == FailDataTransfer)
+                {
+                    throw new HspPipeException($"Data transfer {_dataTransfers} failed (stand-in console)");
+                }
+            }
+
+            if (_payloadDue)
+            {
+                _payloadDue = false;
                 _dataSeen = true;
                 _relist = RelistFaderInfoAfterWrites;
+                _faultArmed |= FaultAfterWrite != ConsoleFault.None;
                 DataWritten.TrySetResult();   // a Data payload: nothing answers it
                 return;
             }
 
-            if (data[0] == 0 && _dataSeen)
+            if (isDataHeader)
+            {
+                _payloadDue = true;   // its payload follows
+                return;
+            }
+
+            if (data[0] == 2)
+            {
+                _fetched = data[4] | (data[5] << 8);
+                return;
+            }
+
+            if (_dataSeen)
             {
                 PollAfterData.TrySetResult();
             }
 
-            switch (data[0])
+            bool pause;
+            lock (_lock)
             {
-                case 0 when _fetched is { } id:
-                    var body = _objects.First(o => o.Id == id).Body;
-                    var payload = Payload(_sequence++, id, body);
-                    _replies.Enqueue(Header(3, (ushort)payload.Length, (ushort)id));
-                    _replies.Enqueue(payload);
-                    _fetched = null;
-                    break;
-                case 0 when !_listed:
-                    _listed = true;
-                    var list = ListPayload(_sequence++, _objects.Select(o => new DirtyObjectRecord(o.Id, 0, 0, 0)).ToArray());
-                    _replies.Enqueue(Header(4, (ushort)list.Length));
-                    _replies.Enqueue(list);
-                    break;
-                case 0 when _relist:
-                    _relist = false;
-                    var again = ListPayload(_sequence++, new DirtyObjectRecord((int)HspObjectId.FaderInfo, 0, 0, 0));
-                    _replies.Enqueue(Header(4, (ushort)again.Length));
-                    _replies.Enqueue(again);
-                    break;
-                case 0:
-                    Thread.Sleep(1);   // idle: let the test's thread run, so the loop does not race far ahead on the virtual clock
-                    _replies.Enqueue(Idle());
-                    break;
-                case 2:
-                    _fetched = data[4] | (data[5] << 8);
-                    break;
-                default:
-                    break;   // a Data header: its payload follows
+                pause = _pauseRequested;
+                _pauseRequested = false;
+                if (pause)
+                {
+                    Paused.TrySetResult();
+                }
             }
+
+            if (pause)
+            {
+                _ = _resume.Wait(Timeout);
+            }
+
+            AnswerPoll();
         }
 
         public void ReadExactly(Span<byte> buffer)
@@ -952,9 +1459,116 @@ public class UsbSmartFadeDeviceTests
 
             reply.CopyTo(buffer);
         }
+
+        private void AnswerPoll()
+        {
+            if (_fetched is { } id)
+            {
+                byte[] body;
+                lock (_lock)
+                {
+                    body = _bodies[id];
+                    _served[id] = (_served.TryGetValue(id, out var count) ? count : 0) + 1;
+                }
+
+                var payload = Payload(_sequence++, id, body);
+                _replies.Enqueue(Header(3, (ushort)payload.Length, (ushort)id));
+                _replies.Enqueue(payload);
+                _fetched = null;
+                return;
+            }
+
+            if (_faultArmed)
+            {
+                _faultArmed = false;
+                if (FaultAfterWrite == ConsoleFault.PayloadByte1)
+                {
+                    // a list read whole whose byte 1 is 0x01 (0x00 in every observed payload, F55): the exchange is closed
+                    var odd = ListPayload(_sequence++, new DirtyObjectRecord((int)HspObjectId.LedStatus, 0, 0, 0));
+                    odd[1] = 0x01;
+                    _replies.Enqueue(Header(4, (ushort)odd.Length));
+                    _replies.Enqueue(odd);
+                }
+                else
+                {
+                    // a reply announcing more than any capture holds: the session stops with the payload still due
+                    _replies.Enqueue(Header(4, HspReadSession.MaxObservedPayloadLength + 1));
+                }
+
+                return;
+            }
+
+            DirtyObjectRecord[] listed;
+            lock (_lock)
+            {
+                if (_relist && !_dirty.Contains((int)HspObjectId.FaderInfo))
+                {
+                    _dirty.Add((int)HspObjectId.FaderInfo);
+                }
+
+                _relist = false;
+                listed = _dirty.Select(o => new DirtyObjectRecord(o, 0, 0, 0)).ToArray();
+                _dirty.Clear();
+            }
+
+            if (listed.Length > 0)
+            {
+                var list = ListPayload(_sequence++, listed);
+                _replies.Enqueue(Header(4, (ushort)list.Length));
+                _replies.Enqueue(list);
+                return;
+            }
+
+            Thread.Sleep(1);   // idle: let the test's thread run, so the loop does not race far ahead on the virtual clock
+            _replies.Enqueue(Idle());
+        }
     }
 
-    /// <summary>A clock that moves only when told to, in UTC, so that "today" never depends on the machine's time zone.</summary>
+    private enum ConsoleFault
+    {
+        None,
+
+        /// <summary>A payload read whole whose byte 1 is 0x01: the session faults with no exchange open.</summary>
+        PayloadByte1,
+
+        /// <summary>A reply header announcing 793 bytes: the session faults with the payload still due.</summary>
+        HeaderTooLong,
+    }
+
+    /// <summary>A sink that keeps the session's notes (the transfers are checked through the pipes).</summary>
+    private sealed class RecordingSink : ITransferSink
+    {
+        private readonly List<string> _notes = new();
+
+        public IReadOnlyList<string> Notes
+        {
+            get
+            {
+                lock (_notes)
+                {
+                    return _notes.ToArray();
+                }
+            }
+        }
+
+        public void Transfer(bool toConsole, ReadOnlySpan<byte> data, DateTimeOffset started, DateTimeOffset completed)
+        {
+        }
+
+        public void Note(string text)
+        {
+            lock (_notes)
+            {
+                _notes.Add(text);
+            }
+        }
+
+        public void Dispose()
+        {
+        }
+    }
+
+    /// <summary>A clock that moves only when told to, in UTC, so that "today" never depends on the machine's time zone; the loop's thread and a test's may both move it.</summary>
     private sealed class VirtualClock : TimeProvider
     {
         private long _ticks;
@@ -963,13 +1577,13 @@ public class UsbSmartFadeDeviceTests
 
         public override long TimestampFrequency => TimeSpan.TicksPerSecond;
 
-        public override long GetTimestamp() => _ticks;
+        public override long GetTimestamp() => Interlocked.Read(ref _ticks);
 
-        public override DateTimeOffset GetUtcNow() => new DateTimeOffset(2026, 10, 30, 12, 0, 0, TimeSpan.Zero).AddTicks(_ticks);
+        public override DateTimeOffset GetUtcNow() => new DateTimeOffset(2026, 10, 30, 12, 0, 0, TimeSpan.Zero).AddTicks(Interlocked.Read(ref _ticks));
 
-        public TimeSpan Now => TimeSpan.FromTicks(_ticks);
+        public TimeSpan Now => TimeSpan.FromTicks(Interlocked.Read(ref _ticks));
 
-        public void Advance(TimeSpan by) => _ticks += by.Ticks;
+        public void Advance(TimeSpan by) => Interlocked.Add(ref _ticks, by.Ticks);
     }
 
     /// <summary>Wraps a pipe, stamping every transfer with the virtual time and charging 1 ms per transfer.</summary>

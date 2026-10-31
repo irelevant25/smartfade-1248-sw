@@ -64,6 +64,8 @@ public class HostingTests
             b.UseSetting("Device:Mode", "Usb");
             b.UseSetting("Device:Usb:ConfirmDate", Today);
             b.UseSetting("Device:Usb:DevicePath", @"\\?\usb#vid_0000&pid_0000&mi_09#test");
+            // the incomplete-write marker is looked for here, never in the owner's capture folder
+            b.UseSetting("Device:Usb:CaptureLogDirectory", Path.Combine(Path.GetTempPath(), "smartfade-tests", Guid.NewGuid().ToString("N")));
             b.ConfigureServices(services =>
                 services.AddSingleton<Func<IHspPipe>>(() => throw new HspPipeException("test: no console")));
         });

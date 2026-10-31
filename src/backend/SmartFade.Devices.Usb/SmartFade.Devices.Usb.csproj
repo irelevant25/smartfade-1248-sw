@@ -8,6 +8,12 @@
   </ItemGroup>
 
   <ItemGroup>
+    <!-- UsbSmartFadeDevice.Interlock (SC-2 condition 5 as the gate applies it) is replayed over E9 and E9b by the golden
+         interlock test; the device itself calls it only from its gate. -->
+    <InternalsVisibleTo Include="SmartFade.Devices.Usb.Tests" />
+  </ItemGroup>
+
+  <ItemGroup>
     <PackageReference Include="Microsoft.Extensions.Hosting.Abstractions" Version="10.0.14" />
     <PackageReference Include="Microsoft.Extensions.Logging.Abstractions" Version="10.0.14" />
     <PackageReference Include="Microsoft.Extensions.Options.ConfigurationExtensions" Version="10.0.14" />
