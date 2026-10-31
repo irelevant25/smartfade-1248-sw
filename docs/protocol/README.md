@@ -39,11 +39,11 @@ Rules:
 |---|---|
 | [known-facts.md](known-facts.md) | Facts with sources |
 | [hypotheses.md](hypotheses.md) | Open hypotheses with test plans |
-| [smartsoft-analysis.md](smartsoft-analysis.md) | Static analysis of the SmartSoft installer, application, engine DLLs and USB driver |
+| [smartsoft-analysis.md](smartsoft-analysis.md) | Static analysis of the SmartSoft installer, application, engine DLLs and USB driver; S11.15 (2026-10-30): the write paths from the GUI; S11.16 (2026-10-31): GUI edits of the patch, the independents, names, sequences and the stack, all INFERRED or DOCUMENTED and never seen on the bus |
 | [midi-spec-analysis.md](midi-spec-analysis.md) | MIDI spec v1.5 vs console manual v3.0, message tables |
 | [evidence-matrix.md](evidence-matrix.md) | Feature × source cross-reference (central document) |
 | [capability-matrix.md](capability-matrix.md) | What the console / SmartSoft / our app supports |
-| [reverse-engineering.md](reverse-engineering.md) | Experiment plan, tooling, safety rules, hardware evidence requested, capture format |
+| [reverse-engineering.md](reverse-engineering.md) | Experiment plan, tooling, safety rules, hardware evidence requested, capture format; runbooks for E8, E8b, E9 and, planned 2026-10-31 and not run, **E12** (SmartSoft editing the patch and the stack / sequences, passive) |
 | [packet-format.md](packet-format.md) | HSP framing as observed in E2 (OBSERVED, nothing VERIFIED); since E3 (2026-10-29) the framing facts are VERIFIED as observed behaviour; E3b (2026-10-30) reproduced them a third time; E8 (2026-10-30, our own read-only session) reproduced them with another host program, the first evidence channel other than SmartSoft; E8b (2026-10-30 evening, our second read-only session, with the bus seen in parallel) reproduced them again and showed that WinUSB splits long IN reads into two URBs (host-side); E9 (2026-10-30, late evening, SmartSoft's first data writes, passive) added the type-1 data-write framing and the outbound counter over 401 writes (OBSERVED once, NOT CLEARED), reproduced the rest again and made F93 and F94 VERIFIED; E9b (2026-10-31, the repeat of E9: 427 data writes in three SmartSoft sessions, passive) reproduced the write framing and made it VERIFIED as SmartSoft's and the console's behaviour (F131, still NOT CLEARED) and added the Memory (0) write's w1 = 94 |
 | [commands.md](commands.md) | PC → console messages SmartSoft sent in E2, E3 and E3b (a record, not a list of messages we may send; VERIFIED there means SmartSoft's behaviour only); E8 and E8b were our own read-only sessions (SC-1) and add none; **E9 (2026-10-30, late evening) adds a section with the exact bytes of SmartSoft's ConsoleEvent (fader, key) and ChannelText writes, with the fader indices and key codes seen, each OBSERVED (one session) and NOT CLEARED**; **E9b (2026-10-31) adds the Memory (0) whole-object write, fader index 0x04 and the key codes 0x37, 0x3B, 0x47 and 0x48, and marks the rows it repeated VERIFIED as SmartSoft's behaviour, all NOT CLEARED** |
 | [responses.md](responses.md) | Reply types and object payloads seen in E2, E3, E3b, E8 and E8b (the live objects are decoded from E3, E3b, E8 and E8b); E9: the Memory objects the console lists after a recording, the first System records with c ≠ 0 and the live objects following PC events (section "Live objects (E9)"); E9b: the console's own EDIT MEM and recordings listed like the PC's, the post-MASTER stored level, the emptied memory, the label returned verbatim (section "Live objects (E9b)") |
@@ -108,6 +108,14 @@ unchanged: VERIFIED is necessary, not sufficient, **E9b clears no message**, no 
 SC-1's two messages remain the only ones cleared, and the safety check SC-2 ([safety-checks.md](safety-checks.md); its input is the E9b
 record's "Input for a future safety check (SC-2), updated after E9b") is the gate for any write; **SC-2 ran the same day**: a conditional GO for building and reviewing a live-control encoder bounded to the fader indices 0x00 / 0x30 / 0x31 and eight live key codes, with the first write session E11 on the owner's go, and a NO-GO for the record keys from the PC (SC-3 later), ChannelText and Memory writes and the System pair; it clears nothing for sending until its conditions are met. The owner's statements never promote;
 `SHOW08.ASC` is the E9b pre-session backup and `SHOW09.ASC` the owner's save after he restored memory 7.
+**Update 2026-10-31, later (the static pass S11.16 and the plan of E12; no experiment was run):** the `protocol-researcher` mapped, from
+`SmartSoft.exe` and `sfEngine.dll`, which messages SmartSoft would send when the owner edits the patch, the independents, page and memory
+names, sequences and the stack ([smartsoft-analysis.md](smartsoft-analysis.md) S11.16, INFERRED), and the console and SmartSoft manuals
+were re-checked for the matching functions (known-facts F148–F150, DOCUMENTED). None of these messages has ever been on the bus (no
+patch, stack, sequence or page edit exists in E2–E9b), so nothing is OBSERVED or VERIFIED: hypotheses H91–H101 are HYPOTHESIS with the
+passive capture **E12** as their test ([reverse-engineering.md](reverse-engineering.md) "E12 runbook"; SmartSoft Online drives the edits,
+USBPcap records, our software is not involved; planned, not run). The VERIFIED count stays 61, **nothing is cleared for sending**, and our
+code never sends any of these messages (SC-2 class F, "Never", for the Patch and Independents writes).
 
 ## Version landscape
 

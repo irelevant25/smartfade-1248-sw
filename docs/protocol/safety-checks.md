@@ -372,5 +372,11 @@ mode, a write outside the observed placement, a retry.
   confirmation step before a record key is armed, and the same guard against a stray bump as the panel has
   (a record function is left with CLEAR when nothing is selected within a bound). F136, F145, F146 describe
   the effects; none is reversible by the protocol.
+- **E12, passive (planned 2026-10-31; runbook in `reverse-engineering.md`, guide `tools/usb-probe/e12-guided-session.ps1`):**
+  SmartSoft edits the patch, the stack and a sequence while USBPcap records, so that the Patch, Independents, Page,
+  Sequence, SequenceMain and StepContent writes and the step commands (H91–H101, INFERRED from the binaries) are seen
+  at least once. Nothing of it is cleared by E12; a later check, SC-3 or its own, judges those writes per class, and the
+  "never" of class F for Patch and Independents below stands until then (the show upload, the erase commands, the
+  wheel, FileName and the settings stay never by the owner's decisions).
 - **E11's result** promotes nothing by itself; a second write session of ours (E11b) is needed before any
   write fact about our own host context becomes VERIFIED.

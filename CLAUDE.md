@@ -55,9 +55,9 @@ or copy its contents into source code. Derived extractions go to `analysis/extra
 | Observed framing, commands, responses, session model (from E2, E3, E3b, E8, E8b, E9 and E9b; VERIFIED = reproduced behaviour, never clearance to send; the write messages are VERIFIED only as SmartSoft's behaviour where E9b reproduced E9, the rest OBSERVED once, and none is cleared) | `docs/protocol/packet-format.md`, `commands.md`, `responses.md`, `state-model.md` |
 | Third-party reference compared with our 1248 evidence (ConsoleLink, SmartFade ML, evidence class 5) | `docs/protocol/consolelink-analysis.md` |
 | Capture records, evidence files, capture format | `docs/protocol/captures/`, `tools/protocol-analyzer/` |
-| SmartSoft binary analysis | `docs/protocol/smartsoft-analysis.md` |
+| SmartSoft binary analysis (framing S11; write paths S11.15; GUI edits of the patch and the stack / sequences S11.16, INFERRED, never seen on the bus) | `docs/protocol/smartsoft-analysis.md` |
 | MIDI analysis | `docs/protocol/midi-spec-analysis.md` |
-| Experiments, safety rules, capture format | `docs/protocol/reverse-engineering.md` |
+| Experiments, runbooks (E8, E8b, E9, E12), safety rules, capture format | `docs/protocol/reverse-engineering.md` |
 | Hardware safety checks: what is cleared for sending, under which conditions | `docs/protocol/safety-checks.md` |
 | ASC show file format | `docs/formats/asc-format.md` |
 | Architecture (proposal + "Phase 1 as built") | `docs/architecture.md` |
@@ -221,6 +221,12 @@ day** (the SC-2 "Implementation" section): the first `protocol-safety-reviewer` 
 the same day; majors 1, 2 and 6 and several minors open on the owner's side; majors 3, 4, 5 fixed the same day); nothing is sent before the
 re-check passes and the owner gives the go for E11. Next: "Next capture (proposed by the
 E9b analysis, 2026-10-31)" in `reverse-engineering.md`, and E9c / E11 as SC-2 lists them.
+**E12 planned 2026-10-31, not run** (a passive capture of SmartSoft Online editing the patch and the stack / sequences: SmartSoft drives, USBPcap
+records, our software is not involved; E9c / E9d stay reserved by SC-2 and E11 is the first live-control session of our software): the runbook is
+in `docs/protocol/reverse-engineering.md` ("E12 runbook"), the guided script `tools/usb-probe/e12-guided-session.ps1` is written and parse-checked (the owner's decisions asked first, every change restored, an SD save for the byte comparison at the end), and the
+researcher's static findings are recorded in `docs/protocol/smartsoft-analysis.md` S11.16, the hypotheses H91-H101 (tests = E12) and the DOCUMENTED
+manual facts F148-F150: all INFERRED or DOCUMENTED, none ever seen on the bus, none cleared, and our code never sends any of these messages (SC-2
+class F, "Never", for the Patch and Independents writes; the VERIFIED count stays 61).
 
 ## Commands
 

@@ -37,6 +37,7 @@
 | **E9** | **SmartSoft writing (passive).** USBPcap records a SmartSoft Online session in which the owner moves faders and presses keys in SmartSoft's Console Simulator, renames a channel label, uses the console's own REC MEM, EDIT MEM and COPY through the Simulator keys on empty memories (owner decision 2026-10-30) and (optionally) edits one memory level; our code is not involved. Runbook below, from the static write-path analysis (`smartsoft-analysis.md` S11.15). | Low: SmartSoft's own messages, as for any user; the show backed up; no show load, erase, patch, settings or page action in the script | Interface 1 back on the ETC driver, Memory Integrity off, USBPcap, the action log | H5, H6, H24 (the PC → console data message and the ConsoleEvent framing), H40 (label byte order), the 1248 fader and button indices; the first OBSERVED PC → console write **Done 2026-10-30 (late evening)** → [captures/2026-10-30-e9-smartsoft-writes.md](captures/2026-10-30-e9-smartsoft-writes.md): SmartSoft Online driven by the owner through the guided script `tools/usb-probe/e9-guided-session.ps1` (6de4ddb), USBPcap passive (the committed `.pcap` is the console-only split of the root-hub capture, 214 494 frames, 22:19:59–22:48:44), a named backup (`SHOW07.ASC`, byte-identical to `SHOW04.ASC` … `SHOW06.ASC`) and a timed action log; **401 PC data writes** (the System pair, 332 ConsoleEvent fader events, 64 ConsoleEvent key events, three ChannelText labels); our software sent nothing. Results: **H5 (PC → console part), H6 (for the paths used) and H24 (kinds 0 and 1) CONFIRMED (OBSERVED once)**, H40 reading A (UTF-16BE) OBSERVED for SmartSoft's write (the console's side open), H72 extended, H51 untested; **F93, F94 (its structure), F97 (BUMPS 0xFF) and F103 VERIFIED (VERIFIED count 53, never clearance for sending)**; facts F131–F140 (the write framing and the outbound counter, four fader indices and 13 key codes, the console's answer to PC events, matching with PC faders, the record functions driven from the PC and what the console lists, the first DirtyObjects records with c ≠ 0, the ChannelText write and its bytes, E9's side effects on the show, the Simulator's opening and "all faders to zero" sending nothing), hypotheses H81–H86; F57's "c = 0 in every record" limited. Deviations from the runbook: the Mem Edit steps went through the console's own EDIT MEM (no Memory object was written), the "restore" step edited memory 7 instead of memory 1 (memory 7 was still changed: an open owner item, the owner on 2026-10-31: "Its possible"; **closed 2026-10-31**: `SHOW08.ASC` confirmed the change, the owner restored it by hand, and `SHOW09.ASC` is byte-identical to `SHOW07.ASC`), the guide's deletion step deleted nothing (script fixed in 6cb2c07), and the console was in memory mode at connect. **E9 cleared nothing.** Next: "Next capture (proposed by the E9 analysis, 2026-10-30)" below |
 | **E9b** | **SmartSoft writing, the repeat (passive).** Three SmartSoft Online sessions in one USBPcap capture, driven by the owner through `tools/usb-probe/e9b-guided-session.ps1` (3ce3900) after a console power cycle: E9's live Simulator steps again, the H81 cases (a PC fader against a physical one), keys not yet seen (STACK, IND 1, IND 2, FADERS 25-48), the console's own EDIT MEM on pages 1 and 12, the label of channel 7 across two SmartSoft restarts, REC MEM into memory 9 with the MASTER at half and its deletion by REC MEM of an empty look, and (the owner's choice) one cell in SmartSoft's Mem Edit tab; our code is not involved. | Low: SmartSoft's own messages, as for any user; the show backed up first (`SHOW08.ASC`); no show load, erase, patch, settings or page action in SmartSoft | Interface 1 on the ETC driver, Memory Integrity off, USBPcap, the guided script's action log | The VERIFIED reproduction of F131–F140 and H81–H86 **Done 2026-10-31** → [captures/2026-10-31-e9b-smartsoft-writes-repeat.md](captures/2026-10-31-e9b-smartsoft-writes-repeat.md): USBPcap passive (the committed `.pcap` is the console-only split of the root-hub capture, 208 876 frames, 08:37:27–09:05:18), a named backup (`SHOW08.ASC`, saved at 08:35:31 before the capture) and a timed action log; **427 PC data writes** in three SmartSoft sessions (the System pair × 3, 366 ConsoleEvent fader events, 26 key press / release pairs, two ChannelText labels, one Memory (0) whole-object write); framing errors 0; our software sent nothing. Results: **F131, F132, F133, F134, F138 and F140 VERIFIED, F135 and F136 VERIFIED in part (VERIFIED count 61, as SmartSoft's and the console's behaviour, never clearance for sending)**; F141–F147 added (the last mover wins between a PC fader and a physical fader; the console's own EDIT MEM lists System (5, 5, 0); the Memory (0) whole-object write from the Mem Edit tab, a 90-byte body against the console's 138; ChannelText stored verbatim and returned across restarts and a power cycle; REC MEM stores the post-MASTER level; REC MEM of an empty look empties a memory; the Memory object listed after the console's own recording); fader index 0x04 and key codes 0x37, 0x3B, 0x47, 0x48 seen; **H84 and H86 CONFIRMED, H85 REJECTED, H81's first clause CONFIRMED for channel mode**, H82 and H83 supported, H78 contradicted in its prediction (cause UNKNOWN), H40 and H72 annotated, H87–H90 added. Deviations from the runbook: the H85 MASTER was moved on the console instead of the Simulator (INFERRED from the absence of any write) and its physical position stayed at about half until the owner set it to 100 %; the B7 recording and deletion used the console's REC MEM and bump 9; four Simulator key pairs and a playback check of memory 9 were unlogged. The owner's answers at the start were: the Mem Edit window of E9 = Simulator, no touch at 279 s, the Simulator's fader 1 moved at 290 s ("y"), and memory 7 "was in memory 1, not 7", which the download and `SHOW08.ASC` contradicted (restored by hand and closed 2026-10-31, `SHOW09.ASC` = `SHOW07.ASC`). **E9b cleared nothing:** SC-1's poll and listed fetch remain the only messages cleared, no type-1 header is encoded anywhere in the solution *(Superseded 2026-10-31, later the same day: the owner implemented SC-2's whitelist in `HspOutbound` and `HspReadSession`, sent only by a session with live control switched on for the day (`Device:Usb:LiveControlDate`); reviewed under SC-2 item 10, NEEDS CHANGES at the first pass, see safety-checks.md; nothing is cleared for sending before E11 on the owner's go.)*, and the safety check SC-2 is the gate for any write. Next: "Next capture (proposed by the E9b analysis, 2026-10-31)" below |
 | **E11** | **First live-control session of our own software (active, SC-2; planned).** The backend in a separate write mode sends only SC-2's whitelist (fader indices 0x00, 0x30, 0x31; the eight live key codes) following the script in [safety-checks.md](safety-checks.md) SC-2: read-only first, one control at a time, press / release as one operation, no write while a record function is armed, no retries; USBPcap in parallel, backup first. Needs the encoder built with golden tests over E9 and E9b, the `protocol-safety-reviewer` pass and the owner's go on the day. | Medium: live output changes on the rig as from the panel (MASTER, BLACKOUT included); H66 for writes unknown (the console may ignore the events: the session then ends); no show data touched (record functions refused) | SC-2 conditions met; Zadig on interface 1; SD backup; the owner's written acceptance of the residual risks listed in SC-2 | H66 for writes; whether the console answers our events as it answers SmartSoft's (F134 for our host) |
+| **E12** | **SmartSoft editing the patch and the stack / sequences (passive; planned 2026-10-31, not run).** USBPcap records a SmartSoft Online session in which the owner, led by the guided script `tools/usb-probe/e12-guided-session.ps1` (written 2026-10-31 (`tools/usb-probe/e12-guided-session.ps1`, parse-checked)), edits test objects: channel 47 and IND 1 in the Patch tab, test cues in the stack (insert, a point cue, times, a label, a move, deletes), a step, the run mode and the label of KOTLIK, memory 9's content and name, optionally page 12's name and the console's own patch and step-timing menus. Every change is restored, then checked by two SmartSoft restarts (downloads) and by an SD save compared byte for byte with the backup. Our software is not involved and sends nothing. Runbook below ("E12 runbook"), from the static pass `smartsoft-analysis.md` S11.16. E9c and E9d are reserved by SC-2 for the live-control widening and E11 is the first live-control session of our software, hence the number | Low-to-medium: SmartSoft's own messages as for any user, but they **change show data** (the patch, the stack, one sequence, names, memory 9) and SmartSoft's Patch tab says "There is no UNDO for this!"; every change is restored in the same session and the SD backup is the fallback (the console's Load show, or Load patch from card for the patch alone); DMX 100–102 must be unconnected; no show load, erase, settings, wheel or page action in SmartSoft; the optional step H uses the physical wheel, which E3b showed can move values by accident | Interface 1 on the ETC driver (service ETCHSP), Memory Integrity off, USBPcap started before SmartSoft, the guided script `tools/usb-probe/e12-guided-session.ps1` and its action log, an SD backup to a free number and a second free number for the final save, nothing connected at DMX 100–102 (the rig is DMX 5–16), the owner's decisions listed in the runbook | H91–H101: the Patch, Independents, Page, Sequence, SequenceMain, StepContent and memory-name writes (their layouts against the console's own, `smartsoft-analysis.md` S11.16 row 5), the step commands 32 / 34 / 35 / 42 (bodies, `a` values, call sites; rows 1–4 and 6), InsertStep's two phases, the run-mode mapping (row 7), the label rule of row 8, the un-patch bin (row 10) and what the console lists after SmartSoft's edits and after its own patch and stack edits (H101). **All of it is INFERRED or DOCUMENTED today, nothing OBSERVED or VERIFIED; NOT CLEARED, never sent by our code; E12 is passive and has not been run** |
 
 **E1 and E2 are done (2026-10-28). Next: E3(a)** (see "Next capture" below). E2 turned the
 static hypotheses (poll / dirty / fetch objects) into observed facts; the text below about E2
@@ -45,7 +46,7 @@ are done; the next steps are the owner questions and the passive captures listed
 capture (proposed by the E3 analysis, 2026-10-29)" below.** **Update 2026-10-30: E3b is done (items B1–B4 of
 that list); the next steps are listed under "Next capture (proposed by the E3b analysis, 2026-10-30)" below.** **Update 2026-10-30, later: E8 is done (the
 first read-only session of our own software, see its row); the next steps are listed under "Next capture (proposed by the E8
-analysis, 2026-10-30)" below, and E9 (the runbook below) is the only path to a write mode.** **Update 2026-10-30, evening: E8b is done too (the second read-only session, see its row); the next steps are listed under "Next capture (proposed by the E8b analysis, 2026-10-30)" below; E9 stays the only path to a write mode.** **Update 2026-10-30, late evening: E9 is done too (SmartSoft writing to the console, see its row); the next steps are listed under "Next capture (proposed by the E9 analysis, 2026-10-30)" below. E9 observed the first write messages and cleared none: E9b (the repeat) and a safety check SC-2 stand between those observations and any write of ours.** **Update 2026-10-31: E9b is done too (the repeat of E9, see its row); the next steps are listed under "Next capture (proposed by the E9b analysis, 2026-10-31)" below. E9b reproduced the write framing and the most-used ConsoleEvents (VERIFIED as behaviour) and cleared nothing: SC-2 still stands between those observations and any write of ours.**
+analysis, 2026-10-30)" below, and E9 (the runbook below) is the only path to a write mode.** **Update 2026-10-30, evening: E8b is done too (the second read-only session, see its row); the next steps are listed under "Next capture (proposed by the E8b analysis, 2026-10-30)" below; E9 stays the only path to a write mode.** **Update 2026-10-30, late evening: E9 is done too (SmartSoft writing to the console, see its row); the next steps are listed under "Next capture (proposed by the E9 analysis, 2026-10-30)" below. E9 observed the first write messages and cleared none: E9b (the repeat) and a safety check SC-2 stand between those observations and any write of ours.** **Update 2026-10-31: E9b is done too (the repeat of E9, see its row); the next steps are listed under "Next capture (proposed by the E9b analysis, 2026-10-31)" below. E9b reproduced the write framing and the most-used ConsoleEvents (VERIFIED as behaviour) and cleared nothing: SC-2 still stands between those observations and any write of ours.** **Update 2026-10-31, later: E12 is planned** (a passive capture of SmartSoft editing the patch and the stack / sequences; see its row above and the "E12 runbook" below). It follows from a static pass, `smartsoft-analysis.md` S11.16, whose findings are INFERRED or DOCUMENTED and were never observed on the bus (hypotheses H91–H101). **E12 has not been run and clears nothing;** E9c / E9d (SC-2's widening) and E11 (the first live-control session of our software) keep their places in [safety-checks.md](safety-checks.md).
 *(Plan text before E2:)* **Next: E2**, the single capture that turns the static hypotheses
 (poll / dirty / fetch objects) into observed facts. Before E2 the owner must decide how to get
 `etchsp.sys` loaded (see the E2 row; resolved the same evening). The zero-risk HID listen was
@@ -189,6 +190,112 @@ functions and only into memories 9 and 10 of page 1, which are deleted again at 
 and the first OBSERVED PC → console data messages. Repeat the session once (E9b) so that the
 behaviour can be VERIFIED. Only after E9 and E9b can a safety check (SC-2) consider a type-1
 encoder limited to the whitelisted ConsoleEvents.
+
+### E12 runbook (patch and stack / sequence edits through SmartSoft, passive)
+
+*(Planned 2026-10-31 from the static pass `smartsoft-analysis.md` S11.16; not run. Hypotheses H91–H101; DOCUMENTED context F148–F150.
+Every "expected" cell below is an INFERRED prediction to compare with the bus, never an observed fact; a deviation is a finding, not an
+error. Numbering: E9c and E9d are reserved by SC-2 for the live-control widening, E11 is the first live-control session of our software.)*
+
+**Guided script:** `powershell -NoProfile -ExecutionPolicy Bypass -File tools/usb-probe/e12-guided-session.ps1 -LogFile e12-actions.txt`
+(written 2026-10-31 (`tools/usb-probe/e12-guided-session.ps1`, parse-checked), not yet committed when this section was written; its step tags A1 … J2 follow the table below). It asks the
+owner's decisions below first, takes him through the setup gate (the SD backup name, the driver, USBPcap first), starts SmartSoft itself
+three times and logs every action with the PC clock; it refuses an existing log file. **Nothing in it touches the console, and our software
+is not involved.**
+
+SmartSoft does the writing and USBPcap records it, as in E9 and E9b. Every write is one SmartSoft makes for any user, but these are not
+live controls and not one memory: they change the show's patch, the stack and a sequence, so every change is **restored in the same
+session**, the restores are captured too (they are the DeleteStep, MoveStep and un-patch messages), and two restarts of SmartSoft plus an SD
+save compared byte for byte with the backup prove the restore. Equal files prove it; a difference is a finding to examine, not
+automatically a failure, but it does mean that the console exports something different, because saves of an unchanged show were
+byte-identical (`SHOW04.ASC`, `SHOW05.ASC` and `SHOW06.ASC`; `SHOW09.ASC` equalled `SHOW07.ASC` after the E9 repair; F104, F139). No
+encoder for these objects exists in the solution (checked 2026-10-31: the only data object `HspOutbound` encodes is
+ConsoleEvent, SC-2 classes A and B1).
+
+**Test objects:** channel 47 (no DMX address, F70), DMX 100–102 (unpatched; nothing connected there), IND 1 (channel 49, no address, F115),
+memory 9 of page 1 (empty, so it can be written and emptied again, F146), the last cue of the stack, the sequence KOTLIK (page 1, fader 21,
+7 steps), page 12's name.
+
+**Setup (step 0, owner):** power-cycle the console (the pending list at connect depends on its history, H65); channel mode (FADERS 1-24 lit),
+all channel faders at zero, MASTER and BUMPS full, STACK unlit, fader 21 (KOTLIK) at zero; save the show to the SD card to a **free number**
+(safety rule 3) and note the name; interface 1 on the ETC driver (service ETCHSP; Memory Integrity off, as for E9b); USBPcap on the console's
+root hub (`-A --inject-descriptors`) into a new file **before** SmartSoft starts. Then, with 15 s idle between actions and every action
+logged by the guide:
+
+| Step | Owner action | Expected on the bus (INFERRED, never observed) | Tests |
+|---|---|---|---|
+| A1 | Start SmartSoft Online; idle 60 s | System `09 00 00` and `07 00 00`, then the 157-record download 1 (F58, F94): the baseline of every test object | baseline |
+| A2 | Open the Patch, Stack/Seq Edit, Page and Mem Edit tabs, 30 s each, touch nothing | nothing written (by analogy with opening the Simulator, F140) | — |
+| A3 | (optional, looking only, touch nothing) Is there a patch-level control in the Patch tab? A run-mode popup for the stack? A "Direct cue" option in the Insert dialog? | the owner's answers (y / n / describe) | H100, H95, H98 |
+| B1 | On the console: fader 5 to about half, REC MEM, bump 9, fader 5 to 0 | no PC write; the console lists Memory (0, 0, 8) by itself and SmartSoft fetches it (F147) | prepares memory 9 |
+| C1 | Patch tab: drag channel 47 onto DMX 100 | one Patch (5) write, 514 bytes, entry 99 = 47, every other entry as in download 1 | H91 |
+| C2 | Patch tab: drag IND 1 onto DMX 101 | a Patch (5) write with entry 100 = the IND's number (49 expected); an Independents (12) write may also follow | H91, H93 |
+| C3 | (optional) IND 1: button mode changed and changed back; GM changed and changed back | Independents (12), 85 bytes, one write per change; which record byte changes (c or d by elimination, H93) shows where the mode and GM live | H93 |
+| D1 | Stack: right-click the last cue, Insert step, Memory 01/09; log the cue number offered | InsertStep (32) with `a` = 48, then StepContent (4, new step), 13 bytes | H96, H97, H98 |
+| D2 | Right-click the cue before the last original cue, Insert step, Memory 01/09 as a point cue between them | InsertStep (32) with `a` = 48 and `b` / `c` carrying the point cue (UNKNOWN), then StepContent (4); no id 33 | H97, H98 |
+| D3 | On D1's step: Up, then Down, then Wait, one per action | one StepContent (4, step), 13 bytes, per edit | H94 |
+| D4 | On D1's step: label "T" | StepContent (4), 13 bytes, no label block (S11.16 row 8) | H94 |
+| D5 | (optional) Insert a Direct cue at the end, label "T" | InsertStep with step type 2, then StepContent (4) with levels and a label block | H94, H98, H12 |
+| E1 | KOTLIK: insert after step 7, Memory 01/09 | InsertStep (32) with `a` = 0, then Sequence (2, 0, 0), whole, 144 bytes (8 steps) | H96, H98 |
+| E2 | Change that step's Up time | Sequence (2, 0, 0), whole, 144 bytes | H94 |
+| E3 | Run mode Loop → One Shot | Sequence (2, 0, 0): body[3] 0 → 1 | H95 |
+| E4 | Label KOTLIK → KOTLIX | Sequence (2, 0, 0): the label block changes | H95 |
+| F1 | Mem Edit: memory 01/09, channel 5 to 100 % | Memory (0, 0, 8), 90 bytes, channel 5 = 0xFF (the layout of F143) | H99 |
+| F2 | Page tab: memory 01/09 name "T" | Memory (0, 0, 8), 90 bytes, label "T" | H99 |
+| F3 | (optional) Page 12's name "T" | Page (8, 11), 39 bytes | H99 |
+| G1 | Restart SmartSoft (download 2) | what the console stored of every test object (patch, stack, KOTLIX, memory 9, the names) | H91, H94, H95, H99 |
+| H | (optional, console menu, Blind) Patch DMX 102 to channel 47, then Unpatch dimmer 102; Sequences > Stack > Step Timing > one step: D1's Up time | no PC write; does the console list Patch (5) or StepContent (4), and does SmartSoft follow? | H101 |
+| I1 | Restores: page 12's name empty (if F3 was done), KOTLIK's label back, run mode Loop, Delete step on E1's step | Page (8, 11); Sequence (2, 0, 0) twice; DeleteStep (34) with `a` = 0 after "Are you sure?" | H95, H97 |
+| I2 | Drag D2's step to between the last cue and D1's step (the Move dialog), then delete D2's, D1's (and D5's) steps | MoveStep (35) and id 42; DeleteStep (34) with `a` = 48, once per step | H96, H97 |
+| I3 | Memory 9's name empty; then on the console REC MEM + bump 9 with nothing up | Memory (0, 0, 8) with an empty label; then the console lists the emptied memory (F146) | H99 |
+| I4 | Drag the DMX 101 cell, then the DMX 100 cell, onto the un-patch bin | one Patch (5) write per drop, the entry zeroed | H92 |
+| J1 | Restart SmartSoft (download 3) | equals download 1 | the restore |
+| J2 | Close SmartSoft, stop USBPcap, SD save to a new free number, compare byte for byte with the backup | identical files | the restore |
+
+The steps depend on one another: D2 and I2's move belong together (dropping D2 drops the move), D5 and its delete in I2, F3 and I1's
+page-name restore; C3 has no separate restore step (each change is changed back in place); H restores itself (Unpatch dimmer 102; the
+step-timing change goes with the deletion of D1's step in I2). The owner logs the text of any message box he sees (SmartSoft has the strings
+"No space to insert a cue here" and "No space to move a cue here", S11.16 row 16).
+
+**Never in E12:** the Simulator's wheel, Open showfile, New show, Save As, any Erase, Default times, REC SEQ, Tap mode, PAGE clicks in
+SmartSoft (H51); no save inside SmartSoft; and never a *channel* dragged onto the un-patch bin (it zeroes every address of the channel,
+S11.16 row 10): only the DMX cells I4 names. Abort rules as for E8: anything the console does that the owner did not cause ends the session
+(note the time); an edit SmartSoft refuses is not retried; never power-cycle the console to recover mid-session.
+
+**If the restore does not hold** (download 3 differs from download 1 or the J2 save from the backup): record first which object and which
+bytes differ (that is a finding), close SmartSoft, then on the console Menu>Save/Load Show: Load show (the backup), or Load patch from card
+if only the patch differs, and save again to compare. The console manual prints the menu path of "Load patch from card" as `[Save as]`, the
+same as for saving (printed p.6, F148): read the entry off the console, do not trust the printed path.
+
+**Evidence afterwards:** the action log, the USBPcap file (split to the console only, as for E9b) and the two SD files go into
+`docs/protocol/captures/` (log, split pcap, normalized JSONL) and `smartfade-sd-card-backup/`; the capture analyst writes the E12 record
+(`/record-experiment`), starting with the byte comparison; the curator then updates H91–H101 and the facts. OBSERVED needs bytes from this
+capture, VERIFIED needs a second, independent session (an E12b), and neither clears anything for sending.
+
+**Owner questions before E12** (the guide asks them first; the answers are statements and never promote):
+
+1. Do you accept that E12 changes show data on purpose (a patch address for channel 47, IND 1's address, test cues in the stack, a test step
+   in KOTLIK, its run mode and label, names, memory 9), restores it in the same session, and uses the SD backup (Load show, or Load patch from
+   card) as the fallback?
+2. Which optional steps do you want: C3 (IND 1's button mode and GM), D2 (the point cue; I2's move goes with it), D5 (a Direct cue), F3 (page
+   12's name), H (the console's own Patch by dimmer, Unpatch dimmer and Step Timing, which use the physical wheel; E3b showed that the wheel
+   can move values by accident)?
+3. Which free SD numbers for the backup (before) and for the final save (after)?
+4. Is nothing connected at DMX 100, 101 and 102 (the rig is DMX 5–16)?
+5. A console power cycle beforehand?
+6. An offline dry run of SmartSoft first, with the USB cable unplugged (zero risk), to find the Patch, Stack/Seq Edit, Page and Mem Edit
+   controls, the Insert and Move dialogs and the answers to A3?
+
+**What E12 cannot answer** (open unknowns, S11.16 "Open"): whether the console accepts these writes from a host that never sent the System
+pair (H66 for writes; only sending can tell, and SmartSoft always sends the pair first); how it handles a malformed or short body; what id 42
+means (E12 can show its bytes and its place next to MoveStep, not its meaning); which sequence step number the console's display shows (H43);
+whether a proportional patch level exists anywhere (the Patch object has none, F70; A3 only shows whether SmartSoft offers one); what `b` and
+`c` of InsertStep carry beyond what the logged dialog entries imply; what triggers phase 2 of InsertStep; whether label residue can be cleared
+(F144).
+
+**E12 clears no message:** SC-1's poll and listed fetch remain the only messages cleared for a read-only session, SC-2's classes are
+unchanged (Patch and Independents stay class F, "Never"; the stack, sequence and page writes are in none of its classes), and a write of
+these objects by our code would need its own safety check, a full body decode and a restore story first.
 
 ### Next capture (proposed by the E2 analysis, 2026-10-28)
 

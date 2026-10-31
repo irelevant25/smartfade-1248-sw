@@ -118,6 +118,14 @@ HYPOTHESIS: `a` = sequence index (0–47 = sequence faders 12 pages × 4, 48 = m
 `b` = run mode / type (2 for stack). `d`,`e` = rate/fade overrides where 256 = 100 %
 (Ostrov `638` ≈ 249 %?). **All UNKNOWN until E6.**
 
+**Update 2026-10-31 (static pass, `docs/protocol/smartsoft-analysis.md` S11.16 rows 3 and 7; INFERRED, no status change):** the
+researcher reads SmartSoft's run-mode popup as setting `b` to 0 Loop, 1 One Shot, 2 Manual (the console's meaning is HYPOTHESIS,
+H95), so `b` = 2 on the stack would read "Manual" and `b` = 0 on KOTLIK "Loop". The console manual (printed p.51, known-facts F149)
+lists the sequence run modes as Manual, One Shot, Loop (default) and says the Stack's run mode "is determined by the wait times
+recorded in the Stack steps", so the stack's `b` = 2 may be something else. The researcher's addressing of the step commands (a = page × 4 + slot for a
+sequence and 48 for the stack, row 3) agrees with the HYPOTHESIS on `a` above. Both readings are tested by the planned capture
+E12 (reverse-engineering.md), not by an SD save; nothing here is a reason to write `b` in a file other than as read.
+
 Sequence label: `Text KOTLIK` + `$$Text 1 KOTLIK` / `$$Text 2 ` / `$$Text 3 ` directly after the header.
 
 ### Step record (`CUE` in main stack, `$CUE` in sequences)
