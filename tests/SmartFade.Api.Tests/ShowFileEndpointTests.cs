@@ -8,6 +8,15 @@ namespace SmartFade.Api.Tests;
 /// <summary>The show-file page's endpoint: the committed Ostrov sample goes in as bytes and comes back as the DTO; nothing touches the console.</summary>
 public class ShowFileEndpointTests
 {
+    [Fact]
+    public void The_derived_label_text_renders_an_entity_as_a_question_mark()
+    {
+        // SHOW15.ASC (E12b): a full first line with an entity continues into lines 2 and 3, and the console writes '?' for the entity
+        Assert.Equal("?AJ12345678901234", ShowFileRules.LabelText("&#268;AJ123", "456789", "01234"));
+        Assert.Equal("PREDNA", ShowFileRules.LabelText("PREDNA", "", "&#268;ERVEN"));   // KAIMO: the entity never reaches the derived line
+        Assert.Equal(6, ShowFileRules.LabelLength("&#268;AJ123"));
+    }
+
     private static string RepositoryRoot { get; } = FindRepositoryRoot();
 
     private static string OstrovSample => Path.Combine(RepositoryRoot, "smartsoft-source-materials", "example lighting output file - Ostrov - 16.09.2026.asc");

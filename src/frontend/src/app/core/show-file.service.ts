@@ -390,7 +390,22 @@ export const LABEL_LINE_PATTERN = /^[ -%'-~]*$/;
  * line 1, then line 2 only when line 1 is full (6 characters), then line 3 only when line 2 is full too.
  */
 export function labelText(line1: string, line2: string, line3: string): string {
-  return line1.length < LABEL_LINE_LENGTH ? line1 : line2.length < LABEL_LINE_LENGTH ? line1 + line2 : line1 + line2 + line3;
+  const text =
+    labelLength(line1) < LABEL_LINE_LENGTH
+      ? line1
+      : labelLength(line2) < LABEL_LINE_LENGTH
+        ? line1 + line2
+        : line1 + line2 + line3;
+  // an HTML numeric entity (the console's form of a character outside ASCII, `&#268;` = Č) is one character and
+  // becomes '?' in the derived line (SHOW15.ASC, E12b, observed once)
+  return text.replace(ENTITY_PATTERN, '?');
+}
+
+const ENTITY_PATTERN = /&#[0-9]+;/g;
+
+/** Characters as the console counts them: an entity is one. */
+export function labelLength(line: string): number {
+  return line.replace(ENTITY_PATTERN, 'x').length;
 }
 
 /**

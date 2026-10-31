@@ -291,6 +291,8 @@ describe('ShowFilePageComponent', () => {
     expect(labelText('NOC 3', 'MORE', '')).toBe('NOC 3');
     expect(labelText('LAFIAO', 'GULA', '')).toBe('LAFIAOGULA');
     expect(labelText('BLUE 2', 'HVIRZD', 'X')).toBe('BLUE 2HVIRZDX');
+    expect(labelText('&#268;AJ123', '456789', '01234')).toBe('?AJ12345678901234'); // SHOW15.ASC: an entity is one character and renders as '?'
+    expect(labelText('PREDNA', '', '&#268;ERVEN')).toBe('PREDNA');
     expect(parseChannelPairs('7/100 15/8')).toEqual([{ channel: 7, percent: 100 }, { channel: 15, percent: 8 }]);
     expect(parseChannelPairs('  ')).toEqual([]);
     expect(parseChannelPairs('7-100')).toBeUndefined();

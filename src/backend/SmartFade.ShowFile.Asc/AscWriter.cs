@@ -146,6 +146,11 @@ public static class AscWriter
             {
                 yield return line;
             }
+
+            // A step that carries a label block ends with two blank lines, like memories and pages: the one here and the
+            // caller's (SHOW15.ASC, E12b, 2026-10-31: the "State" step 13.1, the only labelled step seen in a console-written
+            // file; OBSERVED once).
+            yield return string.Empty;
         }
     }
 

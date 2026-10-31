@@ -190,10 +190,12 @@ public static partial class ShowFileRules
     /// <summary>
     /// The <c>Text</c> line of a label block as the console derives it from the three <c>$$Text n</c> lines (4 282 of
     /// 4 282 blocks in 34 files): line 1, followed by line 2 only when line 1 is full (6 characters), followed by line 3
-    /// only when line 2 is full too. The reading of a full line with an entity in it is HYPOTHESIS (no such line exists).
+    /// only when line 2 is full too. A line with an entity counts the entity as one character, and in the derived line the
+    /// console writes <c>?</c> for it: SHOW15.ASC (E12b, 2026-10-31) has <c>$$Text 1 &amp;#268;AJ123</c>, a full line, followed by
+    /// lines 2 and 3 in the derived text as <c>Text ?AJ12345678901234</c> (OBSERVED once; before that file no full line held an entity).
     /// </summary>
     public static string LabelText(string line1, string line2, string line3) =>
-        LabelLength(line1) < LabelLineLength ? line1 : LabelLength(line2) < LabelLineLength ? line1 + line2 : line1 + line2 + line3;
+        EntityPattern().Replace(LabelLength(line1) < LabelLineLength ? line1 : LabelLength(line2) < LabelLineLength ? line1 + line2 : line1 + line2 + line3, "?");
 
     /// <summary>Characters as the console counts them: <c>&amp;#268;</c> (one file writes Č so) is one.</summary>
     public static int LabelLength(string line) => EntityPattern().Replace(line, "x").Length;
