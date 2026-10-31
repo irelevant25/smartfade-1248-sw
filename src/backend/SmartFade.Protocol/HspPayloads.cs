@@ -32,9 +32,10 @@ public sealed record HspInboundPayload(byte Sequence, byte Byte1, ushort BodyLen
 
 /// <summary>
 /// PC → console payload as SmartSoft sends it after a Data header: [seq][u16 LE body length]
-/// [object id][body] (VERIFIED for SmartSoft's two System writes, F54 / F58). Decoder only.
+/// [object id][body] (VERIFIED for SmartSoft's two System writes, F54 / F58, and its ConsoleEvents, F131).
+/// A decoder: the only outbound payloads our code builds are <see cref="HspOutbound"/>'s ConsoleEvents.
 /// </summary>
-[Evidence(EvidenceStatus.Verified, "F54, F58", "layout as sent by SmartSoft; not clearance to send")]
+[Evidence(EvidenceStatus.Verified, "F54, F58, F131", "layout as sent by SmartSoft (the System writes and the ConsoleEvents); not clearance to send")]
 public sealed record HspOutboundPayload(byte Sequence, ushort BodyLength, int ObjectId, ReadOnlyMemory<byte> Body)
 {
     public const int HeaderSize = 4;

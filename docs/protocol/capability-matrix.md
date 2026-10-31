@@ -89,7 +89,7 @@ sent may; what the UI shows at a given commit is a separate question that this p
 a PC **writes** to the console: SmartSoft Online, driven by the owner through its Console Simulator and recorded passively by
 USBPcap (28 minutes, 401 data writes); our software sent nothing. **53 facts are VERIFIED** in all (F93, F94 for its structure,
 F97 for BUMPS 0xFF and F103 added, each E3b + E9). **The write columns now say what SmartSoft sends, OBSERVED once and NOT
-CLEARED:** every Implemented? and Tested? cell below stays **No**, no type-1 data header is encoded anywhere in the solution,
+CLEARED:** every Implemented? and Tested? cell below stays **No**, no type-1 data header is encoded anywhere in the solution *(Superseded 2026-10-31, later the same day: the owner implemented SC-2's whitelist in `HspOutbound` and `HspReadSession`, sent only by a session with live control switched on for the day (`Device:Usb:LiveControlDate`); reviewed under SC-2 item 10, NEEDS CHANGES at the first pass, see safety-checks.md; nothing is cleared for sending before E11 on the owner's go.)*,
 and a future safety check SC-2, after the repeat E9b, is the gate. Live control is the ConsoleEvent message: kind 0 for a fader,
 `[00][index][value][previous]`, with the indices 0x00 = channel fader 1, 0x06 = channel fader 7 (inside EDIT MEM), 0x30 = MASTER
 and 0x31 = BUMPS; kind 1 for a key, `[01][code][01 on press, 00 on release]`, 13 codes seen (F132, F133). The console answers as

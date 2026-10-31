@@ -15,8 +15,8 @@ public sealed class ConsoleStateStore
 {
     private readonly object _gate = new();
     private readonly ConsoleCapabilities _capabilities;
-    private readonly DeviceCommands _supportedCommands;
-    private readonly IReadOnlySet<string>? _writableControls;
+    private DeviceCommands _supportedCommands;
+    private IReadOnlySet<string>? _writableControls;
     private readonly byte[] _desired;
     private readonly byte[] _actual;
     private readonly byte[] _output;
@@ -55,6 +55,16 @@ public sealed class ConsoleStateStore
     }
 
     public ConsoleCapabilities Capabilities => _capabilities;
+
+    /// <summary>The device's commands and writable controls as of now (a device may change them between connections, e.g. live control expiring at midnight).</summary>
+    public void SetCommands(DeviceCommands supportedCommands, IReadOnlySet<string>? writableControls)
+    {
+        lock (_gate)
+        {
+            _supportedCommands = supportedCommands;
+            _writableControls = writableControls;
+        }
+    }
 
     public ConnectionState Connection
     {

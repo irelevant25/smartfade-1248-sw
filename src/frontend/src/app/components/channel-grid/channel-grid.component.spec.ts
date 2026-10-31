@@ -190,17 +190,21 @@ describe('ChannelGridComponent', () => {
     beforeEach(() => {
       state.applyConsoleStateChanged(
         createSampleState({
+          connection: { ...createSampleState().connection, mode: 'hardware' },
           supportedCommands: ['setChannelLevel', 'bumpChannel'],
-          writableControls: ['channelFader:1', 'channelBump:7'],
+          writableControls: ['channelFader:2', 'channelBump:7'],
         }),
       );
       fixture.detectChanges();
     });
 
-    it('moves only channel fader 1 and enables only bump 7, as the device reports', () => {
-      expect(sliders()[0].disabled).toBe(false);
-      expect(sliders().slice(1).every((slider) => slider.disabled)).toBe(true);
+    it('moves only channel fader 2, from the level the console reports, and enables only bump 7', () => {
+      expect(sliders()[1].disabled).toBe(false);
+      expect(sliders().filter((_, index) => index !== 1).every((slider) => slider.disabled)).toBe(true);
       expect(element().querySelectorAll('.fader--readonly')).toHaveLength(47);
+      // channel 2 is reported at 64 although 128 was asked: the drag starts from the console's level (SC-2 condition 6)
+      const sample = createSampleState().channels[1];
+      expect(sliders()[1].valueAsNumber).toBe(sample.pending ? sample.desired : sample.actual);
       const bumps = bumpButtons();
       expect(bumps[6].disabled).toBe(false);
       expect(bumps.filter((_, index) => index !== 6).every((button) => button.disabled)).toBe(true);

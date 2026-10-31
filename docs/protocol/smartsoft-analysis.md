@@ -938,7 +938,7 @@ Question: by which messages can a PC change anything on the console, and which o
 GUI actually use? Static work only (`protocol-researcher`, x86_probe + capstone/pefile; Ghidra was
 not available in that session), on the same binaries as above (`sfEngine.dll` 3228bd9b…7983,
 `SmartSoft.exe` 4c4c9cf7…8c01). Nothing here is cleared for sending; SC-1 clears the poll and the
-listed fetch only, and no type-1 data header is encoded anywhere in the solution. Addresses are VAs.
+listed fetch only, and no type-1 data header is encoded anywhere in the solution *(Superseded 2026-10-31, later the same day: the owner implemented SC-2's whitelist in `HspOutbound` and `HspReadSession`, sent only by a session with live control switched on for the day (`Device:Usb:LiveControlDate`); reviewed under SC-2 item 10, NEEDS CHANGES at the first pass, see safety-checks.md; nothing is cleared for sending before E11 on the owner's go.)*. Addresses are VAs.
 
 | # | Finding | Status | Evidence |
 |---|---|---|---|

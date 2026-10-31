@@ -69,7 +69,7 @@ pairs), two ChannelText writes (byte-identical to E9's) and **one Memory (0) who
 Where E9b reproduced E9, the Status cells below read **VERIFIED as SmartSoft's behaviour** (F131–F134, F138): SmartSoft and the
 console were seen to behave so in two sessions, **never that we may send the message**. New in E9b: fader index 0x04, the key
 codes 0x37, 0x3B, 0x47 and 0x48, and the Memory (0) row (OBSERVED once). **E9b clears no message:** SC-1's poll and listed fetch
-remain the only messages cleared, no type-1 data header is encoded anywhere in the solution, and SC-2 is the gate for any write.
+remain the only messages cleared, no type-1 data header is encoded anywhere in the solution *(Superseded 2026-10-31, later the same day: the owner implemented SC-2's whitelist in `HspOutbound` and `HspReadSession`, sent only by a session with live control switched on for the day (`Device:Usb:LiveControlDate`); reviewed under SC-2 item 10, NEEDS CHANGES at the first pass, see safety-checks.md; nothing is cleared for sending before E11 on the owner's go.)*, and SC-2 is the gate for any write.
 
 | Message | Bytes as seen | Count in E2 (E3) | Effect observed | Status | Facts |
 |---|---|---|---|---|---|

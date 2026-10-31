@@ -6,6 +6,15 @@ using SmartFade.Protocol.Objects;
 namespace SmartFade.Devices.Usb;
 
 /// <summary>
+/// The fader mode, bank and memory page as ConsoleStatus last reported them: body[0] = 0x00 channel mode / 0x01 memory
+/// mode (F87, F98), body[4] = 0x00 bank 1-24 / 0x01 bank 25-48 (F98), body[2] = the memory page − 1 (F113, VERIFIED for
+/// the structure, E8 + E8b). The mode and bank bytes are OBSERVED; their readings as mode and bank are HYPOTHESIS,
+/// strongly supported (H53). Used only to refuse (live control keeps each control in the state it was seen in), never
+/// to send.
+/// </summary>
+public sealed record ReportedFaderMode(bool MemoryMode, bool Bank25To48, int MemoryPage);
+
+/// <summary>
 /// Turns the objects the console delivers into the application's actual state, for display.
 /// No transmitted byte depends on anything here (the session sends from F51–F57 alone); the
 /// readings below are inbound decoding at the status their facts carry, and nothing is reported
@@ -24,6 +33,8 @@ namespace SmartFade.Devices.Usb;
 /// - MASTER = FaderInfo body[194] (VERIFIED in part, F82); BUMPS = body[193] (OBSERVED, one session, F95);
 /// - SOLO = LedStatus block 52 all 0xFF (INFERRED from one press / release pair, F100);
 /// - file name (VERIFIED F60, follows the last save F103) and firmware version (VERIFIED F59);
+/// - key LEDs (<see cref="Keys"/>) and the fader mode (<see cref="FaderMode"/>): live control's interlocks read them
+///   (SC-2 condition 5), only ever to refuse a write;
 /// - memories: Memory objects give a page and fader from their qualifiers (0-based a, b; whether
 ///   they are the physical page and fader is OPEN, H25), the label text (OBSERVED F73; byte order
 ///   HYPOTHESIS H40) and the levels (VERIFIED bodies F71, scale OBSERVED F72). "Recorded" is read as
@@ -50,6 +61,7 @@ public sealed class ConsoleStateAssembler
     private bool _pageReported;
     private bool _functionScreen;
     private PanelKeys? _keys;
+    private ReportedFaderMode? _faderMode;
     private CrossfaderState? _crossfader;
     private string? _showFileName;
     private string? _firmwareVersion;
@@ -80,6 +92,12 @@ public sealed class ConsoleStateAssembler
     public Masters? Masters => _masters;
 
     public IReadOnlyList<byte> ChannelLevels => _channelLevels;
+
+    /// <summary>The key LEDs as last reported (LedStatus; identities INFERRED, H72; patterns F116, F117); null until LedStatus has arrived in this session.</summary>
+    public PanelKeys? Keys => _keys;
+
+    /// <summary>The fader mode, bank and memory page as ConsoleStatus last reported them; null until it has arrived, or when it carried a value never observed.</summary>
+    public ReportedFaderMode? FaderMode => _faderMode;
 
     /// <summary>Applies one delivered object; returns the change to report, or null when the object carries nothing the state model holds.</summary>
     public DeviceStateChange? Apply(ObjectReceived received)
@@ -240,6 +258,11 @@ public sealed class ConsoleStateAssembler
     {
         var raw = status.Raw.Span;
         _memoryMode = raw.Length > 0 && raw[0] == 1;
+
+        // Only the values seen (0x00 / 0x01 for mode and bank, F98) make a reading; anything else leaves it unknown.
+        _faderMode = raw.Length > 4 && raw[0] <= 1 && raw[4] <= 1
+            ? new ReportedFaderMode(MemoryMode: raw[0] == 1, Bank25To48: raw[4] == 1, MemoryPage: raw[2] + 1)
+            : null;
         if (raw.Length < 3)
         {
             return null;

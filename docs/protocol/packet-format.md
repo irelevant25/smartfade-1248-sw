@@ -59,7 +59,7 @@ pair**: 401 writes, each a type-1 header and one payload, for the ids 39, 20 (Co
 held for all of them: header `01 00 [w1 LE] [w2 … w5]` with the stale words in 401 of 401, payload `[pseq][u16 LE len = w1 − 4][id][body]`,
 SmartSoft's sequence byte +1 per data payload across all ids with one wrap and 0 gaps, USBD status 0, 0 framing errors; the inbound
 framing held again (894 payloads, byte 1 = 0x00, four wraps, the first pseq 245 continuing E8b's 244). The write shapes are
-**OBSERVED once** (F131) and **NOT CLEARED**: nothing here clears a message, no type-1 header is encoded anywhere in the solution, and
+**OBSERVED once** (F131) and **NOT CLEARED**: nothing here clears a message, no type-1 header is encoded anywhere in the solution *(Superseded 2026-10-31, later the same day: the owner implemented SC-2's whitelist in `HspOutbound` and `HspReadSession`, sent only by a session with live control switched on for the day (`Device:Usb:LiveControlDate`); reviewed under SC-2 item 10, NEEDS CHANGES at the first pass, see safety-checks.md; nothing is cleared for sending before E11 on the owner's go.)*, and
 the messages with their exact bytes are in [commands.md](commands.md) "PC → console data writes seen in E9". The first records with
 c ≠ 0 appeared in E9's DirtyObjects lists (four System records, F137).
 
@@ -70,7 +70,7 @@ exactly w1 bytes 0.067–0.254 ms later, w1 = 7, 8, 43 and **94** (the Memory wr
 per data payload across all ids, one wrap (seq 39860 → 39866), 0 gaps, USBD status 0, 0 framing errors; the inbound framing held (1 604
 payloads, six wraps, byte 1 = 0x00, the first pseq 0x00 after the power cycle and continuous across both restarts). The write framing is
 now **VERIFIED as SmartSoft's and the console's behaviour** (F131, E9 + E9b), which is **not clearance**: nothing here clears a message,
-no type-1 header is encoded anywhere in the solution, and the messages with their exact bytes are in [commands.md](commands.md)
+no type-1 header is encoded anywhere in the solution *(Superseded 2026-10-31, later the same day: the owner implemented SC-2's whitelist in `HspOutbound` and `HspReadSession`, sent only by a session with live control switched on for the day (`Device:Usb:LiveControlDate`); reviewed under SC-2 item 10, NEEDS CHANGES at the first pass, see safety-checks.md; nothing is cleared for sending before E11 on the owner's go.)*, and the messages with their exact bytes are in [commands.md](commands.md)
 "PC → console data writes seen in E9" (the section keeps its heading; it holds the E9b rows too).
 
 ## Transport

@@ -3,7 +3,7 @@ using SmartFade.Protocol;
 namespace SmartFade.Devices.Usb;
 
 /// <summary>
-/// Settings of the read-only USB device ("Device:Usb"). The timings default to what SmartSoft
+/// Settings of the USB device ("Device:Usb"), read-only unless <see cref="LiveControlDate"/> names today. The timings default to what SmartSoft
 /// was measured doing on the owner's PC: F62 (idle poll-to-poll median ≈ 31 ms, next poll
 /// ≥ 10.3 ms after a fetch) and the 2026-10-30 re-count with `tools/protocol-analyzer/poll_rules.py`
 /// over E2, E3 and E3b (poll submit to poll submit: min 20.59 ms, median 30.8–31.2 ms, n = 38 512;
@@ -11,9 +11,13 @@ namespace SmartFade.Devices.Usb;
 /// completion to fetch submit: min 20.53 ms, median 28.3–28.8 ms, n = 1 651). These are OBSERVED
 /// per-session host figures, not console limits (F62): the console has never been driven faster,
 /// so the loop treats the observed minimums as floors, rounded up, and the settings can only make
-/// it slower.
+/// it slower. The write floors (live control, SC-2) come from SmartSoft's 828 writes in E9 and E9b,
+/// counted on 2026-10-31 with `tools/protocol-analyzer/write_rules.py`: poll to the next write min 29.81 ms,
+/// a write to the next poll or fetch min 14.51 ms, write to write min 44.77 ms, a key's press to its
+/// release min 45.63 ms.
 /// </summary>
 [Evidence(EvidenceStatus.Observed, "F62, poll_rules.py 2026-10-30", "SmartSoft's host-side cadence used as floors; the console's own limits are UNKNOWN")]
+[Evidence(EvidenceStatus.Observed, "F131, write_rules.py 2026-10-31 (E9, E9b)", "SmartSoft's write spacing used as floors for live control (SC-2 condition 7)")]
 public sealed class UsbDeviceOptions
 {
     public const string SectionName = "Device:Usb";
@@ -27,8 +31,17 @@ public sealed class UsbDeviceOptions
         /// <summary>Fetch submit to the next poll submit: min 10.35 ms over 1 651 fetches (F62 measures ≥ 10.30 ms from the fetch's completion).</summary>
         public const int PollAfterFetch = 11;
 
-        /// <summary>Payload completion to the next fetch submit: min 20.53 ms over 1 651 fetches.</summary>
+        /// <summary>Payload completion to the next fetch submit: min 20.53 ms over 1 651 fetches. Also the least gap between a payload and a write (E9b min 20.53 ms after an object, 828 writes).</summary>
         public const int FetchDelay = 21;
+
+        /// <summary>Poll submit to the next write submit (a write takes the poll's slot): min 29.81 ms over 828 writes (E9 401, E9b 427).</summary>
+        public const int WriteAfterPoll = 30;
+
+        /// <summary>Write payload to the next poll or fetch submit: min 14.51 ms (E9; E9b 14.69 ms), 13.63 ms from the payload's completion (E9b).</summary>
+        public const int PollAfterWrite = 15;
+
+        /// <summary>Write to the next write, header submit to header submit: min 44.77 ms between any two writes (E9; E9b 45.55 ms) and 45.63 ms from a key's press to its release (E9; E9b 45.88 ms), the larger rounded up.</summary>
+        public const int WriteInterval = 46;
     }
 
     /// <summary>Idle poll cadence; SmartSoft's median was 31 ms.</summary>
@@ -39,6 +52,12 @@ public sealed class UsbDeviceOptions
 
     /// <summary>Delay between a received payload and the next fetch; SmartSoft's median was 28 ms.</summary>
     public int FetchDelayMilliseconds { get; set; } = 28;
+
+    /// <summary>Delay between a write and the poll or fetch after it; SmartSoft's median was 15.4 ms (E9, E9b).</summary>
+    public int PollAfterWriteMilliseconds { get; set; } = 15;
+
+    /// <summary>Least time from one write to the next; SmartSoft's writes in a burst were a median 61.8 ms apart (E9b), and one write per poll cycle (31 + 15 ms) gives 46 ms.</summary>
+    public int WriteIntervalMilliseconds { get; set; } = 46;
 
     /// <summary>How long a reply may take before the session is abandoned (the console answered within 12 ms in every capture).</summary>
     public int ReplyTimeoutMilliseconds { get; set; } = 500;
@@ -57,14 +76,27 @@ public sealed class UsbDeviceOptions
     /// </summary>
     public string? ConfirmDate { get; set; }
 
-    // TODO (SC-2 item 6): the write switch with its own date (for example LiveControlDate), checked at start-up in
-    // ServiceCollectionExtensions next to ConfirmDate and again at Connect; absent or stale, the device stays read-only.
+    /// <summary>
+    /// The write switch of live control (SC-2 item 6): the local date (yyyy-MM-dd) for which ConsoleEvents of SC-2's
+    /// whitelist may be sent, and of it only what SmartSoft was seen to send from the PC (channel fader 1, MASTER, BUMPS;
+    /// bump 7, memory bump 1, GO, SOLO, BLACKOUT, FADERS 1-24, MEMS; see <see cref="UsbSmartFadeDevice"/>). It works only on top of the read-only mode (`Device:Mode=Usb` and <see cref="ConfirmDate"/> for today);
+    /// the backend refuses to start when it is set to any other day or without that mode, and the device checks it
+    /// again at Connect and at every command. Absent, or stale at Connect, the device stays read-only. Never a default.
+    /// </summary>
+    public string? LiveControlDate { get; set; }
 
     public TimeSpan PollInterval => TimeSpan.FromMilliseconds(Math.Max(PollIntervalMilliseconds, Floors.PollInterval));
 
     public TimeSpan PollAfterFetch => TimeSpan.FromMilliseconds(Math.Max(PollAfterFetchMilliseconds, Floors.PollAfterFetch));
 
     public TimeSpan FetchDelay => TimeSpan.FromMilliseconds(Math.Max(FetchDelayMilliseconds, Floors.FetchDelay));
+
+    /// <summary>A write takes the poll's slot: the poll cadence, never below the 30 ms floor.</summary>
+    public TimeSpan WriteAfterPoll => TimeSpan.FromMilliseconds(Math.Max(PollIntervalMilliseconds, Floors.WriteAfterPoll));
+
+    public TimeSpan PollAfterWrite => TimeSpan.FromMilliseconds(Math.Max(PollAfterWriteMilliseconds, Floors.PollAfterWrite));
+
+    public TimeSpan WriteInterval => TimeSpan.FromMilliseconds(Math.Max(WriteIntervalMilliseconds, Floors.WriteInterval));
 
     public TimeSpan ReplyTimeout => TimeSpan.FromMilliseconds(Math.Clamp(ReplyTimeoutMilliseconds, 50, 10_000));
 }

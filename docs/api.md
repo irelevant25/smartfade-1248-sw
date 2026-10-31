@@ -96,6 +96,7 @@ interface ConsoleStateDto {
                                                     // "clearChannels", "clearMemories"); a real console may report
                                                     // none (H6 open): the UI disables the rest
   writableControls: string[] | null;                // the individual controls the device accepts commands for, or null
+                                                    // (a real console with live control, SC-2, names its whitelist here)
                                                     // when every control of a supported command's kind is accepted (the
                                                     // simulator). Names: "channelFader:N" / "channelBump:N" (N = 1..48),
                                                     // "memoryFader:N" / "memoryBump:N" (N = memory number 1..288),

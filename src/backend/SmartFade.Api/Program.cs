@@ -30,6 +30,12 @@ if (!usbMode && !string.Equals(deviceMode, "Simulated", StringComparison.Ordinal
         $"Device:Mode '{deviceMode}' is not available. Use 'Simulated' (default) or 'Usb' (the real console, read-only, safety check SC-1).");
 }
 
+// Live control (SC-2 item 6): a separate write switch with its own date, only on top of the USB mode confirmed for
+// today; set for another day or without that mode, the backend refuses to start. Absent, the USB device is read-only.
+SmartFade.Devices.Usb.ServiceCollectionExtensions.ValidateLiveControlDate(
+    builder.Configuration["Device:Usb:LiveControlDate"], usbMode, DateOnly.FromDateTime(DateTime.Now));
+var liveControl = usbMode && !string.IsNullOrWhiteSpace(builder.Configuration["Device:Usb:LiveControlDate"]);
+
 var allowedOrigins = builder.Configuration.GetSection("Security:AllowedOrigins").Get<string[]>()
     ?? new[] { "http://localhost:4200", "http://localhost:5160", "http://127.0.0.1:5160" };
 
@@ -136,12 +142,16 @@ app.MapPost("/api/showfile/render", (ShowFileDto dto) =>
 
 app.MapHub<ConsoleHub>("/hubs/console");
 
-if (usbMode)
+if (liveControl)
+{
+    app.Logger.LogWarning("HARDWARE MODE, LIVE CONTROL (SC-2): the backend will talk to the real console when Connect is pressed; besides the poll and the listed fetch (SC-1) it sends the whitelisted live controls, behind the record-function interlock. Back up the show first.");
+}
+else if (usbMode)
 {
     app.Logger.LogWarning("HARDWARE MODE (read-only): the backend will talk to the real console when Connect is pressed; only the poll and the listed fetch are sent (SC-1). Back up the show first.");
 }
 
-app.Logger.LogInformation("SmartFade backend {Version} starting in {Mode} mode", backendVersion, usbMode ? "Usb (hardware, read-only)" : "Simulated");
+app.Logger.LogInformation("SmartFade backend {Version} starting in {Mode} mode", backendVersion, liveControl ? "Usb (hardware, live control)" : usbMode ? "Usb (hardware, read-only)" : "Simulated");
 app.Run();
 
 /// <summary>Makes the entry point visible to WebApplicationFactory in the API tests.</summary>

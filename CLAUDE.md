@@ -30,8 +30,11 @@ console's firmware.
   is a conditional GO for building and reviewing a live-control encoder bounded to the fader indices
   0x00, 0x30, 0x31 and eight live key codes, with the first write session E11 on the owner's go; it
   clears nothing for sending until its conditions are met, and it is a NO-GO for the record keys, the
-  label and memory writes and the System pair. Nothing else is cleared, and no type-1 header is
-  encoded anywhere in the solution yet.
+  label and memory writes and the System pair. Nothing else is cleared. The owner implemented SC-2's
+  whitelist on 2026-10-31 (`HspOutbound`, `HspReadSession`, `UsbSmartFadeDevice`), sent only by a session
+  with `Device:Usb:LiveControlDate` = today on top of the read-only mode; the first safety review (SC-2
+  item 10) found changes still open, so nothing may be sent before they are fixed, re-checked and the
+  owner gives the go for E11. Claude never writes that code (see "Current state").
 - Never touch the console bootloader / firmware update path.
 - Never retry commands with side effects blindly.
 - Golden protocol tests may only use bytes from a committed capture in `docs/protocol/captures/`.
@@ -213,7 +216,10 @@ updated after E9b"). **SC-2 ran the same day** (`docs/protocol/safety-checks.md`
 only) and class B1 (eight live key codes: bumps 1 / 7 / 9, GO, SOLO, BLACKOUT, FADERS 1-24, MEMS) to build and review an encoder with golden tests over E9 and
 E9b and to run the first write session E11 on the owner's go, under a separate write switch, a typed whitelist, press / release as one operation, no write while
 a record function is armed, no retries; NO-GO for the record keys from the PC (SC-3, after the owner's written acceptance per key and a second capture E9c),
-for ChannelText and Memory writes and for the System pair; never for the paths of F121. Nothing is encoded or sent yet. Next: "Next capture (proposed by the
+for ChannelText and Memory writes and for the System pair; never for the paths of F121. **The owner implemented classes A and B1 the same
+day** (the SC-2 "Implementation" section): the first `protocol-safety-reviewer` pass (item 10) found NEEDS CHANGES (one blocker, fixed as tags
+the same day; majors 1, 2 and 6 and several minors open on the owner's side; majors 3, 4, 5 fixed the same day); nothing is sent before the
+re-check passes and the owner gives the go for E11. Next: "Next capture (proposed by the
 E9b analysis, 2026-10-31)" in `reverse-engineering.md`, and E9c / E11 as SC-2 lists them.
 
 ## Commands
@@ -272,6 +278,12 @@ default) and shows HARDWARE in the UI; it is never the default, any other `Devic
 refuses to start, and it is run only as the E8 runbook says (backup first). The golden tests locate the captures by walking up to
 `SmartFade.sln`, so run them from a checkout. Port 5000 is taken by another application on the
 owner's PC.
+**Live control (SC-2 classes A and B1, the owner's implementation; not before the re-check and E11's go):**
+`dotnet run --project src/backend/SmartFade.Api -- --Device:Mode=Usb --Device:Usb:ConfirmDate=yyyy-MM-dd --Device:Usb:LiveControlDate=yyyy-MM-dd`
+(both dates today, or the backend refuses to start; set without `Device:Mode=Usb` it refuses too) adds the whitelisted
+ConsoleEvents (channel fader 1, MASTER, BUMPS, bump 7, memory bump 1, SOLO, BLACKOUT) behind the record-function
+interlock, shows LIVE CONTROL beside HARDWARE and names the writable controls to the UI; everything else stays as
+in the read-only mode. Run only as the SC-2 E11 script says (backup first, USBPcap in parallel).
 
 ## Working style
 

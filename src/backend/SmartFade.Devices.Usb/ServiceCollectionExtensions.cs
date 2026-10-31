@@ -11,9 +11,9 @@ namespace SmartFade.Devices.Usb;
 public static class ServiceCollectionExtensions
 {
     /// <summary>
-    /// Registers the read-only USB device as the <see cref="ISmartFadeDevice"/>. Only reachable
-    /// through the explicit configuration `Device:Mode=Usb` confirmed for the day
-    /// (`Device:Usb:ConfirmDate`); the pipe is opened on Connect, never at start-up, and only on
+    /// Registers the USB device as the <see cref="ISmartFadeDevice"/> (read-only, or with live control when
+    /// `Device:Usb:LiveControlDate` names today, SC-2). Only reachable through the explicit configuration
+    /// `Device:Mode=Usb` confirmed for the day (`Device:Usb:ConfirmDate`); the pipe is opened on Connect, never at start-up, and only on
     /// the console's interface 1 bound to WinUSB (Zadig, owner action). A hosted service stops a
     /// running session when the host shuts down.
     /// </summary>
@@ -43,6 +43,32 @@ public static class ServiceCollectionExtensions
     /// </summary>
     public static bool IsConfirmedForToday(string? confirmDate, DateOnly today) =>
         DateOnly.TryParseExact(confirmDate, "yyyy-MM-dd", out var date) && date == today;
+
+    /// <summary>
+    /// The start-up check of live control's write switch (SC-2 item 6), next to <see cref="IsConfirmedForToday"/>:
+    /// absent, the device is read-only; set, it must name today and come with `Device:Mode=Usb` (whose own
+    /// `Device:Usb:ConfirmDate` check stays as it is), or the backend refuses to start. The device checks the date
+    /// again at Connect and at every command.
+    /// </summary>
+    public static void ValidateLiveControlDate(string? liveControlDate, bool usbMode, DateOnly today)
+    {
+        if (string.IsNullOrWhiteSpace(liveControlDate))
+        {
+            return;
+        }
+
+        if (!usbMode)
+        {
+            throw new InvalidOperationException(
+                "Device:Usb:LiveControlDate is set but Device:Mode is not Usb: live control exists only on top of the read-only USB mode (SC-2 item 6).");
+        }
+
+        if (!IsConfirmedForToday(liveControlDate, today))
+        {
+            throw new InvalidOperationException(
+                $"Device:Usb:LiveControlDate={liveControlDate} is not today ({today:yyyy-MM-dd}): live control is confirmed per day, never left switched on (SC-2 item 6). Leave it out for a read-only session.");
+        }
+    }
 
     private static IHspPipe OpenConsolePipe(UsbDeviceOptions options)
     {

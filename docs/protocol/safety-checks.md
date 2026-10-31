@@ -117,7 +117,7 @@ E9 ([record](captures/2026-10-30-e9-smartsoft-writes.md)) was a **SmartSoft** se
 nothing): the first capture of a PC writing to the console. It observed, in one session, SmartSoft's ConsoleEvent faders (kind 0)
 and keys (kind 1) and three ChannelText label writes, with their exact bytes ([commands.md](commands.md) "PC → console data writes
 seen in E9"; F131–F138). **E9 clears no message:** SC-1's clearance (the poll and the fetch of a listed record, read-only) is
-unchanged, and no type-1 data header is encoded anywhere in the solution. The record's table "Input for a future safety check
+unchanged, and no type-1 data header is encoded anywhere in the solution *(Superseded 2026-10-31, later the same day: the owner implemented SC-2's whitelist in `HspOutbound` and `HspReadSession`, sent only by a session with live control switched on for the day (`Device:Usb:LiveControlDate`); reviewed under SC-2 item 10, NEEDS CHANGES at the first pass, see safety-checks.md; nothing is cleared for sending before E11 on the owner's go.)*. The record's table "Input for a future safety check
 (SC-2)" is the starting point of a future **SC-2**, whose gate is: a second session that reproduces the writes (E9b); each message
 class understood and shown harmless (the record functions and the object writes change show data and are not reversible by the
 protocol, and a wrong bump already edited another memory in E9, F139); a whitelist of indices and codes (only four fader indices and
@@ -305,6 +305,52 @@ things in it are unobserved (items 2 and 11 below) and the session ends on the f
   LED blocks, ConsoleStatus, PlaybackInfo), the bus against the backend's log byte for byte (as E8b), any
   deviation and the time it ended the session, and the physical fader positions at the end. Afterwards: an
   SD save, compared with the backup byte for byte (no show data may have changed).
+
+### Review (SC-2 item 10)
+
+**First pass (2026-10-31, `protocol-safety-reviewer`, over the owner's uncommitted implementation): NEEDS CHANGES, one
+blocker and six majors; the bytes, the whitelist, the golden tests and the read-only mode passed** (build 0 warnings,
+198 tests green at the time). Findings and what was done:
+
+| # | Finding | Status |
+|---|---|---|
+| BLOCKER | Protocol assumptions in the write path carried no status word and the device class no `[Evidence]` tag (toggle per click, the freshness reading of condition 5, F96 used as fact, capture counts without status). | Fixed the same day, tags and status words only: toggle per click VERIFIED (F133 / F134), the freshness reading INFERRED from F57 and F116, F96 OBSERVED, the counts OBSERVED (`write_rules.py`), four `[Evidence]` attributes on the device. |
+| MAJOR 1 | Condition 5's "report younger than two poll periods" is checked when the write is chosen, not when it is sent: after the slot wait the report can be about 75 ms old with the default settings, unbounded with larger ones. | **Open (owner):** ask the gate and the write's condition again right before the header goes out, or take a write only from a slot whose timing is already met; a virtual-clock test of the report's age at every header. |
+| MAJOR 2 | The interlock fails open: a LedStatus, ConsoleStatus or FaderInfo object that does not decode is logged and skipped, the old reading stays and counts as current. | **Open (owner):** in a live session a decode failure of those objects ends the session (item 7), or at least clears the reading so the gate holds or drops; a test. |
+| MAJOR 3 | Condition 6 not met for channel fader 1: the thumb and the drag started from the UI's remembered value, not from the reported level (the H89 / F141 jump). | Fixed the same day in the UI: on a real console a writable fader's thumb sits at the reported level while nothing is pending and a drag starts there (`channel-grid.component.spec.ts`). |
+| MAJOR 4 | Item 6's per-control list was not connected: the device named no `WritableControls`, so the UI enabled every channel fader and bump while the device sends three faders and a few keys. | Fixed the same day: `UsbSmartFadeDevice.WritableControls` names exactly channel fader 1, MASTER, BUMPS, bump 7, memory bump 1 of each page, SOLO and BLACKOUT (device, hosting and UI tests). |
+| MAJOR 5 | Docs not updated in the same change: "no type-1 header is encoded anywhere" and "not implemented" statements, the switch and the run line nowhere. | Fixed the same day: every such statement annotated as superseded, the switch and the run line in CLAUDE.md, this section. |
+| MAJOR 6 | Condition 5 and the end-of-session paths had no tests (a write refused or dropped while a record key is lit, the holds, the discard after an LED report, expiry inside a session, the release after a fault, an in-flight release, the incomplete write, a SOLO / BLACKOUT tap that goes out); the golden replays use a gate that always says Send, although the captures can prove the interlock (the 16 whitelisted SmartSoft writes made inside a record function must read armed: E9 payload seq 67098, 68338, 74000, 77851, 83191, 91068 and their headers; E9b 79059, 84069; the other 589 read off). | **Open (owner).** |
+| MINOR | A failed Data header write is assumed not to have reached the console (unmarked); the incomplete-write marker lives in memory only; the write timings have no upper bound; `onSend` runs before the write is committed; a chosen write still goes out if a stop arrives during the slot wait; the replays prove "where SmartSoft wrote", not "nowhere else". | **Open (owner).** |
+| MINOR | The HARDWARE hint said read-only beside the LIVE CONTROL badge; the command lists were read once at start-up. | Fixed the same day: the hint, and the lists are refreshed on every connection change. |
+| MINOR | `ClearedKey`'s attribute cited F134 for bump 9; `HspOutboundPayload`'s lacked F131; no hosting test of the switch. | Fixed the same day. |
+
+**Two points for the owner's E11 acceptance, from the review:** our first ConsoleEvent carries the counter 0x00, whereas
+every SmartSoft session's first ConsoleEvent carried 0x02 or more (its System pair took 0x00 and 0x01); whether the console
+checks the counter is UNKNOWN. And after a session fault the code still sends an owed key release when no exchange is open
+(condition 4 as written), a transfer into a console state the session has just judged unobserved.
+
+**E11 is not permitted until the open items are fixed and a re-check passes.**
+
+### Implementation (owner, 2026-10-31)
+
+The owner implemented classes A and B1 at the marked extension points: `HspOutbound` (the typed whitelist, the Data header
+and the two payloads), `HspReadSession` (the write queue, the counter, the previous byte, the placement, taps, the gate),
+`HspReadLoop` (header then payload, both logged, the floors from `write_rules.py`), `UsbSmartFadeDevice` (the commands
+behind the interlocks of conditions 5, 6 and 8, each control only in the console state SmartSoft sent it in: channel fader
+1 in channel mode, bank 1-24, with the MASTER at full; bump 7 in channel mode; memory bump 1 on the page shown; SOLO and
+BLACKOUT from a steady LED; GO with STACK dim), the switch `Device:Usb:LiveControlDate` (checked at start-up, at Connect
+and at every command), `ReplayHspPipe`'s write mode and the golden tests `HspLiveSessionTests` (E9 up to seq 68339 and the
+three E9b sessions, byte for byte, the counter less the skipped SmartSoft writes, F132's seq 16560 exception declared).
+Bump 9, channel bump 1 and memory bump 7 are whitelisted codes the device never sends (seen from a PC only inside record
+functions, or only in the other fader mode). GO, MEMS and FADERS 1-24 have device methods but no port method yet.
+
+Run line (E11, on the owner's go only, after the re-check): `dotnet run --project src/backend/SmartFade.Api --
+--Device:Mode=Usb --Device:Usb:ConfirmDate=<today> --Device:Usb:LiveControlDate=<today>`.
+
+**E11 script adjustments to the implementation:** "bump 1 tap" becomes bump 7 (the device sends channel bump 7, never
+bump 1); the MASTER step goes last, since channel fader 1 is sent only with the MASTER at full; GO only with STACK dim;
+MEMS and FADERS 1-24 wait for their port methods; SOLO and BLACKOUT only from a steady LED.
 
 ### What SC-2 does not clear
 

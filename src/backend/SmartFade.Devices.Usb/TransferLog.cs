@@ -40,7 +40,7 @@ public sealed class TransferLog : ITransferSink
             sourceSha256 = string.Empty,
             captureStart = _start.ToString("O", CultureInfo.InvariantCulture),
             console = new { model = "SF1248" },
-            host = new { app = "SmartFade backend (read-only USB device)", version = hostVersion, pipe = pipeDescription },
+            host = new { app = "SmartFade backend (USB device; the session's first notes say read-only or live control)", version = hostVersion, pipe = pipeDescription },
             device = new { vid = "14D5", pid = "0200" },
             normalizer = new { name = "SmartFade.Devices.Usb.TransferLog", version = 1 },
             statusNote = "frames carry no USBD status: the backend only sees WinUSB succeed or fail; failed transfers are notes, and the health counts come from the parallel USBPcap capture",

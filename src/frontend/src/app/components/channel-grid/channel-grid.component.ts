@@ -57,6 +57,9 @@ export class ChannelGridComponent {
     const readOnly = this.readOnly();
     const bumpsDisabled = this.bumpsDisabled();
     const writable = (control: string) => this._state.writable(control);
+    // SC-2 condition 6: on a real console a writable fader's thumb sits at the reported level while nothing is pending, so
+    // a drag starts from what the console says, not from a value the UI remembers (F141: the last mover wins without notice).
+    const hardware = this._state.mode() === 'hardware';
     const bankSize = this._state.capabilities().physicalFaders;
     const banks: Bank[] = [];
     for (let start = 0; start < channels.length; start += bankSize) {
@@ -74,7 +77,7 @@ export class ChannelGridComponent {
           : {
               channel: channel.channel,
               // a read-only console reports levels only: the thumb follows the report
-              desired: readOnly || !writable(`channelFader:${channel.channel}`) ? channel.actual : channel.desired,
+              desired: readOnly || !writable(`channelFader:${channel.channel}`) || (hardware && !channel.pending) ? channel.actual : channel.desired,
               actual: channel.actual,
               pending: channel.pending,
               output: channel.output,

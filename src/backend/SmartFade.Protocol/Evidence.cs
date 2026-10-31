@@ -26,7 +26,9 @@ public enum EvidenceStatus
 /// docs/protocol/known-facts.md and hypotheses.md). VERIFIED is necessary, not sufficient
 /// (CLAUDE.md): the only elements of this assembly cleared for sending are the poll and the
 /// listed fetch of <see cref="HspOutbound"/>, for a read-only session, by safety check SC-1
-/// (docs/protocol/safety-checks.md, 2026-10-30); everything else here decodes.
+/// (docs/protocol/safety-checks.md, 2026-10-30). <see cref="HspOutbound"/> also encodes the Data
+/// header and the ConsoleEvents of SC-2's whitelist (2026-10-31, a conditional GO to build and
+/// review; nothing is sent before E11 on the owner's go); everything else here decodes.
 /// </summary>
 [AttributeUsage(AttributeTargets.All, AllowMultiple = true, Inherited = false)]
 public sealed class EvidenceAttribute : Attribute

@@ -88,6 +88,45 @@ public class HostingTests
     }
 
     [Fact]
+    public async Task Live_control_needs_the_USB_mode_and_todays_date_and_then_names_its_controls()
+    {
+        using var withoutUsb = new WebApplicationFactory<Program>().WithWebHostBuilder(b =>
+        {
+            b.UseSetting("Device:Mode", "Simulated");
+            b.UseSetting("Device:Usb:LiveControlDate", Today);
+        });
+        Assert.Contains("LiveControlDate", Assert.ThrowsAny<Exception>(() => withoutUsb.CreateClient()).ToString(), StringComparison.Ordinal);
+
+        using var stale = new WebApplicationFactory<Program>().WithWebHostBuilder(b =>
+        {
+            b.UseSetting("Device:Mode", "Usb");
+            b.UseSetting("Device:Usb:ConfirmDate", Today);
+            b.UseSetting("Device:Usb:LiveControlDate", "2026-01-01");
+            b.ConfigureServices(services => services.AddSingleton<Func<IHspPipe>>(() => throw new HspPipeException("test: no console")));
+        });
+        Assert.Contains("LiveControlDate", Assert.ThrowsAny<Exception>(() => stale.CreateClient()).ToString(), StringComparison.Ordinal);
+
+        // live control for today: the device names the SC-2 whitelist and nothing else. The same two guards as above keep
+        // this host off real hardware (the pipe factory is replaced; the path is one the WinUSB pipe refuses).
+        using var live = new WebApplicationFactory<Program>().WithWebHostBuilder(b =>
+        {
+            b.UseSetting("Device:Mode", "Usb");
+            b.UseSetting("Device:Usb:ConfirmDate", Today);
+            b.UseSetting("Device:Usb:LiveControlDate", Today);
+            b.UseSetting("Device:Usb:DevicePath", @"\\?\usb#vid_0000&pid_0000&mi_09#test");
+            b.ConfigureServices(services => services.AddSingleton<Func<IHspPipe>>(() => throw new HspPipeException("test: no console")));
+        });
+        using var client = live.CreateClient();
+        var state = await client.GetFromJsonAsync<ConsoleStateDto>("/api/console/state");
+        Assert.NotNull(state);
+        Assert.Contains("setMaster", state.SupportedCommands);
+        Assert.DoesNotContain("recordMemory", state.SupportedCommands);
+        Assert.NotNull(state.WritableControls);
+        Assert.Contains("channelFader:1", state.WritableControls);
+        Assert.DoesNotContain("channelFader:2", state.WritableControls);
+    }
+
+    [Fact]
     public async Task Requests_from_a_foreign_origin_are_refused_before_they_execute()
     {
         using var factory = new WebApplicationFactory<Program>().WithWebHostBuilder(b => b.UseSetting("Device:Mode", "Simulated"));

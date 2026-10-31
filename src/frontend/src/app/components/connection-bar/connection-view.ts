@@ -42,7 +42,7 @@ export function describeMode(mode: DeviceMode | undefined): ModeView {
       return {
         label: 'Hardware',
         tone: 'alert',
-        hint: 'The real console, read-only: it is observed, nothing on it can be changed from here.',
+        hint: 'The real console, read-only (safety check SC-1) unless a LIVE CONTROL badge is shown beside this one.',
       };
     default:
       return {

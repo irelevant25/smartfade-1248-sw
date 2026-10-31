@@ -8,17 +8,44 @@ namespace SmartFade.Communication;
 /// same point, so a session engine run over a capture proves that it would have put the same
 /// bytes on the wire. SmartSoft's Data transfers (its two System writes per session, F58) are
 /// skipped and counted: a read-only session never sends them. It reaches no device.
+/// <para>
+/// Write mode, for the golden tests of the write path (SC-2 condition 2): the SmartSoft Data writes whose payload the
+/// test's predicate accepts (the whitelisted ConsoleEvents) are not skipped but expected from the session under test,
+/// header then payload, each compared byte for byte; every other SmartSoft write (the System pair, ChannelText, Memory,
+/// events outside the whitelist) stays skipped. The one byte not taken from SmartSoft's transfer as it stands is the
+/// payload's counter: SmartSoft's counter also counts the writes this mode skips, so the pipe expects SmartSoft's
+/// value less the SmartSoft data payloads skipped since <see cref="Open"/>, the counter of a session that never sends
+/// those (F131: 0x00 at the session's first data payload, +1 per data payload). SmartSoft restarts that counter and its
+/// previous bytes in each of its sessions, so a capture with several SmartSoft sessions is replayed one session at a
+/// time (a range of JSONL seq numbers, with a new session under test each, as a reconnect would have). A deviation
+/// the knowledge base documents is declared with <see cref="ExpectInstead"/>.
+/// </para>
 /// </summary>
 public sealed class ReplayHspPipe : IHspPipe
 {
     private readonly CaptureFrame[] _frames;
+    private readonly Func<ReadOnlyMemory<byte>, bool>? _expectWrite;
+    private readonly Dictionary<int, byte[]> _instead = new();
+    private readonly List<int> _deviationsMet = new();
     private int _position;
+    private int _skippedDataPayloads;
+    private bool _awaitingPayload;
 
     public ReplayHspPipe(CaptureFile capture)
+        : this(capture, expectWrite: null)
+    {
+    }
+
+    /// <summary>
+    /// A replay of the capture's bulk transfers with JSONL seq in [<paramref name="firstSeq"/>, <paramref name="endSeq"/>).
+    /// With <paramref name="expectWrite"/> (write mode), the SmartSoft Data writes whose payload it accepts are expected
+    /// from the session under test; without it every SmartSoft Data write is skipped, as for a read-only session.
+    /// </summary>
+    public ReplayHspPipe(CaptureFile capture, Func<ReadOnlyMemory<byte>, bool>? expectWrite, int firstSeq = int.MinValue, int endSeq = int.MaxValue)
     {
         ArgumentNullException.ThrowIfNull(capture);
         Capture = capture;
-        var bulk = capture.BulkFrames.ToArray();
+        var bulk = capture.BulkFrames.Where(f => f.Seq >= firstSeq && f.Seq < endSeq).ToArray();
         var empty = bulk.Count(f => f.Data.Length == 0);
         if (empty > 0)
         {
@@ -27,11 +54,22 @@ public sealed class ReplayHspPipe : IHspPipe
         }
 
         _frames = bulk;
+        _expectWrite = expectWrite;
+        FirstSeq = firstSeq;
+        EndSeq = endSeq;
     }
 
     public CaptureFile Capture { get; }
 
-    public string Description => $"replay of {Capture.Header.SourceFile}";
+    /// <summary>First JSONL seq of the replayed range.</summary>
+    public int FirstSeq { get; }
+
+    /// <summary>JSONL seq after the replayed range.</summary>
+    public int EndSeq { get; }
+
+    public string Description => _expectWrite is null && FirstSeq == int.MinValue && EndSeq == int.MaxValue
+        ? $"replay of {Capture.Header.SourceFile}"
+        : $"replay of {Capture.Header.SourceFile}, seq {FirstSeq}..{EndSeq}{(_expectWrite is null ? string.Empty : ", writes expected")}";
 
     public bool IsOpen { get; private set; }
 
@@ -40,29 +78,75 @@ public sealed class ReplayHspPipe : IHspPipe
 
     public int Remaining => _frames.Length - _position;
 
+    /// <summary>OUT transfers matched (polls, fetches, and in write mode each Data header and payload).</summary>
     public int MatchedWrites { get; private set; }
+
+    /// <summary>Write mode: SmartSoft Data writes (header and payload) that the session under test reproduced.</summary>
+    public int MatchedDataWrites { get; private set; }
 
     public int Reads { get; private set; }
 
     /// <summary>SmartSoft Data transfers (header + payload) that the capture holds and the session under test did not send.</summary>
     public int SkippedSmartSoftWrites { get; private set; }
 
+    /// <summary>The capture frames at which a declared deviation (<see cref="ExpectInstead"/>) was compared, in order.</summary>
+    public IReadOnlyList<int> DeviationsMet => _deviationsMet;
+
     /// <summary>The capture-relative time of the last transfer consumed.</summary>
     public double LastTime { get; private set; }
+
+    /// <summary>
+    /// Write mode: the payload of SmartSoft's write that the next transfers must reproduce (its Data header first), so
+    /// a test can hand the session the same event; null when the next transfer expected is no such write.
+    /// </summary>
+    public ReadOnlyMemory<byte>? ExpectedWrite
+    {
+        get
+        {
+            if (_expectWrite is null || _awaitingPayload || !IsOpen)
+            {
+                return null;
+            }
+
+            SkipSmartSoftWrites();
+            if (_position + 1 < _frames.Length && IsDataHeader(_frames[_position]))
+            {
+                return _frames[_position + 1].Data;
+            }
+
+            return null;
+        }
+    }
 
     public void Open()
     {
         IsOpen = true;
         _position = 0;
+        _skippedDataPayloads = 0;
+        _awaitingPayload = false;
+        _deviationsMet.Clear();
     }
 
     public void Close() => IsOpen = false;
 
     public void Dispose() => Close();
 
+    /// <summary>
+    /// Write mode: compare the session's transfer at capture frame <paramref name="seq"/> with
+    /// <paramref name="expected"/> instead of SmartSoft's bytes (the payload counter is still adjusted as above). Only
+    /// for a deviation the knowledge base documents, with bytes taken from the capture.
+    /// </summary>
+    public void ExpectInstead(int seq, ReadOnlySpan<byte> expected) => _instead[seq] = expected.ToArray();
+
     public void Write(ReadOnlySpan<byte> data)
     {
         EnsureOpen();
+        if (_awaitingPayload)
+        {
+            WritePayload(data);
+            return;
+        }
+
         SkipSmartSoftWrites();
         if (_position >= _frames.Length)
         {
@@ -75,21 +159,30 @@ public sealed class ReplayHspPipe : IHspPipe
             throw new HspPipeException($"write of {data.Length} bytes where the capture expects a read (frame seq {expected.Seq}, {expected.Data.Length} bytes in)");
         }
 
-        if (!data.SequenceEqual(expected.Data))
+        var reference = Reference(expected);
+        if (!data.SequenceEqual(reference))
         {
             throw new HspPipeException(
                 $"write differs from SmartSoft's transfer at capture seq {expected.Seq} (t = {expected.Time:F6} s): " +
-                $"ours {Convert.ToHexString(data)}, SmartSoft's {Convert.ToHexString(expected.Data)}");
+                $"ours {Convert.ToHexString(data)}, SmartSoft's {Convert.ToHexString(reference)}");
         }
 
         _position++;
         MatchedWrites++;
         LastTime = expected.Time;
+
+        // Only in write mode does a Data header get here (SkipSmartSoftWrites stopped at it): its payload is due next.
+        _awaitingPayload = IsDataHeader(expected);
     }
 
     public void ReadExactly(Span<byte> buffer)
     {
         EnsureOpen();
+        if (_awaitingPayload)
+        {
+            throw new HspPipeException($"read of {buffer.Length} bytes where the payload of the Data header is due");
+        }
+
         if (_position >= _frames.Length)
         {
             throw new HspPipeException($"read of {buffer.Length} bytes after the end of the capture");
@@ -117,14 +210,61 @@ public sealed class ReplayHspPipe : IHspPipe
     {
         get
         {
+            if (_awaitingPayload)
+            {
+                return false;
+            }
+
             SkipSmartSoftWrites();
             return _position >= _frames.Length;
         }
     }
 
-    // TODO (SC-2 condition 2): a second mode for the golden tests of the write path, in which SmartSoft's ConsoleEvent
-    // writes are not skipped but expected from the session under test and compared byte for byte (header, then
-    // payload); the System pair, ChannelText and Memory writes stay skipped in that mode too.
+    private void WritePayload(ReadOnlySpan<byte> data)
+    {
+        _awaitingPayload = false;
+        if (_position >= _frames.Length)
+        {
+            throw new HspPipeException($"write of {data.Length} bytes after the end of the capture, where SmartSoft's payload was due");
+        }
+
+        var expected = _frames[_position];
+        if (expected.Direction != CaptureDirection.Out)
+        {
+            throw new HspPipeException($"write of {data.Length} bytes where the capture expects a read (frame seq {expected.Seq})");
+        }
+
+        // The counter of a session that never sends the writes this mode skips (see the class comment).
+        var reference = (byte[])Reference(expected).Clone();
+        if (reference.Length > 0)
+        {
+            reference[0] = unchecked((byte)(reference[0] - _skippedDataPayloads));
+        }
+
+        if (!data.SequenceEqual(reference))
+        {
+            throw new HspPipeException(
+                $"payload differs from SmartSoft's at capture seq {expected.Seq} (t = {expected.Time:F6} s): ours {Convert.ToHexString(data)}, " +
+                $"expected {Convert.ToHexString(reference)} (SmartSoft's {Convert.ToHexString(expected.Data)}, its counter less the {_skippedDataPayloads} data payload(s) skipped)");
+        }
+
+        _position++;
+        MatchedWrites++;
+        MatchedDataWrites++;
+        LastTime = expected.Time;
+    }
+
+    /// <summary>SmartSoft's bytes at that frame, or the declared deviation's.</summary>
+    private byte[] Reference(CaptureFrame frame)
+    {
+        if (_instead.TryGetValue(frame.Seq, out var instead))
+        {
+            _deviationsMet.Add(frame.Seq);
+            return instead;
+        }
+
+        return frame.Data;
+    }
 
     private void SkipSmartSoftWrites()
     {
@@ -132,10 +272,17 @@ public sealed class ReplayHspPipe : IHspPipe
         {
             var header = _frames[_position];
             var length = header.Data[2] | (header.Data[3] << 8);
+            var hasPayload = _position + 1 < _frames.Length && _frames[_position + 1].Direction == CaptureDirection.Out && _frames[_position + 1].Data.Length == length;
+            if (_expectWrite is not null && hasPayload && _expectWrite(_frames[_position + 1].Data))
+            {
+                return;   // write mode: the session under test must send this one
+            }
+
             _position++;
-            if (_position < _frames.Length && _frames[_position].Direction == CaptureDirection.Out && _frames[_position].Data.Length == length)
+            if (hasPayload)
             {
                 _position++;
+                _skippedDataPayloads++;
             }
 
             SkippedSmartSoftWrites++;

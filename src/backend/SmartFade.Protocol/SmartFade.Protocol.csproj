@@ -6,4 +6,10 @@
     <Nullable>enable</Nullable>
   </PropertyGroup>
 
+  <ItemGroup>
+    <!-- HspReadSession's press-without-tap path (QueueKeyPress / QueueKeyRelease) exists for the SC-2 golden tests only:
+         they release a key where SmartSoft released it. The device sends taps only (SC-2 condition 4). -->
+    <InternalsVisibleTo Include="SmartFade.Protocol.Tests" />
+  </ItemGroup>
+
 </Project>

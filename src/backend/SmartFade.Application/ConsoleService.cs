@@ -317,6 +317,7 @@ public sealed class ConsoleService : IDisposable
 
     private void OnDeviceConnectionChanged(object? sender, ConnectionState state)
     {
+        _store.SetCommands(_device.SupportedCommands, _device.WritableControls);   // a device may change them between connections
         var cleared = _store.SetConnection(state);
         _logger.LogInformation("Connection: {Status} ({Mode}, {Device}){Error}", state.Status, state.Mode, state.DeviceDescription, state.Error is null ? string.Empty : $": {state.Error}");
         ConnectionChanged?.Invoke(state);

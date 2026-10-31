@@ -89,6 +89,64 @@ public class ReplayHspPipeTests
         Assert.Equal(3001 + 228, pipe.MatchedWrites);
     }
 
+    /// <summary>
+    /// Write mode over E9 (docs/protocol/captures/2026-10-30-e9-smartsoft-writes.jsonl): SmartSoft's System pair (header /
+    /// payload seq 137 / 138 and 220 / 221, its counter 0x00 and 0x01) is skipped, and its first fader event (header
+    /// seq 9664, payload seq 9665, its counter 0x02) is expected with the counter 0x00 of a session that never sent the
+    /// System pair (F131). The bytes are SmartSoft's own, written back as the session under test would write them.
+    /// </summary>
+    [Theory]
+    [InlineData(0x00, true)]    // the counter without the two skipped writes
+    [InlineData(0x02, false)]   // SmartSoft's own counter
+    public void Write_mode_expects_a_whitelisted_event_with_the_counter_less_the_skipped_writes(int counter, bool accepted)
+    {
+        var capture = CaptureFile.Load(TestPaths.Capture("2026-10-30-e9-smartsoft-writes.jsonl"));
+        using var pipe = new ReplayHspPipe(capture, payload => SmartFade.Protocol.HspOutbound.IsClearedConsoleEvent(payload.Span), int.MinValue, 9666);
+        pipe.Open();
+        var buffer = new byte[4096];
+        var frames = capture.BulkFrames.Where(f => f.Seq < 9664).ToArray();
+        for (var index = 0; index < frames.Length; index++)
+        {
+            var frame = frames[index];
+            if (frame.Direction == CaptureDirection.Out)
+            {
+                if (frame.Data.Length == 12 && frame.Data[0] == 1)
+                {
+                    index++;   // SmartSoft's System pair: the pipe skips header and payload
+                    continue;
+                }
+
+                Assert.Null(pipe.ExpectedWrite);
+                pipe.Write(frame.Data);
+            }
+            else
+            {
+                pipe.ReadExactly(buffer.AsSpan(0, frame.Data.Length));
+            }
+        }
+
+        var header = Assert.Single(capture.Frames, f => f.Seq == 9664).Data;
+        var smartSofts = Assert.Single(capture.Frames, f => f.Seq == 9665).Data;
+        Assert.Equal(smartSofts, pipe.ExpectedWrite!.Value.ToArray());
+        Assert.Equal(2, pipe.SkippedSmartSoftWrites);
+        pipe.Write(header);
+        var ours = smartSofts.ToArray();
+        ours[0] = (byte)counter;
+
+        if (accepted)
+        {
+            pipe.Write(ours);
+            Assert.Equal(1, pipe.MatchedDataWrites);
+            Assert.True(pipe.AtEnd);
+        }
+        else
+        {
+            var ex = Assert.Throws<HspPipeException>(() => pipe.Write(ours));
+            Assert.Contains("less the 2 data payload(s) skipped", ex.Message, StringComparison.Ordinal);
+            Assert.Equal(0, pipe.MatchedDataWrites);
+        }
+    }
+
     [Fact]
     public void Is_closed_until_opened()
     {
