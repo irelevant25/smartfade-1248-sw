@@ -90,11 +90,14 @@ interface ConsoleStateDto {
   connection: ConnectionDto;
   capabilities: CapabilitiesDto;
   supportedCommands: string[];                      // hub commands the connected device accepts; the simulator accepts
-                                                    // all thirteen ("setChannelLevel", "setMaster", "setBlackout",
+                                                    // the thirteen it models ("setChannelLevel", "setMaster", "setBlackout",
                                                     // "setBumps", "setSolo", "bumpChannel", "setMemoryLevel",
                                                     // "bumpMemory", "recordMemory", "storeMemory", "setIndependent",
-                                                    // "clearChannels", "clearMemories"); a real console may report
-                                                    // none (H6 open): the UI disables the rest
+                                                    // "clearChannels", "clearMemories"); the key taps "pressGo",
+                                                    // "pressFadersMems" and "pressFaders1To24" come only from a device
+                                                    // that models the stack and the fader mode (the real console with
+                                                    // live control, SC-2 class B1); a read-only real console reports
+                                                    // none: the UI disables the rest
   writableControls: string[] | null;                // the individual controls the device accepts commands for, or null
                                                     // (a real console with live control, SC-2, names its whitelist here)
                                                     // when every control of a supported command's kind is accepted (the
@@ -160,6 +163,9 @@ returns the content.
 | `setBlackout(on)` | `boolean` | blackout on/off (simulator) |
 | `setBumps(level)` | `number 0..255` | BUMPS level command: the level bumps go to (simulator) |
 | `setSolo(on)` | `boolean` | bump mode: off = pile-on, on = solo (simulator) |
+| `pressGo()` | — | GO as a tap (press and release as one operation): the next step of the stack; `not_supported` on the simulator; the real console takes it only in channel mode, bank 1-24, with STACK dim and no record function armed (SC-2) |
+| `pressFadersMems()` | — | FADERS MEMS as a tap: the physical faders to memory mode; `not_supported` on the simulator |
+| `pressFaders1To24()` | — | FADERS 1-24 as a tap: the physical faders to channel mode, bank 1-24; `not_supported` on the simulator |
 | `bumpChannel(channel, pressed)` | `number 1..48`, `boolean` | the bump button under a channel fader went down (`true`) or up (`false`); a client must send the release it owes |
 | `setMemoryLevel(page, fader, level)` | `number 1..12`, `number 1..24`, `number 0..255` | moves a memory fader (`invalid_memory` when the address is out of range) |
 | `bumpMemory(page, fader, pressed)` | `number 1..12`, `number 1..24`, `boolean` | the bump button under a memory fader went down or up |

@@ -316,7 +316,9 @@ owner's PC.
 (both dates today, or the backend refuses to start; set without `Device:Mode=Usb`, or with one of the five cadence settings
 (poll interval, poll after fetch, fetch delay, poll after write, write interval) or the reply timeout slower than its default,
 it refuses too) adds the whitelisted
-ConsoleEvents (channel fader 1, MASTER, BUMPS, bump 7, memory bump 1, SOLO, BLACKOUT) behind the record-function
+ConsoleEvents (channel fader 1, MASTER, BUMPS, bump 7, memory bump 1, SOLO, BLACKOUT, and since 2026-10-31 evening the key
+taps GO, FADERS MEMS and FADERS 1-24 through the port, the API and the UI: `pressGo`, `pressFadersMems`, `pressFaders1To24`,
+`not_supported` on the simulator) behind the record-function
 interlock, shows LIVE CONTROL beside HARDWARE and names the writable controls to the UI; everything else stays as
 in the read-only mode. Run only as the SC-2 E11 script says (backup first, USBPcap in parallel; the guided script
 `tools/usb-probe/e11-guided-session.ps1` refuses to start it before the re-check's items are closed and the acceptances given). After a Data write

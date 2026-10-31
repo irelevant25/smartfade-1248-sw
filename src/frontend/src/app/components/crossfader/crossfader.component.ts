@@ -8,9 +8,11 @@ import { ChannelFaderComponent } from '../channel-fader/channel-fader.component'
 /**
  * The console's crossfader section (manual v3.0 printed p.60): the Live (A) and Next (B)
  * faders with the GO and STACK keys under A and the PAUSE and CLEAR keys under B. The stack and
- * crossfades are not in the simulator yet, so the faders, GO, PAUSE and STACK are shown
- * inactive; CLEAR works as on the console (one press aborts an armed function, two presses
- * clear the channel faders, three the memory faders).
+ * crossfades are not in the simulator yet, so the faders, PAUSE and STACK are shown inactive;
+ * GO is a tap on a device that models the stack (`supportedCommands` has `pressGo` and the
+ * control `go` is writable: the real console with live control, SC-2 class B1); CLEAR works as on
+ * the console (one press aborts an armed function, two presses clear the channel faders, three
+ * the memory faders).
  */
 @Component({
   selector: 'sf-crossfader',
@@ -26,6 +28,8 @@ export class CrossfaderComponent {
 
   protected readonly enabled = this._channels.enabled;
   protected readonly canClear = computed(() => this._state.supports('clearChannels'));
+  /** GO is a tap on a device that models the stack and names the control writable. */
+  protected readonly canGo = computed(() => this._state.supports('pressGo') && this._state.writable('go'));
   protected readonly clearPresses = this._clear.presses;
   /** A real console reports the STACK and CLEAR LEDs (F117, F116; identities inferred, H72). */
   protected readonly keys = this._state.keys;
@@ -54,5 +58,9 @@ export class CrossfaderComponent {
 
   protected clear(): void {
     this._clear.press();
+  }
+
+  protected go(): void {
+    this._channels.pressGo();
   }
 }

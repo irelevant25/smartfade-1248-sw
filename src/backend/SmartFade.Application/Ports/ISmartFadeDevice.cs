@@ -59,6 +59,15 @@ public interface ISmartFadeDevice
     /// <summary>Presses (true) or releases (false) the bump button under a channel fader.</summary>
     Task BumpChannelAsync(int channel, bool pressed, CancellationToken cancellationToken);
 
+    /// <summary>GO as a tap (press and release as one operation): the next step of the stack. Only a device reporting <see cref="DeviceCommands.PressGo"/> accepts it.</summary>
+    Task PressGoAsync(CancellationToken cancellationToken);
+
+    /// <summary>FADERS MEMS as a tap: the physical faders to memory mode. Only a device reporting <see cref="DeviceCommands.PressFadersMems"/> accepts it.</summary>
+    Task PressFadersMemsAsync(CancellationToken cancellationToken);
+
+    /// <summary>FADERS 1-24 as a tap: the physical faders to channel mode, bank 1-24. Only a device reporting <see cref="DeviceCommands.PressFaders1To24"/> accepts it.</summary>
+    Task PressFaders1To24Async(CancellationToken cancellationToken);
+
     /// <summary>Moves a memory fader: the playback level of one memory.</summary>
     Task SetMemoryLevelAsync(int page, int fader, byte level, CancellationToken cancellationToken);
 

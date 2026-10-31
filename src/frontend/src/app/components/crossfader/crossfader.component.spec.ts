@@ -11,6 +11,7 @@ describe('CrossfaderComponent', () => {
   let enabled: ReturnType<typeof signal<boolean>>;
   let presses: ReturnType<typeof signal<number>>;
   let press: ReturnType<typeof vi.fn>;
+  let pressGo: ReturnType<typeof vi.fn>;
 
   const element = () => fixture.nativeElement as HTMLElement;
   const key = (selector: string) => element().querySelector<HTMLButtonElement>(selector)!;
@@ -19,9 +20,10 @@ describe('CrossfaderComponent', () => {
     enabled = signal(true);
     presses = signal(0);
     press = vi.fn();
+    pressGo = vi.fn();
     TestBed.configureTestingModule({
       providers: [
-        { provide: ChannelService, useValue: { enabled: enabled.asReadonly() } },
+        { provide: ChannelService, useValue: { enabled: enabled.asReadonly(), pressGo } },
         { provide: ClearKeyService, useValue: { presses: presses.asReadonly(), press } },
       ],
     });
@@ -65,6 +67,27 @@ describe('CrossfaderComponent', () => {
     expect(key('.xfade__pause').getAttribute('aria-label')).toBe('Pause');
     expect(key('.xfade__stack').disabled).toBe(true);
     expect(key('.xfade__stack').textContent?.trim()).toBe('Stack');
+  });
+
+  it('enables GO as a tap only for a device that models the stack and names the control writable', () => {
+    expect(key('.xfade__go').disabled).toBe(true);
+    expect(key('.xfade__go').classList.contains('sf-key--inactive')).toBe(true);
+
+    TestBed.inject(ConsoleStateService).applyConsoleStateChanged(
+      createSampleState({ supportedCommands: ['pressGo'], writableControls: ['go'] }),
+    );
+    fixture.detectChanges();
+
+    expect(key('.xfade__go').disabled).toBe(false);
+    expect(key('.xfade__go').classList.contains('sf-key--inactive')).toBe(false);
+    key('.xfade__go').click();
+    expect(pressGo).toHaveBeenCalledTimes(1);
+
+    TestBed.inject(ConsoleStateService).applyConsoleStateChanged(
+      createSampleState({ supportedCommands: ['pressGo'], writableControls: ['master'] }),
+    );
+    fixture.detectChanges();
+    expect(key('.xfade__go').disabled).toBe(true);
   });
 
   it('passes CLEAR presses on and shows a series in progress', () => {

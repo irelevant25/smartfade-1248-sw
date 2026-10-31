@@ -53,6 +53,9 @@ describe('ChannelService', () => {
   let sendIndependent: Mock<(number: number, on: boolean) => Promise<void>>;
   let sendClearChannels: Mock<() => Promise<void>>;
   let sendClearMemories: Mock<() => Promise<void>>;
+  let sendPressGo: Mock<() => Promise<void>>;
+  let sendPressFadersMems: Mock<() => Promise<void>>;
+  let sendPressFaders1To24: Mock<() => Promise<void>>;
   let state: ConsoleStateService;
   let service: ChannelService;
 
@@ -73,6 +76,9 @@ describe('ChannelService', () => {
     sendIndependent = vi.fn().mockResolvedValue(undefined);
     sendClearChannels = vi.fn().mockResolvedValue(undefined);
     sendClearMemories = vi.fn().mockResolvedValue(undefined);
+    sendPressGo = vi.fn().mockResolvedValue(undefined);
+    sendPressFadersMems = vi.fn().mockResolvedValue(undefined);
+    sendPressFaders1To24 = vi.fn().mockResolvedValue(undefined);
 
     TestBed.configureTestingModule({
       providers: [
@@ -96,6 +102,9 @@ describe('ChannelService', () => {
             sendIndependent,
             sendClearChannels,
             sendClearMemories,
+            sendPressGo,
+            sendPressFadersMems,
+            sendPressFaders1To24,
           },
         },
       ],
@@ -300,6 +309,31 @@ describe('ChannelService', () => {
 
       expect(state.masters().blackout).toBe(false);
       expect(sendBlackout).not.toHaveBeenCalled();
+    });
+  });
+
+  describe('key taps (GO, FADERS MEMS, FADERS 1-24)', () => {
+    it('sends each tap right away', () => {
+      service.pressGo();
+      service.pressFadersMems();
+      service.pressFaders1To24();
+
+      expect(sendPressGo).toHaveBeenCalledTimes(1);
+      expect(sendPressFadersMems).toHaveBeenCalledTimes(1);
+      expect(sendPressFaders1To24).toHaveBeenCalledTimes(1);
+      expect(frames.pending).toBe(0);
+    });
+
+    it('sends nothing while commands are not possible', () => {
+      link.set('disconnected');
+
+      service.pressGo();
+      service.pressFadersMems();
+      service.pressFaders1To24();
+
+      expect(sendPressGo).not.toHaveBeenCalled();
+      expect(sendPressFadersMems).not.toHaveBeenCalled();
+      expect(sendPressFaders1To24).not.toHaveBeenCalled();
     });
   });
 

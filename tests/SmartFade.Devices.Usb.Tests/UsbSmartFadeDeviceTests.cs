@@ -461,7 +461,8 @@ public class UsbSmartFadeDeviceTests
     }
 
     private const DeviceCommands LiveCommands = DeviceCommands.SetChannelLevel | DeviceCommands.SetMaster | DeviceCommands.SetBumps
-        | DeviceCommands.SetBlackout | DeviceCommands.SetSolo | DeviceCommands.BumpChannel | DeviceCommands.BumpMemory;
+        | DeviceCommands.SetBlackout | DeviceCommands.SetSolo | DeviceCommands.BumpChannel | DeviceCommands.BumpMemory
+        | DeviceCommands.PressGo | DeviceCommands.PressFadersMems | DeviceCommands.PressFaders1To24;
 
     private static string Today(VirtualClock clock) => DateOnly.FromDateTime(clock.GetLocalNow().DateTime).ToString("yyyy-MM-dd");
 
@@ -494,6 +495,9 @@ public class UsbSmartFadeDeviceTests
         Assert.Empty(stale.WritableControls!);   // read-only: nothing is writable
         Assert.Contains(DeviceControls.ChannelFader(1), live.WritableControls!);
         Assert.Contains(DeviceControls.MemoryBump(265), live.WritableControls!);
+        Assert.Contains(DeviceControls.Go, live.WritableControls!);
+        Assert.Contains(DeviceControls.FadersMems, live.WritableControls!);
+        Assert.Contains(DeviceControls.Faders1To24, live.WritableControls!);
         Assert.DoesNotContain(DeviceControls.ChannelFader(2), live.WritableControls!);
         Assert.DoesNotContain(DeviceControls.ChannelBump(9), live.WritableControls!);
         Assert.Contains("live control", live.Description, StringComparison.Ordinal);

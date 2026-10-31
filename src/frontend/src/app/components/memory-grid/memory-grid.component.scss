@@ -36,6 +36,37 @@
   text-transform: uppercase;
 }
 
+// FADERS 1-24 / FADERS MEMS as taps, shown only when the device accepts them (the real console with live control)
+.memories__mode {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.memories__mode-key {
+  appearance: none;
+  min-width: 48px;
+  min-height: 30px;
+  padding: 0 8px;
+  border: 1px solid var(--sf-border-strong);
+  border-radius: 4px;
+  background: linear-gradient(#242b33, #1a2026);
+  color: var(--sf-text-dim);
+  font: 700 0.75rem var(--sf-font-mono);
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  cursor: pointer;
+
+  &:disabled {
+    cursor: default;
+    opacity: 0.45;
+  }
+
+  &:hover {
+    border-color: var(--sf-accent);
+  }
+}
+
 .memories__page {
   appearance: none;
   min-width: 36px;

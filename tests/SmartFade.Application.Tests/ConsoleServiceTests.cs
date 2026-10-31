@@ -100,6 +100,21 @@ public class ConsoleServiceTests
     }
 
     [Fact]
+    public async Task GO_and_the_fader_mode_keys_are_refused_by_a_device_that_does_not_model_them()
+    {
+        // the simulator's set (DeviceCommands.All) has no stack playback and no fader mode; the application refuses before the device is asked
+        var (service, _) = CreateSimulated();
+        await service.ConnectAsync(CancellationToken.None);
+
+        Assert.False(DeviceCommands.All.HasFlag(DeviceCommands.PressGo));
+        Assert.False(DeviceCommands.All.HasFlag(DeviceCommands.PressFadersMems));
+        Assert.False(DeviceCommands.All.HasFlag(DeviceCommands.PressFaders1To24));
+        await Assert.ThrowsAsync<NotSupportedException>(() => service.PressGoAsync(CancellationToken.None));
+        await Assert.ThrowsAsync<NotSupportedException>(() => service.PressFadersMemsAsync(CancellationToken.None));
+        await Assert.ThrowsAsync<NotSupportedException>(() => service.PressFaders1To24Async(CancellationToken.None));
+    }
+
+    [Fact]
     public async Task Out_of_range_commands_are_rejected()
     {
         var (service, _) = CreateSimulated();
@@ -544,6 +559,12 @@ public class ConsoleServiceTests
         public Task SetSoloAsync(bool on, CancellationToken cancellationToken) => Task.CompletedTask;
 
         public Task BumpChannelAsync(int channel, bool pressed, CancellationToken cancellationToken) => Task.CompletedTask;
+
+        public Task PressGoAsync(CancellationToken cancellationToken) => Task.CompletedTask;
+
+        public Task PressFadersMemsAsync(CancellationToken cancellationToken) => Task.CompletedTask;
+
+        public Task PressFaders1To24Async(CancellationToken cancellationToken) => Task.CompletedTask;
 
         public Task SetMemoryLevelAsync(int page, int fader, byte level, CancellationToken cancellationToken) => Task.CompletedTask;
 

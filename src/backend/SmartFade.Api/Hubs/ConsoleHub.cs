@@ -44,6 +44,12 @@ public sealed class ConsoleHub : Hub
 
     public Task SetSolo(bool on) => Guard(() => _console.SetSoloAsync(on, Context.ConnectionAborted), awaitExecution: false);
 
+    public Task PressGo() => Guard(() => _console.PressGoAsync(Context.ConnectionAborted), awaitExecution: false);
+
+    public Task PressFadersMems() => Guard(() => _console.PressFadersMemsAsync(Context.ConnectionAborted), awaitExecution: false);
+
+    public Task PressFaders1To24() => Guard(() => _console.PressFaders1To24Async(Context.ConnectionAborted), awaitExecution: false);
+
     public Task BumpChannel(int channel, bool pressed) =>
         Guard(() => _console.BumpChannelAsync(channel, pressed, Context.ConnectionAborted), awaitExecution: false);
 

@@ -108,6 +108,27 @@ public sealed class ConsoleService : IDisposable
         return EnqueueAsync("setSolo", ct => _device.SetSoloAsync(on, ct), cancellationToken);
     }
 
+    /// <summary>GO as a tap: the next step of the stack (a device that models it, e.g. the real console under SC-2 class B1).</summary>
+    public Task PressGoAsync(CancellationToken cancellationToken)
+    {
+        EnsureCommandAllowed(DeviceCommands.PressGo);
+        return EnqueueAsync("pressGo", _device.PressGoAsync, cancellationToken);
+    }
+
+    /// <summary>FADERS MEMS as a tap: the physical faders to memory mode.</summary>
+    public Task PressFadersMemsAsync(CancellationToken cancellationToken)
+    {
+        EnsureCommandAllowed(DeviceCommands.PressFadersMems);
+        return EnqueueAsync("pressFadersMems", _device.PressFadersMemsAsync, cancellationToken);
+    }
+
+    /// <summary>FADERS 1-24 as a tap: the physical faders to channel mode, bank 1-24.</summary>
+    public Task PressFaders1To24Async(CancellationToken cancellationToken)
+    {
+        EnsureCommandAllowed(DeviceCommands.PressFaders1To24);
+        return EnqueueAsync("pressFaders1To24", _device.PressFaders1To24Async, cancellationToken);
+    }
+
     /// <summary>Presses (true) or releases (false) the bump button under a channel fader.</summary>
     public Task BumpChannelAsync(int channel, bool pressed, CancellationToken cancellationToken)
     {

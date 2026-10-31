@@ -2,9 +2,9 @@
 # as safety check SC-2 conditions it (docs/protocol/safety-checks.md, "Conditions for E11 (the first write session) and what to
 # record", with the "E11 script adjustments to the implementation"). The backend sends the poll and the listed fetch (SC-1) and,
 # with the write switch set for today, the whitelisted ConsoleEvents of SC-2 classes A and B1 that the owner's implementation
-# exposes to the UI: channel fader 1, MASTER, BUMPS, channel bump 7, memory bump 1 of the page shown, SOLO and BLACKOUT (GO,
-# FADERS MEMS and FADERS 1-24 have no port method yet and are NOT part of E11). Nothing else is sent; nothing in this script
-# talks to the console. The script
+# exposes to the UI: channel fader 1, MASTER, BUMPS, channel bump 7, memory bump 1 of the page shown, SOLO, BLACKOUT, and (on
+# the port since 2026-10-31, evening) the key taps FADERS MEMS, FADERS 1-24 and GO. Nothing else is sent; nothing in this
+# script talks to the console. The script
 #   - refuses to go on unless the SC-2 re-check's open items are closed and the owner gives every written acceptance SC-2 lists,
 #   - takes the safety-rule-3 gate (the SD backup's name), records the versions (backend commit, Windows build, firmware, cable),
 #   - wants USBPcap running from BEFORE the WinUSB bind and interface 1 bound to WinUSB before the backend starts,
@@ -115,7 +115,8 @@ Require-Yes "Acceptance 4: MASTER and BLACKOUT events change the whole live outp
 Require-Yes "Acceptance 5 (review point a): our first ConsoleEvent carries the counter 0x00, where SmartSoft's first carried 0x02 or more; whether the console checks it is UNKNOWN. (y / n)" "accept counter 0x00"
 Require-Yes "Acceptance 6 (review point b): after a session fault, an owed key release is still sent when no exchange is open, also when the fault was a LedStatus, ConsoleStatus or FaderInfo report that did not decode; a press whose own transfer failed gets no release and is reported as not completed. (y / n)" "accept release after fault"
 Require-Yes "The rig: is every fixture on DMX 5-16 safe to flash or dim briefly (channel 7 and memory 1's look at the BUMPS level; MASTER to half)? (y / n)" "rig decision"
-$optMemoryBump = (Ask "Optional: memory bump 1 of page 1 tapped from the UI in memory mode (flashes memory 1's look on the rig at the BUMPS level)? (y / n)" "opt memory bump") -eq 'y'
+$optMemoryBump = (Ask "Optional W6: FADERS MEMS from the UI, then memory bump 1 of page 1 tapped from the UI (flashes memory 1's look on the rig at the BUMPS level), then FADERS 1-24 from the UI? (y / n)" "opt memory bump") -eq 'y'
+$optGo = (Ask "Optional W8: GO once from the UI with STACK unlit (the stack's next cue crossfades on the console: its channels light the rig for the cue's time, as the panel's GO would)? (y / n)" "opt go") -eq 'y'
 
 # --- Gate 2: safety rule 3, the backup; the versions ---
 Write-Host ""
@@ -167,8 +168,8 @@ Log ("backend started by the script: dotnet run --project src/backend/SmartFade.
 Start-Process -FilePath "cmd.exe" -ArgumentList @("/k", "npm start") -WorkingDirectory (Join-Path $Repo "src/frontend") | Out-Null
 Log "ui dev server started by the script: npm start in src/frontend"
 Write-Host "   Open http://localhost:4200 when the UI window says it is ready. BEFORE you press Connect the bar must show HARDWARE and" -ForegroundColor Yellow
-Write-Host "   LIVE CONTROL, the panels 'Not reported by the console yet', and only channel fader 1, bump 7, MASTER, BUMPS, SOLO, BLACKOUT" -ForegroundColor Yellow
-Write-Host "   (and memory bump 1 in memory mode) may be enabled; every other fader and key must be read-only." -ForegroundColor Yellow
+Write-Host "   LIVE CONTROL, the panels 'Not reported by the console yet', and only channel fader 1, bump 7, MASTER, BUMPS, SOLO, BLACKOUT," -ForegroundColor Yellow
+Write-Host "   GO (crossfader panel), the Faders 1-24 / Mems keys (memory panel head) and memory bump 1 may be enabled; every other fader and key must be read-only." -ForegroundColor Yellow
 Confirm-Done "When the UI shows HARDWARE and LIVE CONTROL and only those controls are enabled." "ui ready, hardware and live control badges (owner)"
 Ask "Which controls are enabled in the UI (list them exactly)? Is anything else enabled?" "ui enabled controls"
 Write-Host ""
@@ -230,13 +231,17 @@ if ($ok) {
     $ok = After-Control "the BUMPS fader (body[193] in the UI's masters panel)" "w5 result"
 }
 if ($ok -and $optMemoryBump) {
-    Step "W6: on the CONSOLE press FADERS MEMS (memory mode; the page shown stays 1)." "w6 memory mode on panel"
+    Step "W6: in the UI, click the MEMS key (memory panel head, 'Faders: Mems'): FADERS MEMS as a tap; the console switches to memory mode (its FADERS MEMS LED lights; the page shown stays 1)." "w6 faders mems from ui"
     Wait-Idle 10 "after w6 mode"
+    $ok = After-Control "the FADERS MEMS tap (did the console switch to memory mode: its LED, the bump LEDs red?)" "w6 mems result"
+}
+if ($ok -and $optMemoryBump) {
     Step "W6: in the UI, click the BUMP of MEMORY 1 (page 1) once (a tap: memory 1's look flashes on the rig at the BUMPS level)." "w6 memory bump 1 tap"
     Wait-Idle 10 "after w6 tap"
     $ok = After-Control "the memory bump 1 tap" "w6 result"
-    Step "W6: on the CONSOLE press FADERS 1-24 (back to channel mode)." "w6 channel mode on panel"
+    Step "W6: in the UI, click the 1-24 key (memory panel head): FADERS 1-24 as a tap; the console goes back to channel mode." "w6 faders 1-24 from ui"
     Wait-Idle 10 "after w6 back"
+    $ok = After-Control "the FADERS 1-24 tap (is the console back in channel mode?)" "w6 1-24 result"
 }
 if ($ok) {
     Step "W7 (last, the whole output): in the UI, drag MASTER slowly to about HALF." "w7 master to half"
@@ -245,7 +250,13 @@ if ($ok) {
     Wait-Idle 10 "after w7 full"
     $ok = After-Control "MASTER (the physical MASTER stays where it is: last mover wins, F141)" "w7 result"
 }
-Log "GO, FADERS MEMS and FADERS 1-24 from the UI: not in E11 (no port method yet; SC-2 'E11 script adjustments')"
+if ($ok -and $optGo) {
+    Step "W8: STACK unlit on the console (its LED dim); in the UI, click GO once (crossfader panel): the stack's next cue crossfades on the console." "w8 go from ui"
+    Wait-Idle 15 "after w8 go (the crossfade's time)"
+    $ok = After-Control "GO (the crossfade in the UI's crossfader panel and on the console; which cue is live now?)" "w8 result"
+    Ask "W8: the stack is now one cue further: leave it, or set it back on the console as you like; which cue is live?" "w8 stack position" | Out-Null
+}
+Log "E11 controls covered: channel fader 1, bump 7, SOLO, BLACKOUT, BUMPS, FADERS MEMS / 1-24 and memory bump 1 (optional), MASTER, GO (optional); SC-2 'E11 script adjustments' applied"
 Wait-Idle 10 "end of actions, an idle point"
 
 # --- End: disconnect at an idle point, the checks, the save ---

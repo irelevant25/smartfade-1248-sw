@@ -12,10 +12,12 @@
       <sf-channel-fader label="A" [desired]="faderA()" [disabled]="!crossfader()" [readOnly]="true" />
       <button
         type="button"
-        class="xfade__key xfade__go sf-key--inactive"
-        disabled
+        class="xfade__key xfade__go"
+        [class.sf-key--inactive]="!canGo()"
+        [disabled]="!enabled() || !canGo()"
         aria-label="Go"
-        title="Go: not available yet"
+        [attr.title]="canGo() ? 'Go: the next step of the stack on the console (a key tap)' : 'Go: not available on this device'"
+        (click)="go()"
       >
         <svg class="xfade__icon" viewBox="0 0 16 16" aria-hidden="true" focusable="false">
           <path d="M3 2l11 6-11 6z" />

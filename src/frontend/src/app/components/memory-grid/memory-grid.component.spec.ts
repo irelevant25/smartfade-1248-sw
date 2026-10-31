@@ -98,6 +98,29 @@ describe('MemoryGridComponent', () => {
     expect(lit(2)).toBe('0.14'); // memory 3: empty
   });
 
+  it('shows the fader-mode keys only for a device that accepts them and sends the taps', () => {
+    expect(element().querySelector('.memories__mode')).toBeNull();
+
+    const pressFadersMems = vi.fn();
+    const pressFaders1To24 = vi.fn();
+    Object.assign(TestBed.inject(ChannelService), { pressFadersMems, pressFaders1To24 });
+    state.applyConsoleStateChanged(
+      createSampleState({
+        supportedCommands: ['pressFadersMems', 'pressFaders1To24'],
+        writableControls: ['fadersMems', 'faders1To24'],
+      }),
+    );
+    fixture.detectChanges();
+
+    const keys = Array.from(element().querySelectorAll<HTMLButtonElement>('.memories__mode-key'));
+    expect(keys.map((key) => key.textContent?.trim())).toEqual(['1-24', 'Mems']);
+    expect(keys.every((key) => !key.disabled)).toBe(true);
+    click(keys[1]);
+    click(keys[0]);
+    expect(pressFadersMems).toHaveBeenCalledTimes(1);
+    expect(pressFaders1To24).toHaveBeenCalledTimes(1);
+  });
+
   it('switches pages with bigger page keys and marks the pages that hold a memory', () => {
     expect(pageButton(1).getAttribute('aria-pressed')).toBe('true');
     expect(pageButton(1).classList.contains('memories__page--content')).toBe(true);

@@ -221,6 +221,15 @@ public sealed class SimulatedSmartFadeDevice : ISmartFadeDevice
     public Task SetSoloAsync(bool on, CancellationToken cancellationToken) =>
         ChangeMastersAsync(masters => masters with { Solo = on }, cancellationToken);
 
+    /// <summary>Not modelled: the simulator has no stack playback (<see cref="SupportedCommands"/> leaves it out, so the application refuses it first).</summary>
+    public Task PressGoAsync(CancellationToken cancellationToken) => throw new NotSupportedException("The simulator has no stack playback yet.");
+
+    /// <summary>Not modelled: the simulator's channel and memory faders are separate controls, there is no fader mode to switch.</summary>
+    public Task PressFadersMemsAsync(CancellationToken cancellationToken) => throw new NotSupportedException("The simulator has no fader mode: its channel and memory faders are separate.");
+
+    /// <summary>Not modelled, as <see cref="PressFadersMemsAsync"/>.</summary>
+    public Task PressFaders1To24Async(CancellationToken cancellationToken) => throw new NotSupportedException("The simulator has no fader mode: its channel and memory faders are separate.");
+
     public Task SetIndependentAsync(int number, bool on, CancellationToken cancellationToken)
     {
         if (number < 1 || number > Capabilities.Independents)

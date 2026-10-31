@@ -114,6 +114,18 @@ export class ConsoleConnectionService {
     return this._send('bumpChannel', channel, pressed);
   }
 
+  sendPressGo(): Promise<void> {
+    return this._send('pressGo');
+  }
+
+  sendPressFadersMems(): Promise<void> {
+    return this._send('pressFadersMems');
+  }
+
+  sendPressFaders1To24(): Promise<void> {
+    return this._send('pressFaders1To24');
+  }
+
   sendMemoryLevel(page: number, fader: number, level: number): Promise<void> {
     return this._send('setMemoryLevel', page, fader, level);
   }

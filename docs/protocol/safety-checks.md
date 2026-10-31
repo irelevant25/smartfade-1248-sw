@@ -308,7 +308,7 @@ things in it are unobserved (items 2 and 11 below) and the session ends on the f
 - **Guided script (written 2026-10-31, evening, parse-checked; not run):** `tools/usb-probe/e11-guided-session.ps1` takes the owner
   through the above in that order and refuses to start the backend unless the re-check's open items are closed and every
   acceptance is answered y; it follows the "E11 script adjustments" below (bump 7 instead of bump 1, MASTER last, SOLO and BLACKOUT
-  from a steady LED, memory bump 1 optional in memory mode; GO, MEMS and FADERS 1-24 left out until they have port methods).
+  from a steady LED, memory bump 1 optional in memory mode between FADERS MEMS and FADERS 1-24 from the UI, GO optional and last).
 
 ### Review (SC-2 item 10)
 
@@ -392,14 +392,17 @@ BLACKOUT from a steady LED; GO with STACK dim), the switch `Device:Usb:LiveContr
 and at every command), `ReplayHspPipe`'s write mode and the golden tests `HspLiveSessionTests` (E9 up to seq 68339 and the
 three E9b sessions, byte for byte, the counter less the skipped SmartSoft writes, F132's seq 16560 exception declared).
 Bump 9, channel bump 1 and memory bump 7 are whitelisted codes the device never sends (seen from a PC only inside record
-functions, or only in the other fader mode). GO, MEMS and FADERS 1-24 have device methods but no port method yet.
+functions, or only in the other fader mode). GO, MEMS and FADERS 1-24 had device methods but no port method until 2026-10-31, evening, when
+`ISmartFadeDevice.PressGoAsync` / `PressFadersMemsAsync` / `PressFaders1To24Async`, the hub methods `pressGo` / `pressFadersMems` /
+`pressFaders1To24` and the UI's GO key (crossfader panel) and Faders 1-24 / Mems keys (memory panel head) were added at the owner's
+wish, behind the same interlocks (`DeviceCommands.PressGo` etc., outside the simulator's set).
 
 Run line (E11, on the owner's go only, after the re-check): `dotnet run --project src/backend/SmartFade.Api --
 --Device:Mode=Usb --Device:Usb:ConfirmDate=<today> --Device:Usb:LiveControlDate=<today>`.
 
 **E11 script adjustments to the implementation:** "bump 1 tap" becomes bump 7 (the device sends channel bump 7, never
 bump 1); the MASTER step goes last, since channel fader 1 is sent only with the MASTER at full; GO only with STACK dim;
-MEMS and FADERS 1-24 wait for their port methods; SOLO and BLACKOUT only from a steady LED. A write queued while the console downloads what changed goes only after the next poll reply (the freshness reading of condition 5), so a drag reaches the console in steps; no timing setting may be slower than its default (the backend refuses to start).
+MEMS and FADERS 1-24 from the UI (optional step W6 of the guide, around the memory bump) and GO from the UI (optional W8, last, with STACK dim; the stack's next cue crossfades on the console); SOLO and BLACKOUT only from a steady LED. A write queued while the console downloads what changed goes only after the next poll reply (the freshness reading of condition 5), so a drag reaches the console in steps; no timing setting may be slower than its default (the backend refuses to start).
 
 ### What SC-2 does not clear
 

@@ -103,6 +103,30 @@ export class ChannelService {
     void this._connection.sendSolo(on);
   }
 
+  /** GO as a tap: the next step of the stack. Sent right away; only a device that models the stack accepts it (the UI enables the key from `supportedCommands`). */
+  pressGo(): void {
+    if (!this.enabled()) {
+      return;
+    }
+    void this._connection.sendPressGo();
+  }
+
+  /** FADERS MEMS as a tap: the physical faders to memory mode. Sent right away. */
+  pressFadersMems(): void {
+    if (!this.enabled()) {
+      return;
+    }
+    void this._connection.sendPressFadersMems();
+  }
+
+  /** FADERS 1-24 as a tap: the physical faders to channel mode, bank 1-24. Sent right away. */
+  pressFaders1To24(): void {
+    if (!this.enabled()) {
+      return;
+    }
+    void this._connection.sendPressFaders1To24();
+  }
+
   /** IND 1 (1) or IND 2 (2) on or off. Sent right away. */
   setIndependent(number: number, on: boolean): void {
     if (

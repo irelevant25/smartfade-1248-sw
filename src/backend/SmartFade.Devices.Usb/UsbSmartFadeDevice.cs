@@ -39,11 +39,12 @@ public sealed class UsbSmartFadeDevice : ISmartFadeDevice, IAsyncDisposable
 
     /// <summary>The port commands live control accepts (SC-2 item 6); each one refuses every control outside the whitelist.</summary>
     private const DeviceCommands LiveCommands = DeviceCommands.SetChannelLevel | DeviceCommands.SetMaster | DeviceCommands.SetBumps
-        | DeviceCommands.SetBlackout | DeviceCommands.SetSolo | DeviceCommands.BumpChannel | DeviceCommands.BumpMemory;
+        | DeviceCommands.SetBlackout | DeviceCommands.SetSolo | DeviceCommands.BumpChannel | DeviceCommands.BumpMemory
+        | DeviceCommands.PressGo | DeviceCommands.PressFadersMems | DeviceCommands.PressFaders1To24;
 
-    /// <summary>The controls the command methods send, by name (docs/api.md `writableControls`): channel fader 1, MASTER, BUMPS, bump 7, memory bump 1 of every page, SOLO, BLACKOUT.</summary>
+    /// <summary>The controls the command methods send, by name (docs/api.md `writableControls`): channel fader 1, MASTER, BUMPS, bump 7, memory bump 1 of every page, SOLO, BLACKOUT, GO, FADERS MEMS, FADERS 1-24.</summary>
     private static readonly IReadOnlySet<string> LiveControls = new HashSet<string>(
-        new[] { DeviceControls.ChannelFader(1), DeviceControls.Master, DeviceControls.Bumps, DeviceControls.ChannelBump(7), DeviceControls.Solo, DeviceControls.Blackout }
+        new[] { DeviceControls.ChannelFader(1), DeviceControls.Master, DeviceControls.Bumps, DeviceControls.ChannelBump(7), DeviceControls.Solo, DeviceControls.Blackout, DeviceControls.Go, DeviceControls.FadersMems, DeviceControls.Faders1To24 }
             .Concat(Enumerable.Range(0, 12).Select(page => DeviceControls.MemoryBump(1 + 24 * page))));
 
     private static readonly IReadOnlySet<string> NoControls = new HashSet<string>();
@@ -461,17 +462,17 @@ public sealed class UsbSmartFadeDevice : ISmartFadeDevice, IAsyncDisposable
 
     /// <summary>
     /// GO (code 0x31, SC-2 class B1) as a tap, in channel mode, bank 1-24, while STACK's LED reads dim and steady: both
-    /// PC presses of E9 and E9b came then (F134: GO from a PC only with STACK unlit). Not on <see cref="ISmartFadeDevice"/>
-    /// yet: the port needs its own method before the API and the UI can reach it.
+    /// PC presses of E9 and E9b came then (F134: GO from a PC only with STACK unlit). On the port since 2026-10-31, evening
+    /// (<see cref="DeviceCommands.PressGo"/>): the API and the UI reach it behind the same interlocks.
     /// </summary>
     public Task PressGoAsync(CancellationToken cancellationToken) =>
         QueueLiveTap(LiveSession(), ClearedKey.Go, () => NotInChannelBank1To24("GO") ?? StackNotAsObserved());
 
-    /// <summary>FADERS MEMS (code 0x39) as a tap, from channel mode, bank 1-24, as every PC press. Not on <see cref="ISmartFadeDevice"/> yet.</summary>
+    /// <summary>FADERS MEMS (code 0x39) as a tap, from channel mode, bank 1-24, as every PC press. On the port (<see cref="DeviceCommands.PressFadersMems"/>).</summary>
     public Task PressFadersMemsAsync(CancellationToken cancellationToken) =>
         QueueLiveTap(LiveSession(), ClearedKey.FadersMems, () => NotInChannelBank1To24("FADERS MEMS"));
 
-    /// <summary>FADERS 1-24 (code 0x36) as a tap, from memory mode or from bank 25-48, as every PC press. Not on <see cref="ISmartFadeDevice"/> yet.</summary>
+    /// <summary>FADERS 1-24 (code 0x36) as a tap, from memory mode or from bank 25-48, as every PC press. On the port (<see cref="DeviceCommands.PressFaders1To24"/>).</summary>
     public Task PressFaders1To24Async(CancellationToken cancellationToken) =>
         QueueLiveTap(LiveSession(), ClearedKey.Faders1To24, NotFromMemoryModeOrBank25To48);
 

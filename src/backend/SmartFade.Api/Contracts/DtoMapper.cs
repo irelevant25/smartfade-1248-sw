@@ -28,6 +28,9 @@ public static class DtoMapper
         (DeviceCommands.SetIndependent, "setIndependent"),
         (DeviceCommands.ClearChannels, "clearChannels"),
         (DeviceCommands.ClearMemories, "clearMemories"),
+        (DeviceCommands.PressGo, "pressGo"),
+        (DeviceCommands.PressFadersMems, "pressFadersMems"),
+        (DeviceCommands.PressFaders1To24, "pressFaders1To24"),
     ];
 
     /// <summary>Wire names of docs/api.md, pinned independently of the enum member names.</summary>

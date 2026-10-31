@@ -122,9 +122,11 @@ public class HostingTests
         var state = await client.GetFromJsonAsync<ConsoleStateDto>("/api/console/state");
         Assert.NotNull(state);
         Assert.Contains("setMaster", state.SupportedCommands);
+        Assert.Contains("pressGo", state.SupportedCommands);
         Assert.DoesNotContain("recordMemory", state.SupportedCommands);
         Assert.NotNull(state.WritableControls);
         Assert.Contains("channelFader:1", state.WritableControls);
+        Assert.Contains("go", state.WritableControls);
         Assert.DoesNotContain("channelFader:2", state.WritableControls);
     }
 

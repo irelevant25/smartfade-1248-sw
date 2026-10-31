@@ -30,5 +30,12 @@ public enum DeviceCommands
     ClearChannels = 2048,
     /// <summary>CLEAR pressed three times: every memory fader to zero.</summary>
     ClearMemories = 4096,
+    /// <summary>GO: the next step of the stack (a key tap). Not in <see cref="All"/>: the simulator has no stack playback.</summary>
+    PressGo = 8192,
+    /// <summary>FADERS MEMS: the physical faders to memory mode (a key tap). Not in <see cref="All"/>: the simulator has no fader mode.</summary>
+    PressFadersMems = 16384,
+    /// <summary>FADERS 1-24: the physical faders to channel mode, bank 1-24 (a key tap). Not in <see cref="All"/>.</summary>
+    PressFaders1To24 = 32768,
+    /// <summary>Every command the simulator models. The three key taps above are outside it: a real console with live control (SC-2 class B1) reports them.</summary>
     All = SetChannelLevel | SetMaster | SetBlackout | SetBumps | SetSolo | BumpChannel | SetMemoryLevel | BumpMemory | RecordMemory | StoreMemory | SetIndependent | ClearChannels | ClearMemories,
 }
