@@ -57,6 +57,9 @@ public sealed class UsbDeviceOptions
     /// </summary>
     public string? ConfirmDate { get; set; }
 
+    // TODO (SC-2 item 6): the write switch with its own date (for example LiveControlDate), checked at start-up in
+    // ServiceCollectionExtensions next to ConfirmDate and again at Connect; absent or stale, the device stays read-only.
+
     public TimeSpan PollInterval => TimeSpan.FromMilliseconds(Math.Max(PollIntervalMilliseconds, Floors.PollInterval));
 
     public TimeSpan PollAfterFetch => TimeSpan.FromMilliseconds(Math.Max(PollAfterFetchMilliseconds, Floors.PollAfterFetch));

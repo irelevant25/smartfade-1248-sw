@@ -91,6 +91,9 @@ public sealed class HspReadLoop
             }
 
             var next = Session.Next();
+            // TODO (SC-2 conditions 7 and 8): a Data transfer from the session is written as its header and then its
+            // payload, both logged like every other transfer; nothing is read back (F131: no acknowledgement) and the
+            // next transfer is the usual poll at the usual cadence.
             if (next.Kind == HspMessageType.Poll)
             {
                 await WaitAsync((LastPollStamp, _options.PollInterval), (lastFetch, _options.PollAfterFetch)).ConfigureAwait(false);

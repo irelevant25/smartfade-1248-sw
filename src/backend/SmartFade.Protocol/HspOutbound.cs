@@ -33,6 +33,12 @@ public static class HspOutbound
         return Header((ushort)HspMessageType.Fetch, 0, (ushort)record.ObjectId, (ushort)record.A, (ushort)record.B, (ushort)record.C);
     }
 
+    // TODO (SC-2, write mode; not implemented: nothing in this class sends anything but the poll and the fetch).
+    // The Data header and the two ConsoleEvent payload builders go here, next to Poll and Fetch, taking a fader
+    // index or a key code only from an enum of the SC-2 whitelist (docs/protocol/safety-checks.md, SC-2 condition 1).
+    // Layouts: docs/protocol/packet-format.md "Data writes" and commands.md "PC -> console data writes"; proof:
+    // golden tests over the E9 and E9b captures (condition 2). The class comment above changes with it.
+
     private static byte[] Header(ushort w0, ushort w1, ushort w2, ushort w3, ushort w4, ushort w5)
     {
         var bytes = new byte[HspHeader.Size];

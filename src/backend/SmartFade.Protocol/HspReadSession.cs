@@ -75,6 +75,9 @@ public sealed class HspReadSession
     private HspHeader _lastReplyHeader;
     private byte? _lastInboundSequence;
 
+    // TODO (SC-2 conditions 1 and 3): the queue of writes to send, the per-session outbound counter and the last
+    // value sent per fader index (the previous byte) live here.
+
     public HspReadSessionState State { get; private set; } = HspReadSessionState.ReadyToSend;
 
     /// <summary>Why the session faulted, else null.</summary>
@@ -127,6 +130,9 @@ public sealed class HspReadSession
             return new HspOutboundTransfer(fetch, HspMessageType.Fetch);
         }
 
+        // TODO (SC-2 condition 7, placement): when a write is queued, no fetch is outstanding and _pollDueAfterFetch
+        // is false, return it here (header and payload in one transfer object that the loop writes as two transfers)
+        // instead of the poll; never between a fetch and its poll, at most one write per loop iteration, nothing re-sent.
         var poll = HspOutbound.Poll(_w2, _w3, _w4, _w5);
         _decoder.Feed(HspDirection.ToConsole, poll);
         _pollDueAfterFetch = false;

@@ -122,6 +122,10 @@ public sealed class ReplayHspPipe : IHspPipe
         }
     }
 
+    // TODO (SC-2 condition 2): a second mode for the golden tests of the write path, in which SmartSoft's ConsoleEvent
+    // writes are not skipped but expected from the session under test and compared byte for byte (header, then
+    // payload); the System pair, ChannelText and Memory writes stay skipped in that mode too.
+
     private void SkipSmartSoftWrites()
     {
         while (_position < _frames.Length && IsDataHeader(_frames[_position]))

@@ -73,6 +73,7 @@ public sealed class UsbSmartFadeDevice : ISmartFadeDevice, IAsyncDisposable
 
     public ConsoleCapabilities Capabilities { get; }
 
+    // TODO (SC-2 item 6): in the write mode SupportedCommands names only the whitelisted controls; read-only keeps None.
     /// <summary>None: the console is only read (SC-1 clears the poll and the listed fetch, nothing that changes state).</summary>
     public DeviceCommands SupportedCommands => DeviceCommands.None;
 
@@ -284,6 +285,11 @@ public sealed class UsbSmartFadeDevice : ISmartFadeDevice, IAsyncDisposable
         }
     }
 
+    // TODO (SC-2 classes A and B1): in the write mode these methods queue a ConsoleEvent on the session for channel
+    // fader 1, the MASTER, BUMPS, bumps 1 / 7 / 9 (press and release as one operation, condition 4), SOLO and BLACKOUT
+    // (toggles: one press, only when the reported LED differs from the wish, refused while it is unreported); GO, MEMS
+    // and FADERS 1-24 need new port methods. Every write is refused while REC MEM, EDIT MEM or COPY is lit, blinking or
+    // unreported (condition 5). Everything else keeps throwing ReadOnly().
     public Task SetChannelLevelAsync(int channel, byte level, CancellationToken cancellationToken) => throw ReadOnly();
 
     public Task SetMasterAsync(byte level, CancellationToken cancellationToken) => throw ReadOnly();

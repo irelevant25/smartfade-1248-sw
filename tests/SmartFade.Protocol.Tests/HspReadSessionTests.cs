@@ -256,6 +256,10 @@ public class HspReadSessionTests
         Assert.Contains("11 bytes", shortHeader.Fault, StringComparison.Ordinal);
     }
 
+    // TODO (SC-2 condition 2): HspLiveSessionTests (a new file): replay E9 and E9b, hand the session each ConsoleEvent
+    // SmartSoft sent at that point and expect byte-identical transfers; plus unit tests of the counter, the previous
+    // byte, the placement and the whitelist typing.
+
     private static void Drive(HspReadSession session, params byte[][] inbound)
     {
         var next = session.Next();
