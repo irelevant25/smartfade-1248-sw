@@ -314,8 +314,8 @@ owner's PC.
 **Live control (SC-2 classes A and B1, the owner's implementation; not before the re-check and E11's go):**
 `dotnet run --project src/backend/SmartFade.Api -- --Device:Mode=Usb --Device:Usb:ConfirmDate=yyyy-MM-dd --Device:Usb:LiveControlDate=yyyy-MM-dd`
 (both dates today, or the backend refuses to start; set without `Device:Mode=Usb`, or with one of the five cadence settings
-(poll interval, poll after fetch, fetch delay, poll after write, write interval) slower than its default, it refuses too; the
-reply timeout is not bounded) adds the whitelisted
+(poll interval, poll after fetch, fetch delay, poll after write, write interval) or the reply timeout slower than its default,
+it refuses too) adds the whitelisted
 ConsoleEvents (channel fader 1, MASTER, BUMPS, bump 7, memory bump 1, SOLO, BLACKOUT) behind the record-function
 interlock, shows LIVE CONTROL beside HARDWARE and names the writable controls to the UI; everything else stays as
 in the read-only mode. Run only as the SC-2 E11 script says (backup first, USBPcap in parallel; the guided script

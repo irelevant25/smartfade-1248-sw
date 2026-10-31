@@ -1169,10 +1169,11 @@ public class UsbSmartFadeDeviceTests
         // The first review of SC-2 item 10, minor: the write timings had no upper bound. Faster settings end at the floors.
         Assert.Null(new UsbDeviceOptions().LiveControlTimingProblem());
         Assert.Null(new UsbDeviceOptions { PollIntervalMilliseconds = 1, WriteIntervalMilliseconds = 1 }.LiveControlTimingProblem());
-        var slow = new UsbDeviceOptions { PollIntervalMilliseconds = 100, WriteIntervalMilliseconds = 500 };
+        var slow = new UsbDeviceOptions { PollIntervalMilliseconds = 100, WriteIntervalMilliseconds = 500, ReplyTimeoutMilliseconds = 1000 };
         var problem = slow.LiveControlTimingProblem();
         Assert.Contains("PollIntervalMilliseconds=100, at most 31", problem, StringComparison.Ordinal);
         Assert.Contains("WriteIntervalMilliseconds=500, at most 46", problem, StringComparison.Ordinal);
+        Assert.Contains("ReplyTimeoutMilliseconds=1000, at most 500", problem, StringComparison.Ordinal);   // the second pass of item 10, MINOR C
 
         var today = new DateOnly(2026, 10, 30);
         Assert.Throws<InvalidOperationException>(() => ServiceCollectionExtensions.ValidateLiveControlDate("2026-10-30", usbMode: true, today, slow));
@@ -1182,6 +1183,181 @@ public class UsbSmartFadeDeviceTests
         slow.LiveControlDate = Today(clock);
         var device = Create(() => new BlockingPipe(), slow, clock: clock);
         Assert.Equal(DeviceCommands.None, device.SupportedCommands);   // a device built around the start-up check stays read-only
+    }
+
+    [Fact]
+    public async Task A_write_waits_while_the_console_has_listed_its_fader_mode_it_has_not_delivered_and_goes_after_it()
+    {
+        // SC-2 condition 5 (the second pass of item 10, MINOR A): ConsoleStatus listed and not fetched is a fader mode or page
+        // not known yet. The console lists ConsoleStatus again (the same E9b seq 796 body: channel mode, bank 1-24, page 1); the
+        // MASTER write goes only after that object is in.
+        var rig = LiveConsole();
+        await rig.Device.ConnectAsync(CancellationToken.None);
+        await rig.KeysReported.WaitAsync(Timeout);
+
+        await rig.Console.PauseAtNextPoll().WaitAsync(Timeout);
+        await rig.Device.SetMasterAsync(0x80, CancellationToken.None);
+        rig.Console.Report((int)HspObjectId.ConsoleStatus, E9bBody(796));
+        rig.Console.Resume();
+        await rig.Console.DataWritten.Task.WaitAsync(Timeout);
+        await rig.Console.PollAfterData.Task.WaitAsync(Timeout);
+        await rig.Device.DisconnectAsync(CancellationToken.None);
+
+        Assert.Equal(1, rig.Device.LastSession!.WritesSent);
+        Assert.Contains("write held back: the console listed a new fader mode or page (ConsoleStatus) that is not fetched yet", rig.Log.Notes);
+        var transfers = Recorded(rig.Pipe);
+        var statusFetch = transfers.FindLastIndex(t => t.ToConsole && t.Data.Length == 12 && t.Data[0] == 2 && t.Data[4] == (int)HspObjectId.ConsoleStatus);
+        var header = transfers.FindIndex(IsDataHeader);
+        Assert.True(statusFetch > 0 && header > statusFetch, $"the write went at {header}, ConsoleStatus was fetched at {statusFetch}");
+    }
+
+    [Fact]
+    public async Task Channel_fader_1_waits_while_the_console_has_listed_FaderInfo_it_has_not_delivered_and_goes_after_it()
+    {
+        // SC-2 condition 6 (the second pass of item 10, MINOR A): channel fader 1 is sent only with the MASTER at full, so a
+        // listed FaderInfo (where the MASTER is reported) that is not fetched yet holds it. The console lists FaderInfo again
+        // (the same E9b seq 11628 body: MASTER and BUMPS at full); the event goes only after that object is in.
+        var rig = LiveConsole();
+        await rig.Device.ConnectAsync(CancellationToken.None);
+        await rig.KeysReported.WaitAsync(Timeout);
+
+        await rig.Console.PauseAtNextPoll().WaitAsync(Timeout);
+        await rig.Device.SetChannelLevelAsync(1, 0x40, CancellationToken.None);
+        rig.Console.Report((int)HspObjectId.FaderInfo, E9bBody(11628));
+        rig.Console.Resume();
+        await rig.Console.DataWritten.Task.WaitAsync(Timeout);
+        await rig.Console.PollAfterData.Task.WaitAsync(Timeout);
+        await rig.Device.DisconnectAsync(CancellationToken.None);
+
+        Assert.Equal(1, rig.Device.LastSession!.WritesSent);
+        Assert.Equal(0, rig.Device.LastSession.WritesDropped);
+        Assert.Contains("write held back: the console listed FaderInfo (the MASTER) and it is not fetched yet", rig.Log.Notes);
+        var transfers = Recorded(rig.Pipe);
+        var faderInfoFetch = transfers.FindLastIndex(t => t.ToConsole && t.Data.Length == 12 && t.Data[0] == 2 && t.Data[4] == (int)HspObjectId.FaderInfo);
+        var header = transfers.FindIndex(IsDataHeader);
+        Assert.True(faderInfoFetch > 0 && header > faderInfoFetch, $"the event went at {header}, FaderInfo was fetched at {faderInfoFetch}");
+    }
+
+    /// <summary>
+    /// A delay hook that stops the device (Disconnect, as the host does) inside the first write slot wait that
+    /// <paramref name="which"/> selects: the stop arrives while the loop waits for that write's slot. The Disconnect task is
+    /// handed back through <paramref name="disconnect"/> (Disconnect cancels the session's stop token before it first awaits).
+    /// </summary>
+    private static Func<VirtualClock, Func<TimeSpan, CancellationToken, Task>> StopDuringOneWriteSlot(Func<UsbSmartFadeDevice?> device, Func<HspReadSession, bool> which, StrongBox<Task?> disconnect)
+    {
+        var once = 1;
+        return clock => (wait, _) =>
+        {
+            var dev = device();
+            if (dev?.LastSession is { State: HspReadSessionState.ReadyToSend } session
+                && session.PeekNextKind() == HspMessageType.Data && which(session) && Interlocked.Exchange(ref once, 0) == 1)
+            {
+                disconnect.Value = dev.DisconnectAsync(CancellationToken.None);
+            }
+
+            clock.Advance(wait);
+            return Task.CompletedTask;
+        };
+    }
+
+    [Fact]
+    public async Task A_stop_during_a_writes_slot_wait_chooses_no_new_write_and_drops_the_queued_one()
+    {
+        // The first review of SC-2 item 10, minor (5), and the second pass, MINOR B: a stop that arrives while the loop waits
+        // for a write's slot is handled before anything is chosen; the MASTER write queued for that slot never goes out.
+        UsbSmartFadeDevice? device = null;
+        var disconnect = new StrongBox<Task?>();
+        var rig = LiveConsole(delay: StopDuringOneWriteSlot(() => device, session => session.HeldKey is null, disconnect));
+        device = rig.Device;
+        await device.ConnectAsync(CancellationToken.None);
+        await rig.KeysReported.WaitAsync(Timeout);
+
+        await rig.Console.PauseAtNextPoll().WaitAsync(Timeout);
+        await device.SetMasterAsync(0x80, CancellationToken.None);
+        rig.Console.Resume();
+        await WaitUntil(() => disconnect.Value is not null);
+        await disconnect.Value!.WaitAsync(Timeout);
+
+        Assert.Equal(ConnectionStatus.Disconnected, device.Status);
+        Assert.Equal(0, device.LastSession!.WritesSent);
+        Assert.Equal(0, device.LastSession.QueuedWrites);
+        Assert.Contains("stop: 1 queued write(s) dropped before they started", rig.Log.Notes);
+        Assert.DoesNotContain(Recorded(rig.Pipe), IsDataHeader);
+    }
+
+    [Fact]
+    public async Task A_stop_during_a_releases_slot_wait_still_sends_the_release()
+    {
+        // SC-2 condition 4 with the second pass's MINOR B: the stop arrives while the loop waits for the release's slot; the
+        // release of the bump 7 press that already went is the one write a stop does not take away.
+        UsbSmartFadeDevice? device = null;
+        var disconnect = new StrongBox<Task?>();
+        var rig = LiveConsole(delay: StopDuringOneWriteSlot(() => device, session => session.HeldKey is not null, disconnect));
+        device = rig.Device;
+        await device.ConnectAsync(CancellationToken.None);
+        await rig.KeysReported.WaitAsync(Timeout);
+
+        await device.BumpChannelAsync(7, pressed: true, CancellationToken.None);
+        await WaitUntil(() => disconnect.Value is not null);
+        await disconnect.Value!.WaitAsync(Timeout);
+
+        Assert.Equal(ConnectionStatus.Disconnected, device.Status);
+        Assert.Equal(2, device.LastSession!.WritesSent);   // the press, then its release in the very slot the stop arrived in
+        Assert.Null(device.LastSession.HeldKey);
+        var transfers = Recorded(rig.Pipe);
+        Assert.Equal(2, transfers.Count(IsDataHeader));
+        var releaseHeader = transfers.FindLastIndex(IsDataHeader);
+        Assert.Equal(E9Payload(19436, 0x01), transfers[releaseHeader + 1].Data);   // SmartSoft's bump 7 release (E9 seq 19436), this session's second write
+        Assert.DoesNotContain(rig.Log.Notes, note => note.StartsWith("stop:", StringComparison.Ordinal) && note.Contains("dropped", StringComparison.Ordinal));
+    }
+
+    [Fact]
+    public async Task An_incomplete_write_marker_that_cannot_be_read_refuses_to_connect_until_it_can()
+    {
+        // The second pass of SC-2 item 10, MINOR B: a marker that exists but cannot be read refuses too, without opening the
+        // console; readable again, it still records the incomplete write; only its removal lets the device connect.
+        var directory = Path.Combine(Path.GetTempPath(), "smartfade-tests", Guid.NewGuid().ToString("N"));
+        var marker = new IncompleteWriteMarker(directory);
+        try
+        {
+            marker.Write(DateTimeOffset.UnixEpoch, "A Data write did not complete (test)");
+            var opened = 0;
+            var device = Create(() =>
+            {
+                opened++;
+                return new ScriptedPipe(replies: Enumerable.Repeat(Idle(), 100).ToArray());
+            }, marker: marker);
+            var refusals = new List<ConnectionState>();
+            device.ConnectionChanged += (_, state) => refusals.Add(state);
+
+            using (new FileStream(marker.FilePath, FileMode.Open, FileAccess.Read, FileShare.None))
+            {
+                await device.ConnectAsync(CancellationToken.None);
+            }
+
+            Assert.Contains("could not be read", Assert.Single(refusals).Error, StringComparison.Ordinal);
+            Assert.Equal(0, opened);
+            Assert.Equal(ConnectionStatus.Disconnected, device.Status);
+
+            refusals.Clear();
+            await device.ConnectAsync(CancellationToken.None);
+            Assert.Contains("records a Data write that did not complete", Assert.Single(refusals).Error, StringComparison.Ordinal);
+            Assert.Equal(0, opened);
+
+            File.Delete(marker.FilePath);
+            var connected = WaitForStatus(device, ConnectionStatus.Connected);
+            await device.ConnectAsync(CancellationToken.None);
+            await connected;
+            Assert.Equal(1, opened);
+            await device.DisconnectAsync(CancellationToken.None);
+        }
+        finally
+        {
+            if (Directory.Exists(directory))
+            {
+                Directory.Delete(directory, recursive: true);
+            }
+        }
     }
 
     /// <summary>A sink that keeps nothing: the tests above check the bytes through the pipes, not the log.</summary>

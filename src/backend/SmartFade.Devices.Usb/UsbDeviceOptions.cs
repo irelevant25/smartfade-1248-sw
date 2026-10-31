@@ -56,6 +56,9 @@ public sealed class UsbDeviceOptions
         public const int PollAfterWrite = 15;
 
         public const int WriteInterval = 46;
+
+        /// <summary>The reply timeout's default (ms); live control never waits longer for a reply (the console answered within 12 ms in every capture).</summary>
+        public const int ReplyTimeout = 500;
     }
 
     /// <summary>Idle poll cadence; SmartSoft's median was 31 ms.</summary>
@@ -73,8 +76,8 @@ public sealed class UsbDeviceOptions
     /// <summary>Least time from one write to the next; SmartSoft's writes in a burst were a median 61.8 ms apart (E9b), and one write per poll cycle (31 + 15 ms) gives 46 ms.</summary>
     public int WriteIntervalMilliseconds { get; set; } = Defaults.WriteInterval;
 
-    /// <summary>How long a reply may take before the session is abandoned (the console answered within 12 ms in every capture).</summary>
-    public int ReplyTimeoutMilliseconds { get; set; } = 500;
+    /// <summary>How long a reply may take before the session is abandoned (the console answered within 12 ms in every capture); with live control on, at most its default (<see cref="Defaults.ReplyTimeout"/>).</summary>
+    public int ReplyTimeoutMilliseconds { get; set; } = Defaults.ReplyTimeout;
 
     /// <summary>Device path override; when empty the console's WinUSB interface 1 is located automatically. Any path must still name VID 14D5 / PID 0200 interface 1.</summary>
     public string? DevicePath { get; set; }
@@ -120,7 +123,10 @@ public sealed class UsbDeviceOptions
     /// periods, a write waits for the poll, the last payload and the previous write, and a tap lasts until the next
     /// write slot, so each of these settings must stay at or below its default, SmartSoft's median
     /// (<see cref="Defaults"/>): a write then goes about 31 ms after its poll (SmartSoft: 29.81–47.99 ms, E9 and E9b)
-    /// with a report at most 62 ms old, and a tap lasts about 46 ms. Null when they do; else what does not.
+    /// with a report at most 62 ms old, and a tap lasts about 46 ms. The reply timeout is bounded too (at most its default,
+    /// 500 ms; the second pass of item 10, MINOR C): it caps how long a tap's press can stay unreleased when the console is
+    /// slow to answer the poll between press and release (never observed: within 12 ms in every capture). Null when they all
+    /// do; else what does not.
     /// </summary>
     public string? LiveControlTimingProblem()
     {
@@ -130,6 +136,7 @@ public sealed class UsbDeviceOptions
         Check(nameof(FetchDelayMilliseconds), FetchDelayMilliseconds, Defaults.FetchDelay);
         Check(nameof(PollAfterWriteMilliseconds), PollAfterWriteMilliseconds, Defaults.PollAfterWrite);
         Check(nameof(WriteIntervalMilliseconds), WriteIntervalMilliseconds, Defaults.WriteInterval);
+        Check(nameof(ReplyTimeoutMilliseconds), ReplyTimeoutMilliseconds, Defaults.ReplyTimeout);
         return over.Count == 0
             ? null
             : $"live control runs no slower than SmartSoft's measured cadence (the defaults): {string.Join(", ", over)}";
