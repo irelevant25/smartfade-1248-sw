@@ -29,3 +29,12 @@ tab cell change to 100 % was checked on the console ("the channel 5 is stored th
 a SmartSoft restart SmartSoft showed "Čaj"; after the restore and another restart it showed none. H81:
 the physical fader took over at once when moved ("instantly go to the value of the physical fader");
 the Simulator's fader 5 took effect at once. The console was powered off since E9.
+
+Further note (2026-10-31, after the session): "I realized that the MASTER fader was on about 50%. I
+am not sure where or if I should move it to the 100%. I could miss it or there was no task for that
+somewhere at the end." The guide's step H85 set the Simulator MASTER to about half and "h85 reset"
+asked for it back to full; if the console's MASTER ended at about 50 %, the reset to full was missed
+or there was no step for the physical MASTER. This affects live levels only, not the show data, and
+the capture records the MASTER's value over time; the owner can set it back to full on the console at
+any time. Noted for the analyst so a MASTER near 0x80 late in the capture is read as this, not as a
+console anomaly.
