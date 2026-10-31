@@ -33,8 +33,9 @@ console's firmware.
   label and memory writes and the System pair. Nothing else is cleared. The owner implemented SC-2's
   whitelist on 2026-10-31 (`HspOutbound`, `HspReadSession`, `UsbSmartFadeDevice`), sent only by a session
   with `Device:Usb:LiveControlDate` = today on top of the read-only mode; the first safety review (SC-2
-  item 10) found changes, fixed the same day and not yet re-checked, so nothing may be sent before the
-  re-check passes and the owner gives the go for E11. Claude never writes that code (see "Current state").
+  item 10) found changes, fixed the same day; the second pass (re-check, 2026-10-31, evening) found no blocker or
+  major left, three minors and three nits open, and cleared nothing: nothing may be sent before SC-2's E11
+  conditions are met and the owner gives the go for E11. Claude never writes that code (see "Current state").
 - Never touch the console bootloader / firmware update path.
 - Never retry commands with side effects blindly.
 - Golden protocol tests may only use bytes from a committed capture in `docs/protocol/captures/`.
@@ -220,7 +221,11 @@ for ChannelText and Memory writes and for the System pair; never for the paths o
 day** (the SC-2 "Implementation" section): the first `protocol-safety-reviewer` pass (item 10) found NEEDS CHANGES (one blocker, fixed as tags
 the same day; majors 3, 4, 5 fixed the same day, majors 1, 2 and 6 and the minors later that day: the write is chosen after its
 slot wait, an undecodable LED / status / FaderInfo report ends a live session, the interlock is replayed over E9 and E9b, the
-incomplete-write latch is kept on disk); nothing is sent before the re-check passes and the owner gives the go for E11. Next: "Next capture (proposed by the
+incomplete-write latch is kept on disk; commit bf1aa4e). **The second pass (re-check) of 2026-10-31, evening, passed:** majors 1, 2 and 6 and the
+minors RESOLVED with file-and-line evidence, the 16 armed writes confirmed by the reviewer's own replay, SC-1's read-only session unchanged; three
+minors (two untested holds, two untested paths, `ReplyTimeoutMilliseconds` unbounded) and three nits (wording) stay open on the owner's side, to be
+fixed or accepted in the SC-2 review table. It cleared nothing: E11 needs SC-2's conditions (backup, rig decision, USBPcap, versions, the written
+acceptances incl. the decode-failure release case, the script adjustments) and the owner's go on the day. Next: "Next capture (proposed by the
 E9b analysis, 2026-10-31)" in `reverse-engineering.md`, and E9c / E11 as SC-2 lists them.
 **E12 run 2026-10-31, afternoon** (a passive capture of SmartSoft Online editing the patch and the stack / sequences: SmartSoft drives, USBPcap
 records, our software is not involved; E9c / E9d stay reserved by SC-2 and E11 is the first live-control session of our software; planned the same
