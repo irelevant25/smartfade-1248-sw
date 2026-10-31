@@ -61,7 +61,7 @@
     }
 
     @for (sequence of show.sequences; track sequence.index) {
-      <h3 class="show__section">Sequence {{ sequence.index }}{{ sequence.label ? ' "' + labelText(sequence.label) + '"' : '' }} ({{ sequence.steps.length }} steps)</h3>
+      <h3 class="show__section">Sequence {{ sequence.index }} <span class="show__label"><input type="text" class="show__edit show__edit--label" maxlength="6" [value]="sequence.label?.line1 ?? ''" [attr.aria-label]="'Label line 1 of sequence ' + sequence.index" (change)="setLabelLine({ kind: 'sequence', index: seqIndex(sequence) }, 1, $event)" /><input type="text" class="show__edit show__edit--label" maxlength="6" [value]="sequence.label?.line2 ?? ''" [attr.aria-label]="'Label line 2 of sequence ' + sequence.index" (change)="setLabelLine({ kind: 'sequence', index: seqIndex(sequence) }, 2, $event)" /><input type="text" class="show__edit show__edit--label" maxlength="6" [value]="sequence.label?.line3 ?? ''" [attr.aria-label]="'Label line 3 of sequence ' + sequence.index" (change)="setLabelLine({ kind: 'sequence', index: seqIndex(sequence) }, 3, $event)" /></span> ({{ sequence.steps.length }} steps)</h3>
       <table class="show__table">
         <thead><tr><th>Step</th><th>Memory</th><th>Up</th><th>Down</th><th>Follow-on</th><th>Channels</th><th class="show__rowbtns"></th></tr></thead>
         <tbody>
@@ -89,6 +89,7 @@
     <p class="show__hint">Steps: the fade times, delays and follow-on take the console's own forms (seconds with one decimal, or m:ss); the memory is 1..288 and sets the step's channel list (and a sequence step's number) from that memory, as the console's own files do. + adds a step after a row as a copy of its memory and times (a new cue takes the next free number below 200), × removes a step; existing numbers stay as the file wrote them.</p>
 
     <h3 class="show__section">Memories ({{ show.memories.length }} recorded)</h3>
+    <p class="show__hint">A memory's channels in the files' own form, 7/100 15/8 (channels 1..48 at 1..100 %; a channel left out is at 0); the steps that use the memory follow it. A label is three lines of up to 6 characters.</p>
     <table class="show__table">
       <thead><tr><th>Memory</th><th>Page</th><th>Fader</th><th>Label</th><th>Channels</th></tr></thead>
       <tbody>
@@ -97,8 +98,12 @@
             <td class="show__num">{{ memory.number }}</td>
             <td class="show__num">{{ memory.page }}</td>
             <td class="show__num">{{ memory.fader }}</td>
-            <td>{{ labelText(memory.label) }}</td>
-            <td class="show__chans">{{ channelsText(memory.channels) }}</td>
+            <td class="show__label">
+              <input type="text" class="show__edit show__edit--label" maxlength="6" [value]="memory.label.line1" [attr.aria-label]="'Label line 1 of memory ' + memory.number" (change)="setLabelLine({ kind: 'memory', number: memory.number }, 1, $event)" />
+              <input type="text" class="show__edit show__edit--label" maxlength="6" [value]="memory.label.line2" [attr.aria-label]="'Label line 2 of memory ' + memory.number" (change)="setLabelLine({ kind: 'memory', number: memory.number }, 2, $event)" />
+              <input type="text" class="show__edit show__edit--label" maxlength="6" [value]="memory.label.line3" [attr.aria-label]="'Label line 3 of memory ' + memory.number" (change)="setLabelLine({ kind: 'memory', number: memory.number }, 3, $event)" />
+            </td>
+            <td class="show__chans"><input type="text" class="show__edit show__edit--chans" [value]="channelsText(memory.channels)" [attr.aria-label]="'Channels of memory ' + memory.number" (change)="setMemoryChannels(memory.number, $event)" /></td>
           </tr>
         }
       </tbody>
@@ -139,6 +144,22 @@
         <div><dt>IND {{ independent.number }}</dt><dd>{{ independent.a }} {{ independent.b }} {{ independent.c }} {{ independent.d }} {{ labelText(independent.label) }}</dd></div>
       }
     </dl>
+    <details class="show__details">
+      <summary>Edit channel labels ({{ show.channels.length }} channels; three lines of up to 6 characters each)</summary>
+      <table class="show__table">
+        <thead><tr><th>Channel</th><th>Line 1</th><th>Line 2</th><th>Line 3</th></tr></thead>
+        <tbody>
+          @for (channel of show.channels; track channel.number) {
+            <tr>
+              <td class="show__num">{{ channel.number }}</td>
+              <td><input type="text" class="show__edit show__edit--label" maxlength="6" [value]="channel.label.line1" [attr.aria-label]="'Label line 1 of channel ' + channel.number" (change)="setLabelLine({ kind: 'channel', number: channel.number }, 1, $event)" /></td>
+              <td><input type="text" class="show__edit show__edit--label" maxlength="6" [value]="channel.label.line2" [attr.aria-label]="'Label line 2 of channel ' + channel.number" (change)="setLabelLine({ kind: 'channel', number: channel.number }, 2, $event)" /></td>
+              <td><input type="text" class="show__edit show__edit--label" maxlength="6" [value]="channel.label.line3" [attr.aria-label]="'Label line 3 of channel ' + channel.number" (change)="setLabelLine({ kind: 'channel', number: channel.number }, 3, $event)" /></td>
+            </tr>
+          }
+        </tbody>
+      </table>
+    </details>
 
     <h3 class="show__section">Settings</h3>
     <dl class="show__facts">

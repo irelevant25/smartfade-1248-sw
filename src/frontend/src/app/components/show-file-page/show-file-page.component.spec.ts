@@ -1,7 +1,7 @@
 import { TestBed } from '@angular/core/testing';
 import { ShowFilePageComponent } from './show-file-page.component';
 import type { ShowFileDto } from '../../core/show-file.models';
-import { nextCueNumber, ShowFileService } from '../../core/show-file.service';
+import { labelText, nextCueNumber, parseChannelPairs, ShowFileService } from '../../core/show-file.service';
 
 const label = (line1 = '', text = line1) => ({ text, line1, line2: '', line3: '' });
 
@@ -86,15 +86,15 @@ describe('ShowFilePageComponent', () => {
     expect(root.querySelector('.show__facts')?.textContent).toContain('SHOW07.ASC');
     expect(root.querySelector('.show__facts')?.textContent).toContain('48 of 512');
     const tables = Array.from(root.querySelectorAll('.show__table'));
-    expect(tables).toHaveLength(3); // stack, one sequence, memories
+    expect(tables).toHaveLength(4); // stack, one sequence, memories, channel labels
     expect(tables[0].querySelectorAll('tbody tr')).toHaveLength(2);
     const cell = (label: string) => tables[0].querySelector<HTMLInputElement>(`input[aria-label="${label}"]`)?.value;
     expect(cell('Memory of cue 1.0')).toBe('1');
     expect(tables[0].textContent).toContain('p1 f1');
     expect(cell('Follow-on of cue 2.0')).toBe('1:30');
-    expect(root.textContent).toContain('Sequence 0 "KOTLIK"');
-    expect(tables[2].textContent).toContain('OPONA');
-    expect(tables[2].textContent).toContain('7/100 8/100');
+    expect(root.querySelector<HTMLInputElement>('input[aria-label="Label line 1 of sequence 0"]')?.value).toBe('KOTLIK');
+    expect(tables[2].querySelector<HTMLInputElement>('input[aria-label="Label line 1 of memory 1"]')?.value).toBe('OPONA');
+    expect(tables[2].querySelector<HTMLInputElement>('input[aria-label="Channels of memory 1"]')?.value).toBe('7/100 8/100');
     expect(root.querySelectorAll('.show__patch-cell')).toHaveLength(512);
     expect(root.querySelectorAll('.show__patch-cell--empty')).toHaveLength(512 - 48);
     expect(root.textContent).toContain('7 Caj');
@@ -240,5 +240,59 @@ describe('ShowFilePageComponent', () => {
     expect(nextCueNumber('10.1', '10.2')).toBeUndefined();
     expect(nextCueNumber('199.9', undefined)).toBeUndefined();
     expect(nextCueNumber(undefined, '2.0')).toBe('1.0');
+  });
+
+  it("edits a memory's channels and labels, keeps the steps that use the memory in step, and refuses what the files never write", async () => {
+    await openFile(sampleShow());
+    const fixture = TestBed.createComponent(ShowFilePageComponent);
+    fixture.detectChanges();
+    const root = fixture.nativeElement as HTMLElement;
+    const field = (label: string) => root.querySelector<HTMLInputElement>(`input[aria-label="${label}"]`)!;
+    const typeInto = (input: HTMLInputElement, value: string) => {
+      input.value = value;
+      input.dispatchEvent(new Event('change'));
+      fixture.detectChanges();
+    };
+    const service = TestBed.inject(ShowFileService);
+
+    // channels in the files' form, sorted into rising order; cue 1.0 uses memory 1 and follows it
+    typeInto(field('Channels of memory 1'), '9/100 7/50');
+    expect(service.edited()!.memories[0].channels).toEqual([{ channel: 7, percent: 50 }, { channel: 9, percent: 100 }]);
+    expect(service.edited()!.mainStack!.steps[0].channels).toEqual([{ channel: 7, percent: 50 }, { channel: 9, percent: 100 }]);
+    expect(field('Channels of memory 1').value).toBe('7/50 9/100');
+
+    // channel 49, 101 %, a malformed pair: refused and restored; empty = no channels
+    typeInto(field('Channels of memory 1'), '49/100');
+    expect(field('Channels of memory 1').value).toBe('7/50 9/100');
+    typeInto(field('Channels of memory 1'), '7/101');
+    expect(field('Channels of memory 1').value).toBe('7/50 9/100');
+    typeInto(field('Channels of memory 1'), '7-50');
+    expect(field('Channels of memory 1').value).toBe('7/50 9/100');
+    typeInto(field('Channels of memory 1'), '');
+    expect(service.edited()!.memories[0].channels).toEqual([]);
+    expect(service.edited()!.mainStack!.steps[0].channels).toEqual([]);
+
+    // labels: the Text line follows from the lines as the console derives it; 7 characters and '&' are refused
+    typeInto(field('Label line 1 of memory 1'), 'OPONA2');
+    typeInto(field('Label line 2 of memory 1'), 'X');
+    expect(service.edited()!.memories[0].label).toEqual({ text: 'OPONA2X', line1: 'OPONA2', line2: 'X', line3: '' });
+    typeInto(field('Label line 1 of memory 1'), 'SEDEM7A');
+    expect(field('Label line 1 of memory 1').value).toBe('OPONA2');
+    typeInto(field('Label line 3 of memory 1'), 'A&B');
+    expect(field('Label line 3 of memory 1').value).toBe('');
+    typeInto(field('Label line 1 of channel 7'), 'CAJ');
+    expect(service.edited()!.channels[0].label).toEqual({ text: 'CAJ', line1: 'CAJ', line2: '', line3: '' });
+    typeInto(field('Label line 1 of sequence 0'), 'KOTOL');
+    expect(service.edited()!.sequences[0].label).toEqual({ text: 'KOTOL', line1: 'KOTOL', line2: '', line3: '' });
+    expect(root.querySelector('.show__dirty')).not.toBeNull();
+  });
+
+  it('derives the Text line and parses channel pairs as the files write them', () => {
+    expect(labelText('NOC 3', 'MORE', '')).toBe('NOC 3');
+    expect(labelText('LAFIAO', 'GULA', '')).toBe('LAFIAOGULA');
+    expect(labelText('BLUE 2', 'HVIRZD', 'X')).toBe('BLUE 2HVIRZDX');
+    expect(parseChannelPairs('7/100 15/8')).toEqual([{ channel: 7, percent: 100 }, { channel: 15, percent: 8 }]);
+    expect(parseChannelPairs('  ')).toEqual([]);
+    expect(parseChannelPairs('7-100')).toBeUndefined();
   });
 });

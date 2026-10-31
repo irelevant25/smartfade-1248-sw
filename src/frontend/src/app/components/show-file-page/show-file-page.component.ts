@@ -1,6 +1,6 @@
 import { ChangeDetectionStrategy, Component, computed, inject, signal } from '@angular/core';
 import type { ChannelPercentDto, LabelDto, SequenceDto, StepDto } from '../../core/show-file.models';
-import { ShowFileService, TIME_PATTERN, type StepHome } from '../../core/show-file.service';
+import { parseChannelPairs, ShowFileService, TIME_PATTERN, type LabelTarget, type StepHome } from '../../core/show-file.service';
 
 /**
  * The show-file page (E10, step 1): open a `.asc` show file from disk and browse what it holds, read-only:
@@ -91,6 +91,37 @@ export class ShowFilePageComponent {
   protected removeStep(home: StepHome, index: number): void {
     this._stepNotice.set(undefined);
     this._files.removeStep(home, index);
+  }
+
+  /** The channels cell of a memory, in the files' own form (`7/100 15/8`); restored when refused. */
+  protected setMemoryChannels(number: number, event: Event): void {
+    const input = event.target as HTMLInputElement;
+    const pairs = parseChannelPairs(input.value);
+    if (!pairs || !this._files.setMemoryChannels(number, pairs)) {
+      input.value = this.channelsText(this.edited()?.memories.find((m) => m.number === number)?.channels ?? []);
+      return;
+    }
+    input.value = this.channelsText(this.edited()?.memories.find((m) => m.number === number)?.channels ?? []);
+  }
+
+  /** One line of a label; restored when refused (over 6 characters, or a character the files never write). */
+  protected setLabelLine(target: LabelTarget, line: 1 | 2 | 3, event: Event): void {
+    const input = event.target as HTMLInputElement;
+    if (!this._files.setLabelLine(target, line, input.value)) {
+      input.value = this.labelOf(target)?.[`line${line}`] ?? '';
+    }
+  }
+
+  private labelOf(target: LabelTarget): LabelDto | null | undefined {
+    const show = this.edited();
+    switch (target.kind) {
+      case 'memory':
+        return show?.memories.find((m) => m.number === target.number)?.label;
+      case 'channel':
+        return show?.channels.find((c) => c.number === target.number)?.label;
+      case 'sequence':
+        return show?.sequences[target.index]?.label;
+    }
   }
 
   /** The position of a sequence in the file's list: the service addresses steps by it. */

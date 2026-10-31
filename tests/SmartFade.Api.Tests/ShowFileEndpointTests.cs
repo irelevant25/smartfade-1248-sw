@@ -171,6 +171,50 @@ public class ShowFileEndpointTests
         Assert.Contains("numbered by its memory (265.0)", await Refusal(dto with { Sequences = sequences }), StringComparison.Ordinal);
     }
 
+
+    [Fact]
+    public async Task Renders_an_edited_memory_and_its_label_and_refuses_shapes_the_console_never_wrote()
+    {
+        using var factory = new WebApplicationFactory<Program>().WithWebHostBuilder(b => b.UseSetting("Device:Mode", "Simulated"));
+        using var client = factory.CreateClient();
+        using var upload = new ByteArrayContent(await File.ReadAllBytesAsync(OstrovSample));
+        var dto = (await (await client.PostAsync("/api/showfile/parse?name=Ostrov.asc", upload)).Content.ReadFromJsonAsync<ShowFileDto>())!;
+
+        // memory 265 (page 12, fader 1): new channels and a label; the sequence steps that use it repeat its channels
+        var memories = dto.Memories.ToList();
+        var index = memories.FindIndex(m => m.Number == 265);
+        var channels = new[] { new ChannelPercentDto(7, 50), new ChannelPercentDto(45, 100) };
+        memories[index] = memories[index] with { Channels = channels, Label = new LabelDto("KOTOL", "KOTOL", "", "") };
+        var sequences = dto.Sequences.ToList();
+        sequences[0] = sequences[0] with { Steps = sequences[0].Steps.Select(s => s.MemoryNumber == 265 ? s with { Channels = channels } : s).ToArray() };
+        var edited = await client.PostAsJsonAsync("/api/showfile/render", dto with { Memories = memories, Sequences = sequences });
+        Assert.Equal(HttpStatusCode.OK, edited.StatusCode);
+        var text = System.Text.Encoding.Latin1.GetString(await edited.Content.ReadAsByteArrayAsync());
+        var group = text[text.IndexOf("GROUP 265", StringComparison.Ordinal)..text.IndexOf("GROUP 266", StringComparison.Ordinal)];
+        Assert.Contains("CHAN 7/50 45/100", group, StringComparison.Ordinal);
+        Assert.Contains("Text KOTOL", group, StringComparison.Ordinal);
+        Assert.Contains("$$Text 1 KOTOL", group, StringComparison.Ordinal);
+        var step = text[text.IndexOf("$CUE 265.0", StringComparison.Ordinal)..text.IndexOf("$CUE 266.0", StringComparison.Ordinal)];
+        Assert.Contains("CHAN 7/50 45/100", step, StringComparison.Ordinal);
+
+        async Task<string> Refusal(ShowFileDto body)
+        {
+            var refused = await client.PostAsJsonAsync("/api/showfile/render", body);
+            Assert.Equal(HttpStatusCode.BadRequest, refused.StatusCode);
+            return (await refused.Content.ReadFromJsonAsync<ErrorDto>())!.Message;
+        }
+
+        var withLabel = memories.ToList();
+        withLabel[index] = memories[index] with { Label = new LabelDto("SEDEM7A", "SEDEM7A", "", "") };
+        Assert.Contains("longer than 6", await Refusal(dto with { Memories = withLabel, Sequences = sequences }), StringComparison.Ordinal);
+        withLabel[index] = memories[index] with { Label = new LabelDto("WRONG", "KOTOL", "", "") };
+        Assert.Contains("does not follow from its lines", await Refusal(dto with { Memories = withLabel, Sequences = sequences }), StringComparison.Ordinal);
+        withLabel[index] = memories[index] with { Channels = new[] { new ChannelPercentDto(49, 100) } };
+        Assert.Contains("outside 1..48", await Refusal(dto with { Memories = withLabel, Sequences = sequences }), StringComparison.Ordinal);
+        withLabel[index] = memories[index] with { Channels = new[] { new ChannelPercentDto(9, 100), new ChannelPercentDto(7, 50) } };
+        Assert.Contains("must rise through the list", await Refusal(dto with { Memories = withLabel, Sequences = sequences }), StringComparison.Ordinal);
+    }
+
     private static string FindRepositoryRoot()
     {
         var directory = new DirectoryInfo(AppContext.BaseDirectory);

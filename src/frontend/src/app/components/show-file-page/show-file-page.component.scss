@@ -177,6 +177,32 @@
   width: 44px;
 }
 
+.show__edit--label {
+  width: 58px;
+  margin-right: 2px;
+  text-transform: none;
+}
+
+.show__edit--chans {
+  width: 100%;
+  min-width: 180px;
+}
+
+.show__label {
+  white-space: nowrap;
+  font-weight: normal;
+}
+
+.show__details {
+  margin: 8px 0;
+
+  summary {
+    cursor: pointer;
+    font-size: 0.85rem;
+    color: var(--sf-muted, inherit);
+  }
+}
+
 .show__rowbtns {
   white-space: nowrap;
   width: 1%;

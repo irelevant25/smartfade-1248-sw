@@ -53,6 +53,16 @@ public static partial class ShowFileRules
             memories[memory.Number] = memory;
         }
 
+        if (CheckMemories(dto.Memories) is { } memoryProblem)
+        {
+            return memoryProblem;
+        }
+
+        if (CheckLabels(dto) is { } labelProblem)
+        {
+            return labelProblem;
+        }
+
         var stepProblem = dto.MainStack is { } main ? CheckSteps("the stack", main, memories) : null;
         foreach (var sequence in dto.Sequences)
         {
@@ -170,6 +180,138 @@ public static partial class ShowFileRules
 
     private static string Describe(IReadOnlyList<ChannelPercentDto> channels) =>
         channels.Count == 0 ? "no channels" : string.Join(' ', channels.Select(c => string.Create(CultureInfo.InvariantCulture, $"{c.Channel}/{c.Percent}")));
+
+    /// <summary>The highest channel a memory of the 34 files names (4 860 of 4 860 pairs; the console's 48 faders).</summary>
+    public const int MaxMemoryChannel = 48;
+
+    /// <summary>A label line as the console writes it: at most 6 characters, an HTML numeric entity counting as one.</summary>
+    public const int LabelLineLength = 6;
+
+    /// <summary>
+    /// The <c>Text</c> line of a label block as the console derives it from the three <c>$$Text n</c> lines (4 282 of
+    /// 4 282 blocks in 34 files): line 1, followed by line 2 only when line 1 is full (6 characters), followed by line 3
+    /// only when line 2 is full too. The reading of a full line with an entity in it is HYPOTHESIS (no such line exists).
+    /// </summary>
+    public static string LabelText(string line1, string line2, string line3) =>
+        LabelLength(line1) < LabelLineLength ? line1 : LabelLength(line2) < LabelLineLength ? line1 + line2 : line1 + line2 + line3;
+
+    /// <summary>Characters as the console counts them: <c>&amp;#268;</c> (one file writes Č so) is one.</summary>
+    public static int LabelLength(string line) => EntityPattern().Replace(line, "x").Length;
+
+    /// <summary>
+    /// A memory (<c>GROUP n</c>): channels in rising order, each once, 1..48, at 1..100 percent (a channel at 0 is not
+    /// written; 496 of 496 memories, 4 860 pairs); its label as <see cref="CheckLabel"/> says.
+    /// </summary>
+    private static string? CheckMemories(IReadOnlyList<MemoryFileDto> memories)
+    {
+        foreach (var memory in memories)
+        {
+            var name = $"memory {memory.Number}";
+            if (memory.Number < 1 || memory.Number > 12 * MemoriesPerPage)
+            {
+                return $"{name}: the number is outside 1..{12 * MemoriesPerPage}.";
+            }
+
+            var previous = 0;
+            foreach (var channel in memory.Channels)
+            {
+                if (channel.Channel < 1 || channel.Channel > MaxMemoryChannel)
+                {
+                    return $"{name}: channel {channel.Channel} is outside 1..{MaxMemoryChannel} (the files never name another in a memory).";
+                }
+
+                if (channel.Channel <= previous)
+                {
+                    return $"{name}: the channels must rise through the list, each once; {channel.Channel} follows {previous}.";
+                }
+
+                if (channel.Percent < 1 || channel.Percent > 100)
+                {
+                    return $"{name}: channel {channel.Channel} at {channel.Percent} % is outside 1..100 (a channel at 0 is left out).";
+                }
+
+                previous = channel.Channel;
+            }
+
+            if (CheckLabel(name, memory.Label) is { } problem)
+            {
+                return problem;
+            }
+        }
+
+        return null;
+    }
+
+    private static string? CheckLabels(ShowFileDto dto)
+    {
+        foreach (var sequence in dto.MainStack is { } main ? dto.Sequences.Prepend(main) : dto.Sequences)
+        {
+            var where = sequence.IsMainStack ? "the stack" : $"sequence {sequence.Index}";
+            if (sequence.Label is { } label && CheckLabel(where, label) is { } problem)
+            {
+                return problem;
+            }
+
+            foreach (var step in sequence.Steps)
+            {
+                if (step.Label is { } stepLabel && CheckLabel($"{where}, step {step.Number}", stepLabel) is { } stepProblem)
+                {
+                    return stepProblem;
+                }
+            }
+        }
+
+        foreach (var (what, items) in new[] { ("channel", dto.Channels), ("page", dto.Pages) })
+        {
+            foreach (var item in items)
+            {
+                if (CheckLabel($"{what} {item.Number}", item.Label) is { } problem)
+                {
+                    return problem;
+                }
+            }
+        }
+
+        foreach (var independent in dto.Independents)
+        {
+            if (CheckLabel($"independent {independent.Number}", independent.Label) is { } problem)
+            {
+                return problem;
+            }
+        }
+
+        return null;
+    }
+
+    /// <summary>
+    /// A label block: three lines of at most 6 characters (an entity counting as one), printable ASCII only (no file
+    /// holds another byte; a non-ASCII character appears only as an HTML numeric entity, OBSERVED in one file), and the
+    /// <c>Text</c> line derived from them as the console derives it (<see cref="LabelText"/>).
+    /// </summary>
+    private static string? CheckLabel(string where, LabelDto label)
+    {
+        foreach (var (n, line) in new[] { (1, label.Line1), (2, label.Line2), (3, label.Line3) })
+        {
+            if (LabelLength(line) > LabelLineLength)
+            {
+                return $"{where}: label line {n} '{line}' is longer than {LabelLineLength} characters.";
+            }
+
+            if (!LabelLinePattern().IsMatch(line))
+            {
+                return $"{where}: label line {n} '{line}' holds a character the console's files never write (printable ASCII only; '&' only in a numeric entity).";
+            }
+        }
+
+        var expected = LabelText(label.Line1, label.Line2, label.Line3);
+        return label.Text == expected ? null : $"{where}: the label's Text line '{label.Text}' does not follow from its lines ('{expected}').";
+    }
+
+    [System.Text.RegularExpressions.GeneratedRegex("&#[0-9]+;")]
+    private static partial System.Text.RegularExpressions.Regex EntityPattern();
+
+    [System.Text.RegularExpressions.GeneratedRegex("^([ -%'-~]|&#[0-9]+;)*$")]
+    private static partial System.Text.RegularExpressions.Regex LabelLinePattern();
 
     private static bool IsTime(string value) => TimePattern().IsMatch(value);
 

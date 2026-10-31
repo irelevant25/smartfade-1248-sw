@@ -1,5 +1,5 @@
 import { computed, Injectable, signal } from '@angular/core';
-import type { SequenceDto, ShowFileDto, StepDto } from './show-file.models';
+import type { ChannelPercentDto, LabelDto, SequenceDto, ShowFileDto, StepDto } from './show-file.models';
 
 /** Where a step lives: the main stack, or a sequence by its position in the file's list. */
 export type StepHome = 'stack' | number;
@@ -185,6 +185,89 @@ export class ShowFileService {
     );
   }
 
+  /**
+   * Memory edit: the channel list of a memory (channels 1..48 at 1..100 %, in rising order, each once, as the 496
+   * memories of the console's files; a channel at 0 is left out). Every step that references the memory repeats the
+   * list, so those steps are updated too (894 of 894 in the files). Returns false, and changes nothing, when refused.
+   */
+  setMemoryChannels(number: number, channels: ChannelPercentDto[]): boolean {
+    const edited = this._edited();
+    const index = edited?.memories.findIndex((m) => m.number === number) ?? -1;
+    if (!edited || index < 0) {
+      return false;
+    }
+    const sorted = channels.map((c) => ({ ...c })).sort((a, b) => a.channel - b.channel);
+    for (let i = 0; i < sorted.length; i++) {
+      const { channel, percent } = sorted[i];
+      if (!Number.isInteger(channel) || channel < 1 || channel > MAX_MEMORY_CHANNEL || !Number.isInteger(percent) || percent < 1 || percent > 100) {
+        return false;
+      }
+      if (i > 0 && sorted[i - 1].channel === channel) {
+        return false;
+      }
+    }
+    const memories = edited.memories.slice();
+    memories[index] = { ...memories[index], channels: sorted };
+    const repeat = (sequence: SequenceDto): SequenceDto => ({
+      ...sequence,
+      steps: sequence.steps.map((step) => (step.memoryNumber === number ? { ...step, channels: sorted.map((c) => ({ ...c })) } : step)),
+    });
+    this._edited.set({
+      ...edited,
+      memories,
+      mainStack: edited.mainStack ? repeat(edited.mainStack) : null,
+      sequences: edited.sequences.map(repeat),
+    });
+    return true;
+  }
+
+  /**
+   * Label edit: one of the three lines of a memory, channel or sequence label, at most 6 printable ASCII characters
+   * (no '&': the console writes other characters as numeric entities, which this editor never produces). The `text`
+   * line follows from the three lines as the console derives it (4 282 of 4 282 blocks). Returns false when refused.
+   */
+  setLabelLine(target: LabelTarget, line: 1 | 2 | 3, value: string): boolean {
+    const edited = this._edited();
+    if (!edited || value.length > LABEL_LINE_LENGTH || !LABEL_LINE_PATTERN.test(value)) {
+      return false;
+    }
+    const update = (label: LabelDto): LabelDto => {
+      const lines = { line1: label.line1, line2: label.line2, line3: label.line3, [`line${line}`]: value };
+      return { ...lines, text: labelText(lines.line1, lines.line2, lines.line3) };
+    };
+    switch (target.kind) {
+      case 'memory': {
+        const index = edited.memories.findIndex((m) => m.number === target.number);
+        if (index < 0) {
+          return false;
+        }
+        const memories = edited.memories.slice();
+        memories[index] = { ...memories[index], label: update(memories[index].label) };
+        this._edited.set({ ...edited, memories });
+        return true;
+      }
+      case 'channel': {
+        const index = edited.channels.findIndex((c) => c.number === target.number);
+        if (index < 0) {
+          return false;
+        }
+        const channels = edited.channels.slice();
+        channels[index] = { ...channels[index], label: update(channels[index].label) };
+        this._edited.set({ ...edited, channels });
+        return true;
+      }
+      case 'sequence': {
+        const sequence = edited.sequences[target.index];
+        if (!sequence) {
+          return false;
+        }
+        const next = { ...sequence, label: update(sequence.label ?? { text: '', line1: '', line2: '', line3: '' }) };
+        this._edited.set({ ...edited, sequences: edited.sequences.map((s, i) => (i === target.index ? next : s)) });
+        return true;
+      }
+    }
+  }
+
   revert(): void {
     const original = this._file();
     this._edited.set(original ? structuredClone(original) : undefined);
@@ -290,4 +373,39 @@ export function nextCueNumber(previous: string | undefined, next: string | undef
     return undefined;
   }
   return `${Math.floor(candidate / 10)}.${candidate % 10}`;
+}
+
+/** Where a label lives: a memory or a channel by its number, or a sequence by its position in the file's list. */
+export type LabelTarget = { kind: 'memory'; number: number } | { kind: 'channel'; number: number } | { kind: 'sequence'; index: number };
+
+/** The highest channel a memory of the console's files names (4 860 of 4 860 pairs in 34 files). */
+export const MAX_MEMORY_CHANNEL = 48;
+/** A label line as the console writes it: at most 6 characters. */
+export const LABEL_LINE_LENGTH = 6;
+/** Printable ASCII without '&' (the console writes other characters as numeric entities, never produced here). */
+export const LABEL_LINE_PATTERN = /^[ -%'-~]*$/;
+
+/**
+ * The `Text` line of a label block as the console derives it from the three lines (4 282 of 4 282 blocks in 34 files):
+ * line 1, then line 2 only when line 1 is full (6 characters), then line 3 only when line 2 is full too.
+ */
+export function labelText(line1: string, line2: string, line3: string): string {
+  return line1.length < LABEL_LINE_LENGTH ? line1 : line2.length < LABEL_LINE_LENGTH ? line1 + line2 : line1 + line2 + line3;
+}
+
+/**
+ * Channel pairs as the files write them, `7/100 15/8`: channel and percent, separated by spaces; an empty text is an
+ * empty list. Undefined when the text is not of that form (the ranges are checked by the service).
+ */
+export function parseChannelPairs(text: string): ChannelPercentDto[] | undefined {
+  const parts = text.trim().split(/\s+/).filter((p) => p.length > 0);
+  const pairs: ChannelPercentDto[] = [];
+  for (const part of parts) {
+    const match = /^([0-9]{1,2})\/([0-9]{1,3})$/.exec(part);
+    if (!match) {
+      return undefined;
+    }
+    pairs.push({ channel: Number(match[1]), percent: Number(match[2]) });
+  }
+  return pairs;
 }
