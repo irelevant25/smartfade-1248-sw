@@ -104,4 +104,52 @@ describe('ShowFilePageComponent', () => {
     expect(root.querySelector('.show__error')?.textContent).toContain('request body');
     expect(root.querySelector('.show__table')).toBeNull();
   });
+
+  it('edits the patch in the working copy and downloads the rendered result as a new file', async () => {
+    const root = await openFile(sampleShow());
+    const calls: { url: string; body: string }[] = [];
+    vi.spyOn(globalThis, 'fetch').mockImplementation(async (input, init) => {
+      calls.push({ url: String(input), body: String(init?.body) });
+      return new Response('MANUFACTURER AVAB', {   // a string body: jsdom's Blob lacks stream(), which the fetch Response needs
+        status: 200,
+        headers: { 'Content-Disposition': 'attachment; filename="SHOW07-edited.ASC"' },
+      });
+    });
+    const createObjectUrl = vi.fn(() => 'blob:edited');
+    const revokeObjectUrl = vi.fn();
+    Object.assign(URL, { createObjectURL: createObjectUrl, revokeObjectURL: revokeObjectUrl });
+    const clicks: string[] = [];
+    vi.spyOn(HTMLAnchorElement.prototype, 'click').mockImplementation(function (this: HTMLAnchorElement) {
+      clicks.push(this.download);
+    });
+    const fixture = TestBed.createComponent(ShowFilePageComponent);
+    fixture.detectChanges();
+    const page = fixture.nativeElement as HTMLElement;
+
+    const cell = page.querySelector<HTMLInputElement>('input[aria-label="Channel for DMX 1"]')!;
+    cell.value = '12';
+    cell.dispatchEvent(new Event('change'));
+    fixture.detectChanges();
+    expect(page.querySelector('.show__dirty')?.textContent).toContain('edited');
+    expect(page.querySelector<HTMLButtonElement>('.show__revert')?.disabled).toBe(false);
+
+    page.querySelector<HTMLButtonElement>('.show__download')!.click();
+    for (let turn = 0; turn < 6; turn++) {
+      await settle();
+    }
+    fixture.detectChanges();
+
+    expect(page.querySelector('.show__error')?.textContent ?? '').toBe('');
+    expect(calls[0].url).toBe('/api/showfile/render');
+    const sent = JSON.parse(calls[0].body) as { patch: { dmx: number; channel: number }[] };
+    expect(sent.patch[0]).toEqual({ dmx: 1, channel: 12, level: 100 });
+    expect(clicks).toEqual(['SHOW07-edited.ASC']);
+    expect(revokeObjectUrl).toHaveBeenCalledWith('blob:edited');
+
+    page.querySelector<HTMLButtonElement>('.show__revert')!.click();
+    fixture.detectChanges();
+    expect(page.querySelector('.show__dirty')).toBeNull();
+    expect(page.querySelector<HTMLInputElement>('input[aria-label="Channel for DMX 1"]')?.value).toBe('1');
+    expect(root).toBeDefined();
+  });
 });

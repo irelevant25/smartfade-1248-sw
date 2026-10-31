@@ -56,6 +56,45 @@ public class ShowFileEndpointTests
         Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
     }
 
+    [Fact]
+    public async Task Renders_the_parsed_file_back_byte_for_byte_and_names_the_download_as_a_new_file()
+    {
+        using var factory = new WebApplicationFactory<Program>().WithWebHostBuilder(b => b.UseSetting("Device:Mode", "Simulated"));
+        using var client = factory.CreateClient();
+        var bytes = await File.ReadAllBytesAsync(OstrovSample);
+        using var upload = new ByteArrayContent(bytes);
+        var dto = await (await client.PostAsync("/api/showfile/parse?name=Ostrov.asc", upload)).Content.ReadFromJsonAsync<ShowFileDto>();
+
+        var response = await client.PostAsJsonAsync("/api/showfile/render", dto);
+
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        Assert.Equal("Ostrov-edited.asc", response.Content.Headers.ContentDisposition?.FileNameStar ?? response.Content.Headers.ContentDisposition?.FileName?.Trim('"'));
+        Assert.Equal(bytes, await response.Content.ReadAsByteArrayAsync());   // the DTO carries everything the writer needs
+    }
+
+    [Fact]
+    public async Task Renders_an_edited_patch_and_refuses_a_channel_outside_the_range()
+    {
+        using var factory = new WebApplicationFactory<Program>().WithWebHostBuilder(b => b.UseSetting("Device:Mode", "Simulated"));
+        using var client = factory.CreateClient();
+        using var upload = new ByteArrayContent(await File.ReadAllBytesAsync(OstrovSample));
+        var dto = (await (await client.PostAsync("/api/showfile/parse?name=Ostrov.asc", upload)).Content.ReadFromJsonAsync<ShowFileDto>())!;
+
+        var patch = dto.Patch.ToList();
+        patch[0] = patch[0] with { Channel = 12 };   // DMX 1 -> channel 12
+        var edited = await client.PostAsJsonAsync("/api/showfile/render", dto with { Patch = patch });
+        Assert.Equal(HttpStatusCode.OK, edited.StatusCode);
+        var text = System.Text.Encoding.Latin1.GetString(await edited.Content.ReadAsByteArrayAsync());
+        Assert.Contains("PATCH 1 1/12/100 2/2/100", text, StringComparison.Ordinal);
+
+        patch[0] = patch[0] with { Channel = 97 };
+        var refused = await client.PostAsJsonAsync("/api/showfile/render", dto with { Patch = patch });
+        Assert.Equal(HttpStatusCode.BadRequest, refused.StatusCode);
+        var error = await refused.Content.ReadFromJsonAsync<ErrorDto>();
+        Assert.Equal("invalid_argument", error?.Code);
+        Assert.Contains("outside 0..96", error?.Message, StringComparison.Ordinal);
+    }
+
     private static string FindRepositoryRoot()
     {
         var directory = new DirectoryInfo(AppContext.BaseDirectory);

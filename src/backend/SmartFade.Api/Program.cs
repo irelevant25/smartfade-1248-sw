@@ -113,6 +113,27 @@ app.MapPost("/api/showfile/parse", async (HttpRequest request, string? name, Can
     return Results.Ok(ShowFileMapper.ToDto(string.IsNullOrWhiteSpace(name) ? "show.asc" : name.Trim(), bytes.Length, read));
 });
 
+// The editing pages: the UI sends the DTO it edited and receives the rendered .asc bytes to save as a NEW file.
+// The backend keeps nothing and overwrites nothing; the patch is checked against the 1248's ranges first.
+app.MapPost("/api/showfile/render", (ShowFileDto dto) =>
+{
+    var problem = ShowFileRules.Check(dto);
+    if (problem is not null)
+    {
+        return Results.BadRequest(new ErrorDto(problem, "invalid_argument"));
+    }
+
+    try
+    {
+        var bytes = SmartFade.ShowFile.Asc.AscWriter.Render(ShowFileMapper.ToModel(dto));
+        return Results.File(bytes, "application/octet-stream", ShowFileRules.EditedFileName(dto.Name));
+    }
+    catch (ArgumentException ex)
+    {
+        return Results.BadRequest(new ErrorDto(ex.Message, "invalid_argument"));
+    }
+});
+
 app.MapHub<ConsoleHub>("/hubs/console");
 
 if (usbMode)

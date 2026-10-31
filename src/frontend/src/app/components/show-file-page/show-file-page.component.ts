@@ -18,15 +18,18 @@ export class ShowFilePageComponent {
   private readonly _files = inject(ShowFileService);
 
   protected readonly file = this._files.file;
+  /** The working copy: what the tables and the patch grid show, and what a download renders. */
+  protected readonly edited = this._files.edited;
+  protected readonly dirty = this._files.dirty;
   protected readonly busy = this._files.busy;
   protected readonly error = this._files.error;
 
-  protected readonly patchedCount = computed(() => this.file()?.patch.filter((p) => p.channel !== 0).length ?? 0);
+  protected readonly patchedCount = computed(() => this.edited()?.patch.filter((p) => p.channel !== 0).length ?? 0);
   protected readonly namedChannels = computed(() => this.file()?.channels.filter((c) => !isEmpty(c.label)) ?? []);
   protected readonly namedPages = computed(() => this.file()?.pages.filter((p) => !isEmpty(p.label)) ?? []);
   /** The 512 patch entries in rows of 32 DMX addresses, for the grid. */
   protected readonly patchRows = computed(() => {
-    const patch = this.file()?.patch ?? [];
+    const patch = this.edited()?.patch ?? [];
     const rows: (typeof patch)[] = [];
     for (let start = 0; start < patch.length; start += 32) {
       rows.push(patch.slice(start, start + 32));
@@ -45,6 +48,25 @@ export class ShowFilePageComponent {
 
   protected close(): void {
     this._files.close();
+  }
+
+  /** A patch cell's input: DMX address `dmx` now drives the typed channel (0 clears it). */
+  protected setChannel(dmx: number, event: Event): void {
+    const input = event.target as HTMLInputElement;
+    const channel = input.value.trim() === '' ? 0 : Number(input.value);
+    if (!Number.isInteger(channel) || channel < 0 || channel > 96) {
+      input.value = String(this.edited()?.patch.find((entry) => entry.dmx === dmx)?.channel ?? 0);
+      return;
+    }
+    this._files.setPatchChannel(dmx, channel);
+  }
+
+  protected revert(): void {
+    this._files.revert();
+  }
+
+  protected download(): void {
+    void this._files.download();
   }
 
   protected labelText(label: LabelDto | null): string {

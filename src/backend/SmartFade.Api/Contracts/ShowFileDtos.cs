@@ -1,4 +1,5 @@
 using SmartFade.ShowFile.Asc;
+using AscShow = SmartFade.ShowFile.Asc.ShowFile;   // the model's name is also the library's namespace
 
 namespace SmartFade.Api.Contracts;
 
@@ -116,4 +117,56 @@ public static class ShowFileMapper
         new(memory.Number, (memory.Number - 1) / MemoriesPerPage + 1, (memory.Number - 1) % MemoriesPerPage + 1, memory.Channels.Select(c => new ChannelPercentDto(c.Channel, c.Percent)).ToArray(), ToDto(memory.Label));
 
     public static LabelDto ToDto(TextBlock label) => new(label.Text, label.Line1, label.Line2, label.Line3);
+
+    /// <summary>
+    /// The way back, for the editing pages: a DTO the UI edited becomes the model the writer renders. Every field the
+    /// DTO carries is taken verbatim; a file whose reader kept unknown lines cannot be rebuilt from the DTO and is refused,
+    /// because those lines would be lost.
+    /// </summary>
+    public static AscShow ToModel(ShowFileDto dto)
+    {
+        ArgumentNullException.ThrowIfNull(dto);
+        if (dto.UnknownLines > 0)
+        {
+            throw new ArgumentException("The file holds lines the reader did not recognise; it cannot be rebuilt without losing them.", nameof(dto));
+        }
+
+        return new AscShow(
+            dto.Manufacturer,
+            dto.Console,
+            dto.SoftwareVersion,
+            dto.Ident,
+            dto.ClearAll,
+            dto.MainStack is { } main ? ToModel(main) : null,
+            dto.Sequences.Select(ToModel).ToArray(),
+            dto.Memories.Select(m => new Memory(m.Number, ToModel(m.Channels), ToModel(m.Label))).ToArray(),
+            dto.Patch.Select(p => new PatchEntry(p.Dmx, p.Channel, p.Level)).ToArray(),
+            dto.Independents.Select(i => new Independent(i.Number, i.A, i.B, i.C, i.D, ToModel(i.Label))).ToArray(),
+            dto.Channels.Select(c => new LabelledItem(c.Number, ToModel(c.Label))).ToArray(),
+            dto.Pages.Select(p => new LabelledItem(p.Number, ToModel(p.Label))).ToArray(),
+            dto.Settings.Select(s => new Setting(s.Key, s.Value)).ToArray(),
+            Array.Empty<UnknownRecord>(),
+            string.Equals(dto.LineEnding, "crlf", StringComparison.OrdinalIgnoreCase) ? AscLineEnding.CrLf : AscLineEnding.Lf);
+    }
+
+    public static Sequence ToModel(SequenceDto dto) =>
+        new(dto.Index, dto.B, dto.C, dto.D, dto.E, dto.Label is { } label ? ToModel(label) : null, dto.Steps.Select(ToModel).ToArray());
+
+    public static Step ToModel(StepDto dto) =>
+        new(
+            dto.Number,
+            dto.MemoryPage is { } page && dto.MemoryFader is { } fader ? (page, fader) : null,
+            dto.CueParams,
+            dto.UpTime,
+            dto.UpDelay,
+            dto.DownTime,
+            dto.DownDelay,
+            dto.FollowOn,
+            ToModel(dto.Channels),
+            dto.Label is { } label ? ToModel(label) : null);
+
+    public static TextBlock ToModel(LabelDto label) => new(label.Text, label.Line1, label.Line2, label.Line3);
+
+    private static IReadOnlyList<ChannelLevelPercent> ToModel(IReadOnlyList<ChannelPercentDto> channels) =>
+        channels.Select(c => new ChannelLevelPercent(c.Channel, c.Percent)).ToArray();
 }

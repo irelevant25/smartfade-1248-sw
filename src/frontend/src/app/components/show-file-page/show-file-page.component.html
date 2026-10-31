@@ -7,15 +7,20 @@
     </label>
     @if (file()) {
       <button type="button" class="sf-key" (click)="close()">Close</button>
+      <button type="button" class="sf-key sf-key--accent show__download" [disabled]="busy()" (click)="download()">Download as new file</button>
+      <button type="button" class="sf-key show__revert" [disabled]="!dirty()" (click)="revert()">Revert changes</button>
+      @if (dirty()) {
+        <span class="show__dirty" role="status">edited, not saved</span>
+      }
     }
-    <p class="show__hint">Read-only: the file is parsed by the backend and shown here; nothing is written and nothing reaches the console.</p>
+    <p class="show__hint">The file is parsed by the backend and shown here. The patch can be edited; "Download as new file" saves the result under a new name through the browser, the original is never changed, and nothing reaches the console.</p>
   </div>
 
   @if (error(); as problem) {
     <p class="show__error" role="alert">{{ problem }}</p>
   }
 
-  @if (file(); as show) {
+  @if (edited(); as show) {
     <dl class="show__facts">
       <div><dt>File</dt><dd>{{ show.name }}</dd></div>
       <div><dt>Size</dt><dd>{{ show.bytes }} bytes, {{ show.lines }} lines, {{ show.lineEnding === 'crlf' ? 'CRLF' : 'LF' }}</dd></div>
@@ -81,7 +86,7 @@
       </tbody>
     </table>
 
-    <h3 class="show__section">Patch (DMX address → channel; dimmed = unpatched)</h3>
+    <h3 class="show__section">Patch (DMX address → channel; dimmed = unpatched; type a channel 1..96, 0 clears)</h3>
     <div class="show__patch" role="table" aria-label="Patch">
       @for (row of patchRows(); track $index) {
         <div class="show__patch-row" role="row">
@@ -93,7 +98,15 @@
               [attr.title]="'DMX ' + entry.dmx + (entry.channel ? ' → channel ' + entry.channel + ' at ' + entry.level + ' %' : ': unpatched')"
             >
               <span class="show__patch-dmx">{{ entry.dmx }}</span>
-              <span class="show__patch-ch">{{ entry.channel || '·' }}</span>
+              <input
+                type="number"
+                class="show__patch-ch"
+                min="0"
+                max="96"
+                [value]="entry.channel"
+                [attr.aria-label]="'Channel for DMX ' + entry.dmx"
+                (change)="setChannel(entry.dmx, $event)"
+              />
             </span>
           }
         </div>
