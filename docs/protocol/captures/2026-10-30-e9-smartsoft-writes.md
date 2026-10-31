@@ -408,7 +408,7 @@ from the console's own listing.
   `SHOW07.ASC` holds only `CHAN 15/8`). Either look at it on the console (EDIT MEM, bump 7: channel 7's bump would light;
   leave with CLEAR) or save the show to the SD card and compare `GROUP 7` with `SHOW07.ASC`. The same save would show
   whether memories 9 and 10 are gone and memory 1 is back to `CHAN 7/100 8/100`. **Resolved 2026-10-31 (after E9b):**
-  `SHOW08.ASC` confirmed the change (`GROUP 7` = `CHAN 7/100 15/8`, `GROUP 1` = `CHAN 7/100 8/100`, no `GROUP 9` or `GROUP 10`,
+  `SHOW08.ASC` (the E9b pre-session backup) confirmed the change (`GROUP 7` = `CHAN 7/100 15/8`, `GROUP 1` = `CHAN 7/100 8/100`, no `GROUP 9` or `GROUP 10`,
   nothing else different from `SHOW07.ASC` besides the three stack cues that carry memory 7); the owner removed channel 7 from
   memory 7 by hand and `SHOW09.ASC`, saved afterwards, is byte-identical to `SHOW07.ASC`.
 - The memory 1 complaint is explained: the restore step selected bump 7 (key 0x06) after EDIT MEM, so it edited memory 7

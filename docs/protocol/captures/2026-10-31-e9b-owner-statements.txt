@@ -50,11 +50,12 @@ Owner: "Memory 7 of page 1, what value should channel 7 has there?" and "master 
 Reading (assistant): the console's MASTER is back at full; the MASTER-at-50 % note above describes
 the end of the capture only. Memory 7 was answered from the SD card backups, not from memory:
 SHOW04 to SHOW07.ASC (SHOW07 = the pre-E9 backup) all write GROUP 7 ("NOC 3" / "MORE") as
-"CHAN 15/8" only; SHOW08.ASC (saved after E9b) writes "CHAN 7/100 15/8". The only other lines that
+"CHAN 15/8" only; SHOW08.ASC (the E9b pre-session backup, logged 08:35:31; an earlier version of this
+note said "saved after E9b", which was wrong and is corrected here) writes "CHAN 7/100 15/8". The only other lines that
 differ between SHOW07 and SHOW08 are the three cue CHAN lines in the stack that carry memory 7's
 content. GROUP 1 ("OPONA") reads "CHAN 7/100 8/100" in both and neither file has a GROUP 9 or
-GROUP 10, so the owner's hand fixes after E9 (memory 1, memories 9 and 10) hold and E9b's own
-memory 9 was removed again. Restore target given to the owner: channel 7 out of memory 7 (level 0),
+GROUP 10, so the owner's hand fixes after E9 (memory 1, memories 9 and 10) held before E9b; that
+E9b left nothing behind follows from SHOW09 = SHOW07 (next paragraph), not from SHOW08. Restore target given to the owner: channel 7 out of memory 7 (level 0),
 channel 15 left as it is (8 % in the file, 0x15 in the Memory object), label unchanged; then a save
 to the SD card for a check. Not yet restored at the time of writing.
 

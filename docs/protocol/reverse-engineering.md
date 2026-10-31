@@ -456,8 +456,8 @@ statements, never promotions).
 1. Memory 7 of page 1: is channel 7 at full? **Asked 2026-10-31: "Its possible." (a statement); not yet checked or restored. An open
    owner item.** Look at it on the console (EDIT MEM, bump 7, look at channel 7's bump, leave with CLEAR) or save `SHOW08.ASC` to the SD
    card and copy it into `smartfade-sd-card-backup/`, so that `GROUP 1`, `GROUP 7` and the absence of memories 9 and 10 can be compared
-   with `SHOW07.ASC`, the pre-E9 state (E9 record "Side effects on the show", F139). **Done 2026-10-31:** `SHOW08.ASC` (saved after
-   E9b) showed `GROUP 7` = `CHAN 7/100 15/8`, `GROUP 1` unchanged and no memories 9 and 10; the owner removed channel 7 from memory 7 by
+   with `SHOW07.ASC`, the pre-E9 state (E9 record "Side effects on the show", F139). **Done 2026-10-31:** `SHOW08.ASC` (the E9b
+   pre-session backup) showed `GROUP 7` = `CHAN 7/100 15/8`, `GROUP 1` unchanged and no memories 9 and 10; the owner removed channel 7 from memory 7 by
    hand and `SHOW09.ASC`, saved afterwards, is byte-identical to `SHOW07.ASC`. **Closed.**
 2. ~~Step 12: which SmartSoft window did you use, the Console Simulator or the Mem Edit tab?~~ **Answered in part (2026-10-31):** "Uuuff. I do
    not remember. Sorry. From what I remember I used console simulator for mem edit." This agrees with the capture (only Simulator key and
