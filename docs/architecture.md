@@ -198,7 +198,8 @@ Decisions taken while building:
   and reports a per-channel **output** next to the fader level, as the console's ChannelLevels
   object carries post-MASTER values (F96, F97). The model follows the manual where it states the
   behaviour (HTP F107, bump modes F6, Master and Blackout F5) and marks its own readings INFERRED
-  (proportional memory playback, recording before the MASTER). Ten hub commands, a
+  (proportional memory playback; recording was pre-MASTER until 2026-10-31, when E9b showed that the
+  console stores the post-MASTER level, F145, and the simulator followed). Ten hub commands, a
   `memoriesChanged` event and `getMemory` were added to the contract (docs/api.md); memory
   content is fetched on demand, the state carries only each memory's fader level, recorded flag
   and label. The UI lays the panel out like the console: readout above each fader, the numbered

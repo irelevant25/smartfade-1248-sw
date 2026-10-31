@@ -257,6 +257,23 @@ public class ConsoleServiceTests
     }
 
     [Fact]
+    public async Task Record_memory_stores_the_post_master_level()
+    {
+        // E9b, F145 (OBSERVED once): channel fader 5 at 0x7C with the console's MASTER at 0x86 was stored as 0x41.
+        var (service, _) = CreateSimulated();
+        await service.ConnectAsync(CancellationToken.None);
+        await service.SetChannelLevelAsync(5, 0x7C, CancellationToken.None);
+        await service.SetMasterAsync(0x86, CancellationToken.None);
+        Assert.Equal(0x41, service.GetState().Outputs[4]);
+
+        await service.RecordMemoryAsync(1, 9, CancellationToken.None);
+
+        var content = await service.GetMemoryAsync(1, 9, CancellationToken.None);
+        Assert.Equal(0x41, content.Levels[4]);
+        Assert.Equal(0, content.Levels[0]);
+    }
+
+    [Fact]
     public async Task Record_memory_stores_the_look_and_memory_faders_play_it_back_proportionally()
     {
         var (service, _) = CreateSimulated();

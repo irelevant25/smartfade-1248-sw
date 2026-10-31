@@ -25,10 +25,12 @@ namespace SmartFade.Devices.Simulated;
 ///   the current output", "the other intensity channels will be temporarily muted"; the owner
 ///   saw a memory's lights go off when its bump was pressed with SOLO on and BUMPS at zero, E3
 ///   owner statements);
-/// - REC MEM stores the look (channel faders and memory playback, before the MASTER, held bumps
-///   excluded) into the memory (F107: "Set up a look you want to record using the channel
-///   faders. You may record the output from other memory faders as well"; pre-MASTER and the
-///   exclusion of bumps are INFERRED); a memory whose levels are all zero counts as deleted (F107);
+/// - REC MEM stores the look (channel faders and memory playback) scaled by the MASTER, held bumps
+///   excluded, into the memory (F107: "Set up a look you want to record using the channel
+///   faders. You may record the output from other memory faders as well"; the MASTER scaling is
+///   OBSERVED once, E9b F145: fader 0x7C at MASTER 0x86 was stored as 0x41, which replaced the
+///   earlier pre-MASTER reading on 2026-10-31; the exclusion of bumps is INFERRED); a memory whose
+///   levels are all zero counts as deleted (F107);
 /// - CLEAR: two presses set every channel fader to zero, three presses every memory fader
 ///   (F109); nothing is erased;
 /// - the independents IND 1 and IND 2 drive DMX 97 and 98 by default (DOCUMENTED, F108) at full
@@ -287,7 +289,7 @@ public sealed class SimulatedSmartFadeDevice : ISmartFadeDevice
         MemoryState memory;
         lock (_gate)
         {
-            _memoryContents[index] = LookUnsafe();
+            _memoryContents[index] = RecordedLookUnsafe();
             computed = RecomputeUnsafe();
             memory = MemoryStateUnsafe(index);
         }
@@ -574,6 +576,22 @@ public sealed class SimulatedSmartFadeDevice : ISmartFadeDevice
         for (var c = 0; c < look.Length; c++)
         {
             look[c] = LookOfUnsafe(c);
+        }
+
+        return look;
+    }
+
+    /// <summary>
+    /// The look REC MEM stores: the look after the MASTER. E9b (F145, OBSERVED once): channel fader 5 at 0x7C with
+    /// the console's MASTER at 0x86 was stored as 0x41, the post-MASTER level the console reported for the channel.
+    /// Whether BLACKOUT or SOLO change what is stored is UNKNOWN; they do not enter the recorded look here.
+    /// </summary>
+    private byte[] RecordedLookUnsafe()
+    {
+        var look = LookUnsafe();
+        for (var c = 0; c < look.Length; c++)
+        {
+            look[c] = Scale(look[c], _masters.Master);
         }
 
         return look;

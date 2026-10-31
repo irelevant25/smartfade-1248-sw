@@ -200,8 +200,9 @@ future hardware mode (no web page may ever drive a console without the owner's a
   BUMPS level, SOLO replacing the output, REC MEM recording the look, all-zero = deleted, the
   independents on DMX 97 / 98 untouched by the masters, CLEAR never erasing) follows the console
   manual where it states the behaviour (F5, F6, F107, F108, F109) and is marked INFERRED where it
-  does not (proportional memory playback, recording before the MASTER, the independents' level
-  and modes); it is documented in `SmartFade.Devices.Simulated`. COPY is a UI workflow over
+  does not (proportional memory playback, the independents' level and modes); REC MEM records the
+  look after the MASTER (OBSERVED once, E9b F145: fader 0x7C at MASTER 0x86 stored 0x41; the earlier
+  pre-MASTER reading was replaced on 2026-10-31); it is documented in `SmartFade.Devices.Simulated`. COPY is a UI workflow over
   `getMemory` + `storeMemory`; the CLEAR press count (one press aborts an armed function) lives
   in the UI too.
 - Levels are the console's unit, 0..255; "0xFF = 100 %" is OBSERVED against one show file (F72),
