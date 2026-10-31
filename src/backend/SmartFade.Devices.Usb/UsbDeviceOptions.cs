@@ -57,7 +57,7 @@ public sealed class UsbDeviceOptions
 
         public const int WriteInterval = 46;
 
-        /// <summary>The reply timeout's default (ms); live control never waits longer for a reply (the console answered within 12 ms in every capture).</summary>
+        /// <summary>The reply timeout's default (ms); live control never waits longer for a reply (the console answered within 12 ms in every capture up to E12; E12b's SD save is the one exception, F163).</summary>
         public const int ReplyTimeout = 500;
     }
 
@@ -76,7 +76,7 @@ public sealed class UsbDeviceOptions
     /// <summary>Least time from one write to the next; SmartSoft's writes in a burst were a median 61.8 ms apart (E9b), and one write per poll cycle (31 + 15 ms) gives 46 ms.</summary>
     public int WriteIntervalMilliseconds { get; set; } = Defaults.WriteInterval;
 
-    /// <summary>How long a reply may take before the session is abandoned (the console answered within 12 ms in every capture); with live control on, at most its default (<see cref="Defaults.ReplyTimeout"/>).</summary>
+    /// <summary>How long a reply may take before the session is abandoned (the console answered within 12 ms in every capture up to E12; in E12b it answered nothing for about 0.85 s while it wrote the SD card, OBSERVED once, F163 / H109, so a save on the console during a session of ours ends it with a fault, and the E11 guide forbids one); with live control on, at most its default (<see cref="Defaults.ReplyTimeout"/>).</summary>
     public int ReplyTimeoutMilliseconds { get; set; } = Defaults.ReplyTimeout;
 
     /// <summary>Device path override; when empty the console's WinUSB interface 1 is located automatically. Any path must still name VID 14D5 / PID 0200 interface 1.</summary>

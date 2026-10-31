@@ -101,6 +101,7 @@ Write-Host "Follow the yellow instructions one by one. Press Enter exactly when 
 Write-Host "Abort rules: an Error in the UI ends the session (Disconnect, read the backend log, never reconnect before); anything the" -ForegroundColor Green
 Write-Host "console does that you did not cause ends it (note the time); a key reported as held is pressed on the panel only after reading" -ForegroundColor Green
 Write-Host "the log; never power-cycle the console to recover; INCOMPLETE-WRITE.txt in the capture folder is removed only after reading the log." -ForegroundColor Green
+Write-Host "Never save to or load from the SD card while our software is connected: during E12b's save the console stopped answering USB for about 0.85 s (H109); our session would end with a fault." -ForegroundColor Green
 Log "START guided E11 session (PC clock, local time)"
 Log ("repository: " + $Repo)
 
@@ -178,6 +179,7 @@ Write-Host "STACK unlit, BLACKOUT off, SOLO off, IND 1 / IND 2 off, REC MEM / ED
 Confirm-Done "Set that up now." "starting position set (owner)"
 
 # --- Connect and the read-only minute ---
+Write-Host "   (From here until Disconnect: no SD save or load on the console, no menu that writes the card.)" -ForegroundColor Yellow
 Step "Press CONNECT in the UI." "connect pressed"
 Confirm-Done "When the UI shows Connected." "connected (owner)"
 Wait-Idle 60 "idle after connect: the read side as in E8, nothing is sent but the poll and the listed fetch"
