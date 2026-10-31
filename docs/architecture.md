@@ -251,7 +251,7 @@ dependency and sends nothing anywhere; the E6 round trip (save on the console, c
 software, load from the SD card) is the experiment that would make its model trustworthy for
 editing.
 
-## Show-file page as built (2026-10-31, E10 steps 1 to 4)
+## Show-file page as built (2026-10-31, E10 steps 1 to 5)
 
 The UI has a page switch in the connection bar: the console (default) and the show-file viewer. The
 viewer (`src/frontend/src/app/components/show-file-page`) opens a `.asc` file chosen in the browser,
@@ -277,8 +277,13 @@ the next free number between its neighbours (one decimal, below 200, rising thro
 console-written files), a sequence step takes its memory's number (383 of 383), and a memory step repeats its
 memory's channel list (894 of 894; none when the memory is not in the file), which is why a memory change now
 replaces the channels too and a step's memory can no longer be removed. × removes a step without renumbering.
-`ShowFileRules` checks all of it again and refuses anything the console was never seen to write. Next (owner's
-order): memory contents and labels in the file, then the E6 round trip on the console to validate an edited file.
+`ShowFileRules` checks all of it again and refuses anything the console was never seen to write. **Step 5 (same
+day): memory contents and labels.** A memory's channel list is edited in the files' own form (`7/100 15/8`; channels
+1..48 at 1..100 %, sorted into rising order, a channel left out is at 0) and every step that uses the memory follows
+it; the labels of memories, channels and sequences are three inputs of up to 6 printable ASCII characters each, and
+the label's `Text` line is derived as the console derives it (line 1, then line 2 only when line 1 is full, then line
+3 only when line 2 is full: 4 282 of 4 282 blocks in 34 files). The backend repeats the checks and refuses the rest.
+Next (owner's order): the E6 round trip on the console to validate an edited file.
 
 ## Phase 2 proposal: live control after E9b and SC-2 (2026-10-31, not implemented)
 

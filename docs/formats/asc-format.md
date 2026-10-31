@@ -381,6 +381,21 @@ lines; the show-file page's editor and `ShowFileRules` (docs/api.md) keep an edi
 What the console does with a file that breaks one of these shapes is UNKNOWN (the SD load path is the only
 way such a file reaches it; E6 is the test), so the editor never produces one.
 
+## Label and memory rules learned from the files (2026-10-31, OBSERVED on 34 files)
+
+Counted like the step rules above, over the same 34 console-written files; the show-file page's editor and
+`ShowFileRules` keep an edited file inside these shapes:
+
+| Rule | Count | Status |
+|---|---|---|
+| The `Text` line of a label block is derived from its three `$$Text n` lines: line 1, then line 2 only when line 1 has 6 characters, then line 3 only when line 2 has 6 too (`NOC 3` / `MORE` → `Text NOC 3`; `LAFIAO` / `GULA` → `Text LAFIAOGULA`; `BLUE 2` / `HVIRZD` → `Text BLUE 2HVIRZD`) | 4 282 of 4 282 blocks (memories, sequences, steps, channels, pages, independents) | OBSERVED; consistent with H40's reading of the 18-unit block as three lines read up to the first 0 |
+| A label line has at most 6 characters | 12 843 of 12 846 lines; the 3 others (KAIMO final 13-06-19.asc, lines 545, 563, 581, a memory label's line 3) read `&#268;ERVEN`: the console writes a character outside ASCII as an HTML numeric entity (`&#268;` = Č), which counts as one character on the console | OBSERVED (the entity form in one file; how the console reads an entity back from the SD card is UNTESTED) |
+| Label bytes are printable ASCII (0x20–0x7E); no other byte occurs in any label line | 12 846 of 12 846 lines | OBSERVED |
+| A memory's `CHAN` pairs name channels 1..48 only, in rising order, each once, at 1..100 % (a channel at 0 is not written) | 4 860 of 4 860 pairs, 496 of 496 memories | OBSERVED |
+
+The editor writes labels of printable ASCII without `&` (so it never produces an entity and never breaks one), and
+memory channel lists in the files' form; what the console does with a file outside these shapes is UNKNOWN (E6).
+
 ## Unknown data policy
 
 The parser must never drop data:
