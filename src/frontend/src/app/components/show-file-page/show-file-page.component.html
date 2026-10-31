@@ -34,15 +34,20 @@
     @if (show.mainStack; as stack) {
       <h3 class="show__section">Stack ({{ stack.steps.length }} steps)</h3>
       <table class="show__table">
-        <thead><tr><th>Cue</th><th>Memory</th><th>Up</th><th>Down</th><th>Follow-on</th><th>Channels</th><th>Label</th></tr></thead>
+        <thead><tr><th>Cue</th><th>Memory</th><th>Up</th><th>Up delay</th><th>Down</th><th>Down delay</th><th>Follow-on</th><th>Channels</th><th>Label</th></tr></thead>
         <tbody>
           @for (step of stack.steps; track $index) {
             <tr>
               <td class="show__num">{{ step.number }}</td>
-              <td>{{ memoryRef(step) }}</td>
-              <td class="show__num">{{ step.upTime }}@if (step.upDelay !== '0') { <span class="show__delay">+{{ step.upDelay }}</span> }</td>
-              <td class="show__num">{{ step.downTime }}@if (step.downDelay !== '0') { <span class="show__delay">+{{ step.downDelay }}</span> }</td>
-              <td class="show__num">{{ step.followOn }}</td>
+              <td>
+                <input type="number" class="show__edit show__edit--memory" min="1" max="288" [value]="step.memoryNumber ?? ''" [attr.aria-label]="'Memory of cue ' + step.number" (change)="setMemory('stack', $index, $event)" />
+                <span class="show__delay">{{ step.memoryNumber !== null ? 'p' + (step.memoryPage! + 1) + ' f' + (step.memoryFader! + 1) : '' }}</span>
+              </td>
+              <td><input type="text" class="show__edit" [value]="step.upTime" [attr.aria-label]="'Up time of cue ' + step.number" (change)="setTime('stack', $index, 'upTime', $event)" /></td>
+              <td><input type="text" class="show__edit" [value]="step.upDelay" [attr.aria-label]="'Up delay of cue ' + step.number" (change)="setTime('stack', $index, 'upDelay', $event)" /></td>
+              <td><input type="text" class="show__edit" [value]="step.downTime" [attr.aria-label]="'Down time of cue ' + step.number" (change)="setTime('stack', $index, 'downTime', $event)" /></td>
+              <td><input type="text" class="show__edit" [value]="step.downDelay" [attr.aria-label]="'Down delay of cue ' + step.number" (change)="setTime('stack', $index, 'downDelay', $event)" /></td>
+              <td><input type="text" class="show__edit" [value]="step.followOn" [attr.aria-label]="'Follow-on of cue ' + step.number" (change)="setTime('stack', $index, 'followOn', $event)" /></td>
               <td class="show__chans" [attr.title]="channelsText(step.channels)">{{ step.channels.length }}</td>
               <td>{{ labelText(step.label) }}</td>
             </tr>
@@ -56,19 +61,21 @@
       <table class="show__table">
         <thead><tr><th>Step</th><th>Memory</th><th>Up</th><th>Down</th><th>Follow-on</th><th>Channels</th></tr></thead>
         <tbody>
-          @for (step of sequence.steps; track $index) {
+          @for (step of sequence.steps; track $index; let stepIndex = $index) {
             <tr>
               <td class="show__num">{{ step.number }}</td>
-              <td>{{ memoryRef(step) }}</td>
-              <td class="show__num">{{ step.upTime }}</td>
-              <td class="show__num">{{ step.downTime }}</td>
-              <td class="show__num">{{ step.followOn }}</td>
+              <td><input type="number" class="show__edit show__edit--memory" min="1" max="288" [value]="step.memoryNumber ?? ''" [attr.aria-label]="'Memory of sequence ' + sequence.index + ' step ' + step.number" (change)="setMemory(seqIndex(sequence), stepIndex, $event)" /></td>
+              <td><input type="text" class="show__edit" [value]="step.upTime" [attr.aria-label]="'Up time of sequence ' + sequence.index + ' step ' + step.number" (change)="setTime(seqIndex(sequence), stepIndex, 'upTime', $event)" /></td>
+              <td><input type="text" class="show__edit" [value]="step.downTime" [attr.aria-label]="'Down time of sequence ' + sequence.index + ' step ' + step.number" (change)="setTime(seqIndex(sequence), stepIndex, 'downTime', $event)" /></td>
+              <td><input type="text" class="show__edit" [value]="step.followOn" [attr.aria-label]="'Follow-on of sequence ' + sequence.index + ' step ' + step.number" (change)="setTime(seqIndex(sequence), stepIndex, 'followOn', $event)" /></td>
               <td class="show__chans" [attr.title]="channelsText(step.channels)">{{ step.channels.length }}</td>
             </tr>
           }
         </tbody>
       </table>
     }
+
+    <p class="show__hint">Steps: the fade times, delays and follow-on take the console's own forms (seconds with one decimal, or m:ss); the memory is 1..288 or empty. Step numbers stay as the file wrote them.</p>
 
     <h3 class="show__section">Memories ({{ show.memories.length }} recorded)</h3>
     <table class="show__table">

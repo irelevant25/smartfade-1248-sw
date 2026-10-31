@@ -1,6 +1,7 @@
 import { TestBed } from '@angular/core/testing';
 import { ShowFilePageComponent } from './show-file-page.component';
 import type { ShowFileDto } from '../../core/show-file.models';
+import { ShowFileService } from '../../core/show-file.service';
 
 const label = (line1 = '', text = line1) => ({ text, line1, line2: '', line3: '' });
 
@@ -87,8 +88,10 @@ describe('ShowFilePageComponent', () => {
     const tables = Array.from(root.querySelectorAll('.show__table'));
     expect(tables).toHaveLength(3); // stack, one sequence, memories
     expect(tables[0].querySelectorAll('tbody tr')).toHaveLength(2);
-    expect(tables[0].textContent).toContain('1 (page 1, fader 1)');
-    expect(tables[0].textContent).toContain('1:30');
+    const cell = (label: string) => tables[0].querySelector<HTMLInputElement>(`input[aria-label="${label}"]`)?.value;
+    expect(cell('Memory of cue 1.0')).toBe('1');
+    expect(tables[0].textContent).toContain('p1 f1');
+    expect(cell('Follow-on of cue 2.0')).toBe('1:30');
     expect(root.textContent).toContain('Sequence 0 "KOTLIK"');
     expect(tables[2].textContent).toContain('OPONA');
     expect(tables[2].textContent).toContain('7/100 8/100');
@@ -151,5 +154,34 @@ describe('ShowFilePageComponent', () => {
     expect(page.querySelector('.show__dirty')).toBeNull();
     expect(page.querySelector<HTMLInputElement>('input[aria-label="Channel for DMX 1"]')?.value).toBe('1');
     expect(root).toBeDefined();
+  });
+
+  it("edits a step's times and memory, keeps the number, and restores an input the console would not write", async () => {
+    await openFile(sampleShow());
+    const fixture = TestBed.createComponent(ShowFilePageComponent);
+    fixture.detectChanges();
+    const root = fixture.nativeElement as HTMLElement;
+    const field = (label: string) => root.querySelector<HTMLInputElement>(`input[aria-label="${label}"]`)!;
+    const typeInto = (input: HTMLInputElement, value: string) => {
+      input.value = value;
+      input.dispatchEvent(new Event('change'));
+      fixture.detectChanges();
+    };
+
+    typeInto(field('Follow-on of cue 1.0'), '1:30');
+    typeInto(field('Memory of cue 1.0'), '267');
+    typeInto(field('Up time of sequence 0 step 265.0'), '2.5');
+    expect(root.querySelector('.show__dirty')).not.toBeNull();
+    expect(field('Memory of cue 1.0').nextElementSibling?.textContent).toContain('p12 f3');
+
+    typeInto(field('Up time of cue 1.0'), '3,5'); // not a console time: restored
+    expect(field('Up time of cue 1.0').value).toBe('5.0');
+    typeInto(field('Memory of cue 1.0'), '300'); // outside 1..288: restored
+    expect(field('Memory of cue 1.0').value).toBe('267');
+
+    const service = TestBed.inject(ShowFileService);
+    const stack = service.edited()!.mainStack!;
+    expect(stack.steps[0]).toMatchObject({ number: '1.0', followOn: '1:30', memoryPage: 11, memoryFader: 2, memoryNumber: 267, upTime: '5.0' });
+    expect(service.edited()!.sequences[0].steps[0].upTime).toBe('2.5');
   });
 });

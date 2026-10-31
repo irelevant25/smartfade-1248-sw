@@ -95,6 +95,33 @@ public class ShowFileEndpointTests
         Assert.Contains("outside 0..96", error?.Message, StringComparison.Ordinal);
     }
 
+    [Fact]
+    public async Task Renders_edited_step_times_and_memory_and_refuses_a_time_the_console_never_writes()
+    {
+        using var factory = new WebApplicationFactory<Program>().WithWebHostBuilder(b => b.UseSetting("Device:Mode", "Simulated"));
+        using var client = factory.CreateClient();
+        using var upload = new ByteArrayContent(await File.ReadAllBytesAsync(OstrovSample));
+        var dto = (await (await client.PostAsync("/api/showfile/parse?name=Ostrov.asc", upload)).Content.ReadFromJsonAsync<ShowFileDto>())!;
+
+        var steps = dto.MainStack!.Steps.ToList();
+        steps[0] = steps[0] with { UpTime = "3.5", DownDelay = "2", FollowOn = "1:30", MemoryPage = 11, MemoryFader = 2, MemoryNumber = 267 };
+        var edited = await client.PostAsJsonAsync("/api/showfile/render", dto with { MainStack = dto.MainStack with { Steps = steps } });
+        Assert.Equal(HttpStatusCode.OK, edited.StatusCode);
+        var text = System.Text.Encoding.Latin1.GetString(await edited.Content.ReadAsByteArrayAsync());
+        var cue = text.IndexOf("CUE  1.0", StringComparison.Ordinal);
+        var next = text.IndexOf("CUE  2.0", StringComparison.Ordinal);
+        var step = text[cue..next];
+        Assert.Contains("$$MEMORY 11 2", step, StringComparison.Ordinal);
+        Assert.Contains("UP 3.5   0    ", step, StringComparison.Ordinal);
+        Assert.Contains("DOWN 5.0   2    ", step, StringComparison.Ordinal);
+        Assert.Contains("FOLLOWON 1:30 ", step, StringComparison.Ordinal);
+
+        steps[0] = steps[0] with { UpTime = "3,5" };
+        var refused = await client.PostAsJsonAsync("/api/showfile/render", dto with { MainStack = dto.MainStack with { Steps = steps } });
+        Assert.Equal(HttpStatusCode.BadRequest, refused.StatusCode);
+        Assert.Contains("up time '3,5'", (await refused.Content.ReadFromJsonAsync<ErrorDto>())?.Message, StringComparison.Ordinal);
+    }
+
     private static string FindRepositoryRoot()
     {
         var directory = new DirectoryInfo(AppContext.BaseDirectory);

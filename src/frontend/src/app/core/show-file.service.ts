@@ -1,5 +1,12 @@
 import { computed, Injectable, signal } from '@angular/core';
-import type { ShowFileDto } from './show-file.models';
+import type { SequenceDto, ShowFileDto, StepDto } from './show-file.models';
+
+/** Where a step lives: the main stack, or a sequence by its position in the file's list. */
+export type StepHome = 'stack' | number;
+
+/** A time as the console's files write it: seconds with at most one decimal, or m:ss. */
+export const TIME_PATTERN = /^([0-9]+([.][0-9])?|[0-9]+:[0-9]{2})$/;
+const MEMORIES_PER_PAGE = 24;
 
 /**
  * Opens a `.asc` show file chosen in the browser and holds an editable copy of it. The bytes go to the
@@ -70,6 +77,65 @@ export class ShowFileService {
     const patch = edited.patch.slice();
     patch[index] = { ...patch[index], channel };
     this._edited.set({ ...edited, patch });
+  }
+
+  /**
+   * Step edit: the fade times, the delays, the follow-on and the referenced memory of an existing step. Times
+   * must look like the console's (TIME_PATTERN); the memory is 1..288 or none. The step number is never changed.
+   * Returns false, and changes nothing, when a value is refused.
+   */
+  setStep(
+    home: StepHome,
+    index: number,
+    change: Partial<Pick<StepDto, 'upTime' | 'upDelay' | 'downTime' | 'downDelay' | 'followOn'>> & { memoryNumber?: number | null },
+  ): boolean {
+    const edited = this._edited();
+    if (!edited) {
+      return false;
+    }
+    const sequence = home === 'stack' ? edited.mainStack : edited.sequences[home];
+    const step = sequence?.steps[index];
+    if (!sequence || !step) {
+      return false;
+    }
+    const { memoryNumber, ...times } = change;
+    for (const value of Object.values(times)) {
+      if (typeof value !== 'string' || !TIME_PATTERN.test(value)) {
+        return false;
+      }
+    }
+    let memory: Pick<StepDto, 'memoryPage' | 'memoryFader' | 'memoryNumber'> = {
+      memoryPage: step.memoryPage,
+      memoryFader: step.memoryFader,
+      memoryNumber: step.memoryNumber,
+    };
+    if ('memoryNumber' in change) {
+      if (memoryNumber === null) {
+        memory = { memoryPage: null, memoryFader: null, memoryNumber: null };
+      } else if (
+        typeof memoryNumber === 'number' &&
+        Number.isInteger(memoryNumber) &&
+        memoryNumber >= 1 &&
+        memoryNumber <= 12 * MEMORIES_PER_PAGE
+      ) {
+        memory = {
+          memoryPage: Math.floor((memoryNumber - 1) / MEMORIES_PER_PAGE),
+          memoryFader: (memoryNumber - 1) % MEMORIES_PER_PAGE,
+          memoryNumber,
+        };
+      } else {
+        return false;
+      }
+    }
+    const steps = sequence.steps.slice();
+    steps[index] = { ...step, ...times, ...memory };
+    const next: SequenceDto = { ...sequence, steps };
+    this._edited.set(
+      home === 'stack'
+        ? { ...edited, mainStack: next }
+        : { ...edited, sequences: edited.sequences.map((s, i) => (i === home ? next : s)) },
+    );
+    return true;
   }
 
   revert(): void {

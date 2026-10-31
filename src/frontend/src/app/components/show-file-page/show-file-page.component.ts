@@ -1,6 +1,6 @@
 import { ChangeDetectionStrategy, Component, computed, inject } from '@angular/core';
-import type { ChannelPercentDto, LabelDto, StepDto } from '../../core/show-file.models';
-import { ShowFileService } from '../../core/show-file.service';
+import type { ChannelPercentDto, LabelDto, SequenceDto, StepDto } from '../../core/show-file.models';
+import { ShowFileService, TIME_PATTERN, type StepHome } from '../../core/show-file.service';
 
 /**
  * The show-file page (E10, step 1): open a `.asc` show file from disk and browse what it holds, read-only:
@@ -61,6 +61,35 @@ export class ShowFilePageComponent {
     this._files.setPatchChannel(dmx, channel);
   }
 
+  /** A time cell of a step: accepted when it looks like the console's times, else the input is restored. */
+  protected setTime(home: StepHome, index: number, field: 'upTime' | 'upDelay' | 'downTime' | 'downDelay' | 'followOn', event: Event): void {
+    const input = event.target as HTMLInputElement;
+    const value = input.value.trim();
+    if (!TIME_PATTERN.test(value) || !this._files.setStep(home, index, { [field]: value })) {
+      input.value = this.stepOf(home, index)?.[field] ?? '';
+    }
+  }
+
+  /** The memory cell of a step: 1..288, or empty for none; else the input is restored. */
+  protected setMemory(home: StepHome, index: number, event: Event): void {
+    const input = event.target as HTMLInputElement;
+    const text = input.value.trim();
+    const number = text === '' ? null : Number(text);
+    if (!this._files.setStep(home, index, { memoryNumber: number })) {
+      input.value = String(this.stepOf(home, index)?.memoryNumber ?? '');
+    }
+  }
+
+  /** The position of a sequence in the file's list: the service addresses steps by it. */
+  protected seqIndex(sequence: SequenceDto): number {
+    return this.edited()?.sequences.indexOf(sequence) ?? -1;
+  }
+
+  private stepOf(home: StepHome, index: number): StepDto | undefined {
+    const show = this.edited();
+    return (home === 'stack' ? show?.mainStack : show?.sequences[home])?.steps[index];
+  }
+
   protected revert(): void {
     this._files.revert();
   }
@@ -75,10 +104,6 @@ export class ShowFilePageComponent {
     }
     const lines = [label.line1, label.line2, label.line3].filter((line) => line.trim().length > 0);
     return lines.length > 0 ? lines.join(' / ') : label.text;
-  }
-
-  protected memoryRef(step: StepDto): string {
-    return step.memoryNumber === null ? '' : `${step.memoryNumber} (page ${step.memoryPage! + 1}, fader ${step.memoryFader! + 1})`;
   }
 
   protected channelsText(channels: ChannelPercentDto[]): string {

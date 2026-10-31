@@ -159,6 +159,24 @@
   }
 }
 
+.show__edit {
+  width: 52px;
+  padding: 1px 4px;
+  border: 1px solid var(--sf-border);
+  border-radius: 3px;
+  background: #1a2026;
+  color: var(--sf-text);
+  font: 0.75rem var(--sf-font-mono);
+
+  &:focus {
+    outline: 1px solid var(--sf-accent);
+  }
+}
+
+.show__edit--memory {
+  width: 44px;
+}
+
 .show__dirty {
   font: 600 0.6875rem var(--sf-font-ui);
   letter-spacing: 0.08em;
