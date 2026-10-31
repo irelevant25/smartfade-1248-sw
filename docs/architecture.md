@@ -276,6 +276,8 @@ adding and removing steps only if the owner asks for it.
 
 ## Phase 2 proposal: live control after E9b and SC-2 (2026-10-31, not implemented)
 
+*(Update 2026-10-31, after E9b: the repeat ran the same morning, [record](protocol/captures/2026-10-31-e9b-smartsoft-writes-repeat.md). It made the write framing and the most-used ConsoleEvents VERIFIED as SmartSoft's and the console's behaviour, 61 facts in all, never clearance to send, and added three inputs this proposal did not have: the last mover wins between a PC fader and a physical fader, F141; SmartSoft's Mem Edit tab writes a whole Memory object with a layout unlike the console's own and not reversible by the protocol, F143, which this proposal must never send; and REC MEM stores the post-MASTER level, F145, which the simulator now follows. SC-2 has not run; nothing below is cleared, and no type-1 header is encoded anywhere in the solution. The text below is kept as written before E9b.)*
+
 E9 (2026-10-30) was the first capture of a PC writing to the console. It showed, for one session,
 that SmartSoft's live control is a single message type, ConsoleEvent (object 20), sent as a type-1
 data header with a four-byte payload for a fader (`[0][index][level][previous]`) or a three-byte
@@ -322,7 +324,7 @@ write path would be built once that happens, so that nothing of it is improvised
   COPY as key presses only (owner decision 2026-10-30), so the console remains in charge of its show
   data; whether those keys can be cleared at all is SC-2's question after E9b, and the Memory
   objects the console lists afterwards are already decoded for display.
-- **Gates before the first byte:** E9b reproduces F131–F140 with a timed log; SC-2 runs the
+- **Gates before the first byte:** E9b reproduces F131–F140 with a timed log (done 2026-10-31: F131–F134, F138 and F140 VERIFIED, F135 and F136 in part, as behaviour; F137 not reproduced); SC-2 runs the
   checklist for each message class with its exact bytes; `protocol-safety-reviewer` reviews the
   encoder and the whitelist; the first write session is its own experiment with a backup, USBPcap,
   and the session ending on the first unobserved reply, as E8 was for reading.
