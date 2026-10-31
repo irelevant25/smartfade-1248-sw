@@ -45,7 +45,7 @@ or copy its contents into source code. Derived extractions go to `analysis/extra
 | Source inventory + hashes | `docs/source-materials.md` |
 | Hardware facts | `docs/hardware/smartfade-1248.md` |
 | Protocol knowledge base (status vocabulary, facts, hypotheses, evidence matrix) | `docs/protocol/` |
-| Observed framing, commands, responses, session model (from E2, E3, E3b, E8, E8b and E9; VERIFIED = reproduced behaviour, never clearance to send; E9's write messages are OBSERVED once and not cleared) | `docs/protocol/packet-format.md`, `commands.md`, `responses.md`, `state-model.md` |
+| Observed framing, commands, responses, session model (from E2, E3, E3b, E8, E8b, E9 and E9b; VERIFIED = reproduced behaviour, never clearance to send; the write messages are VERIFIED only as SmartSoft's behaviour where E9b reproduced E9, the rest OBSERVED once, and none is cleared) | `docs/protocol/packet-format.md`, `commands.md`, `responses.md`, `state-model.md` |
 | Third-party reference compared with our 1248 evidence (ConsoleLink, SmartFade ML, evidence class 5) | `docs/protocol/consolelink-analysis.md` |
 | Capture records, evidence files, capture format | `docs/protocol/captures/`, `tools/protocol-analyzer/` |
 | SmartSoft binary analysis | `docs/protocol/smartsoft-analysis.md` |
@@ -190,6 +190,17 @@ reversible by the protocol. **E9 cleared nothing: SC-1's poll and listed fetch r
 anywhere in the solution, and the repeat E9b plus a safety check SC-2 are the gate for any write.** The owner item on memory 7 of page 1
 (changed by E9, F139) was closed 2026-10-31: `SHOW08.ASC` confirmed the change, the owner restored it by hand, and `SHOW09.ASC` equals the
 pre-E9 backup `SHOW07.ASC` byte for byte. Next: "Next capture (proposed by the E9 analysis, 2026-10-30)" in `reverse-engineering.md`.
+**E9b done 2026-10-31** (`docs/protocol/captures/2026-10-31-e9b-smartsoft-writes-repeat.md`, the repeat of E9: three SmartSoft Online sessions driven through its
+Console Simulator after a console power cycle and recorded passively; our software sent nothing): 427 writes (the System pair x 3, 366 ConsoleEvent fader events,
+26 key press / release pairs, two ChannelText labels and **one Memory (0) whole-object write** from SmartSoft's Mem Edit tab, a 90-byte body against the console's
+own 138), framing errors 0. It reproduced the write framing and the most-used ConsoleEvents: **61 facts are VERIFIED** (F131-F134, F138 and F140 added, F135 and
+F136 in part; as SmartSoft's and the console's behaviour, never clearance to send). F141-F147 and H87-H90 were added: the last mover wins between a PC fader and a
+physical fader (F141), the console's own EDIT MEM lists System (5, 5, 0) (F142), the console stores a label write verbatim (F144, OBSERVED), REC MEM stores the
+post-MASTER level (F145, H85 REJECTED, the simulator changed accordingly) and, with nothing raised, empties the memory (F146, H86 CONFIRMED); fader index 0x04 and
+the key codes 0x37 (FADERS 25-48), 0x3B (STACK), 0x47 / 0x48 (IND 1 / IND 2) were seen once each; H84 CONFIRMED, H81's first clause CONFIRMED for channel mode,
+H78 contradicted in its prediction (cause UNKNOWN). **E9b cleared nothing: SC-1's poll and listed fetch remain the only messages cleared, no type-1 data header is
+encoded anywhere in the solution, and the safety check SC-2 is the gate for any write** (its input: the E9b record's "Input for a future safety check (SC-2),
+updated after E9b"). Next: "Next capture (proposed by the E9b analysis, 2026-10-31)" in `reverse-engineering.md`.
 
 ## Commands
 

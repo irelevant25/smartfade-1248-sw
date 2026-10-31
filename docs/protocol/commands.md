@@ -9,7 +9,8 @@ reverse-engineering.md; a reproduction alone proves only that SmartSoft sends it
 Evidence: [E2 record](captures/2026-10-28-e2-smartsoft-connect.md) and, since 2026-10-29,
 the [E3 record](captures/2026-10-29-e3-console-actions.md) and, since 2026-10-30, the
 [E3b record](captures/2026-10-30-e3b-live-objects.md) and, since the late evening of 2026-10-30, the
-[E9 record](captures/2026-10-30-e9-smartsoft-writes.md) (SmartSoft's data writes beyond the System pair).
+[E9 record](captures/2026-10-30-e9-smartsoft-writes.md) (SmartSoft's data writes beyond the System pair) and, since 2026-10-31, the
+[E9b record](captures/2026-10-31-e9b-smartsoft-writes-repeat.md) (the repeat of E9).
 
 **Update 2026-10-29 (E3).** The second SmartSoft session, after a console power cycle, sent the same
 four kinds of message (poll, fetch, the two System writes) and nothing else: no ConsoleEvent, no show
@@ -61,6 +62,15 @@ in E9" below, each **OBSERVED (one session) and NOT CLEARED**. **E9 clears no me
 only messages cleared, and the System writes and every message of the E9 section stay uncleared; the statements further down that
 no set-level, GO or record message was observed are superseded by E9 (text kept, annotated where they stand).
 
+**Update 2026-10-31 (E9b).** E9b ([record](captures/2026-10-31-e9b-smartsoft-writes-repeat.md)) was the repeat of E9: three SmartSoft
+sessions through the Console Simulator, recorded passively (our software sent nothing), 427 data writes: the System pair × 3
+(byte-identical again, SmartSoft's seventh to ninth session), 366 ConsoleEvent kind 0 writes, 52 kind 1 writes (26 press / release
+pairs), two ChannelText writes (byte-identical to E9's) and **one Memory (0) whole-object write** from SmartSoft's Mem Edit tab.
+Where E9b reproduced E9, the Status cells below read **VERIFIED as SmartSoft's behaviour** (F131–F134, F138): SmartSoft and the
+console were seen to behave so in two sessions, **never that we may send the message**. New in E9b: fader index 0x04, the key
+codes 0x37, 0x3B, 0x47 and 0x48, and the Memory (0) row (OBSERVED once). **E9b clears no message:** SC-1's poll and listed fetch
+remain the only messages cleared, no type-1 data header is encoded anywhere in the solution, and SC-2 is the gate for any write.
+
 | Message | Bytes as seen | Count in E2 (E3) | Effect observed | Status | Facts |
 |---|---|---|---|---|---|
 | Poll | 12-byte header, w0 = 0 (first poll f11: all zero) | 3 001 (E3: 9 692) (E3b: 25 824) | Console answers with a type-3 or type-4 reply header | **VERIFIED 2026-10-29** as SmartSoft's behaviour (E2 + E3; was OBSERVED) | F52, F53 |
@@ -82,45 +92,55 @@ SC-2 and not an approval. Framing: header `01 00 [w1 LE] [w2 … w5]` with w2..w
 `[pseq][u16 LE len = w1 − 4][id][body]`, SmartSoft's sequence byte +1 per data payload across all ids ([packet-format.md](packet-format.md)
 "Data writes", F131). `[pseq]` stands for that counter byte; the examples carry its value at that point of the session.
 
+*(E9b, 2026-10-31: the rows that E9b repeated are VERIFIED as SmartSoft's behaviour in the Status column and keep E9's counts with E9b's
+in brackets; the rows E9b first saw (the Memory row, index 0x04, the codes 0x37, 0x3B, 0x47, 0x48) are OBSERVED once; every row stays NOT
+CLEARED. "OBSERVED (one session)" in the first paragraph is the E9 wording, kept.)*
+
 | Message | Bytes as seen | Count in E9 | Effect observed | Status | Facts |
 |---|---|---|---|---|---|
-| Data: ConsoleEvent (ID 20), kind 0 (fader) | header `01 00 08 00` + stale words; payload `[pseq] 04 00 14 00 [index] [value] [previous]`. First event: header seq 9664 (f19327) `01 00 08 00 00 00 00 00 00 00 00 00`, payload seq 9665 (f19329) `02 04 00 14 00 00 05 00` | 332 (index 0x00: 84, 0x06: 70, 0x30: 86, 0x31: 92) | Sets the control with that index at once, from the first event: FaderInfo, ChannelLevels, OutputLevels, an LED block and an LCD cell follow as for the panel; inside EDIT MEM it edits the selected memory's level (stored by the next EDIT MEM); no acknowledgement | OBSERVED (one session), NOT CLEARED | F131, F132, F134, F135 |
-| Data: ConsoleEvent (ID 20), kind 1 (key), press | header `01 00 07 00` + stale words; payload `[pseq] 03 00 14 01 [code] 01`. Example: bump 7, header seq 19054 (f38107) `01 00 07 00 00 00 00 00 00 00 00 00`, payload seq 19055 (f38109) `56 03 00 14 01 06 01` | 32 | The console acts on the press (bumps flash, BLACKOUT and SOLO toggle, GO starts a fade, FADERS keys switch mode, the record keys open their function) | OBSERVED (one session), NOT CLEARED | F133, F134 |
-| Data: ConsoleEvent (ID 20), kind 1 (key), release | the same header; payload `[pseq] 03 00 14 01 [code] 00`, a separate write 46 ms to 5.80 s after the press. Example: seq 19435 / 19436 (f38871) `57 03 00 14 01 06 00` | 32 | Ends a held bump (its output goes off); a session that ends between a press and its release is untested | OBSERVED (one session), NOT CLEARED | F133 |
-| Data: ChannelText (ID 9), a label | header `01 00 2B 00` + stale words; payload `[pseq] 27 00 09 [channel − 1] 03 06 [36 bytes]` (the whole 39-byte object). Channel 7: seq 57437 (f114873) `1A 27 00 09 06 03 06` + 36 × `00` (the unchanged empty label); seq 57881 (f115761) `1B 27 00 09 06 03 06 01 0C 00 61 00 6A` + 30 × `00` ("Čaj", UTF-16BE); seq 60605 (f121209) `1C 27 00 09 06 03 06 00 00 00 61 00 6A` + 30 × `00` (the "restore", residue behind a zeroed first unit) | 3 | Replaces the channel's label (show data); nothing was listed back | OBSERVED (one session), NOT CLEARED | F138 |
-| Data: System (ID 39), body `09 00 00` / `07 00 00` | as in the table above; E9: header seq 137 (f273) + payload seq 138 (f275) `00 03 00 27 09 00 00`, header seq 220 (f439) + payload seq 221 (f441) `01 03 00 27 07 00 00` | 2 (78.262 s, 79.510 s) | as above (list [37] / the 157-record list) | **VERIFIED as SmartSoft's behaviour only** (sixth session; never clearance) | F58, F92 |
+| Data: ConsoleEvent (ID 20), kind 0 (fader) | header `01 00 08 00` + stale words; payload `[pseq] 04 00 14 00 [index] [value] [previous]`. First event: header seq 9664 (f19327) `01 00 08 00 00 00 00 00 00 00 00 00`, payload seq 9665 (f19329) `02 04 00 14 00 00 05 00` | 332 (index 0x00: 84, 0x06: 70, 0x30: 86, 0x31: 92) (E9b: 366; index 0x00: 135, 0x04: 93, 0x30: 73, 0x31: 65) | Sets the control with that index at once, from the first event: FaderInfo, ChannelLevels, OutputLevels, an LED block and an LCD cell follow as for the panel; inside EDIT MEM it edits the selected memory's level (stored by the next EDIT MEM); no acknowledgement | **VERIFIED 2026-10-31 as SmartSoft's behaviour** for the layout, the value scale, the previous-byte rule and the indices 0x00, 0x30, 0x31 (E9 + E9b; was OBSERVED); indices 0x06 and 0x04 OBSERVED once each; NOT CLEARED | F131, F132, F134, F135, F141 |
+| Data: ConsoleEvent (ID 20), kind 1 (key), press | header `01 00 07 00` + stale words; payload `[pseq] 03 00 14 01 [code] 01`. Example: bump 7, header seq 19054 (f38107) `01 00 07 00 00 00 00 00 00 00 00 00`, payload seq 19055 (f38109) `56 03 00 14 01 06 01` | 32 (E9b: 26) | The console acts on the press (bumps flash, BLACKOUT and SOLO toggle, GO starts a fade, FADERS keys switch mode, the record keys open their function) | **VERIFIED 2026-10-31 as SmartSoft's behaviour** for the layout and the nine codes that E9b repeated (E9 + E9b; was OBSERVED); the other codes OBSERVED; NOT CLEARED | F133, F134 |
+| Data: ConsoleEvent (ID 20), kind 1 (key), release | the same header; payload `[pseq] 03 00 14 01 [code] 00`, a separate write 46 ms to 5.80 s after the press. Example: seq 19435 / 19436 (f38871) `57 03 00 14 01 06 00` | 32 (E9b: 26) | Ends a held bump (its output goes off); a session that ends between a press and its release is untested | **VERIFIED 2026-10-31 as SmartSoft's behaviour** (E9 + E9b; was OBSERVED); a session that ends between a press and its release is untested; NOT CLEARED | F133 |
+| Data: ChannelText (ID 9), a label | header `01 00 2B 00` + stale words; payload `[pseq] 27 00 09 [channel − 1] 03 06 [36 bytes]` (the whole 39-byte object). Channel 7: seq 57437 (f114873) `1A 27 00 09 06 03 06` + 36 × `00` (the unchanged empty label); seq 57881 (f115761) `1B 27 00 09 06 03 06 01 0C 00 61 00 6A` + 30 × `00` ("Čaj", UTF-16BE); seq 60605 (f121209) `1C 27 00 09 06 03 06 00 00 00 61 00 6A` + 30 × `00` (the "restore", residue behind a zeroed first unit) | 3 (E9b: 2, byte-identical to E9's "Čaj" and "restore") | Replaces the channel's label (show data); nothing was listed back | **VERIFIED 2026-10-31 as SmartSoft's behaviour** for the write (E9 + E9b; was OBSERVED); the console stores it verbatim (F144, OBSERVED); NOT CLEARED | F138, F144 |
+| Data: Memory (ID 0), a whole memory (E9b, from SmartSoft's Mem Edit tab) | header `01 00 5E 00` + stale words (w1 = 94); payload `[pseq] 5A 00 00 [page − 1][slot − 1] 01 30 [48 level bytes] 03 06 [36 label bytes]`. E9b: header seq 92052 (f184103) `01 00 5E 00 00 00 00 00 00 00 00 00`, payload seq 92053 (f184105) `23 5A 00 00 00 08 01 30 00 00 00 00 FF` + 43 × `00` + `03 06` + 36 × `00` (memory 9 of page 1, channel 5 = 0xFF) | 0 (E9b: 1) | Replaces the memory's levels and label (show data); nothing was listed back; the console applied it (memory fader 9 raised to full gave channel 5 = 0xFF). The layout differs from the console's own 138-byte Memory body (body[3] = 0x60, 96 levels), and what the console stored for channels 49–96 is UNKNOWN (F143) | OBSERVED (once, E9b), **NOT CLEARED, not reversible by the protocol** without the exact old body | F143, H87 |
+| Data: System (ID 39), body `09 00 00` / `07 00 00` | as in the table above; E9: header seq 137 (f273) + payload seq 138 (f275) `00 03 00 27 09 00 00`, header seq 220 (f439) + payload seq 221 (f441) `01 03 00 27 07 00 00` | 2 (78.262 s, 79.510 s) (E9b: 6, three pairs at 47.260 / 48.525 s, 1048.164 / 1049.431 s and 1145.018 / 1146.283 s) | as above (list [37] / the 157-record list) | **VERIFIED as SmartSoft's behaviour only** (sixth session in E9, the seventh to ninth in E9b; never clearance) | F58, F92 |
 
 Fader indices seen (kind 0; no other index was observed, and none may be derived):
 
 | Index | Control (Simulator) | Events | First event (payload) | What the console followed with |
 |---|---|---|---|---|
-| 0x00 | channel fader 1 | 84 | seq 9665 `02 04 00 14 00 00 05 00` | FaderInfo record 1 byte 0 (body[1]), ChannelLevels[1], OutputLevels[2] (DMX 1), LED block 1 G, LCD cell body[3] |
-| 0x06 | channel fader 7, used inside EDIT MEM | 70 | seq 67236 `25 04 00 14 00 06 02 00` | LED block 7 G and LCD cell body[9] (the edited memory's channel 7, blind) and the stored Memory body[10]; FaderInfo record 7 never moved with it |
-| 0x30 (48) | MASTER | 86 | seq 24115 `58 04 00 14 00 30 FD 00` | FaderInfo body[194]; LED block 53 blinking below full |
-| 0x31 (49) | BUMPS | 92 | seq 29434 `AE 04 00 14 00 31 FD 00` | FaderInfo body[193] |
+| 0x00 | channel fader 1 | 84 (E9b: 135) | seq 9665 `02 04 00 14 00 00 05 00` | FaderInfo record 1 byte 0 (body[1]), ChannelLevels[1], OutputLevels[2] (DMX 1), LED block 1 G, LCD cell body[3] |
+| 0x04 | channel fader 5 (E9b) | 93 | seq 42955 `14 04 00 14 00 04 02 00` | FaderInfo record 5 byte 0 (body[17]), ChannelLevels[5], OutputLevels[6] (DMX 5), LED block 5 G, LCD cell body[7] |
+| 0x06 | channel fader 7, used inside EDIT MEM | 70 (E9b: 0) | seq 67236 `25 04 00 14 00 06 02 00` | LED block 7 G and LCD cell body[9] (the edited memory's channel 7, blind) and the stored Memory body[10]; FaderInfo record 7 never moved with it |
+| 0x30 (48) | MASTER | 86 (E9b: 73) | seq 24115 `58 04 00 14 00 30 FD 00` | FaderInfo body[194]; LED block 53 blinking below full |
+| 0x31 (49) | BUMPS | 92 (E9b: 65) | seq 29434 `AE 04 00 14 00 31 FD 00` | FaderInfo body[193] |
 
 The value byte is the console's level byte (0x00–0xFF, unconverted); the previous byte is SmartSoft's own last value of that index
 (0x00 for the first event of the session, also for the MASTER and BUMPS, which stood at 0xFF on the console; F132). The indices of
 the other 22 channel faders, the memory faders and the crossfaders are UNKNOWN, and "channel fader k = index k − 1" rests on two
-points (HYPOTHESIS).
+points (HYPOTHESIS). *(E9b, 2026-10-31: index 0x04 = channel fader 5 was seen; the rule now rests on three points, 0x00, 0x04 and 0x06, and is still HYPOTHESIS: no other index may be derived from it.)*
 
 Key codes seen (kind 1; each named by a logged Simulator step and a timed press; header / payload seq of the first press, payload frame in brackets):
 
 | Code | Key (Simulator) | Pairs | First press | LED block that changed |
 |---|---|---|---|---|
-| 0x00 | bump 1 (memory bump 1 in memory mode) | 2 | seq 39595 / 39596 (f79191) `14 03 00 14 01 00 01` | 1 |
-| 0x06 | bump 7 | 2 | seq 19054 / 19055 (f38109) `56 03 00 14 01 06 01` | 7 |
-| 0x08 | bump 9 | 4 | seq 73995 / 73996 (f147991) `75 03 00 14 01 08 01` | 9 |
+| 0x00 | bump 1 (memory bump 1 in memory mode) | 2 (E9b: 1) | seq 39595 / 39596 (f79191) `14 03 00 14 01 00 01` | 1 |
+| 0x06 | bump 7 | 2 (E9b: 1) | seq 19054 / 19055 (f38109) `56 03 00 14 01 06 01` | 7 |
+| 0x08 | bump 9 | 4 (E9b: 2) | seq 73995 / 73996 (f147991) `75 03 00 14 01 08 01` | 9 |
 | 0x09 | bump 10 | 2 | seq 84654 / 84655 (f169309) `83 03 00 14 01 09 01` | 10 |
-| 0x31 | GO | 1 | seq 43869 / 43870 (f87739) `18 03 00 14 01 31 01` | 50 |
-| 0x33 | SOLO | 2 | seq 36385 / 36386 (f72771) `0E 03 00 14 01 33 01` | 52 |
-| 0x34 | BLACKOUT | 2 | seq 33541 / 33542 (f67083) `0A 03 00 14 01 34 01` | 53 |
-| 0x36 | FADERS 1-24 | 2 | seq 41448 / 41449 (f82897) `16 03 00 14 01 36 01` | 55 |
+| 0x31 | GO | 1 (E9b: 1) | seq 43869 / 43870 (f87739) `18 03 00 14 01 31 01` | 50 |
+| 0x33 | SOLO | 2 (E9b: 2) | seq 36385 / 36386 (f72771) `0E 03 00 14 01 33 01` | 52 |
+| 0x34 | BLACKOUT | 2 (E9b: 2) | seq 33541 / 33542 (f67083) `0A 03 00 14 01 34 01` | 53 |
+| 0x36 | FADERS 1-24 | 2 (E9b: 5) | seq 41448 / 41449 (f82897) `16 03 00 14 01 36 01` | 55 |
+| 0x37 | FADERS 25-48 (E9b) | 1 | seq 51616 / 51617 (f103233) `7D 03 00 14 01 37 01` | 56 (`00 0A 00 …` → `00 FF 00 00 FF 00`; block 55 → `00 0A 00 …`) |
 | 0x38 | CLEAR | 3 | seq 80937 / 80938 (f161875) `7D 03 00 14 01 38 01` | 57 |
-| 0x39 | FADERS MEMS | 3 | seq 39471 / 39472 (f78943) `12 03 00 14 01 39 01` | 58 |
+| 0x39 | FADERS MEMS | 3 (E9b: 3) | seq 39471 / 39472 (f78943) `12 03 00 14 01 39 01` | 58 |
+| 0x3B | STACK (E9b) | 2 | seq 47229 / 47230 (f94459) `71 03 00 14 01 3B 01` | 60 (`46 46 00 46 46 00` → `FF FF 00 FF FF 00`) |
 | 0x3E | COPY | 1 | seq 82233 / 82234 (f164467) `7F 03 00 14 01 3E 01` | 63 |
-| 0x41 | REC MEM | 1 | seq 73005 / 73006 (f146011) `73 03 00 14 01 41 01` | 66 |
+| 0x41 | REC MEM | 1 (E9b: 2) | seq 73005 / 73006 (f146011) `73 03 00 14 01 41 01` | 66 |
 | 0x42 | EDIT MEM | 7 | seq 66989 / 66990 (f133979; the `sim edit mem` step's own first press, the record's choice: seq 76628, f153257) `21 03 00 14 01 42 01` | 67 |
+| 0x47 | IND 1 (E9b) | 2 | seq 49357 / 49358 (f98715) `75 03 00 14 01 47 01` | 72 (`00 0A 00 …` → `00 FF 00 00 FF 00`) |
+| 0x48 | IND 2 (E9b) | 2 | seq 50173 / 50174 (f100347) `79 03 00 14 01 48 01` | 73 (→ `00 FF 00 00 FF 00`) |
 
 For all 13 codes, code = LED block number − 1 (H82, HYPOTHESIS for any other key: no code may be derived from it). **Not observed, and
 never to be tried:** any other index or code, ConsoleEvent kind 2 (the wheel, excluded by the owner's decision), a Memory
@@ -129,6 +149,13 @@ learns:** only from the state objects the console then lists (FaderInfo, LED blo
 listed or fetched and an object write (ChannelText) produced no listing at all. The console accepted these events from a host that
 had sent the System pair (every SmartSoft session does); whether it accepts them from a host that never sent it (our read-only
 session, H66) is UNKNOWN and can only be learned by sending, which nothing clears.
+
+*(E9b, 2026-10-31: code = block − 1 holds for all 17 codes seen in E9 and E9b; STACK, IND 1 and IND 2 were predicted by H82 and met, and
+FADERS 25-48 lit block 56, which was not known beforehand; still no code may be derived from H82. First presses in E9b, header seq /
+payload frame: 0x00 seq 24888 (f49777), 0x06 seq 11391 (f22783), 0x08 seq 79052 (f158105), 0x31 seq 28407 (f56815), 0x33 seq 22164
+(f44329), 0x34 seq 19740 (f39481), 0x36 seq 26916 (f53833), 0x39 seq 24814 (f49629), 0x41 seq 78966 (f157933). "Not observed" above
+holds for E9; E9b observed one Memory whole-object write after all, see the Memory row above: show data, not reversible by the
+protocol, not part of the owner's write mode, not cleared.)*
 
 Observations that matter for safety:
 
@@ -172,3 +199,8 @@ Observations that matter for safety:
   no evidence that a message is harmless. *(E9: ConsoleEvent kinds 0 and 1 were seen from SmartSoft on the 1248 and are recorded in
   the E9 section above, with 1248 indices and codes that differ from ConsoleLink's ML numbers (24 MASTER, 25 BUMPS); System
   `[0x0A][page][0]` was not seen.)*
+- **E9b (2026-10-31).** A Memory (0) whole-object write exists (SmartSoft's Mem Edit tab; 90 bytes against the console's own 138): show
+  data, not reversible by the protocol without the exact old body, not part of the owner's write mode, not cleared (F143). The last mover
+  wins between a PC fader and a physical fader, so a PC event overrides a hand on the fader and the other way round, without a warning
+  from either side (F141). The console accepted events and object writes in every SmartSoft session, all of which had sent the System
+  pair; whether it accepts them from a host that never sent it (H66) is UNKNOWN and only sending could tell, which nothing clears.

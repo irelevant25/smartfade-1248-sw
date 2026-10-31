@@ -992,6 +992,20 @@ a malformed write, what the Playback tab's "all faders to zero" sends when a fad
 F140), and the Mem Edit tab's whole-object Memory write (not exercised: the owner edited through the console's EDIT MEM). The
 Assessment's order stands: E9b, then SC-2, before any such byte goes out.
 
+**E9b result against the same list (2026-10-31; OBSERVED once, nothing cleared;
+[record](captures/2026-10-31-e9b-smartsoft-writes-repeat.md)):** the Mem Edit tab's whole-object Memory write (row 6, "not exercised" in E9) was
+seen once: header `01 00 5E 00`, payload `[pseq] 5A 00 00` + a 90-byte body `[page − 1][slot − 1] 01 30` + 48 level bytes + `03 06` + 36 label
+bytes (memory 9 of page 1, channel 5 = 0xFF; seq 92052 / 92053, F143), against the console's own 138-byte Memory body (body[3] = 0x60, 96
+levels). SmartSoft's 1248 engine keeps 48 channels per memory (INFERRED) and body[3] is the number of level bytes in both layouts (INFERRED from
+the two lengths); the console applied the write and listed nothing back, and what it stored for channels 49–96 is UNKNOWN (H87). The 1248 wire
+indices and codes of E9 were reproduced and extended (fader index 0x04 = channel fader 5; key codes 0x37 FADERS 25-48, 0x3B STACK, 0x47 IND 1,
+0x48 IND 2; F132, F133); the event rate is again one write per loop iteration, at least 45.55 ms apart (F131); the console reconciles a PC
+fader with the non-motorised physical fader by letting the last mover win, in both directions (F141). **Still open:** whether the console
+accepts ConsoleEvents in a session that never sent the System 9 / 7 pair (H66; only sending can tell), whether it reads the previous byte at
+all, whether a pressed button stays latched when a session dies between press and release, how it handles a malformed write, what the Playback
+tab's "all faders to zero" sends when a fader is up, and the Memory body's channels 49–96 after a 48-level write. The Assessment's order stands:
+SC-2 before any such byte goes out; E9b was the repeat it named.
+
 ## Open static-analysis leads (only if captures prove insufficient)
 
 1. ~~Locate the code referencing the `Fetch object` / `Poll` strings…~~ **Done 2026-10-16:

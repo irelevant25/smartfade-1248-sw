@@ -63,6 +63,16 @@ framing held again (894 payloads, byte 1 = 0x00, four wraps, the first pseq 245 
 the messages with their exact bytes are in [commands.md](commands.md) "PC → console data writes seen in E9". The first records with
 c ≠ 0 appeared in E9's DirtyObjects lists (four System records, F137).
 
+**Update 2026-10-31 (E9b,** [record](captures/2026-10-31-e9b-smartsoft-writes-repeat.md)**).** The repeat of E9 (three SmartSoft sessions in one passive
+capture after a console power cycle; our software sent nothing) held the framing again for **427 data writes** (the ids 39, 20, 9 and now
+**0, Memory**): header `01 00 [w1 LE] [w2 … w5]` with the stale words in 427 of 427, payload `[pseq][u16 LE len = w1 − 4][id][body]` of
+exactly w1 bytes 0.067–0.254 ms later, w1 = 7, 8, 43 and **94** (the Memory write), the outbound counter from 0x00 in each session, +1
+per data payload across all ids, one wrap (seq 39860 → 39866), 0 gaps, USBD status 0, 0 framing errors; the inbound framing held (1 604
+payloads, six wraps, byte 1 = 0x00, the first pseq 0x00 after the power cycle and continuous across both restarts). The write framing is
+now **VERIFIED as SmartSoft's and the console's behaviour** (F131, E9 + E9b), which is **not clearance**: nothing here clears a message,
+no type-1 header is encoded anywhere in the solution, and the messages with their exact bytes are in [commands.md](commands.md)
+"PC → console data writes seen in E9" (the section keeps its heading; it holds the E9b rows too).
+
 ## Transport
 
 | Item | Observed | Fact |
@@ -79,7 +89,7 @@ Every OUT transfer starts as a 12-byte **header**, six u16 LE words:
 | Word | Poll (w0 = 0) | Data (w0 = 1) | Fetch (w0 = 2) |
 |---|---|---|---|
 | w0 | 0 | 1 | 2 |
-| w1 | 0 | payload length (7 in both observed cases, E2 / E3 / E3b; E9: 7, 8 or 43, F131) | 0 |
+| w1 | 0 | payload length (7 in both observed cases, E2 / E3 / E3b; E9: 7, 8 or 43, F131; E9b adds 94 for the Memory write, F143) | 0 |
 | w2 | stale | stale | object ID |
 | w3, w4, w5 | stale | stale | qualifiers a, b, c |
 
@@ -99,10 +109,16 @@ apart (one write per loop iteration, INFERRED from smartsoft-analysis.md S11.2 s
 | 20 ConsoleEvent, kind 0 (fader) | 4 bytes `[00][index][value][previous]` | 8 | 332 | seq 9665 `02 04 00 14 00 00 05 00` |
 | 20 ConsoleEvent, kind 1 (key) | 3 bytes `[01][code][state]`, state 01 on press and 00 on release | 7 | 64 | seq 19055 `56 03 00 14 01 06 01` |
 | 9 ChannelText | 39 bytes `[channel − 1][03][06][36 bytes]` | 43 | 3 | seq 57881 `1B 27 00 09 06 03 06 01 0C 00 61 00 6A` + 30 × `00` |
+| 0 Memory (E9b) | 90 bytes `[page − 1][slot − 1] 01 30` + 48 level bytes + `03 06` + 36 label bytes | 94 | 0 (E9b: 1) | seq 92053 `23 5A 00 00 00 08 01 30 00 00 00 00 FF` + 43 × `00` + `03 06` + 36 × `00` |
 
 The ConsoleEvent bodies are single bytes (no 16-bit fields); the ChannelText text block follows the byte order discussed under
 "Byte order" above (UTF-16BE for SmartSoft's write, H40; the console's side is open, H84). The meaning of every index, code and byte is
 in [commands.md](commands.md), not here.
+
+*(E9b, 2026-10-31: the same shape held for 427 of 427 writes; E9b counts per id: 39 System 6, 20 ConsoleEvent 418 (kind 0: 366, kind 1: 52), 9
+ChannelText 2, 0 Memory 1. The next poll or fetch followed the payload 14.69–16.23 ms later (median 15.44 ms), consecutive writes were at
+least 45.55 ms apart (median 61.81 ms within a burst). The framing is VERIFIED as behaviour (F131); the Memory write's 90-byte body is
+not the console's own 138-byte layout (F143). NOT CLEARED.)*
 
 ## Console → PC
 
@@ -149,6 +165,14 @@ seq 8) … 114, 0 breaks, four wraps with byte 1 = 0x00 (f96 → f104, f33150 �
 pseq continues E8b's last (244)** across a change of host program with no power cycle, which makes F93 VERIFIED (E3b + E9). Whether the
 console checks SmartSoft's outbound sequence byte is UNKNOWN (it never complained).
 
+**E9b (2026-10-31):** the outbound counter started at 0x00 in each of the three SmartSoft sessions and rose by one per data payload across
+all ids, 0 gaps: session 1 388 writes, 0x00 (seq 94, f187) … 0x83 (seq 63422, f126843) with one wrap 0xFF (seq 39860, f79719) → 0x00
+(seq 39866, f79731); session 2 3 writes, 0x00 … 0x02; session 3 36 writes, 0x00 … 0x23 (seq 92053, f184105); the rule is VERIFIED as
+behaviour (F55, F131). The console's counter: 1 604 payloads, **0x00 at the first payload after the power cycle** (seq 10, f20; the fourth
+power-on seen, F80) … 0x43, 0 breaks, six wraps with byte 1 = 0x00 (f26416 → f26428, f57688 → f57696, f86180 → f86192, f130026 → f130034,
+f141568 → f141576, f189664 → f189670), and **continuous across both SmartSoft restarts** (211 → 212 at seq 64766, 115 → 116 at seq 70153;
+F93). Whether the console checks SmartSoft's outbound sequence byte is still UNKNOWN.
+
 ## DirtyObjects (ID 40)
 
 Body: `[u16 BE count]` + count × `[id][u16 BE a][b][c]` (5 bytes each). Each record is fetched
@@ -163,6 +187,10 @@ is byte-identical to E3b's (six sessions, F94 VERIFIED for its structure). **The
 (a, b, c) = (5, 5, 6) at seq 68341, (5, 5, 8) at seq 77854 and again at seq 91071, (5, 5, 9) at seq 95545, each listed when the EDIT
 MEM key selected a memory (`27 00 05 05 06` in the list body at seq 68341); the record format is unchanged, so F57's "c = 0 in every
 record" is limited to E2–E8b, not the format (F137, H83).
+**E9b (2026-10-31):** 315 lists of payload 5 + 2 + 5n with a BE count (sizes 1 × 138, 2 × 33, 3 × 20, 4 × 51, 5 × 70, 157 × 3), **1 289
+records = 1 289 fetches in order**, no re-fetch, ID 40 never fetched, and **c = 0 in all 1 289 records** (E9b selected no memory other
+than memory 1 for editing; the console's own EDIT MEM listed System (5, 5, 0) with c = 0, F142); the 157-record list is byte-identical in
+nine sessions (F57, F94).
 
 ## Timing seen from SmartSoft
 
@@ -183,7 +211,7 @@ median 31.08 ms (n = 52 456, min 29.01, max 77.37), fetch to next poll median 15
 28.72 ms (min 20.41): the cadence of E2–E3b reproduced (F62). **Writes:** data header to its payload 0.05–0.32 ms (median 0.10), payload
 to the next OUT transfer 14.51–16.46 ms (median 15.43; E3b 14.58–15.82 after its six writes), consecutive writes at least 44.8 ms apart
 (median 61.0 ms within a burst): SmartSoft's host-side behaviour, OBSERVED once, not a console limit and not a timing for our code
-(F131).
+(F131). **E9b (SmartSoft again, 2026-10-31):** poll to next poll median 31.12 ms (n = 50 339, min 21.60, max 79.00), fetch to next poll median 15.48 ms (min 10.49), payload completion to fetch median 28.72 ms (min 20.39): the cadence reproduced (F62); 17 idle intervals were below 29 ms, the lowest 21.60 ms (seq 90886 → 90888) while the owner worked in SmartSoft's Mem Edit tab, closer to SC-1's floor for our sender (21 ms) than in any earlier capture, which does not change that floor (it is ours, never derived as SmartSoft's minimum). **Writes:** data header to payload 0.067–0.254 ms (median 0.118), payload to the next OUT transfer 14.69–16.23 ms (median 15.44), consecutive writes at least 45.55 ms apart (median 61.81 ms within a burst): SmartSoft's host-side behaviour, VERIFIED as behaviour (F131), not a console limit and not a timing for our code.
 
 ## Not known
 
@@ -203,7 +231,7 @@ packet-level behaviour below the URB level stays unknown.)* *(Update 2026-10-30,
 SmartSoft's outbound sequence byte or the previous byte of a fader event (it never complained, F131, F132); whether it accepts data
 writes from a host that never sent the System pair (our read-only session sends neither, H66; the answer can only be learned by
 sending, which nothing clears); what it does with a key press whose release never comes (a session ending between the two is
-untested); whether a page other than 1 changes the System (5, 5, c) records (H83).
+untested); whether a page other than 1 changes the System (5, 5, c) records (H83). *(Update 2026-10-31, E9b:)* a page other than 1 does not change the System (5, 5, 0) record for memory 1 (page 12 gave the same record, F142); still open: c ≠ 0 from the console's own EDIT MEM key, what the console stored for the Memory body's channels 49–96 after a 48-level write (F143, H87), and whether the console reads the previous byte of a fader event at all (F132).
 
 ## CL-ML cross-check (class 5, not 1248 evidence)
 

@@ -136,6 +136,28 @@ key events sent by SmartSoft). The Memory objects the console listed after a rec
 receive a Memory object outside SmartSoft's download for the first time (note the time, as the E8 conditions say). Whether to accept
 c ≠ 0 records is a code and review question for the coordinator and is not decided here.
 
+### E9b (2026-10-31): the repeat of the writes; nothing cleared
+
+E9b ([record](captures/2026-10-31-e9b-smartsoft-writes-repeat.md)) repeated E9: three SmartSoft sessions recorded passively (our software sent
+nothing), 427 data writes. **E9b clears no message:** SC-1's clearance (the poll and the fetch of a listed record, read-only) is unchanged, no
+type-1 data header is encoded anywhere in the solution, and the safety check SC-2 has not been run. What E9b changes for SC-2's gate (the E9
+section above): the item "a second session that reproduces the writes" is met for the framing and the most-used ConsoleEvents as SmartSoft's and
+the console's behaviour (F131–F134 and F138 VERIFIED, F135 and F136 in part), which is necessary and not sufficient. The other items are not met:
+each message class understood and shown harmless (E9b adds a Memory (0) whole-object write with a layout unlike the console's own and not
+reversible by the protocol, F143, and the finding that a PC fader and a physical fader override each other without warning, F141); a whitelist
+of indices and codes (five fader indices and 17 key codes were seen, none may be derived, H82); the press / release pairing and a session that
+dies between them (untested); and `/hardware-safety-check` for each class, with `protocol-safety-reviewer` on the encoder. **The starting point
+of SC-2 is the E9b record's section "Input for a future safety check (SC-2), updated after E9b"**, which supersedes the E9 record's table of the
+same name (the E9 text stays). Whether the console accepts events and object writes from a host that never sent SmartSoft's System pair (H66) can
+still be learned only by sending, which nothing clears.
+
+**The c ≠ 0 safe stop, updated (F142, F137).** E9b answered half of the question left open above: the console's own EDIT MEM key lists System (39)
+(5, 5, 0), c = 0, for memory 1, on page 1 and on page 12, which `HspReadSession` fetches (id 39 and body length 3 are inside SC-1 as built). Still
+untested, and INFERRED from E9's c = slot − 1: the selection of any memory other than memory 1 lists c ≠ 0 and ends a read-only session with its
+fault (a safe stop, not a deviation); one console-side selection of memory 2 or higher decides it (E9b record, next capture B). The Memory objects
+the console lists after a recording made with its own keys (id 0, 138 bytes; byte 2 = 0 and zero levels after a deletion) are inside SC-1 as built
+(F147).
+
 ### Review
 
 **First pass (2026-10-30, `protocol-safety-reviewer`): not ready, two blockers.** Findings and

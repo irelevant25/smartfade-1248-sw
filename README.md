@@ -10,10 +10,12 @@ and E2 (first USB capture of a SmartSoft session: poll / dirty-list / fetch fram
 2026-10-29 and E3b (three more SmartSoft sessions after another power cycle: BUMPS, bumps, SOLO, the MASTER
 scaling, the 25-48 bank, a GO crossfade) on 2026-10-30, and E8 (the first read-only session of our own software,
 861 s over WinUSB) and E8b (the second, 1 121 s, with USBPcap and a timed action log) the same day, and E9 (SmartSoft Online writing to
-the console through its Console Simulator, recorded passively: the first observed PC -> console writes) that night. 53 facts are VERIFIED as
+the console through its Console Simulator, recorded passively: the first observed PC -> console writes) that night, and E9b (its repeat: three more
+SmartSoft sessions, 427 writes) on 2026-10-31. 61 facts are VERIFIED as
 observed console / SmartSoft behaviour (USB framing, start-up, show objects, front-panel mirroring, memory faders and pages,
-BLACKOUT, the independents, the record-function screens, the console's counter and the file name it reports, product string, firmware
-version; sixteen of them only in part, the fourteen of E8b and now F94 and F97; before E3 only the last two were). VERIFIED never
+BLACKOUT, the independents, the record-function screens, the console's counter and the file name it reports, the write framing and the main
+fader and key events as SmartSoft sends them, product string, firmware version; several only in part, the structural parts only, never a live
+value; before E3 only the last two were). VERIFIED never
 clears a message for sending: no protocol message is cleared, so no code may talk to a console yet
 *(superseded in part on 2026-10-30 by safety check SC-1, which clears the poll and the listed fetch for
 a read-only session; see below)*.
@@ -26,7 +28,8 @@ state; H66 and H67 CONFIRMED for what was used) and cleared nothing further; its
 bus that nothing else was sent and that no control transfer reached the console at the backend start or at Connect (H68 CONFIRMED),
 tied the independents' and BLACKOUT's keys to their LEDs with timed presses, and also cleared nothing further. E9 (the same night) observed
 SmartSoft's first PC -> console writes (ConsoleEvent fader and key events and a channel label, 401 writes in all) and cleared nothing: they
-are OBSERVED in one session, no data header is encoded anywhere in the solution, and the repeat E9b and a safety check SC-2 are the gate
+are OBSERVED in one session (E9b, the repeat, made the framing and the main fader and key events VERIFIED as SmartSoft's and the console's
+behaviour, never clearance, and cleared nothing either), no data header is encoded anywhere in the solution, and a safety check SC-2 is the gate
 before any write of ours. That session also changed memory 7 of page 1 by mistake; the owner restored it by hand on 2026-10-31, and `SHOW09.ASC`, saved afterwards, equals the pre-E9 backup byte for byte.
 
 ## Run it

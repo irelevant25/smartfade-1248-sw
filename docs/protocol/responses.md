@@ -57,6 +57,14 @@ first Memory objects listed by the console itself after a recording** (four, 138
 the matching of PC faders (F135) (section "Live objects (E9)" below; F131–F140). A row below that still says what it said earlier
 carries the E9 update in its Status cell. VERIFIED never clears a message for sending.
 
+**Update 2026-10-31 (E9b,** [record](captures/2026-10-31-e9b-smartsoft-writes-repeat.md)**).** The repeat of E9 (three SmartSoft sessions through
+the Console Simulator after a console power cycle, passive; our software sent nothing; cited by the JSONL `seq` and, where the bus was
+looked at, by the frame `fN` of the committed console-only split) received the same object ids with the body lengths of F67, and brought
+the first **System record from the console's own EDIT MEM** (5, 5, 0), **Memory objects listed after recordings made with the console's
+own keys** and after a deletion (byte 2 = 0), the **post-MASTER level in a stored memory**, and the console's **verbatim return of a
+ChannelText write** in the next download (section "Live objects (E9b)" below; F141–F147). A row below that still says what it said
+earlier carries the E9b update in its Status or Fact cell. VERIFIED never clears a message for sending.
+
 ## Reply types
 
 | Reply | Meaning | Fact |
@@ -112,7 +120,7 @@ VERIFIED" above are the 2026-10-28 wording, kept.
 
 | Object | Layout (body) | Checked against | Frames | Hyp. | Fact |
 |---|---|---|---|---|---|
-| Memory (0) | `[a][b][01][60][96 levels][text block]`; level raw = ceil(pct x 255 / 100), 0xFF = 100 %, 0xAB = 67 %; memory number = 24a + b + 1; body[2] meaning UNKNOWN | `GROUP`, `CHAN`, `$$MEMORY p f`: 16/16 memories, 768/768 levels (channels 1-48; 49-96 are 0) | f440-f504, f600-f648 (example f448) | H39, H13, H25 | F71, F72 |
+| Memory (0) | `[a][b][01][60][96 levels][text block]`; level raw = ceil(pct x 255 / 100), 0xFF = 100 %, 0xAB = 67 %; memory number = 24a + b + 1; body[2] meaning UNKNOWN *(E9b, 2026-10-31: body[2] = 0x01 in 86 of 86 console bodies of E2, E9 and E9b with a recorded memory and 0x00 in the 2 bodies of an emptied memory, `00 08 00 60` + 96 zero levels, seq 84076, 98692: reading it as a "recorded" flag is H87, HYPOTHESIS. The Memory body SmartSoft writes is a different layout, 90 bytes with body[3] = 0x30 and 48 levels, F143.)* | `GROUP`, `CHAN`, `$$MEMORY p f`: 16/16 memories, 768/768 levels (channels 1-48; 49-96 are 0) | f440-f504, f600-f648 (example f448) | H39, H13, H25 | F71, F72, F143, F146 |
 | Text block | `[03][06]` + 18 UTF-16 code units (byte order BE is INFERRED from structure, H40 / H36; **update 2026-10-29: downgraded to HYPOTHESIS**: reading A = 18 UTF-16BE code units, reading B (CL-ML, class 5) = one pad byte then UTF-16LE lines of 12 / 12 / 11 bytes, same text for every label seen) = 3 lines x 6 characters, each line cut at its first 0; in Memory, Sequence, SequenceMain, Page, ChannelText, Independents | `$$Text 1..3` and `Text` (= `$$Text 1`): 16 memories, 1 sequence, 12 pages, 96 channels, 2 independents | f504, f656 | H40, H36 | F73 |
 | Patch (5) | `[u16 512][512 x channel]`, entry d - 1 = channel at DMX address d, 0 = unpatched; no proportional level | `PATCH 1 d/c/l`: 512/512, 49 patched (incl. DMX 47 -> 50, 48 -> 48, 97 -> 24) | f424 | H34 | F70 |
 | Step record (12 bytes) | `[cue x 10][CUEPARAMS][memory index 24p+f][x = 0][UP][DOWN][FOLLOWON]`, cue and times u16 | `CUE`/`$CUE`, `$$CUEPARAMS`, `$$MEMORY`, `UP`, `DOWN`, `FOLLOWON`: 19/19 + 7/7 | f672-f816, f656 body[48..] | H41, H14, H12 | F74 |
@@ -299,6 +307,44 @@ What E9 shows about the console's objects:
 - **Being listed is not being changed** (F119): ConsoleStatus is re-listed unchanged at every EDIT MEM selection and store.
 - **Not exercised in E9:** the MASTER scaling with a level up and BUMPS at an intermediate level (all levels were 0 at those steps),
   STACK, the IND keys, REC SEQ, the wheel, a page change, the crossfaders, PAUSE, a known source on DMX IN (H52), the Mem Edit tab.
+
+## Live objects (E9b, 2026-10-31)
+
+Source: [E9b record](captures/2026-10-31-e9b-smartsoft-writes-repeat.md) (JSONL `seq` of the normalized capture, `fN` of the committed
+console-only pcap split), the guided script's timed action log and the owner's statements
+([captures/2026-10-31-e9b-owner-statements.txt](captures/2026-10-31-e9b-owner-statements.txt)). SmartSoft Online, three sessions through its Console
+Simulator after a console power cycle, **passive: our software sent nothing; the PC events are SmartSoft's.** **OBSERVED (one session) unless
+stated; nothing here may be sent to a console.** Notation as in the E3, E3b, E8, E8b and E9 sections. The rig is one LED bar at DMX 5–16,
+nothing on DMX IN; the show at the start is the one of `SHOW08.ASC`, which still carried E9's edit of memory 7 (F139).
+
+| Object | Layout / change (body) | Seen with | seq / frames | Hyp. | Fact | Status |
+|---|---|---|---|---|---|---|
+| FaderInfo (14) | `[48][48 × 4][BUMPS][MASTER]` unchanged. **Record 5 byte 0 (body[17])** = the PC's channel fader 5 (index 0x04) or, after a takeover, the physical fader 5; in channel mode the record is the console's level after a PC event or a physical takeover, post-MASTER (fader 0x7C at MASTER 0x86 gave 0x41); body[194] = the MASTER (the PC's 0xFF → 0x80 → 0xFF; the console's own 0xFF → 0x86), body[193] = BUMPS. Memory mode: bytes 0 and 1 equal in 11 of 11 records; one channel-mode exception, record 9 `00 FF 00 00` with record 5 `FF 00 00 00` (seq 95014) | the Simulator's fader 5 (index 0x04), MASTER (0x30), BUMPS (0x31); the physical faders 1 and 5 and the MASTER | seq 32850 … 32999, 39747, 42968 … 43271, 45477, 76489 … 76687, 82071 … 82161, 95014 | H71, H81, H90 | F96, F112, F141, F145 | OBSERVED (the layout VERIFIED earlier) |
+| ChannelLevels (15), OutputLevels (13) | Channel 5 follows the PC's fader 5 (ChannelLevels[5], OutputLevels[6] = DMX 5) and, after a takeover, the physical fader; post-MASTER 0x41 at fader 0x7C and MASTER 0x86; a held bump 7 and memory bump 1 as in E9 (F97); IND 1 / IND 2: ChannelLevels body[49] / [50] 00 ↔ FF, and DMX 47 = 0xFF (OutputLevels body[48]) with IND 2 only; memory fader 9 raised to full drove ChannelLevels[5] and DMX 5 to 0xFF after the Memory write | fader 5, the MASTER, bumps 7 and memory bump 1, the IND keys, memory fader 9 | seq 42968, 76672, 76676, 11401 … 11417, 24896 … 24915, 49365, 50187, 94919 / 94923 | H60 | F96, F97, F115, F143, F145 | OBSERVED |
+| LedStatus (22) | Block 56 `00 0A 00 …` → `00 FF 00 00 FF 00` with FADERS 25-48 (block 55 dim); block 60 `46 46 00 46 46 00` → `FF FF 00 FF FF 00` with STACK; blocks 72 / 73 `00 0A 00 …` → `00 FF 00 00 FF 00` with IND 1 / IND 2; block 53 `00 00 FF 00 00 FF` with BLACKOUT; block 52 `FF`×6 with SOLO; block 50 blue during a GO fade; memory 9's key `46 00 00 46 00 00` (recorded) and `0A 00 00 0A 00 00` (empty); the console's EDIT MEM screen (recorded memories `C8 00 00 0A 00 00` blinking, empty slots `46 00 00 46 00 00`, block 57 blinking, block 67 `FF 37 37 0A 0A 0A`) and the REC MEM screen as in E8b and E9. **Blocks 25–48 `0A 00 00 0A 00 00` (dim red) in every payload** after a channel-mode power-on | FADERS 25-48, STACK, IND 1, IND 2, BLACKOUT, SOLO, GO, REC MEM and EDIT MEM (PC keys and the console's own); the power-on | seq 51634, 47249, 48208, 49371, 50195, 19750, 22172, 28421, 85061, 54611, 78980, 18 | H64, H72, H78, H82 | F84, F98, F100, F114–F117 | OBSERVED (block 56 identified once with a named PC key) |
+| DisplayContent (21) | New texts: "Edit:" / "12/01" (page 12, seq 58747) beside "01/01" (seq 54810); "Memory page:12" / "Bump 1-12 to change" (seq 58420); the rows "25" / "37" with the 25-48 bank (seq 51630); the stack view "Live:14.0 Next: 1.0" / "<6>Mem:01/01 Mem:01/01" (seq 47245), as E8b's; "Record Memory Pg:1" / "Select Bump or Stack" (seq 78974, 87401, 98620) and "Edit Memory" / "Select Bump or Stack" (seq 54604, 58578) | the console's EDIT MEM and a page change on the console, FADERS 25-48, STACK, REC MEM | seq 58747, 54810, 58420, 51630, 47245, 78974, 54604 | | F113, F116, F117, F142 | OBSERVED |
+| ConsoleStatus (23) | 7 bytes. **body[4] 0 → 1** (`00 00 00 00 01 01 00`, seq 51626) with the 25-48 bank from a PC key and back with FADERS 1-24; body[2] = 0x0B at the page change to page 12 on the console (`01 00 0B 00 00 01 00`, seq 58408) and, in channel mode for the edit, `00 00 0B 00 00 01 00` (seq 58735); body[0] 1 / 0 with FADERS MEMS / 1-24 (seq 24824 / 24832, 26924 / 26930); re-listed unchanged at the console's EDIT MEM selection on page 1 | FADERS 25-48 and 1-24 from the PC, the page change and EDIT MEM on the console | seq 51626, 58408, 58735, 24824, 26924 | H53 | F87, F98, F113, F119 | OBSERVED |
+| System (39) | Body `05 05 00` = (a, b, c) = (5, 5, 0), **listed by the console at its own EDIT MEM selection of memory 1**, on page 1 (seq 54790 / 54798) and on page 12 (seq 58731 / 58739): the record does not carry the page; 11 System records in all (9 in the three downloads, 2 at EDIT MEM selections), none with c ≠ 0 | EDIT MEM and the bump under memory 1 on the console | seq 54790 / 54798 (f109580 / f109596), 58731 / 58739 (f117462 / f117478) | H83 | F137, F142 | OBSERVED (twice) |
+| Memory (0) | Listed by the console after a recording made with the PC's keys (seq 79062 / 79066, 84072 / 84076) and with its own keys (seq 87480 / 87484, 98688 / 98692): body `[page − 1][slot − 1] [flag] 60` + 96 levels + the label block, 138 bytes; flag 0x01 for a recorded memory (channel 5 = 0x41, the post-MASTER level, after the PC's REC MEM; 0x7F after the console's), **0x00 and 96 zero levels for an emptied memory** (`00 08 00 60` + zeros). The body SmartSoft writes is a different layout (90 bytes, body[3] = 0x30, 48 levels; F143) | REC MEM and bump 9 from the PC and from the console; REC MEM of an empty look | seq 79066 (f158132), 84076 (f168152), 87484 (f174968), 98692 (f197384) | H85 (REJECTED), H86, H87 | F143, F145, F146, F147 | OBSERVED |
+| PlaybackInfo (17), SequenceMain (3) | GO with STACK unlit from the PC's GO key: list [3, 22], SequenceMain unchanged (46 bytes, seq 28417), PlaybackInfo record 5 `02 02 F5 0A` … → `02 02 FF 00` (seq 28428 … 28869); **STACK from the PC: record 5 bytes 0–1 `02 02` → `00 00`** (seq 47241), and they stayed `00 00` after STACK off; the first PlaybackInfo after the power-on read `02 02` (seq 14) and was pending at connect | the PC's GO and STACK keys | seq 28417, 28428 … 28869, 47241, 14 | H76 | F101, F117, F124 | OBSERVED |
+| Independents (12) | Record byte 0 (body[1] for IND 1, seq 49365; body[43] for IND 2, seq 50181) followed the PC's IND keys 0x47 / 0x48 like the console's own keys | IND 1 and IND 2 from the PC | seq 49365, 50181 | H72 | F115 | OBSERVED |
+| FileName (36) | "SHOW08.ASC" in all three downloads (the owner's SD save of 08:35:31, before the capture) | the backup logged as "backup taken: SHOW08.ASC" | seq 792 (f1584), 65461 (f130922), 70848 (f141696) | | F103 | **VERIFIED** (E3b + E9, a third capture in E9b) |
+| ChannelText (9) | 96 objects in each download. Channel 7's label (ChannelText 6) came back as written after each of SmartSoft's two writes and after E9's: `06 03 06 00 00 00 61 00 6A` + zeros (seq 424, f848), `06 03 06 01 0C 00 61 00 6A` + zeros (seq 65093, f130186), the residue again (seq 70480, f140960); nothing was listed after the writes | SmartSoft's "Čaj" write and its restore, across two restarts and a power cycle | seq 424, 65093, 70480 | H40, H84 | F138, F144 | OBSERVED (three round trips) |
+
+What E9b shows about the console's objects:
+
+- **Writes are not echoed, the Memory write included** (F131, F143): ConsoleEvent (20) was never listed or fetched, and neither the
+  Memory (0) write nor the two ChannelText writes produced a listing; the effect of a write shows only in the state objects, or in the next download.
+- **A PC event produces the same objects and bytes as the physical control, and the last mover wins** (F134, F141): a PC fader sets the
+  console's record at once, a physical fader takes over at once from a PC-set level, and nothing in any object tells the two apart.
+- **The console stores a label write verbatim** (F144): the next download returns the 39 bytes as written, across SmartSoft restarts and a
+  power cycle; the SD file does not carry a label block's residue.
+- **The console lists a recorded memory itself, whoever recorded** (F136, F147): after the PC's REC MEM and bump and after the console's
+  own; an emptied memory is listed with byte 2 = 0 and 96 zero levels (F146). **System (5, 5, 0) at the console's own EDIT MEM** (F142).
+- **Being listed is not being changed** (F119): ConsoleStatus was re-listed unchanged at the console's EDIT MEM selection on page 1.
+- **Not exercised in E9b:** the MASTER at several stable positions and BUMPS at intermediate levels (H60, H54), the crossfaders and PAUSE, a
+  known source on DMX IN (H52), the page-select write (H51), EDIT MEM store, CLEAR and COPY from the PC, the Playback tab, the wheel, a
+  bump in bank 25-48 (H82), and an EDIT MEM selection of a memory other than memory 1 (c ≠ 0 from the console's own key, H83).
 
 ## Label text
 
