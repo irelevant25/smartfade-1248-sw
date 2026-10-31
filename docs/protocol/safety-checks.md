@@ -305,6 +305,10 @@ things in it are unobserved (items 2 and 11 below) and the session ends on the f
   LED blocks, ConsoleStatus, PlaybackInfo), the bus against the backend's log byte for byte (as E8b), any
   deviation and the time it ended the session, and the physical fader positions at the end. Afterwards: an
   SD save, compared with the backup byte for byte (no show data may have changed).
+- **Guided script (written 2026-10-31, evening, parse-checked; not run):** `tools/usb-probe/e11-guided-session.ps1` takes the owner
+  through the above in that order and refuses to start the backend unless the re-check's open items are closed and every
+  acceptance is answered y; it follows the "E11 script adjustments" below (bump 7 instead of bump 1, MASTER last, SOLO and BLACKOUT
+  from a steady LED, memory bump 1 optional in memory mode; GO, MEMS and FADERS 1-24 left out until they have port methods).
 
 ### Review (SC-2 item 10)
 

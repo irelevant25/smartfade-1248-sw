@@ -318,7 +318,8 @@ owner's PC.
 reply timeout is not bounded) adds the whitelisted
 ConsoleEvents (channel fader 1, MASTER, BUMPS, bump 7, memory bump 1, SOLO, BLACKOUT) behind the record-function
 interlock, shows LIVE CONTROL beside HARDWARE and names the writable controls to the UI; everything else stays as
-in the read-only mode. Run only as the SC-2 E11 script says (backup first, USBPcap in parallel). After a Data write
+in the read-only mode. Run only as the SC-2 E11 script says (backup first, USBPcap in parallel; the guided script
+`tools/usb-probe/e11-guided-session.ps1` refuses to start it before the re-check's items are closed and the acceptances given). After a Data write
 that did not complete, the device refuses to connect until the backend restarts and `INCOMPLETE-WRITE.txt` in
 `Device:Usb:CaptureLogDirectory` is removed by the owner, after reading the transfer log.
 
