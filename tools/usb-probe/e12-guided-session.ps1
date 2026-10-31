@@ -131,7 +131,8 @@ Log "interface 1 driver service: ETCHSP (ETC's driver)"
 # --- USBPcap before SmartSoft ---
 Write-Host ""
 Write-Host "In an ADMIN PowerShell window start USBPcap on the console's root hub, into a NEW file, e.g.:" -ForegroundColor Yellow
-Write-Host '   & "C:\Program Files\USBPcap\USBPcapCMD.exe" -d \\.\USBPcap1 -A --inject-descriptors -o e12.pcap' -ForegroundColor White
+Write-Host ('   & "C:\Program Files\USBPcap\USBPcapCMD.exe" -d \\.\USBPcap1 -A --inject-descriptors -o "' + (Join-Path (Get-Location) 'e12.pcap') + '"') -ForegroundColor White
+Write-Host "(an absolute path: an admin window starts in C:\Windows\System32, and the E12 run of 2026-10-31 left its capture there)" -ForegroundColor Yellow
 Confirm-Done "When USBPcap is running." "usbpcap running (owner)"
 
 # --- A: SmartSoft Online, baseline, the tabs ---
