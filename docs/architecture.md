@@ -251,7 +251,7 @@ dependency and sends nothing anywhere; the E6 round trip (save on the console, c
 software, load from the SD card) is the experiment that would make its model trustworthy for
 editing.
 
-## Show-file page as built (2026-10-31, E10 steps 1 to 3)
+## Show-file page as built (2026-10-31, E10 steps 1 to 4)
 
 The UI has a page switch in the connection bar: the console (default) and the show-file viewer. The
 viewer (`src/frontend/src/app/components/show-file-page`) opens a `.asc` file chosen in the browser,
@@ -271,8 +271,14 @@ docs/formats/asc-format.md) and restores the cell otherwise; `ShowFileRules` rep
 backend (times, memory page 0..11 with fader 0..23 or none, CueParams 0..2) and the render answers
 `400` for anything else, so no file leaves the backend with a value the console was never seen to write.
 Nothing is stored on the backend and nothing reaches a console; the console page and its SignalR link
-are untouched. Next (owner's order): the E6 round trip on the console to validate an edited file;
-adding and removing steps only if the owner asks for it.
+are untouched. **Step 4 (same day): steps can be inserted and removed.** A + button inserts a step after a
+row as a copy of its memory and times, so the user then changes the memory in the row; a new stack cue takes
+the next free number between its neighbours (one decimal, below 200, rising through the stack as in all 34
+console-written files), a sequence step takes its memory's number (383 of 383), and a memory step repeats its
+memory's channel list (894 of 894; none when the memory is not in the file), which is why a memory change now
+replaces the channels too and a step's memory can no longer be removed. × removes a step without renumbering.
+`ShowFileRules` checks all of it again and refuses anything the console was never seen to write. Next (owner's
+order): memory contents and labels in the file, then the E6 round trip on the console to validate an edited file.
 
 ## Phase 2 proposal: live control after E9b and SC-2 (2026-10-31, not implemented)
 

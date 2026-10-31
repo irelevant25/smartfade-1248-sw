@@ -362,6 +362,25 @@ every file seen. They come from the files, not from a specification.
 The reader keeps every unrecognised line as an `UnknownRecord` with a warning (none occurred in the
 33 files); the writer cannot place unknown records, so a file with any is not guaranteed to round-trip.
 
+## Step rules learned from the files (2026-10-31, OBSERVED on 34 files)
+
+Counted over the 34 console-written files available on 2026-10-31 (`smartfade-sd-card-backup/`, SHOW01–SHOW11,
+SHOW99 and the 22 named shows; the Ostrov sample is byte-identical to one of them) by a script over the raw
+lines; the show-file page's editor and `ShowFileRules` (docs/api.md) keep an edited file inside these shapes:
+
+| Rule | Count | Status |
+|---|---|---|
+| Every main-stack step (`CUE`) references a memory and carries `$$CUEPARAMS 1` | 525 of 525 | OBSERVED |
+| Stack cue numbers have one decimal (`d.d`, 1–3 digits before the point) and rise strictly through the stack | 525 of 525 (no file has a lower or equal number after a higher one); the engine string "Cue number >199.9" gives the ceiling | OBSERVED (the ceiling DOCUMENTED by the string only) |
+| A sequence step (`$CUE`) with a memory carries `$$CUEPARAMS 1` and is numbered by its memory as `n.0`, n = 24p + f + 1 of `$$MEMORY p f` | 383 of 383 | OBSERVED (extends the 348 of 348 above) |
+| A sequence step without a memory is a channel step, `$$CUEPARAMS 0`, with its own `CHAN` line | 2 of 2 (Husle-04.asc, `$CUE 41.0`, `42.0`) | OBSERVED |
+| A memory step whose memory is in the file repeats the memory's `CHAN` list exactly (same pairs, same order) | 894 of 894 | OBSERVED |
+| A memory step whose memory is not in the file (never recorded or emptied) has no `CHAN` line | 14 of 14 | OBSERVED |
+| Most common time triples (UP, DOWN, FOLLOWON) | stack: `5.0 0`, `5.0 0`, `0` (204 of 525); sequences: `1.0 0`, `1.0 0`, `0` (234 of 385) | OBSERVED (the editor copies a neighbour's times and uses these only for an empty stack or sequence) |
+
+What the console does with a file that breaks one of these shapes is UNKNOWN (the SD load path is the only
+way such a file reaches it; E6 is the test), so the editor never produces one.
+
 ## Unknown data policy
 
 The parser must never drop data:
