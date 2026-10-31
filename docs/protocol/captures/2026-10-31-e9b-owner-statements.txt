@@ -38,3 +38,9 @@ or there was no step for the physical MASTER. This affects live levels only, not
 the capture records the MASTER's value over time; the owner can set it back to full on the console at
 any time. Noted for the analyst so a MASTER near 0x80 late in the capture is read as this, not as a
 console anomaly.
+Clarification (same morning): "Yes in H85 I should move it to the 100% in simulator but it stays on
+50% on physical and maybe I accidentally touch it a little or maybe firmware error or something
+registered a change from the panel maybe so it registered 50% again." Reading (assistant): the owner
+moved the Simulator's MASTER back to full in H85, yet the console's MASTER ended at about 50 %; what
+set it back is for the capture to tell (a physical MASTER move, the console re-reading the physical
+fader, or a PC event): FaderInfo body[194] over time against the kind-0 events of index 0x30.
