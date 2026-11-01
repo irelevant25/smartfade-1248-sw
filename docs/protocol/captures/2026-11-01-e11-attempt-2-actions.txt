@@ -1,0 +1,54 @@
+2026-11-01 15:37:52.579 START guided E11 session (PC clock, local time)
+2026-11-01 15:37:52.584 repository: F:\Repositories\smartfade-1248-sw
+2026-11-01 15:41:21.403 owner answer: sc2 re-check items closed = y
+2026-11-01 15:42:07.887 owner answer: accept h66 unknown = y
+2026-11-01 15:46:10.758 owner answer: accept last mover = y
+2026-11-01 15:46:16.371 owner answer: accept lost release = y
+2026-11-01 15:46:20.899 owner answer: accept live output = y
+2026-11-01 15:46:22.971 owner answer: accept counter 0x00 = y
+2026-11-01 15:46:25.958 owner answer: accept release after fault = y
+2026-11-01 15:46:31.343 owner answer: rig decision = y
+2026-11-01 15:46:35.215 owner answer: opt memory bump = y
+2026-11-01 15:46:41.485 owner answer: opt go = y
+2026-11-01 15:47:11.378 backup taken: SHOW19.ASC (copy it into smartfade-sd-card-backup/ after the session)
+2026-11-01 15:47:11.417 backend commit: 85aa2f5
+2026-11-01 15:47:11.420 windows build: 10.0.26300.0
+2026-11-01 15:47:46.246 owner answer: firmware = 3.0.2.9.0.43
+2026-11-01 15:47:53.781 owner answer: cable = the A-B cable straight into the PC's rear port
+2026-11-01 15:47:59.910 owner answer: power cycled = y
+2026-11-01 15:47:59.915 usbpcap file name suggested to the owner: e11-20261101-1547.pcap
+2026-11-01 15:48:19.131 usbpcap running (owner)
+2026-11-01 15:48:20.169 interface 1 driver service before the bind: WinUSB
+2026-11-01 15:48:25.220 zadig bind start
+2026-11-01 15:48:26.119 interface 1 driver service after the bind: WinUSB
+2026-11-01 15:48:26.166 backend started by the script: dotnet run --project src/backend/SmartFade.Api -- --Device:Mode=Usb --Device:Usb:ConfirmDate=2026-11-01 --Device:Usb:LiveControlDate=2026-11-01
+2026-11-01 15:48:26.181 ui dev server started by the script: npm start in src/frontend
+2026-11-01 15:49:48.410 ui ready, hardware and live control badges (owner)
+2026-11-01 15:49:54.455 owner answer: ui enabled controls = y
+2026-11-01 15:50:03.265 starting position set (owner)
+2026-11-01 15:50:06.559 connect pressed
+2026-11-01 15:50:12.746 connected (owner)
+2026-11-01 15:51:12.755 wait 60 s done (idle after connect: the read side as in E8, nothing is sent but the poll and the listed fetch)
+2026-11-01 15:51:35.526 owner answer: idle observation = n
+2026-11-01 15:52:08.207 w0 faders mems on panel
+2026-11-01 15:52:13.223 wait 5 s done (w0 memory mode)
+2026-11-01 15:52:23.641 w0 faders 1-24 on panel
+2026-11-01 15:52:28.655 wait 5 s done (w0 channel mode)
+2026-11-01 15:52:39.098 w0 solo on off on panel
+2026-11-01 15:52:44.109 wait 5 s done (w0 solo toggled)
+2026-11-01 15:52:59.367 w0 master wiggle on panel
+2026-11-01 15:53:09.376 wait 10 s done (w0 master back at full)
+2026-11-01 15:53:29.609 owner answer: w0 console state reported = y
+2026-11-01 15:53:40.668 w1 channel fader 1 to 20
+2026-11-01 15:53:50.672 wait 10 s done (after w1 up)
+2026-11-01 15:54:32.125 owner answer: h66 channel 1 followed = b
+2026-11-01 15:54:32.127 STOP: the console did not follow channel fader 1 (H66 for writes); the session ends, nothing is retried
+2026-11-01 15:54:32.128 E11 stopped before the controls were covered (see the STOP line above)
+2026-11-01 15:54:42.133 wait 10 s done (end of actions, an idle point)
+2026-11-01 15:55:05.321 disconnect pressed
+2026-11-01 15:55:10.389 disconnected (owner)
+2026-11-01 15:55:19.307 owner answer: end-of-session report = n
+2026-11-01 15:55:34.735 backend and usbpcap stopped (owner)
+2026-11-01 15:55:53.043 owner answer: end positions = as it should, default/starting value
+2026-11-01 15:56:16.136 after-session save: SHOW20.ASC (copy it into smartfade-sd-card-backup/ with the backup)
+2026-11-01 15:56:16.138 END guided E11 session

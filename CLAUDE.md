@@ -276,6 +276,17 @@ so SC-2's interlock refused the first control by condition 8 before any transfer
 at an idle point and `SHOW18.ASC` = `SHOW17.ASC`; the bus equals the backend's logs byte for byte. The guide now makes the console report its state
 from the panel before the first control (step W0) and treats a refusal as "not sent". **E11 is not done: its conditions and SC-2's decisions are
 unchanged, the console's behaviour towards a PC event from our software is still unobserved, nothing is promoted and nothing is cleared.**
+**E11 attempt 2, 2026-11-01 afternoon: the first PC → console writes of our own software** (record
+`docs/protocol/captures/2026-11-01-e11-first-live-control-session-attempt-2.md`): with the backend at 85aa2f5 and live control on, the console had
+LedStatus + DisplayContent pending at Connect (H65 annotated), the W0 panel actions made it report its state, and channel fader 1 dragged in the UI
+sent **four ConsoleEvent fader events** (index 0x00, values 0x05, 0x17, 0x2F, 0x38, counter 0..3, F132's previous-byte chain), each after an idle reply
+44–49 ms old (SC-2's 62 ms bound) and 15–30 ms before the next poll; **the console followed each one** like a physical fader move (FaderInfo record 1,
+ChannelLevels channel 1, OutputLevels DMX 1 and LedStatus block 1 at the sent value, the LCD's bar glyph once; **F167 OBSERVED once, H66 CONFIRMED in
+part for writes**), acknowledged nothing and listed no show object; the interlock held newer values eight times and released each within one poll
+exchange; 0 framing errors, 0 USBD errors, the bus equals the backend's log byte for byte (15 351 transfers). The session ended on a mistyped guide
+answer ("b" for the followed case), so W1's return to zero and W2–W8 are attempt 3's; the guide now accepts the case letters and confirms before an
+H66 stop. **E11 is partly done; SC-2's decisions and conditions are unchanged; nothing further is cleared.** `SHOW20.ASC` against `SHOW19.ASC` is
+compared when the owner copies them; the owner questions are in the record.
 
 ## Commands
 

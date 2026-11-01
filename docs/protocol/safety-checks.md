@@ -323,6 +323,18 @@ things in it are unobserved (items 2 and 11 below) and the session ends on the f
   first control refused by condition 8 as designed, the guide read the refusal as the H66 stop, Disconnect at an idle point, SHOW18 =
   SHOW17; the bus equals the backend's logs byte for byte. Record `captures/2026-11-01-e11-first-live-control-session-attempt-1.md`. **E11 is not done: its conditions are
   unchanged, nothing is promoted, nothing is cleared.** Attempt 2 runs the corrected guide on the owner's go.
+- **Attempt 2 (2026-11-01, afternoon, backend and guide 85aa2f5): four class-A writes sent, the console followed; W1 only.** After the W0
+  panel actions (23 lists), channel fader 1 dragged in the UI sent four ConsoleEvent fader events (index 0x00, values 0x05, 0x17, 0x2F,
+  0x38, counter 0..3, F132's chain), each after an idle reply with nothing outstanding, the reply 43.7–49.4 ms old at the header (MAJOR 1's
+  E11 analysis: at most 62 ms, held for 4 of 4), the next poll 15.4–30.3 ms after the payload, the next write 357–417 ms later; the
+  interlock held newer values eight times (a listed object unfetched, a report older than two poll periods) and released each within one
+  poll exchange; the console listed FaderInfo, ChannelLevels, OutputLevels and LedStatus at the next poll with the sent value in each and
+  acknowledged nothing (F167; H66 CONFIRMED in part for writes); 0 framing errors, 0 USBD errors, the bus = the backend's log (15 351
+  transfers); no end-of-session message, no marker; `SHOW20.ASC` against `SHOW19.ASC` pending the owner's copy. The session ended on the
+  guide's W1 question: the owner typed the case letter "b" (followed) and the guide, accepting only y / yes / followed, took the H66
+  stop; the guide now accepts a / b / c and confirms before a stop. Record
+  `captures/2026-11-01-e11-first-live-control-session-attempt-2.md`. **E11 is partly done (W1 up only): attempt 3 covers W1's return to zero and
+  W2–W8; the conditions and decisions above are unchanged; nothing further is cleared.**
 
 ### Review (SC-2 item 10)
 

@@ -81,6 +81,18 @@ function Interface1Service {
     if ([string]::IsNullOrWhiteSpace($svc)) { return "(no driver service bound)" }
     return [string]$svc
 }
+# W1's answer as one of three cases: 'refused' (a, or any text with 'refus'), 'followed' (b, y, yes, followed) or 'not followed'
+# (c, n, no, or anything else). A stop case is confirmed once, because it ends the session: attempt 2 (2026-11-01) ended on a
+# mistyped letter while the console had followed every event.
+function W1-Case([string]$raw) {
+    $a = $raw.Trim().ToLowerInvariant()
+    if ($a -eq 'a' -or $a -match 'refus') { return 'refused' }
+    if ($a -eq 'b' -or $a -eq 'y' -or $a -eq 'yes' -or $a -eq 'followed') { return 'followed' }
+    $sure = Ask ("You typed '" + $raw.Trim() + "': this means the console did NOT follow a sent event, and the session ENDS without the other controls (H66 stop). Is that what you saw? (y = yes, end the session / n = the level followed, go on)") "w1 stop confirmation"
+    if ($sure.Trim().ToLowerInvariant() -eq 'n' -or $sure.Trim().ToLowerInvariant() -eq 'no') { return 'followed' }
+    return 'not followed'
+}
+
 # After every control: the console's answer as the UI shows it, and the abort rule for an Error or a refusal.
 function After-Control([string]$what, [string]$tag) {
     $a = Ask ("After " + $what + ": what did the UI show, in this order: the console's reported change (level or LED), any REFUSAL text, any ERROR text? (describe, or 'followed')") $tag
@@ -216,20 +228,20 @@ $ok = $w0.Trim().ToLowerInvariant() -eq 'y'
 if ($ok) {
     Step "W1: in the UI, drag CHANNEL FADER 1 slowly to about 20 % and release it (the first write of our software; channel 1 is outside the rig)." "w1 channel fader 1 to 20"
     Wait-Idle 10 "after w1 up"
-    $h66 = Ask "W1: three cases. (a) The UI shows 'Refused: ...': type the refusal text (nothing was sent). (b) The fader went out and the UI's channel 1 level followed within a second: type y. (c) The fader went out (no refusal) and the level did NOT follow: type no." "h66 channel 1 followed"
-    $answer = $h66.Trim().ToLowerInvariant()
-    if ($answer -match 'refus') {
+    $h66 = Ask "W1: three cases. (a) The UI shows 'Refused: ...': type a, or the refusal text (nothing was sent). (b) The fader went out and the UI's channel 1 level followed within a second: type b or y. (c) The fader went out (no refusal) and the level did NOT follow: type c or no." "h66 channel 1 followed"
+    $answer = W1-Case $h66
+    if ($answer -eq 'refused') {
         Log "W1 refused by the device, nothing sent; the cause is in the refusal text"
         Step "W1: a refusal means the console's state is not reported or not as required: repeat W0's four panel actions (FADERS MEMS, FADERS 1-24, SOLO on and off, MASTER down and back to full), wait 10 s, then drag CHANNEL FADER 1 to about 20 % once more." "w1 retry after refusal"
         Wait-Idle 10 "after w1 retry"
-        $h66 = Ask "W1 retry: (a) refused again: type the text; (b) sent and followed: y; (c) sent and not followed: no." "h66 channel 1 followed retry"
-        $answer = $h66.Trim().ToLowerInvariant()
+        $h66 = Ask "W1 retry: (a) refused again: type a or the text; (b) sent and followed: b or y; (c) sent and not followed: c or no." "h66 channel 1 followed retry"
+        $answer = W1-Case $h66
     }
-    if ($answer -match 'refus') {
+    if ($answer -eq 'refused') {
         Log "STOP: W1 refused twice; no event was sent; the session ends without a write (the cause goes to the assistant)"
         Write-Host "Refused twice: nothing was sent. Press DISCONNECT and finish the end steps; the refusal texts go to the assistant." -ForegroundColor Red
         $ok = $false
-    } elseif ($answer -ne 'y' -and $answer -ne 'yes' -and $answer -ne 'followed') {
+    } elseif ($answer -ne 'followed') {
         Log "STOP: the console did not follow channel fader 1 (H66 for writes); the session ends, nothing is retried"
         Write-Host "The console did not follow a sent event: press DISCONNECT in the UI now (SC-2: the session ends, nothing is retried), then finish the end steps below." -ForegroundColor Red
         $ok = $false
