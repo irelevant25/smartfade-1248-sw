@@ -22,7 +22,7 @@ OutputLevels, LedStatus, DisplayContent) and names the fact behind each index.
 | Bus | USBPcapCMD on root hub USBPcap1, started by the owner at 15:48:17 into `e11-20261101-1547.pcap` (the guide's suggested name; SHA-256 `f3efd904c624b51ba2e10822c58bcd1543d51a06851d81ad9614159cb9f6bb94`, 274 436 990 bytes, 208 951 frames, 15:48:17.439149–15:55:33.442129). **Not committed:** it holds other devices (addresses 1, 2, 3, 32, 33, 34: an isochronous device with 269 MB of the file, a hub, the owner's keyboard). Census by `tshark -T fields`: the console is **device address 37** (30 778 bulk frames, 6 control frames = the injected descriptors). Console-only split `2026-11-01-e11-first-live-control-session-attempt-2.pcap` (`tshark -r <raw> -Y "usb.device_address == 37" -F pcap -w <split>`; SHA-256 `75c5ec90ed816e7ea3ac8939380c0f46f3fba1511685a1a3a850798473135acf`, 1 519 904 bytes, 30 784 frames, 15:48:17.439149–15:55:07.346823) |
 | Normalized bus | `2026-11-01-e11-first-live-control-session-attempt-2.usbpcap.jsonl` (SHA-256 `dacfb8c93bf4d6e90d8bf7588e4bc73d2025a2c8adfa618d26e4f8dd4e9bdc2d`; `usbpcap_to_jsonl.py` v2 with the action log merged as notes at UTC+1, 56 notes): 15 392 transfers, 7 665 bulk OUT, 7 724 bulk IN, 3 control (the descriptors), **non-zero USBD status 0**. `hsp_summary.py` reports 76 "framing errors" on the bus file: all 38 reads longer than 64 bytes split into two URBs (200 = 192 + 8, 456 = 448 + 8, 519 = 512 + 7; F122), each counted twice; the backend's log, which reads whole transfers, has 0 |
 | Bus = log | `tools/protocol-analyzer/e11/bus_vs_log.py` (the multi-URB reads joined): **15 351 bulk transfers on the bus = 15 351 in the backend's log, 0 differing in direction or bytes, 38 joins.** Every transfer our software logged is on the bus and nothing else went to or came from the console |
-| Show files | Backup `SHOW19.ASC` before the backend started; after-session save `SHOW20.ASC` after the backend and USBPcap had stopped (the guide's order; no SD operation while connected). **Comparison pending:** the owner copies both into the git-ignored `smartfade-sd-card-backup/`; the expectation is byte-identical files (a fader event changes live state only) |
+| Show files | Backup `SHOW19.ASC` before the backend started; after-session save `SHOW20.ASC` after the backend and USBPcap had stopped (the guide's order; no SD operation while connected). **`SHOW20.ASC` = `SHOW19.ASC` byte for byte** (both 15 944 bytes, SHA-256 `559636399c1d82e0f95e737c961bfee31f88962fe8c486bbc6eba7f7d2177a90`, in the git-ignored `smartfade-sd-card-backup/`; equal also to attempt 1's `SHOW17.ASC` / `SHOW18.ASC`): no show data changed, as expected for live fader events |
 | Tools (read-only) | `tools/protocol-analyzer/hsp_summary.py` (summary, timeline), `write_rules.py` (placement and timings), `tools/protocol-analyzer/e11/writes.py` (each write with its neighbours and the console's answer), `e11/bus_vs_log.py` |
 
 ## What happened, in session time (the backend's clock; local time = 15:50:08.194 + t)
@@ -104,11 +104,12 @@ records still unfetched). This is a measured property of our host under SC-2 con
 - **Not shown:** a fader event back to zero (the UI's fader 1 stayed at 0x38 when the session ended); any key event (press / release
   as one operation), MASTER, BUMPS, SOLO, BLACKOUT, GO, the mode keys; the console's state after a Disconnect with a PC value in force
   (F141 says the console keeps the last mover's value; the owner's "end positions" answer describes the physical faders, not the
-  console's channel 1 level); a second session (nothing here is VERIFIED).
+  console's channel 1 level; **answered after the session by a statement:** the console kept the PC value until the owner moved the physical
+  fader 1 up and down, no capture covers it); a second session (nothing here is VERIFIED).
 - **Not changed:** SC-2's decisions and conditions, the whitelist, the interlocks (they held eight times and released each time within one
   poll exchange), the read-only mode.
 
-## Open owner questions (attempt 2)
+## Owner questions (attempt 2) and the owner's answers
 
 1. Was the console power-cycled again between attempt 1 (10:15) and this session, or only this morning before attempt 1? (For H65 and
    F166: at this Connect the console had LedStatus and DisplayContent pending, with the LCD on the main screen; at attempt 1's two
@@ -119,6 +120,13 @@ records still unfetched). This is a measured property of our host under SC-2 con
 3. The UI during W1: did the channel 1 level in the UI follow within a second after each movement, and did anything else in the UI change
    (an LED reading, a message)?
 
+**Answers (owner, 2026-11-01, the same evening; statements, verbatim in the owner-statements file):** 1. Yes, the console was
+power-cycled again between the morning and this session ("if I remember correctly"), so the pair pending at Connect is consistent with
+H65's power-on list (case (a)); why attempt 1's two Connects found nothing pending after the morning's power cycle stays unexplained.
+2. Yes, the console's channel 1 was still at the PC value after the session; the owner then moved the physical fader 1 up and down and
+the console took it back (F141's last-mover rule, here after a Disconnect; a statement, no capture). 3. Not answered beyond the W1
+answer "b": the UI's channel 1 level followed within a second.
+
 ## Status proposals (for the curator; nothing here is clearance to send)
 
 - **New fact F167 (OBSERVED once):** a ConsoleEvent fader event from our own software (index 0x00, values 0x05, 0x17, 0x2F, 0x38, the
@@ -128,6 +136,7 @@ records still unfetched). This is a measured property of our host under SC-2 con
 - **H66 (for writes): CONFIRMED in part (OBSERVED once)** for channel fader 1 rising; the keys, MASTER, BUMPS and the zero event are untested.
 - **F141 (last mover):** supported once more, with our host: FaderInfo record 1 took the PC value while the physical fader stayed at zero.
 - **H65 / F166:** annotate: at this Connect, after a history close to attempt 1's (an SD save from the console's menu minutes before, the
-  interface on WinUSB throughout), the pair LedStatus + DisplayContent was pending; which difference decides it stays UNKNOWN (owner question 1).
+  interface on WinUSB throughout), the pair LedStatus + DisplayContent was pending; the owner states a power cycle between the attempts, so
+  the pair is the power-on list of case (a); why attempt 1's Connects found nothing after the morning's power cycle stays UNKNOWN.
 - **SC-2:** E11 is partly done (W1); attempt 3 covers W1's return to zero and W2–W8 with the corrected guide; the conditions and decisions are
   unchanged; nothing further is cleared.

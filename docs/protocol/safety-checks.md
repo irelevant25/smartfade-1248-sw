@@ -330,7 +330,7 @@ things in it are unobserved (items 2 and 11 below) and the session ends on the f
   interlock held newer values eight times (a listed object unfetched, a report older than two poll periods) and released each within one
   poll exchange; the console listed FaderInfo, ChannelLevels, OutputLevels and LedStatus at the next poll with the sent value in each and
   acknowledged nothing (F167; H66 CONFIRMED in part for writes); 0 framing errors, 0 USBD errors, the bus = the backend's log (15 351
-  transfers); no end-of-session message, no marker; `SHOW20.ASC` against `SHOW19.ASC` pending the owner's copy. The session ended on the
+  transfers); no end-of-session message, no marker; `SHOW20.ASC` = `SHOW19.ASC` byte for byte (no show data changed). The session ended on the
   guide's W1 question: the owner typed the case letter "b" (followed) and the guide, accepting only y / yes / followed, took the H66
   stop; the guide now accepts a / b / c and confirms before a stop. Record
   `captures/2026-11-01-e11-first-live-control-session-attempt-2.md`. **E11 is partly done (W1 up only): attempt 3 covers W1's return to zero and

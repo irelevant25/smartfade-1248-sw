@@ -285,8 +285,10 @@ ChannelLevels channel 1, OutputLevels DMX 1 and LedStatus block 1 at the sent va
 part for writes**), acknowledged nothing and listed no show object; the interlock held newer values eight times and released each within one poll
 exchange; 0 framing errors, 0 USBD errors, the bus equals the backend's log byte for byte (15 351 transfers). The session ended on a mistyped guide
 answer ("b" for the followed case), so W1's return to zero and W2–W8 are attempt 3's; the guide now accepts the case letters and confirms before an
-H66 stop. **E11 is partly done; SC-2's decisions and conditions are unchanged; nothing further is cleared.** `SHOW20.ASC` against `SHOW19.ASC` is
-compared when the owner copies them; the owner questions are in the record.
+H66 stop. **E11 is partly done; SC-2's decisions and conditions are unchanged; nothing further is cleared.** `SHOW20.ASC` = `SHOW19.ASC` byte for
+byte (no show data changed); the owner states a power cycle between the attempts (so the Connect-time pair is H65's power-on list; attempt 1's
+empty Connects stay unexplained) and that the console kept the PC value on channel 1 after the Disconnect until the physical fader 1 was moved
+up and down (F141, a statement). Next: attempt 3 (W1 to zero, W2–W8) on the owner's go.
 
 ## Commands
 

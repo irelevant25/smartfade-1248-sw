@@ -30,3 +30,18 @@ end-of-session report = n (no message about a held key, an unsent release or an 
 end positions = "as it should, default/starting value" (channel fader 1, BUMPS, MASTER and the SOLO / BLACKOUT
 LEDs at their starting positions; the physical fader 1 was never moved: the console's channel 1 stayed at the
 PC value 0x38 until something else moves it, F141); 15:56:16 after-session save: SHOW20.ASC.
+
+--- Statement 2 (chat, 2026-11-01, evening; the answers to the record's three owner questions) ---
+"1. done
+2. yes, it was power cycled again between the morning and this session if I remember correctly
+3. yes it was, but it move it up and down"
+
+Reading: 1. SHOW19.ASC and SHOW20.ASC were copied into smartfade-sd-card-backup/: both 15 944 bytes, SHA-256
+559636399c1d82e0f95e737c961bfee31f88962fe8c486bbc6eba7f7d2177a90, equal to each other and to attempt 1's SHOW17.ASC and
+SHOW18.ASC: no show data changed. 2. The console was power-cycled again between attempt 1 (ended 10:15) and attempt 2
+(started 15:37), with the owner's reservation "if I remember correctly": the pair LedStatus + DisplayContent pending at
+attempt 2's Connect is consistent with H65's power-on list (case (a)); why attempt 1's two Connects found nothing pending
+after the morning's power cycle stays unexplained. 3. Read as: yes, the console's channel 1 was still at the PC value
+(0x38) after the session, and the owner then moved the physical fader 1 up and down, which took the channel back (F141's
+last-mover rule, here after a Disconnect; a statement, no capture covers it). The record's question 3 (what else the UI
+showed during W1) is answered only by the W1 answer "b": the UI's channel 1 level followed within a second.
