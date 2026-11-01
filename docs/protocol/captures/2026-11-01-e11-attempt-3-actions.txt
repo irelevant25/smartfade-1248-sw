@@ -1,0 +1,94 @@
+2026-11-01 22:04:27.621 START guided E11 session (PC clock, local time)
+2026-11-01 22:04:27.625 repository: F:\Repositories\smartfade-1248-sw
+2026-11-01 22:04:36.206 owner answer: sc2 re-check items closed = y
+2026-11-01 22:04:38.733 owner answer: accept h66 unknown = y
+2026-11-01 22:04:42.260 owner answer: accept last mover = y
+2026-11-01 22:04:44.104 owner answer: accept lost release = y
+2026-11-01 22:04:45.148 owner answer: accept live output = y
+2026-11-01 22:04:46.706 owner answer: accept counter 0x00 = y
+2026-11-01 22:04:48.207 owner answer: accept release after fault = y
+2026-11-01 22:04:50.823 owner answer: rig decision = y
+2026-11-01 22:04:52.924 owner answer: opt memory bump = y
+2026-11-01 22:04:59.458 owner answer: opt go = y
+2026-11-01 22:11:34.166 backup taken: SHOW21.ASC (copy it into smartfade-sd-card-backup/ after the session)
+2026-11-01 22:11:34.204 backend commit: 5485ea3
+2026-11-01 22:11:34.208 windows build: 10.0.26300.0
+2026-11-01 22:44:40.114 owner answer: firmware = 3.0.2.9.0.43
+2026-11-01 22:44:46.137 owner answer: cable = the A-B cable straight into the PC's rear port
+2026-11-01 22:44:49.467 owner answer: power cycled = y
+2026-11-01 22:44:49.471 usbpcap file name suggested to the owner: e11-20261101-2244.pcap
+2026-11-01 22:45:16.529 usbpcap running (owner)
+2026-11-01 22:45:17.563 interface 1 driver service before the bind: WinUSB
+2026-11-01 22:45:20.104 zadig bind start
+2026-11-01 22:45:20.946 interface 1 driver service after the bind: WinUSB
+2026-11-01 22:45:20.994 backend started by the script: dotnet run --project src/backend/SmartFade.Api -- --Device:Mode=Usb --Device:Usb:ConfirmDate=2026-11-01 --Device:Usb:LiveControlDate=2026-11-01
+2026-11-01 22:45:21.009 ui dev server started by the script: npm start in src/frontend
+2026-11-01 22:45:50.127 ui ready, hardware and live control badges (owner)
+2026-11-01 22:46:01.593 owner answer: ui enabled controls = y
+2026-11-01 22:46:24.052 starting position set (owner)
+2026-11-01 22:46:28.262 connect pressed
+2026-11-01 22:46:33.929 connected (owner)
+2026-11-01 22:47:33.947 wait 60 s done (idle after connect: the read side as in E8, nothing is sent but the poll and the listed fetch)
+2026-11-01 22:47:41.836 owner answer: idle observation = n
+2026-11-01 22:47:49.260 w0 faders mems on panel
+2026-11-01 22:47:54.265 wait 5 s done (w0 memory mode)
+2026-11-01 22:48:07.179 w0 faders 1-24 on panel
+2026-11-01 22:48:12.189 wait 5 s done (w0 channel mode)
+2026-11-01 22:48:25.818 w0 solo on off on panel
+2026-11-01 22:48:30.830 wait 5 s done (w0 solo toggled)
+2026-11-01 22:48:39.135 w0 master wiggle on panel
+2026-11-01 22:48:49.151 wait 10 s done (w0 master back at full)
+2026-11-01 22:49:03.316 owner answer: w0 console state reported = y
+2026-11-01 22:49:08.835 w1 channel fader 1 to 20
+2026-11-01 22:49:18.843 wait 10 s done (after w1 up)
+2026-11-01 22:49:39.152 owner answer: h66 channel 1 followed = y
+2026-11-01 22:49:44.642 w1 channel fader 1 to zero
+2026-11-01 22:49:54.653 wait 10 s done (after w1 down)
+2026-11-01 22:50:17.093 owner answer: w1 result = followed
+2026-11-01 22:50:27.838 w2 bump 7 tap
+2026-11-01 22:50:37.849 wait 10 s done (after w2)
+2026-11-01 22:50:53.195 owner answer: w2 result = followed
+2026-11-01 22:50:59.199 w3 solo on
+2026-11-01 22:51:09.213 wait 10 s done (after w3 on)
+2026-11-01 22:51:21.380 owner answer: w3 on result = followed
+2026-11-01 22:51:25.586 w3 solo off
+2026-11-01 22:51:35.598 wait 10 s done (after w3 off)
+2026-11-01 22:51:42.173 owner answer: w3 off result = followed
+2026-11-01 22:51:49.235 w4 blackout on
+2026-11-01 22:51:59.237 wait 10 s done (after w4 on)
+2026-11-01 22:52:10.503 owner answer: w4 on result = followed
+2026-11-01 22:52:13.596 w4 blackout off
+2026-11-01 22:52:23.601 wait 10 s done (after w4 off)
+2026-11-01 22:52:31.550 owner answer: w4 off result = followed
+2026-11-01 22:52:38.327 w5 bumps to half
+2026-11-01 22:52:48.333 wait 10 s done (after w5 half)
+2026-11-01 22:52:52.532 w5 bumps to full
+2026-11-01 22:53:02.547 wait 10 s done (after w5 full)
+2026-11-01 22:53:48.360 owner answer: w5 result = I am not sure, because when moving the fader of BUMPS the console usually does nto show anything as well, so I cant tell
+2026-11-01 22:53:59.338 w6 faders mems from ui
+2026-11-01 22:54:09.345 wait 10 s done (after w6 mode)
+2026-11-01 22:54:19.071 owner answer: w6 mems result = followed
+2026-11-01 22:54:31.419 w6 memory bump 1 tap
+2026-11-01 22:54:41.436 wait 10 s done (after w6 tap)
+2026-11-01 22:56:21.170 owner answer: w6 result = I clicked on it 3 times, when I click and hold its just blink, so I wast experimenting with ti that is why I clicked and old and fast click etc.  3 times, sorry, but it flashes but when I was holding it, it should stay lit, I also tried to click and hold the bump on the CONSOLE as well, sorry for that, I was just confirming what I am saying to you
+2026-11-01 22:56:51.872 w6 faders 1-24 from ui
+2026-11-01 22:57:01.882 wait 10 s done (after w6 back)
+2026-11-01 22:57:08.624 owner answer: w6 1-24 result = followed
+2026-11-01 22:57:14.545 w7 master to half
+2026-11-01 22:57:24.561 wait 10 s done (after w7 half)
+2026-11-01 22:57:28.329 w7 master to full
+2026-11-01 22:57:38.344 wait 10 s done (after w7 full)
+2026-11-01 23:00:33.897 owner answer: w7 result = followed
+2026-11-01 23:00:50.707 w8 go from ui
+2026-11-01 23:01:05.709 wait 15 s done (after w8 go (the crossfade's time))
+2026-11-01 23:01:26.635 owner answer: w8 result = I press it twice, sorry, I was experimenting with it, but it followed
+2026-11-01 23:02:02.774 owner answer: w8 stack position = none, if stack is not on/lit then it is not moving the step/cue
+2026-11-01 23:02:02.775 E11 controls covered: channel fader 1, bump 7, SOLO, BLACKOUT, BUMPS, FADERS MEMS / 1-24 and memory bump 1 (optional), MASTER, GO (optional); SC-2 'E11 script adjustments' applied
+2026-11-01 23:02:12.788 wait 10 s done (end of actions, an idle point)
+2026-11-01 23:02:20.735 disconnect pressed
+2026-11-01 23:02:24.204 disconnected (owner)
+2026-11-01 23:02:41.072 owner answer: end-of-session report = I do not think so
+2026-11-01 23:02:57.585 backend and usbpcap stopped (owner)
+2026-11-01 23:03:50.868 owner answer: end positions = physical position? the faders has no motors so they cannot move without me moving them, there are only some indications and everything is as it was at the begining of the setup
+2026-11-01 23:04:08.320 after-session save: SHOW22.ASC (copy it into smartfade-sd-card-backup/ with the backup)
+2026-11-01 23:04:08.322 END guided E11 session

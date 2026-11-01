@@ -1,0 +1,72 @@
+E11 attempt 3 (2026-11-01, evening): the owner's statements, verbatim, with the assistant's reading. Evidence class: owner
+statements (not a capture). The guided session's own log is 2026-11-01-e11-attempt-3-actions.txt; the owner's typed answers
+are in it and are quoted below where they are more than y / n.
+
+--- From the action log (the owner's typed answers, 2026-11-01-e11-attempt-3-actions.txt) ---
+22:04:36-22:04:59 the gates: SC-2 re-check items closed = y; the acceptances (H66 unknown, last mover, lost release, live
+output, counter 0x00, release after fault) = y; rig decision = y; the optional memory bump and GO = y.
+22:11:34 backup taken: SHOW21.ASC. 22:44:40 firmware = 3.0.2.9.0.43. 22:44:46 cable = the A-B cable straight into the PC's
+rear port. 22:44:49 power cycled = y ("Did you power-cycle the console today before this session?": the day's earlier
+cycles count, so whether the console was cycled again between attempt 2 (15:56) and this session is not answered by it;
+the pair LedStatus + DisplayContent pending at this Connect is the power-on pair of H65, which suggests one).
+22:47:41 idle observation = n (nothing changed by itself during the idle minute).
+22:49:03 w0 console state reported = y.
+22:49:39 h66 channel 1 followed = y; 22:50:17 w1 result = followed (channel fader 1 up to about 20 % and back to zero).
+22:50:53 w2 result = followed (bump 7 tap).
+22:51:21 / 22:51:42 w3 on / off result = followed (SOLO).
+22:52:10 / 22:52:31 w4 on / off result = followed (BLACKOUT).
+22:53:48 w5 result (BUMPS to half and back) = "I am not sure, because when moving the fader of BUMPS the console usually does
+  nto show anything as well, so I cant tell"
+  Reading: with every channel at zero and no bump held, the BUMPS level has no visible effect on the console (F97: bump output
+  appears at the BUMPS level only while a bump is held); the capture shows the console followed every BUMPS event in FaderInfo
+  body[193] (F95), so W5 is "followed" by the capture, not by the owner's eyes.
+22:54:19 w6 mems result = followed (FADERS MEMS from the UI: the console switched to memory mode).
+22:56:21 w6 result (memory bump 1 tap from the UI) = "I clicked on it 3 times, when I click and hold its just blink, so I wast
+  experimenting with ti that is why I clicked and old and fast click etc.  3 times, sorry, but it flashes but when I was holding
+  it, it should stay lit, I also tried to click and hold the bump on the CONSOLE as well, sorry for that, I was just confirming
+  what I am saying to you"
+  Reading: three UI clicks = three PC taps (press and release 47-48 ms apart, SC-2 condition 4: a bump from the PC is a tap, never
+  a hold, so the UI's "click and hold" is by design a flash); the hold on the CONSOLE's own memory bump 1 is in the capture at
+  549.2-550.1 s (0.85 s, no PC write): the console showed memory 1's content (channels 7 and 8 at full) exactly as for SmartSoft's
+  held memory bump 1 in E9 / E9b. The three PC taps left no trace in the fetched objects (the console listed its live objects for
+  each press and each release, but by the first fetch the release had already come).
+22:57:08 w6 1-24 result = followed (FADERS 1-24 from the UI: the console back in channel mode).
+23:00:33 w7 result = followed (MASTER to half and back; the console's MASTER-below-full blink on LED block 53 appeared and cleared).
+23:01:26 w8 result (GO from the UI, STACK unlit) = "I press it twice, sorry, I was experimenting with it, but it followed"
+  Reading: two GO taps (22:00:52 and 22:01:07 UTC, 14.8 s apart): each ran a 5.0 s crossfade in PlaybackInfo with LED block 50
+  blue, as E9's PC GO with STACK unlit (F101, F134).
+23:02:02 w8 stack position = "none, if stack is not on/lit then it is not moving the step/cue"
+  Reading: a statement about the console's behaviour with STACK unlit (the stack's step did not move); consistent with F130 / E9b.
+23:02:41 end-of-session report = "I do not think so" (no message about a held key, an unsent release or an incomplete write;
+  INCOMPLETE-WRITE.txt does not exist).
+23:03:50 end positions = "physical position? the faders has no motors so they cannot move without me moving them, there are
+  only some indications and everything is as it was at the begining of the setup"
+  Reading: the physical faders were not moved during the guided session (channel fader 1 at zero, BUMPS and MASTER at full) and
+  the SOLO / BLACKOUT LEDs ended off; the console's own levels ended as the capture shows (channel 1 at 0, BUMPS 0xFF, MASTER 0xFF).
+23:04:08 after-session save: SHOW22.ASC.
+
+--- Statement 1 (chat, 2026-11-01, late evening; after the session; pasted text, verbatim) ---
+"Okay I am done, you can check the results of the guides session. I have few more things to say to that:
+
+The 1-24 button and MEMS button in the header of MEMORIES, I think there is no need for that. The UI display MEMORIES and
+channels 1-48 by itself at the same time and I do not need to control the CONSOLE in this way. If it is not need to make it
+works obviously. I am trying to create a more simple and user friendy control of the CONSOLE. But if in terms of
+communication it is necessary than okay. But if I can change the memory fader value without swithing to memory I would
+like to do that. But if CONSOLE requires to switch to MEMORIES before doing anything with MEMORIES faders/bumps, than okay
+but in that case the UI needs some changes so the user know he has to switch betweens CHANNELS and MEMORIES and the
+smartfade 1248 has two channels buttons: 1-24 and 25-48. I tried to change the channels fader 1 when the console was in
+memories mode and I get: setChannelLevel(1): Refused: the console is in memory mode: channel fader 1 was sent from a PC only
+in channel mode, bank 1-24 (E9, E9b). So I am not sure if that is possible. Can you check that for me? I really hope it is
+possible and its just a mechanism of my backend not the limitation of the smartfade."
+
+Reading: (1) a design wish (drive memory faders and bumps from the PC without switching the console to memory mode) and a
+question whether the refusal is the backend's or the console's; answered in the record's section "The owner's question: the
+fader mode" from the evidence (E9, E9b, F99, F112, F134, S11.15): the only live-control message ever observed addresses the
+console's physical controls, so what a fader event drives is decided by the console's mode, as for the panel. (2) The sentence
+"I tried to change the channels fader 1 when the console was in memories mode" places the refusal in the third backend session
+of the evening (23:06:59-23:10:43), between the panel's FADERS MEMS (15.2 s) and FADERS 1-24 (27.4 s): a refusal is not a
+transfer, so it is not in the log; the channel fader 1 events that followed (38.7 s on, in channel mode) are.
+(3) The two backend sessions the owner ran after the guide had ended (23:04:35 read-only, 2.97 s; 23:06:59 live control,
+241.7 s, 57 writes: three memory bump 1 taps in memory mode, 17 channel fader 1 events, 17 bump 7 taps, the panel's mode keys in
+between) were not described in the chat beyond this sentence; they ran without USBPcap (stopped at 23:02:56) and after the
+after-session SD save (SHOW22.ASC, 23:04), so they are outside E11's conditions and evidenced by the backend's log alone.

@@ -335,6 +335,21 @@ things in it are unobserved (items 2 and 11 below) and the session ends on the f
   stop; the guide now accepts a / b / c and confirms before a stop. Record
   `captures/2026-11-01-e11-first-live-control-session-attempt-2.md`. **E11 is partly done (W1 up only): attempt 3 covers W1's return to zero and
   W2–W8; the conditions and decisions above are unchanged; nothing further is cleared.**
+- **Attempt 3 (2026-11-01, evening, backend and guide 5485ea3): W1–W8 run to the end, 116 writes, the console followed every control; E11 done.**
+  After the W0 panel actions (24 lists) the guided session sent 92 class-A fader events (channel fader 1 up to 0x34 and back to 0x00, BUMPS 0xFF → 0x7E → 0xFF,
+  MASTER 0xFF → 0x7F → 0xFF) and 12 class-B1 press / release pairs (bump 7, SOLO on / off, BLACKOUT on / off, FADERS MEMS, memory bump 1 × 3, FADERS 1-24,
+  GO × 2 with STACK unlit), each 27.1–45.9 ms after a poll's reply (MAJOR 1's bound of 62 ms held 116 of 116), the next poll or fetch 15.0–31.1 ms after the
+  payload, the press and its release 46.6–76.7 ms apart with no write between, the interlock holding newer values 78 times and releasing each within one poll
+  exchange; the console answered every control at the next poll as it answers the panel and SmartSoft (F167 VERIFIED in part, F168, F169; H66 CONFIRMED for
+  writes, OBSERVED once each) and acknowledged nothing; 0 framing errors, 0 USBD errors, the bus = the backend's log (49 426 transfers); no end-of-session
+  message, no marker; `SHOW22.ASC` = `SHOW21.ASC` byte for byte. A bump tap from the PC (47–77 ms) left no trace in the fetched objects (the console listed them
+  for the press and the release); a held bump from the PC stays unsent (condition 4). **Deviation, recorded:** after the guide's END and the SD save the owner
+  started the backend twice more by hand (23:04 read-only, 3 s; 23:07 live control, 242 s, 57 writes of the same classes behind the same interlocks: memory
+  bump 1 taps in memory mode, channel fader 1 drags, bump 7 taps, the panel's mode keys between), **without USBPcap and without an SD pair**: evidence of the
+  backend's log alone, no show data changeable by those classes, an SD save to compare with `SHOW22.ASC` asked of the owner; the guide now ends with a reminder
+  that a later backend run needs USBPcap and an SD pair. Record `captures/2026-11-01-e11-first-live-control-session-attempt-3.md`. **E11 is done: the
+  conditions and decisions above are unchanged; nothing further is cleared** (every index and code outside the whitelist, a held bump, a fader event in memory
+  mode or in bank 25-48, the record keys, ChannelText, Memory, the System pair and class F stay as decided).
 
 ### Review (SC-2 item 10)
 
@@ -444,7 +459,13 @@ mode, a write outside the observed placement, a retry.
   bank 1-24 moved once (seen so far: faders 1, 5, 7), every bump pressed, the keys seen once (CLEAR, COPY,
   EDIT MEM on an empty memory and left with CLEAR, FADERS 25-48, STACK, IND 1, IND 2, bump 10) and a bump in
   bank 25-48. Indices and codes already OBSERVED once become VERIFIED with E9c as the second session; those
-  first seen in E9c need one more capture (E9d). No derivation replaces a capture.
+  first seen in E9c need one more capture (E9d). No derivation replaces a capture. **Added 2026-11-01 after E11 attempt 3 (the owner's wish to
+  drive memory faders and bank 25-48 from the PC without switching the console by hand):** E9c also moves a Simulator fader in memory mode (memory
+  fader 1 of page 1, then of another page) and in bank 25-48, holds the Simulator's memory bump 1, and switches modes with a Simulator fader up,
+  so that H111 (the index addresses the physical fader; its effect is the console's mode's) and the matching rule (H79, H81) are observed before
+  any of it is classed. Until then every fader index in memory mode and in bank 25-48 stays uncleared, the UI's FADERS 1-24 / MEMS keys (class
+  B1, sent in E11) are the only cleared way to change what the console's 24 faders control, and no message that sets a memory fader or a
+  channel of the other bank directly is known to exist (our code never guesses one).
 - **SC-3 (record keys from the PC):** after E9c, and only with the owner's written acceptance of each key
   (REC MEM, EDIT MEM, COPY, CLEAR), an SD backup immediately before every session that enables them, a UI
   confirmation step before a record key is armed, and the same guard against a stray bump as the panel has

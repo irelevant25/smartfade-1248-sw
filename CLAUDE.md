@@ -289,6 +289,25 @@ H66 stop. **E11 is partly done; SC-2's decisions and conditions are unchanged; n
 byte (no show data changed); the owner states a power cycle between the attempts (so the Connect-time pair is H65's power-on list; attempt 1's
 empty Connects stay unexplained) and that the console kept the PC value on channel 1 after the Disconnect until the physical fader 1 was moved
 up and down (F141, a statement). Next: attempt 3 (W1 to zero, W2–W8) on the owner's go.
+**E11 attempt 3, 2026-11-01 evening: E11 done** (record `docs/protocol/captures/2026-11-01-e11-first-live-control-session-attempt-3.md`):
+with the backend at 5485ea3 and live control on, the guided session ran W1–W8 to the end and sent **116 ConsoleEvents** (channel fader 1 up and
+back to zero, bump 7, SOLO, BLACKOUT, BUMPS, FADERS MEMS / memory bump 1 × 3 / FADERS 1-24, MASTER, GO × 2 with STACK unlit: 92 fader events
+and 12 press / release pairs 47–77 ms apart), each 27–46 ms after a poll's reply (SC-2's 62 ms bound held 116 of 116), and **the console
+followed every control** as it follows the panel and SmartSoft (the level objects, the LED blocks 50 / 52 / 53, the mode objects, the GO
+crossfade): F167 → VERIFIED in part (channel fader 1 rising, attempts 2 + 3, our own host), F168 and F169 added, H66 CONFIRMED for writes
+(OBSERVED once each); **73 facts are VERIFIED** (never clearance to send). A 47–78 ms bump tap from the PC leaves no trace in the fetched
+objects (the console lists them for the press and the release), while the owner's hold of the console's own memory bump 1 showed memory 1 as in
+E9 / E9b; 0 framing errors, the bus = the backend's log (49 426 transfers), `SHOW22.ASC` = `SHOW21.ASC`. After the guide the owner ran the
+backend twice more by hand (a read-only session; a live-control session with 57 writes: memory bump 1 taps in memory mode, channel fader 1
+drags, bump 7 taps, the panel's mode keys) **without USBPcap and after the SD save**: a recorded deviation, log-only evidence, no show data
+changeable by those classes, an SD save to compare still owed (owner question 1 of the record). The owner's wish to drive memory faders from
+the PC without switching the console's mode is answered from the evidence (the record's section; H111 added): the only live-control message
+ever observed, ConsoleEvent, addresses the console's physical controls, so the console's fader mode decides what an event drives (F99, F112,
+F134); memory faders and bank 25-48 from the PC need E9c (a passive capture of SmartSoft's Simulator in memory mode and in bank 25-48) and a
+safety check, and the UI's FADERS 1-24 / MEMS keys are the only cleared way to change the console's bank. **E11 is done; SC-2's decisions
+and conditions are unchanged; nothing further is cleared.** Next: the owner's answers (SHOW23, the power cycle, session 3's actions, tap
+versus hold in the UI), E9c as "Path to a wider clearance" lists it, and a UI change proposed to the owner (the console's fader bank shown,
+the controls of the other banks marked as needing the switch).
 
 ## Commands
 

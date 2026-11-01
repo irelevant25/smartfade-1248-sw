@@ -153,6 +153,17 @@ unchanged: VERIFIED is necessary, not sufficient, **E12b clears no message**, SC
 code never sends any of E12b's messages; its one lesson for our sessions is that no SD save or load is made on the console while our
 software is connected (F163, H109; safety-checks.md "Conditions for E11").
 
+**E11, the first live-control session of our own software, is done (2026-11-01, three attempts; records `captures/2026-11-01-e11-first-live-control-session-attempt-1.md`,
+`captures/2026-11-01-e11-first-live-control-session-attempt-2.md`, `captures/2026-11-01-e11-first-live-control-session-attempt-3.md`).** Under SC-2's conditional GO the backend (the owner's implementation of classes A and B1 behind
+the record-function interlock) sent, in all, 120 ConsoleEvents in the guided sessions (attempt 1 none, attempt 2 four, attempt 3 one hundred and sixteen:
+channel fader 1 up and back to zero, bump 7, SOLO, BLACKOUT, BUMPS, FADERS MEMS, memory bump 1, FADERS 1-24, MASTER, GO with STACK unlit), each between a
+poll's reply and the next poll or fetch with the reply at most 46 ms old, and the console followed every control as it follows the panel and SmartSoft's
+Console Simulator, acknowledging nothing; the bus equals the backend's log byte for byte in every attempt and no show data changed. **73 facts are VERIFIED**
+(one more than above: F167 in part, channel fader 1 rising from our software, attempts 2 + 3); F168 and F169 were added (OBSERVED once: the keys, a bump tap's
+absence from the fetched objects, MASTER and BUMPS), H66 CONFIRMED for writes, H65 and F166 annotated, H111 added (a fader event addresses the physical
+fader; untested in memory mode and bank 25-48). The sentence above stands unchanged: VERIFIED is necessary, not sufficient, **E11 clears nothing beyond
+SC-2's conditional GO**, and the two backend sessions the owner ran after attempt 3's guide without USBPcap are a recorded deviation (log-only evidence).
+
 ## Version landscape
 
 | Artifact | Version | Relationship |
