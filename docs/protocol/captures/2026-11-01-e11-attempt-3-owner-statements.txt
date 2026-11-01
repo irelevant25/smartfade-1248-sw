@@ -70,3 +70,51 @@ transfer, so it is not in the log; the channel fader 1 events that followed (38.
 241.7 s, 57 writes: three memory bump 1 taps in memory mode, 17 channel fader 1 events, 17 bump 7 taps, the panel's mode keys in
 between) were not described in the chat beyond this sentence; they ran without USBPcap (stopped at 23:02:56) and after the
 after-session SD save (SHOW22.ASC, 23:04), so they are outside E11's conditions and evidenced by the backend's log alone.
+
+--- Statement 2 (chat, 2026-11-02, after the attempt 3 report; verbatim) ---
+"If you are 100% sure that is not possible to change CHANNELS faders when the MEMORIES bump is on/lit, then okay. I am
+little bit sad but whatever. What if we could just make a workaround. Like, buttons will be there in another column named
+FADERS. Buttons will be MEMORIES (red), 25-48 (green), 1-24 (green), NEXT (blue - I am not sure what it is for). They can
+work in the same way as they do on CONSOLE. But, when the MEMORIES is lit/on and I click and start moving the channel 25
+for example, it will automatically switch to 25-48 and move the channels 1 (which is address 25). And the same for memories
+when I am in channels etc. What do you say to that? And yes, I would like to have the bump click and hold features. And yes
+I did a little bit of experimenting after I have completed the guided session."
+
+Reading: (1) the owner accepts the mode finding but asks whether it is certain; the answer (chat, 2026-11-02): not proven
+impossible, but no observed message does it, SmartSoft's own Simulator switches modes, and our code never sends what has not
+been observed, so for our software it is not possible unless new evidence appears (E9c). (2) A design proposal: a FADERS
+column with the console's four keys in the owner's colours, and an automatic bank switch before a fader of another bank is
+moved from the UI. Assessment in the chat: the column is built (commit of 2026-11-02, UI only); the automatic switch needs
+E9c (fader events in memory mode and bank 25-48, the FADERS 25-48 key a second time, a mode switch with a PC value in force,
+all passive from SmartSoft), a safety check extending SC-2, the owner's implementation and a live session; the matching
+rule after a mode switch with a PC level in force is untested (H79 / H81) and is the risk the switch would meet. (3) Held
+bumps from the PC are wanted: observed from SmartSoft (E9, E9b: memory bump 1 held), excluded from E11 by SC-2 condition 4;
+needs an SC-2 amendment (a bounded hold, the release sent before any Disconnect, the lost-release case accepted in writing)
+and the owner's implementation. (4) The owner confirms the two sessions after the guide.
+
+--- Statement 3 (chat, 2026-11-02; verbatim) ---
+"Also the columns on riht side should be in this order: FADERS, CROSSFADERS, RECORD and MASTERS (INDEPENDENTS)."
+Reading: the page layout; applied 2026-11-02 (FADERS, CROSSFADER, RECORD, MASTERS with INDEPENDENTS under it).
+
+--- Statement 4 (chat, 2026-11-02; verbatim) ---
+"Also the RATE bump would be nice to have as well. Put it where the CLEAR button is and the CLEAR button put under the STACK
+and RATE. It will be two buttons wide, which is fine."
+Reading: the RATE key ("bump" = button) under PAUSE where CLEAR was, CLEAR under STACK and RATE two keys wide; applied
+2026-11-02 with RATE inactive (the manual: the stack's fade / wait balance set with the wheel while STACK is active, F170;
+never observed from a PC, no key code known). RATE's colour on the console was not stated; drawn white like PAUSE and CLEAR.
+
+--- Statement 5 (chat, 2026-11-02; verbatim) ---
+"Also the INDEPENDENTS sohuld be in its own section under the MASTERS section."
+Reading: applied 2026-11-02 (sf-independents-panel under the masters, same keys and readings).
+
+--- Statement 6 (chat, 2026-11-02; verbatim) ---
+"Also when I start the smartsoft, I do not have to move anything from the CONSOLE and it just download or know somehow
+what are the current values on the CONSOLE and siplay them in the smartsoft."
+Reading: true, and known from the captures: at Online SmartSoft sends its two System messages (09 00 00, then 07 00 00; F58,
+VERIFIED as SmartSoft's behaviour in every session since E2), after which the console lists its version and then the
+157-record show download, which carries the channel levels, the DMX outputs, the LEDs, ConsoleStatus (mode, bank, page)
+and the independents, but not FaderInfo (the MASTER, BUMPS and fader positions), DisplayContent or PlaybackInfo (F89): SmartSoft
+learns the MASTER only at its first move. Our software sends neither System message (SC-2: NO-GO for the System pair, System
+being the object that also carries the erase commands, F121), so a console with nothing pending tells it nothing (F166) and the
+guide's W0 panel step exists. A dedicated safety check (SC-4) could clear exactly those two bodies for the Connect step; proposed
+to the owner in the chat, not run.
