@@ -34,7 +34,7 @@ describe('CrossfaderComponent', () => {
     fixture.detectChanges();
   });
 
-  it('shows the A and B faders inactive, GO and STACK under A, PAUSE and CLEAR under B', () => {
+  it('shows the A and B faders inactive, GO and STACK under A, PAUSE and RATE under B, CLEAR under both', () => {
     const columns = element().querySelectorAll('.xfade__column');
     expect(columns).toHaveLength(2);
 
@@ -58,13 +58,18 @@ describe('CrossfaderComponent', () => {
     expect(columns[0].querySelector('.xfade__go')).not.toBeNull();
     expect(columns[0].querySelector('.xfade__stack')).not.toBeNull();
     expect(columns[1].querySelector('.xfade__pause')).not.toBeNull();
-    expect(columns[1].querySelector('.xfade__clear')).not.toBeNull();
+    expect(columns[1].querySelector('.xfade__rate')).not.toBeNull();
+    // CLEAR is two keys wide: outside the columns, right after them
+    expect(element().querySelector('.xfade__column .xfade__clear')).toBeNull();
+    expect(element().querySelector('.xfade__columns')?.nextElementSibling?.classList.contains('xfade__clear')).toBe(true);
 
     expect(key('.xfade__go').disabled).toBe(true);
     expect(key('.xfade__go').getAttribute('aria-label')).toBe('Go');
     expect(key('.xfade__go').querySelector('svg')).not.toBeNull();
     expect(key('.xfade__pause').disabled).toBe(true);
     expect(key('.xfade__pause').getAttribute('aria-label')).toBe('Pause');
+    expect(key('.xfade__rate').disabled).toBe(true);
+    expect(key('.xfade__rate').textContent?.trim()).toBe('Rate');
     expect(key('.xfade__stack').disabled).toBe(true);
     expect(key('.xfade__stack').textContent?.trim()).toBe('Stack');
   });

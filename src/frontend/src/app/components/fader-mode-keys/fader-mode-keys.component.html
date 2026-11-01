@@ -1,0 +1,55 @@
+<section class="faders sf-panel" aria-labelledby="faders-title">
+  <h2 id="faders-title" class="sf-panel-title">Faders</h2>
+  @if (note(); as text) {
+    <p class="faders__note" role="status">{{ text }}</p>
+  }
+
+  <div class="faders__keys" role="group" aria-label="Fader bank">
+    <button
+      type="button"
+      class="faders__key faders__key--red faders__mems"
+      [class.faders__key--lit]="bank() === 'memories'"
+      [class.faders__key--led]="reported()"
+      [class.sf-key--inactive]="!canMems() && !reported()"
+      [attr.aria-pressed]="reported() ? bank() === 'memories' : null"
+      [disabled]="!enabled() || !canMems()"
+      [attr.title]="memsTitle()"
+      (click)="pressMems()"
+    >
+      Memories
+    </button>
+    <button
+      type="button"
+      class="faders__key faders__key--green faders__upper"
+      [class.faders__key--lit]="bank() === 'channels25To48'"
+      [class.faders__key--led]="reported()"
+      [class.sf-key--inactive]="!reported()"
+      [attr.aria-pressed]="reported() ? bank() === 'channels25To48' : null"
+      disabled
+      [attr.title]="upperTitle()"
+    >
+      25-48
+    </button>
+    <button
+      type="button"
+      class="faders__key faders__key--green faders__lower"
+      [class.faders__key--lit]="bank() === 'channels1To24'"
+      [class.faders__key--led]="reported()"
+      [class.sf-key--inactive]="!can1To24() && !reported()"
+      [attr.aria-pressed]="reported() ? bank() === 'channels1To24' : null"
+      [disabled]="!enabled() || !can1To24()"
+      [attr.title]="lowerTitle()"
+      (click)="press1To24()"
+    >
+      1-24
+    </button>
+    <button
+      type="button"
+      class="faders__key faders__key--blue faders__next sf-key--inactive"
+      disabled
+      [attr.title]="nextTitle"
+    >
+      Next
+    </button>
+  </div>
+</section>

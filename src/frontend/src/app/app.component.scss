@@ -5,9 +5,11 @@
   min-height: 760px;
 }
 
+// The console page: the faders on the left (channels over memories), then the right-hand columns in
+// the owner's order (2026-11-02): FADERS, CROSSFADER, RECORD, MASTERS with INDEPENDENTS under it.
 .shell__main {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) 118px 170px 232px;
+  grid-template-columns: minmax(0, 1fr) 104px 170px 118px 232px;
   grid-template-rows: minmax(0, 2fr) minmax(0, 1fr);
   gap: 10px;
   min-height: 0;
@@ -24,7 +26,7 @@
   grid-row: 2;
 }
 
-.shell__record {
+.shell__faders {
   grid-column: 2;
   grid-row: 1 / span 2;
 }
@@ -34,9 +36,19 @@
   grid-row: 1 / span 2;
 }
 
-.shell__masters {
+.shell__record {
   grid-column: 4;
   grid-row: 1 / span 2;
+}
+
+.shell__masters {
+  grid-column: 5;
+  grid-row: 1;
+}
+
+.shell__independents {
+  grid-column: 5;
+  grid-row: 2;
 }
 
 .shell__show {

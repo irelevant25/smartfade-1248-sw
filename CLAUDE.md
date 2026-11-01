@@ -148,7 +148,10 @@ Angular app (`src/frontend`); see `docs/architecture.md` "Phase 1 as built" and
 `docs/api.md`. The same day the simulator and UI gained memories (REC MEM / EDIT MEM / COPY, 12
 pages × 24), bump buttons, SOLO, the independents IND 1 / IND 2 (DMX 97 / 98 by default) and the
 CLEAR key, modelled on the manual (F5, F6, F107–F109; the simulator's own readings are marked
-INFERRED), plus the console's record and crossfader columns with the unmodelled keys inactive. Since
+INFERRED), plus the console's record and crossfader columns with the unmodelled keys inactive (since 2026-11-02 the right-hand
+columns are FADERS (MEMORIES / 25-48 / 1-24 / NEXT, the bank a real console reports lit from the new `faderBank` state
+field; MEMORIES and 1-24 as taps where accepted, 25-48 and NEXT inactive), CROSSFADER (RATE inactive, CLEAR two keys
+wide), RECORD, MASTERS and INDEPENDENTS as its own section). Since
 SC-1 the only code that can transmit to a console is the read-only USB device, and only the poll and
 the listed fetch. Next: the owner questions and passive captures listed in
 `docs/protocol/reverse-engineering.md` ("Next capture (proposed by the E3b analysis)": BUMPS at intermediate

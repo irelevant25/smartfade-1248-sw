@@ -130,6 +130,11 @@ export interface ConsoleStateDto {
   independentsReported?: boolean;
   /** The console's selected memory page, 1..12, when the device reports it; null for the simulator (the UI chooses). */
   memoryPage?: number | null;
+  /**
+   * What the console's 24 physical faders control (the FADERS keys 1-24 / 25-48 / MEMS), when the device reports it
+   * (a real console: ConsoleStatus, F98); null for the simulator, which plays every bank at once.
+   */
+  faderBank?: FaderBank | null;
   /** The key LEDs a real console reports (hardware mode); null until reported, always null for the simulator. */
   keys?: PanelKeysDto | null;
   /** The console's LCD, two lines (a real console only); kept for the contract, not shown by the UI (owner, 2026-10-31). */
@@ -139,6 +144,11 @@ export interface ConsoleStateDto {
   showFileName?: string | null;
   firmwareVersion?: string | null;
 }
+
+/** The bank the console's physical faders control: channels 1-24, channels 25-48 or the memories of the selected page. */
+export type FaderBank = 'channels1To24' | 'channels25To48' | 'memories';
+
+export const FADER_BANKS: readonly FaderBank[] = ['channels1To24', 'channels25To48', 'memories'];
 
 /** One key LED as the console reports it: its first blink phase, and whether the two phases differ. */
 export interface KeyLedDto {

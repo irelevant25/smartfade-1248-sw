@@ -7,8 +7,10 @@ import { ChannelFaderComponent } from '../channel-fader/channel-fader.component'
 
 /**
  * The console's crossfader section (manual v3.0 printed p.60): the Live (A) and Next (B)
- * faders with the GO and STACK keys under A and the PAUSE and CLEAR keys under B. The stack and
- * crossfades are not in the simulator yet, so the faders, PAUSE and STACK are shown inactive;
+ * faders with the GO and STACK keys under A and the PAUSE and RATE keys under B, and CLEAR under
+ * both, two keys wide (the owner's layout, 2026-11-02). The stack and crossfades are not in the
+ * simulator yet, so the faders, PAUSE, RATE (the stack's fade / wait balance, manual) and STACK
+ * are shown inactive;
  * GO is a tap on a device that models the stack (`supportedCommands` has `pressGo` and the
  * control `go` is writable: the real console with live control, SC-2 class B1); CLEAR works as on
  * the console (one press aborts an armed function, two presses clear the channel faders, three

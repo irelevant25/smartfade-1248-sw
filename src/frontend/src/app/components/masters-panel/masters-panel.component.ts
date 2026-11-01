@@ -5,10 +5,10 @@ import { LEVEL_MAX } from '../../core/console.models';
 import { ChannelFaderComponent } from '../channel-fader/channel-fader.component';
 
 /**
- * The right-hand section of the console: BUMPS fader with the SOLO key above it on the left,
- * MASTER fader with the BLACKOUT key above it on the right, and the INDEPENDENTS keys IND 1 and
- * IND 2 below them (the owner's panel, 2026-10-29 and 2026-10-30). The BLACKOUT key blinks while
- * the MASTER is below full and lights up while blackout is on (manual, F5).
+ * The console's MASTERS section: BUMPS fader with the SOLO key above it on the left, MASTER fader
+ * with the BLACKOUT key above it on the right (the owner's panel, 2026-10-29 and 2026-10-30); the
+ * INDEPENDENTS are their own section under it since 2026-11-02 (`sf-independents-panel`). The
+ * BLACKOUT key blinks while the MASTER is below full and lights up while blackout is on (manual, F5).
  */
 @Component({
   selector: 'sf-masters-panel',
@@ -35,7 +35,6 @@ export class MastersPanelComponent {
    */
   protected readonly observedOnly = computed(() => this._state.mode() === 'hardware');
   protected readonly blackoutUnknown = computed(() => this.observedOnly() && !this.mastersReported());
-  protected readonly independentsUnknown = computed(() => this.observedOnly() && !this._state.independentsReported());
   /**
    * "As soon as the Master is faded under 100% the Blackout button will blink" (F5). The simulator
    * follows the manual; the real console reports its BLACKOUT LED, whose blink (F85) is shown as
@@ -65,10 +64,5 @@ export class MastersPanelComponent {
 
   protected toggleSolo(): void {
     this._channels.setSolo(!this.masters().solo);
-  }
-
-  protected toggleIndependent(number: 1 | 2): void {
-    const on = number === 1 ? this.masters().independent1 : this.masters().independent2;
-    this._channels.setIndependent(number, !on);
   }
 }

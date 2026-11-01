@@ -101,7 +101,17 @@ public static class DtoMapper
             state.Crossfader is { } crossfader ? ToDto(crossfader) : null,
             state.ShowFileName,
             state.FirmwareVersion,
-            state.WritableControls?.Order(StringComparer.Ordinal).ToArray());
+            state.WritableControls?.Order(StringComparer.Ordinal).ToArray(),
+            FaderBankName(state.FaderBank));
+
+    /// <summary>docs/api.md `faderBank`: "channels1To24", "channels25To48", "memories" or null when the device reports none.</summary>
+    private static string? FaderBankName(FaderBank? bank) => bank switch
+    {
+        FaderBank.Channels1To24 => "channels1To24",
+        FaderBank.Channels25To48 => "channels25To48",
+        FaderBank.Memories => "memories",
+        _ => null,
+    };
 
     public static OutputsDto ToOutputsDto(IReadOnlyList<byte> outputs) =>
         new(outputs.Select(b => (int)b).ToArray());

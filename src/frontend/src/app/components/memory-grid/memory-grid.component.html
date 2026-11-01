@@ -26,30 +26,6 @@
       }
     </div>
 
-    @if (canFaders1To24() || canFadersMems()) {
-      <div class="memories__mode" role="group" aria-label="Fader mode">
-        <span class="memories__pages-label" aria-hidden="true">Faders</span>
-        <button
-          type="button"
-          class="memories__mode-key"
-          [disabled]="!enabled() || !canFaders1To24()"
-          title="FADERS 1-24 on the console: the physical faders to channel mode, bank 1-24 (a key tap)"
-          (click)="pressFaders1To24()"
-        >
-          1-24
-        </button>
-        <button
-          type="button"
-          class="memories__mode-key"
-          [disabled]="!enabled() || !canFadersMems()"
-          title="FADERS MEMS on the console: the physical faders to memory mode (a key tap)"
-          (click)="pressFadersMems()"
-        >
-          Mems
-        </button>
-      </div>
-    }
-
     @if (hint(); as text) {
       <p class="memories__hint" role="status">{{ text }}</p>
     }

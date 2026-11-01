@@ -123,6 +123,10 @@ interface ConsoleStateDto {
                                                     // Independents object, F115); the simulator reports them with its snapshot
   memoryPage: number | null;                        // the console's selected memory page, 1..12, when the device reports it
                                                     // (hardware mode: ConsoleStatus, F113); null for the simulator (the UI chooses)
+  faderBank: string | null;                         // what the console's 24 physical faders control, when the device reports it
+                                                    // (hardware mode: ConsoleStatus body[0] / body[4], F98): "channels1To24",
+                                                    // "channels25To48" or "memories"; null for the simulator, which plays every
+                                                    // bank at once. The UI lights the FADERS key of that bank (added 2026-11-02)
   keys: PanelKeysDto | null;                        // the key LEDs a real console reports (hardware mode, LedStatus; F116, F117,
                                                     // key identities INFERRED, H72); null until reported, always null for the simulator
   lcd: string[] | null;                             // the console's LCD, two lines of 20 characters (bar glyphs as block characters;

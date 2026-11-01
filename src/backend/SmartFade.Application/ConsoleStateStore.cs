@@ -34,6 +34,7 @@ public sealed class ConsoleStateStore
     private bool _memoriesReported;
     private bool _independentsReported;
     private int? _memoryPage;
+    private FaderBank? _faderBank;
     private PanelKeys? _keys;
     private IReadOnlyList<string>? _lcd;
     private CrossfaderState? _crossfader;
@@ -101,7 +102,8 @@ public sealed class ConsoleStateStore
                 _crossfader,
                 _showFileName,
                 _firmwareVersion,
-                _writableControls);
+                _writableControls,
+                _faderBank);
         }
     }
 
@@ -134,6 +136,7 @@ public sealed class ConsoleStateStore
                 _memoriesReported = false;
                 _independentsReported = false;
                 _memoryPage = null;
+                _faderBank = null;
                 _keys = null;
                 _lcd = null;
                 _crossfader = null;
@@ -239,6 +242,11 @@ public sealed class ConsoleStateStore
             if (change.MemoryPage is { } page && _capabilities.IsValidMemoryPage(page))
             {
                 _memoryPage = page;
+            }
+
+            if (change.FaderBank is { } faderBank)
+            {
+                _faderBank = faderBank;
             }
 
             if (change.Keys is { } keys)

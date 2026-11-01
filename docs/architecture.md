@@ -219,6 +219,13 @@ Decisions taken while building:
   and independents, the console's Patch, F70) and the stack / sequence pages are the owner's
   next wishes; both are UI over data the console already reports, but writing them to a real
   console is a protocol question that stays closed until a message is cleared.
+  **Layout pass (2026-11-02, owner feedback after E11):** the right-hand columns are, in the owner's
+  order, FADERS (the console's keys MEMORIES, 25-48, 1-24, NEXT in their colours; the key of the bank
+  a real console reports is lit, from the new `faderBank` of the state contract; MEMORIES and 1-24
+  are taps where the device accepts them, 25-48 and NEXT inactive), CROSSFADER (RATE under PAUSE,
+  CLEAR under STACK and RATE, two keys wide), RECORD, and MASTERS with INDEPENDENTS as its own
+  section underneath (`sf-fader-mode-keys`, `sf-independents-panel`); the memory grid's head lost
+  its mode keys. Still UI over reported data: nothing new is sent.
 - **Hardware path (2026-10-30, safety check SC-1, `docs/protocol/safety-checks.md`):** the
   first clearance, for a read-only session: the poll and the fetch of a record the console
   listed. `SmartFade.Protocol` gained its only encoder (`HspOutbound`) and the session state

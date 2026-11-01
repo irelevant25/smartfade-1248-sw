@@ -22,6 +22,7 @@ import {
   CrossfaderDto,
 } from './console.models';
 import { clampLevel } from './level';
+import { FADER_BANKS, type FaderBank } from './console.models';
 
 /** Console limits as documented in docs/api.md; replaced by the backend's values on first state. */
 const DEFAULT_CAPABILITIES: CapabilitiesDto = {
@@ -218,6 +219,7 @@ export class ConsoleStateService {
   private readonly _memoriesReported = signal(false);
   private readonly _independentsReported = signal(false);
   private readonly _memoryPage = signal<number | undefined>(undefined);
+  private readonly _faderBank = signal<FaderBank | undefined>(undefined);
   private readonly _keys = signal<PanelKeysDto | undefined>(undefined);
   private readonly _lcd = signal<readonly string[] | undefined>(undefined);
   private readonly _crossfader = signal<CrossfaderDto | undefined>(undefined);
@@ -256,6 +258,8 @@ export class ConsoleStateService {
   readonly independentsReported = this._independentsReported.asReadonly();
   /** The console's selected memory page when the device reports one (hardware mode), else undefined. */
   readonly memoryPage = this._memoryPage.asReadonly();
+  /** What the console's physical faders control when the device reports it (a real console), else undefined. */
+  readonly faderBank = this._faderBank.asReadonly();
   /** The key LEDs a real console reports (hardware mode), else undefined: the keys then follow the UI's own logic. */
   readonly keys = this._keys.asReadonly();
   /** The console's LCD lines (a real console only); not shown by the UI, kept for the contract. */
@@ -322,6 +326,8 @@ export class ConsoleStateService {
         ? page
         : undefined,
     );
+    const bank = state.faderBank;
+    this._faderBank.set(FADER_BANKS.includes(bank as FaderBank) ? (bank as FaderBank) : undefined);
     this._keys.set(sanitizeKeys(state.keys));
     this._lcd.set(sanitizeLcd(state.lcd));
     this._crossfader.set(sanitizeCrossfader(state.crossfader));

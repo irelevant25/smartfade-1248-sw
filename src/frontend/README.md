@@ -62,7 +62,12 @@ Output goes to `dist/smartfade-ui`.
 |---|---|
 | Top bar | Mode badge (SIMULATED / REPLAY), connection status, Connect / Disconnect, show file name and firmware version when known, last error (dismissible) |
 | Channels | 48 faders in two banks of 24 (1-24, 25-48). The thumb is the desired level, the lit bar the level the console reports; an amber stretch and lamp show a level the console has not reached yet |
-| Masters | MASTER fader, BUMPS level (read only), BLACKOUT toggle that lights red when on |
+| Memories | The 24 memory faders of one page with the page keys 1-12; REC MEM / EDIT MEM / COPY from the Record column pick a memory here |
+| Faders | The console's FADERS keys in its order and colours: MEMORIES (red), 25-48, 1-24 (green), NEXT (blue). A real console reports which bank its 24 physical faders control (`faderBank`) and that key is lit; MEMORIES and 1-24 are taps where the device accepts them, 25-48 and NEXT are shown inactive |
+| Crossfader | The A / B faders (read-only playback from a real console), GO (a tap where accepted), STACK, PAUSE and RATE (inactive), CLEAR under them two keys wide (aborts an armed function, then clears the channel faders, then the memory faders) |
+| Record | COPY, REC SEQ, MAGIC, REC MEM, EDIT MEM, SNAPSHOT in the console's colours; a real console's key LEDs are mirrored |
+| Masters | BUMPS under SOLO, MASTER under BLACKOUT (blue; blinks while the MASTER is below full, lit while blackout is on) |
+| Independents | IND 1 / IND 2 in their own section under the masters (DMX 97 / 98 by default) |
 | Outputs | The 512 outputs as thin bars on one canvas; hover for the level of one output; collapsible |
 
 Faders are disabled while the link to the backend is down or the console is not connected.
@@ -113,7 +118,13 @@ src/app/
     connection-bar/     mode badge, status, Connect / Disconnect, facts, error
     channel-fader/      one vertical fader (channels, MASTER, BUMPS)
     channel-grid/       the 48 faders in two banks
-    masters-panel/      MASTER, BUMPS, BLACKOUT
+    memory-grid/        the 24 memory faders of a page, the page keys
+    fader-mode-keys/    the FADERS column: MEMORIES, 25-48, 1-24, NEXT
+    crossfader/         A / B, GO, STACK, PAUSE, RATE, CLEAR
+    record-keys/        COPY, REC SEQ, MAGIC, REC MEM, EDIT MEM, SNAPSHOT
+    masters-panel/      SOLO / BUMPS, BLACKOUT / MASTER
+    independents-panel/ IND 1, IND 2
+    show-file-page/     the .asc show-file viewer and editor
     output-meters/      512 output bars on a canvas
   app.component.*       the page layout
 ```

@@ -15,7 +15,9 @@ namespace SmartFade.Application;
 /// <see cref="MemoryPage"/> is the console's selected memory page when the device reports one, else null;
 /// <see cref="Keys"/> the key LEDs a real console reports, null until reported (the simulator never does);
 /// <see cref="WritableControls"/> the controls the device accepts commands for, null when every control of a
-/// supported command's kind is accepted (<see cref="DeviceControls"/>).
+/// supported command's kind is accepted (<see cref="DeviceControls"/>);
+/// <see cref="FaderBank"/> what the console's physical faders control when the device reports it (a real console,
+/// ConsoleStatus), else null (the simulator plays every bank at once).
 /// </summary>
 public sealed record ConsoleState(
     ConnectionState Connection,
@@ -37,4 +39,5 @@ public sealed record ConsoleState(
     CrossfaderState? Crossfader,
     string? ShowFileName,
     string? FirmwareVersion,
-    IReadOnlySet<string>? WritableControls = null);
+    IReadOnlySet<string>? WritableControls = null,
+    FaderBank? FaderBank = null);

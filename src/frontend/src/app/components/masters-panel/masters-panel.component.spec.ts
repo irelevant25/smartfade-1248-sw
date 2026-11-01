@@ -196,70 +196,10 @@ describe('MastersPanelComponent', () => {
     });
   });
 
-  describe('INDEPENDENTS', () => {
-    const ind = (number: 1 | 2) =>
-      element().querySelectorAll<HTMLButtonElement>('.masters__ind')[number - 1];
-
-    it('shows IND 1 under BUMPS and IND 2 under MASTER, both off', () => {
-      expect(element().querySelector('#independents-title')?.textContent?.trim()).toBe(
-        'Independents',
-      );
-      expect(ind(1).textContent?.trim()).toBe('Ind 1');
-      expect(ind(2).textContent?.trim()).toBe('Ind 2');
-      expect(ind(1).getAttribute('aria-pressed')).toBe('false');
-      expect(ind(2).getAttribute('aria-pressed')).toBe('false');
-      // the independents row comes after the fader columns, in the same two columns
-      const children = Array.from(element().querySelector('.masters')!.children);
-      expect(children.map((child) => child.className.split(' ')[0])).toEqual([
-        'sf-panel-title',
-        'masters__columns',
-        'masters__independents',
-      ]);
-    });
-
-    it('lights up when the backend reports one on', () => {
-      state.applyMastersChanged({
-        master: 200,
-        bumps: 51,
-        blackout: false,
-        solo: false,
-        independent1: false,
-        independent2: true,
-      });
-      fixture.detectChanges();
-
-      expect(ind(2).getAttribute('aria-pressed')).toBe('true');
-      expect(ind(2).classList.contains('masters__ind--on')).toBe(true);
-      expect(ind(1).classList.contains('masters__ind--on')).toBe(false);
-    });
-
-    it('asks for the opposite of the reported state', () => {
-      ind(1).click();
-      expect(setIndependent).toHaveBeenLastCalledWith(1, true);
-
-      state.applyMastersChanged({
-        master: 200,
-        bumps: 51,
-        blackout: false,
-        solo: false,
-        independent1: true,
-        independent2: false,
-      });
-      fixture.detectChanges();
-      ind(1).click();
-      expect(setIndependent).toHaveBeenLastCalledWith(1, false);
-
-      ind(2).click();
-      expect(setIndependent).toHaveBeenLastCalledWith(2, true);
-    });
-
-    it('cannot be pressed while commands are not possible', () => {
-      enabled.set(false);
-      fixture.detectChanges();
-
-      expect(ind(1).disabled).toBe(true);
-      expect(ind(2).disabled).toBe(true);
-    });
+  it('holds the masters only: the independents are their own section (sf-independents-panel)', () => {
+    const children = Array.from(element().querySelector('.masters')!.children);
+    expect(children.map((child) => child.className.split(' ')[0])).toEqual(['sf-panel-title', 'masters__columns']);
+    expect(element().querySelector('#independents-title')).toBeNull();
   });
 
   describe('with a read-only device (hardware mode)', () => {
@@ -287,12 +227,9 @@ describe('MastersPanelComponent', () => {
       expect(blackout().getAttribute('title')).toContain('LED reading');
       // the MASTER is below full, but without an LED report the manual's rule is not applied to a console
       expect(blackout().classList.contains('masters__blackout--blink')).toBe(false);
-      const independents = Array.from(element().querySelectorAll<HTMLButtonElement>('.masters__ind'));
-      expect(independents.every((button) => button.disabled)).toBe(true);
-      expect(independents.every((button) => button.classList.contains('masters__toggle--unknown'))).toBe(true);
     });
 
-    it('shows the independents once the console reported them', () => {
+    it('lights BLACKOUT from the reported masters and blinks it as the console reports its LED', () => {
       state.applyConsoleStateChanged(
         createSampleState({
           supportedCommands: [],
@@ -302,13 +239,7 @@ describe('MastersPanelComponent', () => {
         }),
       );
       fixture.detectChanges();
-      const independents = Array.from(element().querySelectorAll<HTMLButtonElement>('.masters__ind'));
 
-      expect(independents[0].classList.contains('masters__toggle--unknown')).toBe(false);
-      expect(independents[0].classList.contains('masters__ind--on')).toBe(true);
-      expect(independents[0].getAttribute('aria-pressed')).toBe('true');
-      expect(independents[0].getAttribute('title')).toContain('timed press');
-      expect(independents[1].getAttribute('aria-pressed')).toBe('false');
       expect(blackout().classList.contains('masters__blackout--on')).toBe(true);
 
       // the BLACKOUT LED reported as blinking (the MASTER below full, F85) blinks here too

@@ -4,9 +4,11 @@
   @if (view() === 'console') {
     <sf-channel-grid class="shell__channels" />
     <sf-memory-grid class="shell__memories" />
-    <sf-record-keys class="shell__record" />
+    <sf-fader-mode-keys class="shell__faders" />
     <sf-crossfader class="shell__crossfader" />
+    <sf-record-keys class="shell__record" />
     <sf-masters-panel class="shell__masters" />
+    <sf-independents-panel class="shell__independents" />
   } @else {
     <sf-show-file-page class="shell__show" />
   }

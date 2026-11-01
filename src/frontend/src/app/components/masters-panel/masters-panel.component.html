@@ -65,46 +65,4 @@
       />
     </div>
   </div>
-
-  <div class="masters__independents" role="group" aria-labelledby="independents-title">
-    <h3 id="independents-title" class="sf-panel-title masters__subtitle">Independents</h3>
-    <div class="masters__columns masters__columns--keys">
-      <button
-        type="button"
-        class="masters__toggle masters__ind"
-        [class.masters__ind--on]="masters().independent1"
-        [class.masters__toggle--unknown]="independentsUnknown()"
-        [attr.aria-pressed]="independentsUnknown() ? null : masters().independent1"
-        [disabled]="!enabled() || !supports('setIndependent') || !writable('independent:1')"
-        [attr.title]="
-          independentsUnknown()
-            ? 'Not reported by the console yet'
-            : observedOnly()
-              ? 'Reported by the console (IND 1 identified by a timed press, E8b)'
-              : 'Independent 1 (DMX 97 by default)'
-        "
-        (click)="toggleIndependent(1)"
-      >
-        Ind 1
-      </button>
-      <button
-        type="button"
-        class="masters__toggle masters__ind"
-        [class.masters__ind--on]="masters().independent2"
-        [class.masters__toggle--unknown]="independentsUnknown()"
-        [attr.aria-pressed]="independentsUnknown() ? null : masters().independent2"
-        [disabled]="!enabled() || !supports('setIndependent') || !writable('independent:2')"
-        [attr.title]="
-          independentsUnknown()
-            ? 'Not reported by the console yet'
-            : observedOnly()
-              ? 'Reported by the console (IND 2 identified by a timed press, E8b)'
-              : 'Independent 2 (DMX 98 by default)'
-        "
-        (click)="toggleIndependent(2)"
-      >
-        Ind 2
-      </button>
-    </div>
-  </div>
 </section>

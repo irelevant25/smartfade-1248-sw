@@ -53,22 +53,31 @@
       </button>
       <button
         type="button"
-        class="xfade__key xfade__clear"
-        [class.xfade__clear--series]="clearPresses() > 0"
-        [class.xfade__key--lit]="clearLed()?.light === 'full'"
-        [class.xfade__key--dim]="clearLed()?.light === 'dim'"
-        [class.sf-key--blink]="clearLed()?.blinking === true"
-        [class.xfade__key--led]="!!keys()"
-        [disabled]="!enabled() || !canClear()"
-        [attr.title]="
-          keys()
-            ? ledTitle
-            : 'Clear: once aborts a recording function, twice clears the channel faders, three times the memory faders'
-        "
-        (click)="clear()"
+        class="xfade__key xfade__rate sf-key--inactive"
+        disabled
+        title="Rate: the fade / wait balance of the whole stack, set with the wheel while STACK is active (manual); not available yet"
       >
-        Clear
+        Rate
       </button>
     </div>
   </div>
+
+  <button
+    type="button"
+    class="xfade__key xfade__clear"
+    [class.xfade__clear--series]="clearPresses() > 0"
+    [class.xfade__key--lit]="clearLed()?.light === 'full'"
+    [class.xfade__key--dim]="clearLed()?.light === 'dim'"
+    [class.sf-key--blink]="clearLed()?.blinking === true"
+    [class.xfade__key--led]="!!keys()"
+    [disabled]="!enabled() || !canClear()"
+    [attr.title]="
+      keys()
+        ? ledTitle
+        : 'Clear: once aborts a recording function, twice clears the channel faders, three times the memory faders'
+    "
+    (click)="clear()"
+  >
+    Clear
+  </button>
 </section>

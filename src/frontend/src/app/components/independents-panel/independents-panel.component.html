@@ -1,0 +1,45 @@
+<section class="independents sf-panel" aria-labelledby="independents-title">
+  <h2 id="independents-title" class="sf-panel-title">Independents</h2>
+  @if (unknown()) {
+    <p class="independents__note" role="status">Not reported by the console yet</p>
+  }
+
+  <div class="independents__keys">
+    <button
+      type="button"
+      class="independents__key"
+      [class.independents__key--on]="masters().independent1"
+      [class.independents__key--unknown]="unknown()"
+      [attr.aria-pressed]="unknown() ? null : masters().independent1"
+      [disabled]="!enabled() || !supports('setIndependent') || !writable('independent:1')"
+      [attr.title]="
+        unknown()
+          ? 'Not reported by the console yet'
+          : observedOnly()
+            ? 'Reported by the console (IND 1 identified by a timed press, E8b)'
+            : 'Independent 1 (DMX 97 by default)'
+      "
+      (click)="toggle(1)"
+    >
+      Ind 1
+    </button>
+    <button
+      type="button"
+      class="independents__key"
+      [class.independents__key--on]="masters().independent2"
+      [class.independents__key--unknown]="unknown()"
+      [attr.aria-pressed]="unknown() ? null : masters().independent2"
+      [disabled]="!enabled() || !supports('setIndependent') || !writable('independent:2')"
+      [attr.title]="
+        unknown()
+          ? 'Not reported by the console yet'
+          : observedOnly()
+            ? 'Reported by the console (IND 2 identified by a timed press, E8b)'
+            : 'Independent 2 (DMX 98 by default)'
+      "
+      (click)="toggle(2)"
+    >
+      Ind 2
+    </button>
+  </div>
+</section>

@@ -1,0 +1,82 @@
+:host {
+  display: block;
+  min-height: 0;
+}
+
+.faders {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  height: 100%;
+  padding: 10px 10px 12px;
+}
+
+.faders__note {
+  margin: 0;
+  font: 0.625rem var(--sf-font-ui);
+  color: var(--sf-text-faint);
+}
+
+.faders__keys {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+// A console key in the colour of its LED (the owner's panel, 2026-11-02): --key-rgb is the colour,
+// the face glows with it while the console reports that bank as the live one.
+.faders__key {
+  --key-rgb: 243, 246, 249;
+
+  appearance: none;
+  min-height: 44px;
+  padding: 0 6px;
+  border: 1px solid rgba(var(--key-rgb), 0.45);
+  border-radius: 4px;
+  background: linear-gradient(#242b33, #1a2026);
+  color: rgb(var(--key-rgb));
+  font: 700 0.75rem var(--sf-font-ui);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  white-space: nowrap;
+  cursor: pointer;
+
+  &:hover:not(:disabled) {
+    border-color: rgb(var(--key-rgb));
+  }
+
+  &:active:not(:disabled) {
+    transform: translateY(1px);
+  }
+
+  &:disabled {
+    opacity: 0.4;
+    cursor: not-allowed;
+  }
+}
+
+.faders__key--red {
+  --key-rgb: 255, 92, 92;
+}
+
+.faders__key--green {
+  --key-rgb: 61, 220, 132;
+}
+
+.faders__key--blue {
+  --key-rgb: 78, 161, 255;
+}
+
+// The bank the console reports as live: its key lit as the LED is.
+.faders__key--lit {
+  background: rgb(var(--key-rgb));
+  border-color: rgb(var(--key-rgb));
+  color: #0a0c0f;
+  box-shadow: 0 0 14px rgba(var(--key-rgb), 0.6);
+}
+
+// A key mirroring the console's state is read-only but must not look switched off.
+.faders__key--led:disabled {
+  opacity: 1;
+  cursor: default;
+}

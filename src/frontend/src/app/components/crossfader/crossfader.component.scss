@@ -57,7 +57,8 @@
   fill: currentColor;
 }
 
-// GO is blue, STACK yellow, PAUSE and CLEAR white (the owner's panel, 2026-10-30).
+// GO is blue, STACK yellow, PAUSE and CLEAR white (the owner's panel, 2026-10-30); RATE sits under
+// PAUSE and CLEAR under STACK and RATE, two keys wide (the owner's layout, 2026-11-02).
 .xfade__go {
   border-color: #2f5ea8;
   color: #4ea1ff;
@@ -69,8 +70,14 @@
 }
 
 .xfade__pause,
+.xfade__rate,
 .xfade__clear {
   color: #f3f6f9;
+}
+
+.xfade__clear {
+  width: 100%;
+  flex: 0 0 auto;
 }
 
 .xfade__clear:hover:not(:disabled) {

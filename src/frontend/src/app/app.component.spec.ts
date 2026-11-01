@@ -33,7 +33,7 @@ describe('AppComponent', () => {
     vi.restoreAllMocks();
   });
 
-  it('lays the page out like the console: bar, channels over memories, record keys, crossfader, masters, outputs', () => {
+  it('lays the page out like the console: bar, channels over memories, then FADERS, CROSSFADER, RECORD, MASTERS over INDEPENDENTS, outputs', () => {
     const fixture = TestBed.createComponent(AppComponent);
     fixture.detectChanges();
     const root = element(fixture);
@@ -45,13 +45,16 @@ describe('AppComponent', () => {
     ).toEqual([
       'sf-channel-grid',
       'sf-memory-grid',
-      'sf-record-keys',
+      'sf-fader-mode-keys',
       'sf-crossfader',
+      'sf-record-keys',
       'sf-masters-panel',
+      'sf-independents-panel',
     ]);
     expect(root.querySelectorAll('sf-channel-fader')).toHaveLength(FADER_COUNT);
     expect(root.querySelectorAll('.fader__bump')).toHaveLength(48 + 24);
-    expect(root.querySelectorAll('.masters__ind')).toHaveLength(2);
+    expect(root.querySelectorAll('.independents__key')).toHaveLength(2);
+    expect(root.querySelectorAll('.faders__key')).toHaveLength(4);
   });
 
   describe('when the backend is not running', () => {

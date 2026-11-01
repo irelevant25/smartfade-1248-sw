@@ -30,7 +30,8 @@ export function memoryBumpLit(memory: Pick<MemoryStateDto, 'recorded' | 'level'>
  * numbered as on the console and glows red: faintly when the memory is empty, dimmed when it is
  * recorded, at full while the fader contributes to the output. While REC MEM, EDIT MEM or COPY is
  * armed (record keys panel) the eligible buttons blink and a press picks the memory instead of
- * bumping it.
+ * bumping it. The console's FADERS keys (MEMS / 1-24) live in the FADERS column
+ * (`sf-fader-mode-keys`) since 2026-11-02.
  */
 @Component({
   selector: 'sf-memory-grid',
@@ -52,21 +53,6 @@ export class MemoryGridComponent {
   protected readonly copySource = this._edit.copySource;
   protected readonly readOnly = computed(() => !this._state.supports('setMemoryLevel'));
   protected readonly bumpsDisabled = computed(() => !this._state.supports('bumpMemory'));
-  /** The console's fader-mode keys as taps (FADERS 1-24 / FADERS MEMS): only a device that models the mode and names the controls writable (the real console with live control, SC-2 class B1). */
-  protected readonly canFaders1To24 = computed(
-    () => this._state.supports('pressFaders1To24') && this._state.writable('faders1To24'),
-  );
-  protected readonly canFadersMems = computed(
-    () => this._state.supports('pressFadersMems') && this._state.writable('fadersMems'),
-  );
-
-  protected pressFaders1To24(): void {
-    this._channels.pressFaders1To24();
-  }
-
-  protected pressFadersMems(): void {
-    this._channels.pressFadersMems();
-  }
 
   /** A device cleared for a few memory faders or bumps only (docs/api.md `writableControls`) enables just those. */
   protected faderReadOnly(memory: MemoryStateDto): boolean {

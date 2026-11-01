@@ -62,6 +62,7 @@ public sealed class ConsoleStateAssembler
     private bool _functionScreen;
     private PanelKeys? _keys;
     private ReportedFaderMode? _faderMode;
+    private FaderBank? _faderBank;
     private CrossfaderState? _crossfader;
     private string? _showFileName;
     private string? _firmwareVersion;
@@ -263,21 +264,33 @@ public sealed class ConsoleStateAssembler
         _faderMode = raw.Length > 4 && raw[0] <= 1 && raw[4] <= 1
             ? new ReportedFaderMode(MemoryMode: raw[0] == 1, Bank25To48: raw[4] == 1, MemoryPage: raw[2] + 1)
             : null;
+
+        // What the physical faders control, for the UI's FADERS keys (F98: memory mode wins over the bank flag,
+        // which the console keeps set when MEMS is pressed from bank 25-48, E11 attempt 3); unknown values report nothing.
+        var bank = _faderMode switch
+        {
+            { MemoryMode: true } => FaderBank.Memories,
+            { Bank25To48: true } => FaderBank.Channels25To48,
+            { } => FaderBank.Channels1To24,
+            null => (FaderBank?)null,
+        };
+        var bankChange = bank is { } reportedBank && reportedBank != _faderBank ? new DeviceStateChange(FaderBank: reportedBank) : null;
+        _faderBank = bank;
         if (raw.Length < 3)
         {
-            return null;
+            return bankChange;
         }
 
         var page = raw[2] + 1;
         if (!_capabilities.IsValidMemoryPage(page))
         {
-            return null;
+            return bankChange;
         }
 
         var changed = !_pageReported || page != _memoryPage;
         _memoryPage = page;
         _pageReported = true;
-        return Combine(changed ? new DeviceStateChange(MemoryPage: page) : null, ReportMemoryFaders());
+        return Combine(Combine(changed ? new DeviceStateChange(MemoryPage: page) : null, bankChange), ReportMemoryFaders());
     }
 
     /// <summary>
@@ -431,6 +444,7 @@ public sealed class ConsoleStateAssembler
             Independents = first.Independents ?? second.Independents,
             MemoryPage = first.MemoryPage ?? second.MemoryPage,
             Keys = first.Keys ?? second.Keys,
+            FaderBank = first.FaderBank ?? second.FaderBank,
         };
     }
 
