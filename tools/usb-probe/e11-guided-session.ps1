@@ -139,7 +139,10 @@ Ask "Did you power-cycle the console today before this session? (y / n)" "power 
 # --- Gate 3: USBPcap before the WinUSB bind (SC-2 item 8; H68) ---
 Write-Host ""
 Write-Host "USBPcap must record from BEFORE the WinUSB bind. In an ADMIN PowerShell window start it on the console's root hub, into a NEW file (an absolute path; an admin window starts in C:\Windows\System32):" -ForegroundColor Yellow
-Write-Host ('   & "C:\Program Files\USBPcap\USBPcapCMD.exe" -d \\.\USBPcap1 -A --inject-descriptors -o "' + (Join-Path (Get-Location) 'e11.pcap') + '"') -ForegroundColor White
+# A new file per attempt (attempt 1 of 2026-11-01 left e11.pcap in the working folder; a raw capture must never be overwritten).
+$pcapName = 'e11-' + (Get-Date -Format 'yyyyMMdd-HHmm') + '.pcap'
+Write-Host ('   & "C:\Program Files\USBPcap\USBPcapCMD.exe" -d \\.\USBPcap1 -A --inject-descriptors -o "' + (Join-Path (Get-Location) $pcapName) + '"') -ForegroundColor White
+Log ("usbpcap file name suggested to the owner: " + $pcapName)
 Confirm-Done "When USBPcap is running." "usbpcap running (owner)"
 Log ("interface 1 driver service before the bind: " + (Interface1Service))
 Write-Host ""
