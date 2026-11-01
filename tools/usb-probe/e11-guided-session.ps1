@@ -172,7 +172,7 @@ Write-Host "   Open http://localhost:4200 when the UI window says it is ready. B
 Write-Host "   LIVE CONTROL, the panels 'Not reported by the console yet', and only channel fader 1, bump 7, MASTER, BUMPS, SOLO, BLACKOUT," -ForegroundColor Yellow
 Write-Host "   GO (crossfader panel), the Faders 1-24 / Mems keys (memory panel head) and memory bump 1 may be enabled; every other fader and key must be read-only." -ForegroundColor Yellow
 Confirm-Done "When the UI shows HARDWARE and LIVE CONTROL and only those controls are enabled." "ui ready, hardware and live control badges (owner)"
-Ask "Which controls are enabled in the UI (list them exactly)? Is anything else enabled?" "ui enabled controls"
+Ask "Before Connect every fader and key is disabled; after Connect only the live controls get enabled. Is anything other than the bar's CONNECT button enabled now? (n / what)" "ui enabled controls"
 Write-Host ""
 Write-Host "Starting position on the console: CHANNEL mode (FADERS 1-24 lit), all channel faders at ZERO, MASTER at FULL, BUMPS at FULL," -ForegroundColor Yellow
 Write-Host "STACK unlit, BLACKOUT off, SOLO off, IND 1 / IND 2 off, REC MEM / EDIT MEM / COPY / REC SEQ off, no sequence running, page 1." -ForegroundColor Yellow
@@ -185,15 +185,52 @@ Confirm-Done "When the UI shows Connected." "connected (owner)"
 Wait-Idle 60 "idle after connect: the read side as in E8, nothing is sent but the poll and the listed fetch"
 Ask "During the idle minute: did anything on the console change by itself, and does the UI show the console's state (levels, LEDs, the LCD in the backend log)? (describe)" "idle observation"
 
+# --- W0: the console must report its state before any control (attempt 1 of 2026-11-01: after a power cycle with nothing touched the
+# console listed nothing in 192 s, so conditions 5, 6 and 8 refused the first control; a read-only session never asks for an unlisted object) ---
+Write-Host ""
+Write-Host "W0: the console reports LEDs, its fader mode and the MASTER only when they change. Make it report them from the PANEL now (nothing is sent by us):" -ForegroundColor Yellow
+Step "W0: on the CONSOLE press FADERS MEMS (memory mode)." "w0 faders mems on panel"
+Wait-Idle 5 "w0 memory mode"
+Step "W0: on the CONSOLE press FADERS 1-24 (back to channel mode)." "w0 faders 1-24 on panel"
+Wait-Idle 5 "w0 channel mode"
+Step "W0: on the CONSOLE press SOLO (on), then SOLO again (off)." "w0 solo on off on panel"
+Wait-Idle 5 "w0 solo toggled"
+Step "W0: on the CONSOLE move the MASTER down a little and back to FULL." "w0 master wiggle on panel"
+Wait-Idle 10 "w0 master back at full"
+$w0 = Ask "W0: does the UI now show the console's key LEDs (the Record and Crossfader panels show LED readings), the MASTER at full and channel mode, and are channel fader 1, bump 7, MASTER, BUMPS, SOLO and BLACKOUT enabled? (y / what is missing)" "w0 console state reported"
+if ($w0.Trim().ToLowerInvariant() -ne 'y') {
+    Step "W0: repeat the four panel actions above once more (FADERS MEMS, FADERS 1-24, SOLO on and off, MASTER down and back)." "w0 repeated"
+    Wait-Idle 10 "w0 repeated"
+    $w0 = Ask "W0: and now? (y / what is missing)" "w0 console state reported 2"
+    if ($w0.Trim().ToLowerInvariant() -ne 'y') {
+        Log "STOP: the console's state is not reported after W0; no control is tried (the interlocks would refuse it)"
+        Write-Host "Without the console's reported state every control is refused by design. Press DISCONNECT and finish the end steps; tell the assistant what the UI showed." -ForegroundColor Red
+    }
+}
+$ok = $w0.Trim().ToLowerInvariant() -eq 'y'
+
 # --- The controls, one at a time, 10 s between steps, the console's answer watched in the UI ---
-$ok = $true
-Step "W1: in the UI, drag CHANNEL FADER 1 slowly to about 20 % and release it (the first write of our software; channel 1 is outside the rig)." "w1 channel fader 1 to 20"
-Wait-Idle 10 "after w1 up"
-$h66 = Ask "H66: did the UI's channel 1 level follow within a second (the console reported FaderInfo / ChannelLevels), yes or no? If no, type what the UI shows." "h66 channel 1 followed"
-if ($h66.Trim().ToLowerInvariant() -ne 'y' -and $h66.Trim().ToLowerInvariant() -ne 'yes' -and $h66.Trim().ToLowerInvariant() -ne 'followed') {
-    Log "STOP: the console did not follow channel fader 1 (H66 for writes); the session ends, nothing is retried"
-    Write-Host "The console did not follow: press DISCONNECT in the UI now (SC-2: the session ends, nothing is retried), then finish the end steps below." -ForegroundColor Red
-    $ok = $false
+if ($ok) {
+    Step "W1: in the UI, drag CHANNEL FADER 1 slowly to about 20 % and release it (the first write of our software; channel 1 is outside the rig)." "w1 channel fader 1 to 20"
+    Wait-Idle 10 "after w1 up"
+    $h66 = Ask "W1: three cases. (a) The UI shows 'Refused: ...': type the refusal text (nothing was sent). (b) The fader went out and the UI's channel 1 level followed within a second: type y. (c) The fader went out (no refusal) and the level did NOT follow: type no." "h66 channel 1 followed"
+    $answer = $h66.Trim().ToLowerInvariant()
+    if ($answer -match 'refus') {
+        Log "W1 refused by the device, nothing sent; the cause is in the refusal text"
+        Step "W1: a refusal means the console's state is not reported or not as required: repeat W0's four panel actions (FADERS MEMS, FADERS 1-24, SOLO on and off, MASTER down and back to full), wait 10 s, then drag CHANNEL FADER 1 to about 20 % once more." "w1 retry after refusal"
+        Wait-Idle 10 "after w1 retry"
+        $h66 = Ask "W1 retry: (a) refused again: type the text; (b) sent and followed: y; (c) sent and not followed: no." "h66 channel 1 followed retry"
+        $answer = $h66.Trim().ToLowerInvariant()
+    }
+    if ($answer -match 'refus') {
+        Log "STOP: W1 refused twice; no event was sent; the session ends without a write (the cause goes to the assistant)"
+        Write-Host "Refused twice: nothing was sent. Press DISCONNECT and finish the end steps; the refusal texts go to the assistant." -ForegroundColor Red
+        $ok = $false
+    } elseif ($answer -ne 'y' -and $answer -ne 'yes' -and $answer -ne 'followed') {
+        Log "STOP: the console did not follow channel fader 1 (H66 for writes); the session ends, nothing is retried"
+        Write-Host "The console did not follow a sent event: press DISCONNECT in the UI now (SC-2: the session ends, nothing is retried), then finish the end steps below." -ForegroundColor Red
+        $ok = $false
+    }
 }
 if ($ok) {
     Step "W1: in the UI, drag CHANNEL FADER 1 back to ZERO." "w1 channel fader 1 to zero"
@@ -258,13 +295,13 @@ if ($ok -and $optGo) {
     $ok = After-Control "GO (the crossfade in the UI's crossfader panel and on the console; which cue is live now?)" "w8 result"
     Ask "W8: the stack is now one cue further: leave it, or set it back on the console as you like; which cue is live?" "w8 stack position" | Out-Null
 }
-Log "E11 controls covered: channel fader 1, bump 7, SOLO, BLACKOUT, BUMPS, FADERS MEMS / 1-24 and memory bump 1 (optional), MASTER, GO (optional); SC-2 'E11 script adjustments' applied"
+if ($ok) { Log "E11 controls covered: channel fader 1, bump 7, SOLO, BLACKOUT, BUMPS, FADERS MEMS / 1-24 and memory bump 1 (optional), MASTER, GO (optional); SC-2 'E11 script adjustments' applied" } else { Log "E11 stopped before the controls were covered (see the STOP line above)" }
 Wait-Idle 10 "end of actions, an idle point"
 
 # --- End: disconnect at an idle point, the checks, the save ---
 Step "Press DISCONNECT in the UI (at an idle point: nothing pending)." "disconnect pressed"
 Confirm-Done "When the UI shows Disconnected." "disconnected (owner)"
-Ask "Does the UI or the backend log report a key still held, a release that could not be sent, or a write that did not complete? (n / the text)" "end-of-session report"
+Ask "Does the UI or the backend window show a message about a key still held, a release that could not be sent, or a write that did not complete? Type n if there is no such message, else its text." "end-of-session report"
 if (Test-Path -LiteralPath (Join-Path $captureDir "INCOMPLETE-WRITE.txt")) {
     Log "INCOMPLETE-WRITE.txt exists after the session"
     Write-Host ("INCOMPLETE-WRITE.txt exists in " + $captureDir + ": read the transfer log of this session before anything else; remove the file yourself only after that.") -ForegroundColor Red

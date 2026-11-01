@@ -703,6 +703,8 @@ each restored in place:
 
 **E11 guide (written 2026-10-31, evening, parse-checked; not run):** `tools/usb-probe/e11-guided-session.ps1`, the first live-control session of our software as SC-2 conditions it (safety-checks.md "Conditions for E11"); it starts nothing before the re-check's open items are closed and the owner's written acceptances are given, and since the evening of 2026-10-31 it includes FADERS MEMS / FADERS 1-24 and GO from the UI as optional steps (their port methods and UI keys were added at the owner's wish). E11 and E12b are independent: E12b is passive (SmartSoft), E11 is ours.
 
+**E11 attempt 1 (run 2026-11-01, morning; no write sent):** the owner ran the guide (7789a71) with the backend at 5416d7f; the console, power-cycled earlier and untouched since, listed nothing in 192 s (F166: no power-on list was pending after this history, H65 annotated), so the device refused the first control by condition 8 before any transfer, the guide mistook the refusal for the H66 stop, and the session ended at an idle point with 5 183 polls, 0 writes and SHOW18 = SHOW17. Record `captures/2026-11-01-e11-first-live-control-session-attempt-1.md`. The guide now makes the console report its state from the panel first (W0) and treats a refusal as "not sent"; attempt 2 is the owner's. E11's conditions (safety-checks.md) are unchanged.
+
 - a **channel step** (type 0) in the stack (H12, H98);
 - **Manual** (run mode 2) on KOTLIK and back (H95);
 - an insert and a delete at **another index** of KOTLIK (H102, H103);

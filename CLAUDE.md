@@ -269,6 +269,13 @@ F163, H109), so no SD save or load is made on the console while our software is 
 timeout would end the session, a safe stop). **E12b cleared nothing:** SC-1's poll and listed fetch remain the only messages cleared, SC-2's
 classes are unchanged, 0x32 and 0x3A are outside its whitelist, and our code never sends any of these messages. Next: "Next capture (proposed
 by the E12b analysis, 2026-10-31)" in `reverse-engineering.md` (owner questions, optional passive captures, static checks; no repeat needed).
+**E11 attempt 1, 2026-11-01 morning: no write sent** (record `docs/protocol/captures/2026-11-01-e11-first-live-control-session-attempt-1.md`): the owner
+ran the guided E11 session with the backend at 5416d7f and live control on; the console, power-cycled earlier and untouched since, listed nothing in
+192 s (5 183 polls, idle replies only; the "power-on" pending list of E3b / E8b was not pending after this history, F166 OBSERVED once, H65 annotated),
+so SC-2's interlock refused the first control by condition 8 before any transfer, the guide mistook the refusal for the H66 stop, the session ended
+at an idle point and `SHOW18.ASC` = `SHOW17.ASC`; the bus equals the backend's logs byte for byte. The guide now makes the console report its state
+from the panel before the first control (step W0) and treats a refusal as "not sent". **E11 is not done: its conditions and SC-2's decisions are
+unchanged, the console's behaviour towards a PC event from our software is still unobserved, nothing is promoted and nothing is cleared.**
 
 ## Commands
 

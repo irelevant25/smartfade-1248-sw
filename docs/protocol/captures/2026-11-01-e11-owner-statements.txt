@@ -1,0 +1,39 @@
+E11, attempt 1 (the first live-control session of our own software, SC-2 classes A and B1): owner statements (2026-11-01)
+
+Context (recorded by the assistant): the owner ran tools/usb-probe/e11-guided-session.ps1 (commit 7789a71 on top of 5416d7f; the
+backend at 5416d7f) from 10:00:12 to 10:15:05 local time (CET, UTC+1); the action log 2026-11-01-e11-actions.txt (sha256
+0365c9b84d9860f287f6aac2…, full hash in the record) holds the gates (the re-check items closed: y; every written acceptance SC-2
+lists: y; the rig decision: y; the optional memory bump and GO: y), the backup SHOW17.ASC (10:03:05), the versions (backend commit
+5416d7f, Windows 10.0.26300.0, firmware 3.0.2.9.0.43 as typed from Diagnostics, "the A-B cable straight into the PC's rear port"),
+"power cycled = y" (10:03:55), USBPcap from 10:04:32 (before the Zadig bind at 10:06:09; interface 1 ETCHSP before, WinUSB after),
+the backend started by the script with --Device:Mode=Usb --Device:Usb:ConfirmDate=2026-11-01 --Device:Usb:LiveControlDate=2026-11-01
+(10:06:10), "ui ready, hardware and live control badges" (10:07:45), Connect (10:09:49), the idle minute, and the first control.
+
+The owner's chat message after the session (quoted): "Done. Files from sd card copied to the smartfade-sd-card-backup."
+
+The owner's typed answers (from the action log, quoted):
+- "ui enabled controls = CONSOLE, SHOW FILE, CONNECT" (asked which controls were enabled before Connect: the owner named the
+  bar's items; before Connect every fader and key is disabled, so the answer describes the bar).
+- "idle observation = no" (nothing changed by itself during the idle minute; the UI's state: not described).
+- W1, channel fader 1 to about 20 % in the UI, then the H66 question: "no, setChannelLevel(1): Refused: the console has not
+  reported its key LEDs in this session yet (SC-2 conditions 5 and 8)." The guide read "no" as the console not following a
+  sent event (its H66 stop rule) and ended the session: in fact NO EVENT WAS SENT; the device refused the command before any
+  write, exactly as its interlock is built (condition 8: nothing before the console's first list and its LED state).
+- "end-of-session report = yes" (asked whether the UI or the backend log reported a key still held, a release that could not
+  be sent or a write that did not complete; the backend's log shows none of these: 0 writes, nothing pending, "session stopped
+  by the application at an idle point"; the answer is read as a misreading of the question, not as a report).
+- "end positions = everything in default state".
+- After-session save SHOW18.ASC (10:15:05). SHOW17.ASC and SHOW18.ASC both have sha256
+  559636399c1d82e0f95e737c961bfee31f88962fe8c486bbc6eba7f7d2177a90, byte-identical to each other and to SHOW16 … SHOW04.
+
+Reading for the record (by the assistant): the backend's transfer logs show two sessions on 2026-11-01, 10:07:55–10:08:12 (17 s,
+425 polls: a Connect pressed before the guide's Connect step, then a Disconnect; not in the action log) and 10:09:39–10:12:51
+(192 s, 4 758 polls), both with live control on, and in both the console answered EVERY poll with the idle reply: 0 lists,
+0 fetches, 0 objects, 0 writes, 0 framing errors. Nothing on the panel was touched between the power cycle and the first control,
+so the console had nothing to list, and the "power-on" pending list E8b saw did not appear here (the console had been on for
+minutes and had saved a show to the SD card before the first Connect). Without a LedStatus, ConsoleStatus and FaderInfo report
+the interlocks of SC-2 (conditions 5, 6 and 8) refuse every control: the session was correct and sent nothing. The first
+attempt of E11 therefore made no write; the console's behaviour towards a PC event is still unobserved (H66 for writes). The
+fix is in the guide: before the first control the operator makes the console report its state from the panel (a mode key, a
+toggle key, the MASTER), and a refusal is treated as "not sent" (fix the cause, try once), not as the console failing to follow.
+Owner statements never promote a fact by themselves; the backend's logs and the capture are the evidence.

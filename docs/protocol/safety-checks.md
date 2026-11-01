@@ -313,6 +313,16 @@ things in it are unobserved (items 2 and 11 below) and the session ends on the f
   through the above in that order and refuses to start the backend unless the re-check's open items are closed and every
   acceptance is answered y; it follows the "E11 script adjustments" below (bump 7 instead of bump 1, MASTER last, SOLO and BLACKOUT
   from a steady LED, memory bump 1 optional in memory mode between FADERS MEMS and FADERS 1-24 from the UI, GO optional and last).
+- **The console's state reported before the first control (added 2026-11-01 after attempt 1):** the interlocks refuse every control until
+  the console has reported its key LEDs, its fader mode and the MASTER (conditions 5, 6, 8), and a console with nothing pending reports
+  nothing to a host without the System pair (F166). So the operator makes it report from the PANEL after the idle minute (the guide's
+  step W0: FADERS MEMS, FADERS 1-24, SOLO on and off, the MASTER down and back to full) and checks the UI shows the LEDs, the MASTER and
+  channel mode before the first control; a refused control is "not sent" (repeat W0 once, then the control once; a second refusal ends
+  the attempt), only a sent event the console does not follow is the H66 stop.
+- **Attempt 1 (2026-11-01, backend 5416d7f, guide 7789a71): no write sent.** 5 183 polls in two sessions, 0 lists from the console, the
+  first control refused by condition 8 as designed, the guide read the refusal as the H66 stop, Disconnect at an idle point, SHOW18 =
+  SHOW17; the bus equals the backend's logs byte for byte. Record `captures/2026-11-01-e11-first-live-control-session-attempt-1.md`. **E11 is not done: its conditions are
+  unchanged, nothing is promoted, nothing is cleared.** Attempt 2 runs the corrected guide on the owner's go.
 
 ### Review (SC-2 item 10)
 
