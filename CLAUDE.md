@@ -303,14 +303,23 @@ objects (the console lists them for the press and the release), while the owner'
 E9 / E9b; 0 framing errors, the bus = the backend's log (49 426 transfers), `SHOW22.ASC` = `SHOW21.ASC`. After the guide the owner ran the
 backend twice more by hand (a read-only session; a live-control session with 57 writes: memory bump 1 taps in memory mode, channel fader 1
 drags, bump 7 taps, the panel's mode keys) **without USBPcap and after the SD save**: a recorded deviation, log-only evidence, no show data
-changeable by those classes, an SD save to compare still owed (owner question 1 of the record). The owner's wish to drive memory faders from
+changeable by those classes; `SHOW23.ASC`, saved afterwards and copied 2026-11-02, = `SHOW22.ASC` byte for byte. The owner's wish to drive memory faders from
 the PC without switching the console's mode is answered from the evidence (the record's section; H111 added): the only live-control message
 ever observed, ConsoleEvent, addresses the console's physical controls, so the console's fader mode decides what an event drives (F99, F112,
 F134); memory faders and bank 25-48 from the PC need E9c (a passive capture of SmartSoft's Simulator in memory mode and in bank 25-48) and a
 safety check, and the UI's FADERS 1-24 / MEMS keys are the only cleared way to change the console's bank. **E11 is done; SC-2's decisions
-and conditions are unchanged; nothing further is cleared.** Next: the owner's answers (SHOW23, the power cycle, session 3's actions, tap
-versus hold in the UI), E9c as "Path to a wider clearance" lists it, and a UI change proposed to the owner (the console's fader bank shown,
-the controls of the other banks marked as needing the switch).
+and conditions are unchanged; nothing further is cleared.** **Owner decisions 2026-11-02** (`reverse-engineering.md` "Owner decisions on
+scope"): the UI keeps the console's layout (built the same day: the right-hand columns FADERS / CROSSFADER / RECORD / MASTERS +
+INDEPENDENTS, the bank a real console reports lit from the new `faderBank` state field, RATE and NEXT inactive); the PC is to drive
+memory faders and channels 25-48 through an **automatic bank switch** (the FADERS key sent before the fader event) and **held bumps**
+are wanted; the console's state at Connect without touching the panel (SmartSoft's System pair, F58 / F89) is a candidate for a safety
+check SC-4, not decided. **E9c is the next capture** (passive, SmartSoft's Simulator; runbook in `reverse-engineering.md` "E9c runbook",
+guided script `tools/usb-probe/e9c-guided-session.ps1`, written and parse-checked 2026-11-02, not run): every channel fader of bank 1-24,
+the bank 25-48, memory faders on two pages, the matching rule with a PC level in force (H79 / H81, the automatic switch's risk), held bumps
+with durations, IND 1 / 2, STACK, PAUSE, NEXT (H112), CLEAR, a fader with the MASTER at half, a SmartSoft restart; then its record, a
+safety check SC-5 extending SC-2 (E9d for anything seen once), the owner's implementation, a live session E11b. Still open: the owner's
+answers on the power cycle between E11's attempts 2 and 3 and on session 3's other actions (asked by the E9c guide), and whether a held
+bump's lost-release case is accepted.
 
 ## Commands
 

@@ -132,6 +132,16 @@ and `smartfade-sd-card-backup/`, and the capture analyst writes the E8b record (
   patch or the stack over USB needs one capture per object type, like E9 for a memory. Loading a
   show into the console over USB stays closed (SmartSoft's upload replaces the console's show,
   F121); the SD card does that job.
+- **Added 2026-11-02, after E11:** the UI keeps the console's layout (the right-hand columns FADERS,
+  CROSSFADER, RECORD, MASTERS with INDEPENDENTS under it, the console's key colours), and **the PC
+  drives memory faders and channels 25-48 through an automatic bank switch:** when a fader of another
+  bank is moved in the UI, the backend presses the console's FADERS key for that bank first and then
+  sends the fader event, as the Simulator's user would do by hand (the owner checked SmartSoft: it has
+  no way to move a channel fader while MEMS is lit either). **Held bumps** from the UI are wanted. Both
+  are protocol widenings, not UI shortcuts: E9c (the runbook below) observes them from SmartSoft first,
+  a safety check extending SC-2 decides, the owner implements the sending code, a live session verifies.
+  The owner also wants the console's state at Connect without touching the panel, as SmartSoft has it
+  (its System pair, F58, F89): a candidate for its own safety check, SC-4, not decided.
 
 ### E9 runbook (passive capture of SmartSoft writing; proposed 2026-10-30 from S11.15)
 
@@ -302,6 +312,79 @@ whether a proportional patch level exists anywhere (the Patch object has none, F
 **E12 clears no message:** SC-1's poll and listed fetch remain the only messages cleared for a read-only session, SC-2's classes are
 unchanged (Patch and Independents stay class F, "Never"; the stack, sequence and page writes are in none of its classes), and a write of
 these objects by our code would need its own safety check, a full body decode and a restore story first.
+
+### E9c runbook (SmartSoft's live controls in every bank, held bumps, the keys seen once; passive; written 2026-11-02)
+
+**Why:** after E11 the owner decided (2026-11-02, "Owner decisions on scope") to drive memory faders and
+channels 25-48 from the PC through an **automatic bank switch** (the UI presses the console's FADERS key
+before a fader of another bank is moved) and to have **held bumps** from the PC. Nothing of that has been
+observed from SmartSoft: a fader event in memory mode or in bank 25-48, the FADERS 25-48 key a second time,
+the console's matching rule after a mode or page switch with a PC level in force (H79 / H81, the risk the
+automatic switch meets), and most channel fader indices of bank 1-24 (only 0x00, 0x04, 0x06 so far, H111).
+E9c is the passive capture SC-2's "Path to a wider clearance" names, scoped for that decision; it clears
+nothing by itself. After it: the record, a safety check that extends SC-2 (the classes for every fader
+index in every bank, held bumps with a bounded hold and the release before any Disconnect, the keys seen
+twice), the owner's implementation at the TODO-marked extension points, and a live session like E11.
+
+**Guided script (written 2026-11-02, parse-checked, not run):** `powershell -NoProfile -ExecutionPolicy Bypass
+-File tools/usb-probe/e9c-guided-session.ps1 -LogFile e9c-actions.txt` takes the owner through the setup gate
+(backup, the E11 owner questions still open, which keys the Simulator has, ETC's driver on interface 1, the
+Memory Integrity reading, USBPcap into `e9c-yyyyMMdd-HHmm.pcap` before SmartSoft, the starting position), starts
+SmartSoft itself, logs every step with the PC clock and ends with the after-session SD save.
+
+**Setup (owner):** show backed up to the SD card, name logged (safety rule 3); interface 1 on the ETC driver
+and Memory Integrity off, as for E9b; USBPcapCMD on the console's root hub (`-A --inject-descriptors`) into a new
+file; the starting position: channel mode 1-24, every channel fader at zero, MASTER and BUMPS at full, BLACKOUT,
+SOLO, IND 1 / 2, STACK and NEXT off, page 1, nothing armed; memory 1 of page 1 recorded (channels 7 and 8), memory
+9 of page 1 empty. The rig as before (DMX 5–16; IND 2 drives DMX 47).
+
+**Actions, in order ("Simulator" = SmartSoft's Console Simulator; waits are in the script):**
+
+- **S0.** Online, 60 s untouched (the System pair and the 157-record download once more, for a later SC-4);
+  the Simulator opened, 20 s untouched.
+- **S1. Every channel fader of bank 1-24:** Simulator faders 2 to 24, one at a time, up to about half, held 2 s,
+  back to zero (fader 1 is VERIFIED, 5 and 7 OBSERVED once). Expected: index = fader − 1 for all 24 (H111's
+  channel-mode clause; FaderInfo record N, ChannelLevels[N], DMX N, LED block N, the LCD cell).
+- **S2. Bank 25-48:** the Simulator's FADERS 25-48 (code 0x37, the second observation), then its faders 1, 2 and
+  24 moved and its bump 1 held 2 s there, then FADERS 1-24. Expected (H111): the same indices 0x00, 0x01, 0x17
+  and code 0x00, the console answering with channels 25, 26, 48 (ChannelLevels[25] …, DMX 25 …, the LCD
+  labels 25 / 37); the owner notes the LCD's channel numbers.
+- **S3. Memory mode:** FADERS MEMS, then the Simulator's faders 1, 2 and 9 as memory faders of page 1 (memory 1
+  = channels 7 and 8; memory 9 empty), memory bump 1 held 3 s, memory bump 9 tapped; a page change on the
+  CONSOLE (hold MEMS, bump 2) and the Simulator's fader 1 as memory 1 of page 2; back to page 1 and FADERS
+  1-24. Expected (H111, F112): the same index 0x00 moving FaderInfo record 1 as a memory fader, the memory's
+  channels following; the page's memory on page 2.
+- **S4. The matching rule with a PC level in force** (the automatic switch's risk, H79 / H81): (a) the
+  Simulator's channel fader 1 left at half, then FADERS MEMS: what memory fader 1 reads and whether memory 1's
+  light comes up; the Simulator's fader 1 to full and zero in memory mode; FADERS 1-24: what channel 1 reads
+  after the round trip; cleanup. (b) The physical fader 2 at half, FADERS MEMS, the Simulator's fader 2 from
+  zero (pick-up or at once?), FADERS 1-24, channel 2 afterwards; the physical fader to zero. (c) The
+  Simulator's memory fader 3 at half, a page change on the console, what fader 3 does on page 2; cleanup.
+- **S5. Held bumps with durations:** bump 7 held 3 s, bump 10 held 2 s, bump 7 held 2 s in SOLO mode, memory
+  bump 1 held 3 s in memory mode (the release's timing and what a hold does to the objects, for the SC-2
+  amendment on held bumps).
+- **S6. The live keys seen once or never:** IND 1 and IND 2 on / off (codes 0x47 / 0x48, the second
+  observation), STACK on / off without GO (0x3B), PAUSE twice with no fade running and NEXT on / fader 4 moved
+  blind / NEXT off, each only if the Simulator has the key (H107, H112: the codes 0x32 / 0x3A expected), then
+  CLEAR as one, two and three presses (0x38; levels only, F109).
+- **S7. A channel fader with the MASTER at half:** the Simulator's MASTER to half, its fader 1 to full and
+  back, the MASTER to full (F96: the post-MASTER values in FaderInfo and the level objects, the data for a UI
+  whose MASTER is not at full).
+- **S8. A SmartSoft restart:** close, start again (the System pair and the download, the counter from 0x00),
+  the Simulator's fader 1 once more; then the end: 30 s idle, SmartSoft closed, USBPcap stopped, the physical
+  positions described, the after-session SD save (must equal the backup byte for byte).
+
+**Never in E9c:** REC MEM, EDIT MEM, COPY, REC SEQ, MAGIC, SNAPSHOT (no show data on purpose); RATE (its
+setting is wheel-coupled) and the wheel; GO with STACK lit; Patch / Independents / Settings edits; page clicks
+in SmartSoft; Open showfile, New show, Save As, any Erase. The only console-side actions are the page changes
+(hold MEMS + a bump) and the physical fader 2 in S4b.
+
+**Evidence and what follows:** the USBPcap file (console-only split), the action log and the two SD files into
+`docs/protocol/captures/` with an E9c record (the analysis by the `capture-analyst` agent or the coordinator,
+read-only tools); outcomes for H111 (every index and both banks), H79 / H81 (the matching rule with a PC
+level), H82 (the new codes), H107, H112, F96; the held-bump timings; the System pair's count for SC-4. Then
+the safety check that extends SC-2 (no derivation replaces a capture: an index or a mode seen once in E9c
+needs E9d), the owner's implementation, a live session (E11b) under the same conditions as E11.
 
 ### Next capture (proposed by the E2 analysis, 2026-10-28)
 
@@ -710,7 +793,7 @@ each restored in place:
 
 **E11 attempt 2 (run 2026-11-01, afternoon; the first writes of our software):** the owner ran the guide at 85aa2f5 (W0 included); the console had LedStatus + DisplayContent pending at Connect (H65 annotated), W0 made it report its state (23 lists), and channel fader 1 dragged in the UI sent four class-A fader events that the console followed like a physical fader move (F167; H66 CONFIRMED in part for writes; record `captures/2026-11-01-e11-first-live-control-session-attempt-2.md`); the bus equals the backend's log byte for byte. The session ended on a mistyped guide answer (the case letter "b"), so W1's return to zero and W2–W8 are attempt 3's, with the guide now accepting the case letters a / b / c and confirming before an H66 stop. The owner's answers the same evening: the console was power-cycled again between the attempts (so the Connect-time pair is H65's power-on list; attempt 1's empty Connects stay unexplained), and after the Disconnect the console kept the PC value on channel 1 until the physical fader 1 was moved up and down (F141, a statement); `SHOW20.ASC` = `SHOW19.ASC`. E11's conditions (safety-checks.md) are unchanged; nothing further is cleared.
 
-**E11 attempt 3 (run 2026-11-01, evening; E11 done):** the owner ran the guide at 5485ea3 to its end; the console had the power-on pair pending at Connect (H65 annotated), W0 made it report its state (24 lists), and the UI then sent 116 ConsoleEvents, W1 to W8 (channel fader 1 up and back to zero, bump 7, SOLO, BLACKOUT, BUMPS, FADERS MEMS / memory bump 1 × 3 / FADERS 1-24, MASTER, GO × 2 with STACK unlit), each 27–46 ms after a poll's reply; the console followed every control as it follows the panel and SmartSoft (F167 VERIFIED in part, F168, F169; H66 CONFIRMED for writes, OBSERVED once each; record `captures/2026-11-01-e11-first-live-control-session-attempt-3.md`); the bus equals the backend's log byte for byte; `SHOW22.ASC` = `SHOW21.ASC`. A bump tap from the PC (47–77 ms) leaves no trace in the fetched objects; the owner's hold of the console's own memory bump 1 showed memory 1 as in E9 / E9b. After the guide the owner ran the backend twice more by hand (a read-only session and a live-control session with 57 writes of the same classes) without USBPcap and after the SD save: a recorded deviation, log-only evidence, an SD save to compare still owed. The owner's question of the same night (memory faders from the PC without switching the console's mode) is answered from the evidence in the record and in H111: the console's fader mode decides what a fader event drives; E9c (section B below) is the path. E11's conditions are unchanged; nothing further is cleared.
+**E11 attempt 3 (run 2026-11-01, evening; E11 done):** the owner ran the guide at 5485ea3 to its end; the console had the power-on pair pending at Connect (H65 annotated), W0 made it report its state (24 lists), and the UI then sent 116 ConsoleEvents, W1 to W8 (channel fader 1 up and back to zero, bump 7, SOLO, BLACKOUT, BUMPS, FADERS MEMS / memory bump 1 × 3 / FADERS 1-24, MASTER, GO × 2 with STACK unlit), each 27–46 ms after a poll's reply; the console followed every control as it follows the panel and SmartSoft (F167 VERIFIED in part, F168, F169; H66 CONFIRMED for writes, OBSERVED once each; record `captures/2026-11-01-e11-first-live-control-session-attempt-3.md`); the bus equals the backend's log byte for byte; `SHOW22.ASC` = `SHOW21.ASC`. A bump tap from the PC (47–77 ms) leaves no trace in the fetched objects; the owner's hold of the console's own memory bump 1 showed memory 1 as in E9 / E9b. After the guide the owner ran the backend twice more by hand (a read-only session and a live-control session with 57 writes of the same classes) without USBPcap and after the SD save: a recorded deviation, log-only evidence; `SHOW23.ASC`, saved afterwards and copied 2026-11-02, = `SHOW22.ASC`. The owner's question of the same night (memory faders from the PC without switching the console's mode) is answered from the evidence in the record and in H111: the console's fader mode decides what a fader event drives; E9c (section B below) is the path. E11's conditions are unchanged; nothing further is cleared.
 
 - a **channel step** (type 0) in the stack (H12, H98);
 - **Manual** (run mode 2) on KOTLIK and back (H95);

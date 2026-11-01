@@ -346,7 +346,7 @@ things in it are unobserved (items 2 and 11 below) and the session ends on the f
   for the press and the release); a held bump from the PC stays unsent (condition 4). **Deviation, recorded:** after the guide's END and the SD save the owner
   started the backend twice more by hand (23:04 read-only, 3 s; 23:07 live control, 242 s, 57 writes of the same classes behind the same interlocks: memory
   bump 1 taps in memory mode, channel fader 1 drags, bump 7 taps, the panel's mode keys between), **without USBPcap and without an SD pair**: evidence of the
-  backend's log alone, no show data changeable by those classes, an SD save to compare with `SHOW22.ASC` asked of the owner; the guide now ends with a reminder
+  backend's log alone, no show data changeable by those classes, and `SHOW23.ASC`, saved by the owner afterwards and copied 2026-11-02, equals `SHOW22.ASC` byte for byte; the guide now ends with a reminder
   that a later backend run needs USBPcap and an SD pair. Record `captures/2026-11-01-e11-first-live-control-session-attempt-3.md`. **E11 is done: the
   conditions and decisions above are unchanged; nothing further is cleared** (every index and code outside the whitelist, a held bump, a fader event in memory
   mode or in bank 25-48, the record keys, ChannelText, Memory, the System pair and class F stay as decided).
@@ -465,7 +465,13 @@ mode, a write outside the observed placement, a retry.
   so that H111 (the index addresses the physical fader; its effect is the console's mode's) and the matching rule (H79, H81) are observed before
   any of it is classed. Until then every fader index in memory mode and in bank 25-48 stays uncleared, the UI's FADERS 1-24 / MEMS keys (class
   B1, sent in E11) are the only cleared way to change what the console's 24 faders control, and no message that sets a memory fader or a
-  channel of the other bank directly is known to exist (our code never guesses one).
+  channel of the other bank directly is known to exist (our code never guesses one). **Owner decision 2026-11-02:** the
+  automatic bank switch is the way to go (the UI presses the console's FADERS key before a fader of another bank is moved) and
+  held bumps are wanted; the E9c runbook and guided script (`reverse-engineering.md` "E9c runbook",
+  `tools/usb-probe/e9c-guided-session.ps1`) are scoped for it: every channel fader of bank 1-24, the bank 25-48, memory faders on
+  two pages, the matching rule with a PC level in force, held bumps with durations, IND 1 / 2, STACK, PAUSE, NEXT, CLEAR, a fader
+  with the MASTER at half, a SmartSoft restart. The check that follows E9c (SC-5, with E9d for anything seen once) decides the
+  classes; until then nothing of it is cleared.
 - **SC-3 (record keys from the PC):** after E9c, and only with the owner's written acceptance of each key
   (REC MEM, EDIT MEM, COPY, CLEAR), an SD backup immediately before every session that enables them, a UI
   confirmation step before a record key is armed, and the same guard against a stray bump as the panel has

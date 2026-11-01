@@ -118,3 +118,17 @@ learns the MASTER only at its first move. Our software sends neither System mess
 being the object that also carries the erase commands, F121), so a console with nothing pending tells it nothing (F166) and the
 guide's W0 panel step exists. A dedicated safety check (SC-4) could clear exactly those two bodies for the Connect step; proposed
 to the owner in the chat, not run.
+
+--- Statement 7 (chat, 2026-11-02; verbatim) ---
+"Okay, you have SHOW23.ASC now. You may continue. I have tried to run smartsoft and there is now way how to move channel
+fader when the memories bump is lit/on. I mean it may be possible and smartsoft it just did not implemented it but if you
+said that the addresses to write it to the console are pretty much the same for channel 1 no matter if the memories or
+channels are lit/on then I trust you that is it no possible in direct way. So we may go with automatic switch way I would
+say."
+Reading: (1) SHOW23.ASC copied into smartfade-sd-card-backup/: 15 944 bytes, SHA-256 559636399c1d82e0f95e737c961bfee31f88962fe8c486bbc6eba7f7d2177a90,
+equal to SHOW22.ASC byte for byte, so the two backend sessions after the guide changed no show data either (the record's
+owner question 1 closed). (2) The owner checked SmartSoft: its Simulator offers no way to move a channel fader while MEMS
+is lit (a statement about SmartSoft's UI, consistent with E9 / E9b where the Simulator switched banks with the keys).
+(3) He accepts H111's reading (the fader index names the physical fader; the console's bank decides what it drives) as
+the working assumption and decides for the automatic bank switch (recorded in reverse-engineering.md "Owner decisions on
+scope", 2026-11-02); E9c (runbook and guided script written the same day) is the next capture.
