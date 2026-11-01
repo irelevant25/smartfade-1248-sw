@@ -332,6 +332,8 @@ while ([string]::IsNullOrWhiteSpace($after)) {
 Log ("after-session save: " + $after.Trim() + " (copy it into smartfade-sd-card-backup/ with the backup)")
 Log "END guided E11 session"
 Write-Host ""
+Write-Host "If you start the backend again after this point, that run is OUTSIDE this session's conditions: start USBPcap first (a new file name) and save the show to the SD card afterwards, or leave the console alone. (Attempt 3, 2026-11-01: two later runs had no USBPcap and no SD pair.)" -ForegroundColor Yellow
+Write-Host ""
 Write-Host "Files to copy into docs/protocol/captures/ (with the date prefix ...-e11-...):" -ForegroundColor Green
 Write-Host ("   action log:   " + $LogFile) -ForegroundColor White
 Write-Host ("   backend log:  " + $captureDir + " (the newest .jsonl: the evidence of every transfer our software made)") -ForegroundColor White
