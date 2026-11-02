@@ -34,7 +34,7 @@ describe('StackPageComponent', () => {
     fixture.detectChanges();
 
     expect(element().querySelector('.stack__empty')?.textContent?.trim()).toBe(
-      "No show loaded. Load one from the card (Show menu); the console's own show will appear here at Connect once that is cleared.",
+      "No show loaded. Open a file (Show menu); the console's own show will appear here at Connect once that is cleared.",
     );
     expect(element().querySelector('.stack__tabs')).toBeNull();
   });

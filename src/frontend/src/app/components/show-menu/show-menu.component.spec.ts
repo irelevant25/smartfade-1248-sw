@@ -53,12 +53,12 @@ describe('ShowMenuComponent', () => {
     openMenu();
     expect(trigger().getAttribute('aria-expanded')).toBe('true');
     expect(panel()?.textContent).toContain('No show loaded');
-    expect(panel()?.querySelector('.menu__load')?.textContent).toContain('Load from card');
+    expect(panel()?.querySelector('.menu__load')?.textContent).toContain('Open file…');
     expect(save().disabled).toBe(true);
     expect(element().querySelector<HTMLButtonElement>('.menu__revert')?.disabled).toBe(true);
   });
 
-  it('loads a file from the card through the backend into the store, names it, and closes', async () => {
+  it('opens a file through the backend into the store, names it, and closes', async () => {
     mockParse(sampleShow());
     await pickFile();
 
@@ -73,7 +73,7 @@ describe('ShowMenuComponent', () => {
     openMenu();
     expect(panel()?.textContent).toContain('SHOW07.ASC');
     expect(panel()?.textContent).toContain('unchanged');
-    expect(panel()?.querySelector('.menu__load')?.textContent).toContain('Load another from card');
+    expect(panel()?.querySelector('.menu__load')?.textContent).toContain('Open another file…');
   });
 
   it('reports a file the backend refuses, keeps the panel open and loads nothing', async () => {
@@ -85,7 +85,7 @@ describe('ShowMenuComponent', () => {
     expect(trigger().querySelector('.menu__name')).toBeNull();
   });
 
-  it('enables Save to card only for a loaded and edited show, saves the rendered file as a new file, and keeps the edits marked', async () => {
+  it('enables Save as file only for a loaded and edited show, saves the rendered file as a new file, and keeps the edits marked', async () => {
     mockParse(sampleShow());
     await pickFile();
     openMenu();

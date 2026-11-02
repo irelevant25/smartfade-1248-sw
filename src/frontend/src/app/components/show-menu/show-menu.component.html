@@ -6,7 +6,7 @@
     aria-haspopup="true"
     aria-controls="show-menu-panel"
     [attr.aria-expanded]="open()"
-    title="The show: load one from the card, save the edited one for the card"
+    title="The show: open a file, save the edited one as a new file (copy it to the console's SD card yourself)"
     (click)="toggle()"
   >
     <span class="menu__word">Show</span>
@@ -35,11 +35,11 @@
       </p>
 
       <label class="sf-key menu__load">
-        {{ loaded() ? 'Load another from card' : 'Load from card' }}
-        <input type="file" accept=".asc,.ASC" class="menu__input" aria-label="Load a show file from the card" [disabled]="busy()" (change)="pick($event)" />
+        {{ loaded() ? 'Open another file…' : 'Open file…' }}
+        <input type="file" accept=".asc,.ASC" class="menu__input" aria-label="Open a show file (.asc)" [disabled]="busy()" (change)="pick($event)" />
       </label>
-      <button type="button" class="sf-key sf-key--accent menu__save" [disabled]="!canSave()" title="Renders the edited show and saves it as a new .asc file through the browser, for the SD card; the loaded file is never changed" (click)="save()">
-        Save to card
+      <button type="button" class="sf-key sf-key--accent menu__save" [disabled]="!canSave()" title="Renders the edited show and saves it as a new .asc file on this PC; the opened file is never changed. The PC cannot write the console's SD card: copy the file to the card and load it on the console" (click)="save()">
+        Save as file…
       </button>
       <button type="button" class="sf-key menu__revert" [disabled]="!dirty() || busy()" (click)="revert()">
         Revert edits
@@ -48,7 +48,7 @@
       @if (error(); as problem) {
         <p class="menu__error" role="alert">{{ problem }}</p>
       }
-      <p class="menu__hint">A show from the card (SHOWnn.ASC or a SmartSoft save). Edits are saved as a new file for the card; nothing reaches the console over USB.</p>
+      <p class="menu__hint">A show file from the console's SD card (SHOWnn.ASC) or a SmartSoft save. Edits are saved as a new file on this PC: copy it to the SD card and load it on the console. Nothing reaches the console over USB.</p>
     </div>
   }
 </div>

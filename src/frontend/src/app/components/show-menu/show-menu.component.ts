@@ -4,9 +4,9 @@ import { ShowStore } from '../../core/show.store';
 
 /**
  * The Show menu in the top bar: a button that opens a compact panel with the loaded show's name and its "edited"
- * marker, "Load from card" (a `.asc` file chosen in the browser, parsed by the backend, then handed to the
- * `ShowStore`), "Save to card" (the edited show rendered by the backend and saved as a new file through the
- * browser, for the SD card; only when a show is loaded and edited) and "Revert edits". It is the only place in
+ * marker, "Open file…" (a `.asc` file chosen in the browser, parsed by the backend, then handed to the
+ * `ShowStore`), "Save as file…" (the edited show rendered by the backend and saved as a new file through the
+ * browser, for the owner to copy to the SD card, which the PC cannot write; only when a show is loaded and edited) and "Revert edits". It is the only place in
  * the UI that deals with files; the PATCH and STACK / SEQ pages only read the store. Nothing reaches a console.
  */
 @Component({
@@ -30,7 +30,7 @@ export class ShowMenuComponent {
   protected readonly name = this._store.name;
   protected readonly loaded = this._store.loaded;
   protected readonly dirty = this._store.dirty;
-  /** Saving makes sense only for a loaded show with edits (the original file is on the card already). */
+  /** Saving makes sense only for a loaded show with edits (the opened file is on the PC or the card already). */
   protected readonly canSave = computed(() => this.loaded() && this.dirty() && !this.busy());
 
   protected toggle(): void {

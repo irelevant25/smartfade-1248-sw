@@ -161,7 +161,14 @@ mode would lift it; (5) COPY, REC MEM, EDIT MEM, REC SEQ "not working" → the r
 written acceptance per key, the evidence E9 / E9b for REC MEM, EDIT MEM and COPY, none for REC SEQ, a safety check, a live session);
 (6) "I do not see the PATCH page … Stack/Seq edit page" → they exist on the UI's **Show file** page (the bar's "Show file" view:
 load an `.asc` from the SD card, edit the patch and the stack / sequences, save as a new file; the console's live patch is never
-written over USB, SC-2 class F) → a naming / discoverability follow-up in the UI.
+written over USB, SC-2 class F) → a naming / discoverability follow-up in the UI. **Rebuilt the same evening** (d2b775b) as the views PATCH and STACK / SEQ with a Show menu, at his "No no no"
+to the file-centred page. **Later the same evening:** he expects a loaded file to replace the console's show while connected ("when
+I am connected to the device and open a file it should replace the content of that file state on/to the console"), which is
+SmartSoft's "send show" (F121's destructive path, never captured): offered as a path of its own (a passive capture E14 of SmartSoft
+opening a show while Online, a safety check with his written acceptance, the implementation, the review, a live session), not
+decided; the Show menu's "Save to card" renamed "Save as file…" the same evening, because the PC cannot write the console's card.
+He refuses a panel action for the MASTER after Connect ("the smartsoft do it without me doing anything") → SC-4 clause 4, the probe
+(a bump tap of an unpatched channel sent by the device once after the download).
 
 ### E9 runbook (passive capture of SmartSoft writing; proposed 2026-10-30 from S11.15)
 

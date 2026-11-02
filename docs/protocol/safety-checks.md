@@ -1014,11 +1014,12 @@ the gate (`:1409-1423`); the per-object quiet count rests on F57; the whitelist,
 read-only session, the simulator and the other interlocks untouched; every test byte from a committed capture (backend-6 seqs 4146 /
 4150, 4227 / 4231, 4296 / 4300, 4446 / 4450, 4506 / 4510; E9d 38764 / 38879, 11362; the owner's two cases confirmed: pseq 29 / 30 listed
 after one idle reply, pseq 38 / 39 six idle replies and nothing listed). One minor and three nits, fixed the same evening by the
-subagent (442 backend tests), the reviewer's confirmation pending:
+subagent (442 backend tests) and **confirmed by the reviewer the same evening (over 0909c84): RESOLVED, nothing open on the
+review side for SC-5 item 10; the pass clears nothing for sending**:
 
 | # | Finding | Status |
 |---|---|---|
-| MINOR H | The pre-press value can be stale: the bump press's condition did not hold while FaderInfo or ChannelLevels was listed and unfetched (`:1409`); reachable when such a list carries no LedStatus (the subagent's recount of E9d: 38 of 513 channel-mode lists and 348 of 430 memory-mode lists; with LedStatus first the gate already held the press). Safe direction: a fader moved to the bump's level within one poll before our bump keeps its shadow (the lockout, rarely); the unsafe direction would also need two quiet replies before the release's report, never observed. | **Fixed 2026-11-02 by the subagent, confirmation pending:** the press holds while FaderInfo (and ChannelLevels for a channel bump) is listed and unfetched (`QueueBump` `:1421`, the log notes "…bump 5's press waits for the level its fader reports now"); test `A_bump_press_waits_for_its_faders_current_report` (`UsbSmartFadeDeviceTests.cs:2217`, both list orders from backend-6: seq 4019 / 4023 / 4027 without LedStatus, which fails without the wait, and 9297 / 9301 / 9309 / 9313 with LedStatus first). The optional null pre-press value was not taken: it would lock the new target's fader whenever its content is at the bump's level. |
+| MINOR H | The pre-press value can be stale: the bump press's condition did not hold while FaderInfo or ChannelLevels was listed and unfetched (`:1409`); reachable when such a list carries no LedStatus (the subagent's recount of E9d: 38 of 513 channel-mode lists and 348 of 430 memory-mode lists; with LedStatus first the gate already held the press). Safe direction: a fader moved to the bump's level within one poll before our bump keeps its shadow (the lockout, rarely); the unsafe direction would also need two quiet replies before the release's report, never observed. | **RESOLVED (confirmed over 0909c84):** the press holds at its slot while FaderInfo (and ChannelLevels for a channel bump) is listed and unfetched (`QueueBump` `:1421`, the log notes "…bump 5's press waits for the level its fader reports now"); test `A_bump_press_waits_for_its_faders_current_report` (`UsbSmartFadeDeviceTests.cs:2217`, both list orders from backend-6: seq 4019 / 4023 / 4027 without LedStatus, which fails without the wait, and 9297 / 9301 / 9309 / 9313 with LedStatus first). The optional null pre-press value was not taken: it would lock the new target's fader whenever its content is at the bump's level. |
 | NIT I | "a held bump reads body[193]" tagged VERIFIED holds at BUMPS 0xFF only (F97; F178 has 0x81 once, memory mode; channel mode below full never captured). | **Fixed:** per BUMPS level in the tag (`:46`), the `BumpShadow` doc (`:747-750`), `ShadowEnds` and "Changes after E11b" (VERIFIED at 0xFF, 0x81 once, INFERRED below full in channel mode). |
 | NIT J | The quiet path's docs cited "listed within 16-67 ms"; the bound that matters is the reply count (at most one quiet reply before the release's report in every observed release; up to 112 ms in our host). | **Fixed:** the reply count cited (`:824`, the tag, "Changes after E11b"), recounted by the subagent with the same result. |
 | NIT K | "the fail-closed edge remains only while a bump is held on the panel" was incomplete: also when the content reaches the bump's level during our hold or just before the press; both fail closed, inherent to F178. | **Fixed:** both edges named (`:757`, "Changes after E11b"); the second narrowed by MINOR H's wait. |
@@ -1132,10 +1133,22 @@ Cleared for building, reviewing and one first session E13 on the owner's go, not
    no bump held), the device refuses the pair if anything already reported shows NEXT, BLACKOUT, a record function armed or bank 25-48
    (a pending list at Connect, F177 / H65), and the owner accepts in writing the residual: the pair sent in a state SmartSoft was never
    seen in, with the console's answer UNKNOWN (the only observed effect of the pair being a listing, and the erase values unrepresentable).
-4. **What the pair does not give.** The download never carries FaderInfo (the MASTER and BUMPS levels), DisplayContent or PlaybackInfo
-   (F182, F186): SC-2's condition that the MASTER be reported before a channel or memory fader moves stays, so a session still needs one
-   MASTER movement on the panel before the first fader from the UI (the UI says so instead of "Not reported by the console yet"); the
-   SC-5 matching rule and every other interlock are unchanged.
+4. **What the pair does not give, and the MASTER probe.** The download never carries FaderInfo (the MASTER and BUMPS levels),
+   DisplayContent or PlaybackInfo (F182, F186), and SC-2's condition that the MASTER be reported before a channel or memory fader
+   moves stays. The owner refuses a panel action for it (2026-11-02, evening: "the smartsoft do it without me doing anything"), so the
+   device learns the MASTER by **one probe after the download: a tap of the bump of an unpatched channel**, sent by the device itself.
+   Evidence: a bump press makes the console list FaderInfo (the whole object, body[193] BUMPS and body[194] MASTER included),
+   ChannelLevels and LedStatus (F174, F178; 16–67 ms after the press); an unpatched channel changes no DMX output (channel 49 in E8b,
+   channel 47 in E9d: "no DMX"); the channel bumps 1–48 are cleared as holds by SC-5 (a tap being a 47–77 ms hold, F168) and the
+   physical-control rule names the bump (F171 / F174). Conditions: the probe runs only when FaderInfo has not been reported since
+   Connect, only in channel mode (bank 1-24 or 25-48 as the download's ConsoleStatus says; in memory mode the physical bump is a
+   memory bump, so the device first switches to bank 1-24 by the automatic switch of SC-5 or, if that is refused, asks the user to
+   move a fader), only for a channel whose Patch entry in the download is unpatched (0 in every one of its 512 DMX entries; the
+   first such channel of the shown bank), never under SOLO, BLACKOUT or a record function, exactly once per session, with the
+   bump shadow of SC-5 covering it as any bump of ours; if every channel of the shown bank is patched, no probe: the UI asks for one
+   fader movement on the panel instead. The channel's bump LED blinks once and ChannelLevels[c] reads 0xFF for the tap; nothing on
+   the stage changes (OBSERVED for unpatched channels, INFERRED for a channel whose only address is on a dimmer that is not in use).
+   The owner accepts the probe in writing; the SC-5 matching rule and every other interlock are unchanged.
 5. **One encoder, one whitelist, golden tests.** The two bodies as enum members with their evidence (F181), the placement and the version
    gate replayed over the 20 SmartSoft sessions (the pair's bytes, the ConsoleVersion gate, the download accepted record by record), the
    refusal of controls during the download, the switch's refusals (no `StartupPairDate` → no pair; a date not today → the backend refuses
@@ -1149,7 +1162,11 @@ Cleared for building, reviewing and one first session E13 on the owner's go, not
   to be written from the E11b one: the gate questions, the versions, the starting position, Connect with the pair, the read-only minute
   after the download, then one MASTER movement on the panel and the SC-2 sanity control, Disconnect at an idle point, the SD save).
 - The owner gives the go after reading this section and accepts in writing: the residual of item 3 (a state never seen), the blind window
-  of 7.2–7.6 s, the recovery path after a cut download (a SmartSoft start), and that the MASTER still needs one panel move per session.
+  of 7.2–7.6 s, the recovery path after a cut download (a SmartSoft start), and the MASTER probe of clause 4 (a bump tap of an unpatched
+  channel sent by the device once after the download; one panel fader movement instead when every channel of the shown bank is patched).
+  *(His answers of 2026-11-02, evening, in chat: to the blind window "And?", to the recovery "Hm what?" (explained: keep SmartSoft
+  installed as the way out), to the MASTER "the smartsoft do it without me doing anything so the solution should be somewhere there"
+  (answered by the probe); the written yes is still open.)*
 - Record: the two writes with their placement (ms after the reply, the next poll), the ConsoleVersion bytes, the download (its record
   count, bytes, duration, the order against F182, every record decoded), what the UI showed at the end of the download (mode, bank, page,
   LEDs, levels, independents, file name, memories, patch, stack), that nothing changed (the live objects delivered later against the

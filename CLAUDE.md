@@ -416,7 +416,10 @@ only way out until a safety check clears the whole-object writes; 340 frontend t
 a conditional decision for the owner (the two payloads once per Connect, the version gate, the download taken whole with no control
 during it, a per-day switch `Device:Usb:StartupPairDate`, E13 as the first session); nothing is built or sent before his acceptances.
 **The bump shadow's end rule was replaced at his request** (the Opus subagent; a bump that changed nothing frees its fader after two
-quiet replies; the reviewer's fourth pass pending).
+quiet replies; the reviewer's fourth pass PASS, its minor and nits fixed and confirmed the same evening, 0909c84: the press waits for the
+fader's current report; 442 backend tests). The Show menu's "Save to card" became "Save as file…" (the PC cannot write the console's
+card); the owner's wish that an opened file replace the console's show while connected is SmartSoft's "send show" (F121, never
+captured): a path of its own (E14 passive first), offered, not decided.
 
 ## Commands
 

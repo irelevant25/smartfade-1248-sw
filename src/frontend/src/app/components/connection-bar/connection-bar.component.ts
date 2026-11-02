@@ -8,7 +8,7 @@ import { canConnect, canDisconnect, describeMode, describeStatus } from './conne
 /**
  * Top bar: which mode the app is in (always visible, never ambiguous), whether the console is
  * connected, the view switch (LIVE, PATCH, STACK / SEQ), the connect / disconnect keys, the Show
- * menu (the show's file: load from the card, save for the card), what is known about the show and
+ * menu (the show's file: open a file, save for the card), what is known about the show and
  * firmware, and the last error.
  */
 @Component({
