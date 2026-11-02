@@ -1156,6 +1156,11 @@ Cleared for building, reviewing and one first session E13 on the owner's go, not
 6. **Nothing else:** no other System value, no second pair, no pair on a reconnect without a new Connect, no pair while live control is
    sending (the pair is first or not at all), no change to what SC-1 / SC-2 / SC-5 cleared.
 
+**Owner's acceptance (2026-11-02, evening, chat): "1. yes to SC-4"**, given after the probe clause was written and the two earlier
+questions explained (the blind window: "And?"; the recovery through SmartSoft: "Hm what?", explained); the building of class E as bounded
+above starts on that word (the Opus 5.5 subagent, the `protocol-safety-reviewer`, then E13 on his go on the day, where the gate asks the
+acceptances once more).
+
 ### Conditions for E13 (the first session with the pair) and what to record
 
 - Backup to the SD card first, the name in the log; USBPcap from before the Zadig bind; a guided script (`tools/usb-probe/e13-guided-session.ps1`,

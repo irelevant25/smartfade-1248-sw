@@ -168,7 +168,17 @@ SmartSoft's "send show" (F121's destructive path, never captured): offered as a 
 opening a show while Online, a safety check with his written acceptance, the implementation, the review, a live session), not
 decided; the Show menu's "Save to card" renamed "Save as file…" the same evening, because the PC cannot write the console's card.
 He refuses a panel action for the MASTER after Connect ("the smartsoft do it without me doing anything") → SC-4 clause 4, the probe
-(a bump tap of an unpatched channel sent by the device once after the download).
+(a bump tap of an unpatched channel sent by the device once after the download). **His answers later that evening:** "1. yes to SC-4"
+(the implementation starts); "2. … If I open the file in the UI while connected, then it should replace the state on the console with it.
+Completely. If I press connect it should 'download' the state from the console to the UI." (the download is SC-4; the replacement is
+SmartSoft's "send show": decided as wanted, the path E14 (a passive capture of SmartSoft opening a show while Online, three opens: the
+same show, a copy with one label changed, the original again, with an SD pair) → a safety check SC-7 with his written acceptance → the
+implementation and review → a live session); "3. Every record key except maybe SNAPSHOT which is always on/lit on the console and I do not
+know what is that for should work in both ways." (= REC MEM, EDIT MEM, COPY and REC SEQ from the UI and mirrored from the console:
+**SC-3** opens with this as his acceptance per key; REC MEM, EDIT MEM and COPY were pressed from SmartSoft's Simulator in E9 and E9b,
+REC SEQ never from a PC, so a passive capture E15 of the four record flows from the Simulator comes first, then the check, the interlock's
+redesign (a write while a record function is armed only for the keys that complete or cancel it), the implementation, the review, a live
+session; SNAPSHOT stays out).
 
 ### E9 runbook (passive capture of SmartSoft writing; proposed 2026-10-30 from S11.15)
 
