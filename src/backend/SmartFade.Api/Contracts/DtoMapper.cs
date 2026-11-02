@@ -103,7 +103,8 @@ public static class DtoMapper
             state.ShowFileName,
             state.FirmwareVersion,
             state.WritableControls?.Order(StringComparer.Ordinal).ToArray(),
-            FaderBankName(state.FaderBank));
+            FaderBankName(state.FaderBank),
+            state.BlinkingFaders?.ToArray());
 
     /// <summary>docs/api.md `faderBank`: "channels1To24", "channels25To48", "memories" or null when the device reports none.</summary>
     private static string? FaderBankName(FaderBank? bank) => bank switch

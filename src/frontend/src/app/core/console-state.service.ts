@@ -133,6 +133,14 @@ function sanitizeLcd(lines: readonly string[] | null | undefined): readonly stri
   return lines.map((line) => (typeof line === 'string' ? line : ''));
 }
 
+/** The physical faders 1..count named in the list; anything else is dropped (a missing list means none blinks). */
+function sanitizeFaders(faders: readonly number[] | null | undefined, count: number): ReadonlySet<number> {
+  if (!Array.isArray(faders)) {
+    return new Set<number>();
+  }
+  return new Set(faders.filter((fader) => Number.isInteger(fader) && fader >= 1 && fader <= count));
+}
+
 function sanitizeCrossfader(dto: CrossfaderDto | null | undefined): CrossfaderDto | undefined {
   if (!dto || typeof dto !== 'object' || !Number.isInteger(dto.step) || dto.step < 0) {
     return undefined;
@@ -220,6 +228,7 @@ export class ConsoleStateService {
   private readonly _independentsReported = signal(false);
   private readonly _memoryPage = signal<number | undefined>(undefined);
   private readonly _faderBank = signal<FaderBank | undefined>(undefined);
+  private readonly _blinkingFaders = signal<ReadonlySet<number>>(new Set<number>());
   private readonly _keys = signal<PanelKeysDto | undefined>(undefined);
   private readonly _lcd = signal<readonly string[] | undefined>(undefined);
   private readonly _crossfader = signal<CrossfaderDto | undefined>(undefined);
@@ -260,6 +269,8 @@ export class ConsoleStateService {
   readonly memoryPage = this._memoryPage.asReadonly();
   /** What the console's physical faders control when the device reports it (a real console), else undefined. */
   readonly faderBank = this._faderBank.asReadonly();
+  /** The physical faders 1..24 whose LED the console blinks (a real console), else empty; display only. */
+  readonly blinkingFaders = this._blinkingFaders.asReadonly();
   /** The key LEDs a real console reports (hardware mode), else undefined: the keys then follow the UI's own logic. */
   readonly keys = this._keys.asReadonly();
   /** The console's LCD lines (a real console only); not shown by the UI, kept for the contract. */
@@ -328,6 +339,7 @@ export class ConsoleStateService {
     );
     const bank = state.faderBank;
     this._faderBank.set(FADER_BANKS.includes(bank as FaderBank) ? (bank as FaderBank) : undefined);
+    this._blinkingFaders.set(sanitizeFaders(state.blinkingFaders, this._capabilities().physicalFaders));
     this._keys.set(sanitizeKeys(state.keys));
     this._lcd.set(sanitizeLcd(state.lcd));
     this._crossfader.set(sanitizeCrossfader(state.crossfader));

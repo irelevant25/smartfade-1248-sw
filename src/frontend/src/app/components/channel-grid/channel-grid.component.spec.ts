@@ -209,6 +209,42 @@ describe('ChannelGridComponent', () => {
       expect(bumps[6].disabled).toBe(false);
       expect(bumps.filter((_, index) => index !== 6).every((button) => button.disabled)).toBe(true);
     });
+
+    it('marks the bump of each fader the console blinks, in the bank the console shows only', () => {
+      const blinking = () =>
+        bumpButtons().flatMap((button, index) =>
+          button.classList.contains('fader__bump--blinking') ? [index + 1] : [],
+        );
+      const report = (faderBank: 'channels1To24' | 'channels25To48' | 'memories', blinkingFaders: number[] | null) => {
+        state.applyConsoleStateChanged(
+          createSampleState({
+            connection: { ...createSampleState().connection, mode: 'hardware' },
+            supportedCommands: ['setChannelLevel', 'bumpChannel'],
+            writableControls: ['channelFader:2', 'channelBump:7'],
+            faderBank,
+            blinkingFaders,
+          }),
+        );
+        fixture.detectChanges();
+      };
+      expect(blinking()).toEqual([]);
+
+      // physical faders 1 and 12 (E9c's mode switch, frame 47749) belong to channels 1 and 12 in bank 1-24 ...
+      report('channels1To24', [1, 7, 12]);
+      expect(blinking()).toEqual([1, 7, 12]);
+      // ... display only: bump 7 stays the one enabled
+      expect(bumpButtons()[6].disabled).toBe(false);
+
+      // ... to channels 25 and 36 in bank 25-48, and to no channel in memory mode
+      report('channels25To48', [1, 12]);
+      expect(blinking()).toEqual([25, 36]);
+      report('memories', [1, 12]);
+      expect(blinking()).toEqual([]);
+
+      // a report without the list (the simulator) blinks nothing
+      report('channels1To24', null);
+      expect(blinking()).toEqual([]);
+    });
   });
 
   describe('moving focus with the arrow keys', () => {

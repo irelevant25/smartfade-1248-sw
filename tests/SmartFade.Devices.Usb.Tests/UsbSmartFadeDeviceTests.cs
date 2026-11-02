@@ -576,7 +576,9 @@ public class UsbSmartFadeDeviceTests
     /// seq 796 (channel mode, bank 1-24, page 1, NEXT off), ChannelLevels seq 11632 (every channel at zero; left out with
     /// <paramref name="withChannelLevels"/> false) and LedStatus seq 11636 (REC MEM, EDIT MEM, COPY, REC SEQ, SOLO,
     /// BLACKOUT, IND 1 and IND 2 off, STACK dim), served in that order, so the key LEDs are reported last.
-    /// <paramref name="delay"/> replaces the virtual clock's plain delay; the transfer log's notes are kept.
+    /// <paramref name="delay"/> replaces the virtual clock's plain delay; the transfer log's notes are kept. Without
+    /// <paramref name="withFaderInfo"/> FaderInfo is left out; with <paramref name="order"/> the pipe's transfers, the log's
+    /// notes and the loop's waits are entered there in the order they happen ("out HEX", "in HEX", "note TEXT", "wait").
     /// </summary>
     private static LiveRig LiveConsole(
         bool relistAfterWrites = false,
@@ -585,13 +587,17 @@ public class UsbSmartFadeDeviceTests
         string? liveControlDate = "today",
         int failDataTransfer = 0,
         ConsoleFault faultAfterWrite = ConsoleFault.None,
-        bool withChannelLevels = true)
+        bool withChannelLevels = true,
+        bool withFaderInfo = true,
+        List<string>? order = null)
     {
-        var objects = new List<(int, byte[])>
+        var objects = new List<(int, byte[])>();
+        if (withFaderInfo)
         {
-            ((int)HspObjectId.FaderInfo, E9bBody(11628)),
-            ((int)HspObjectId.ConsoleStatus, E9bBody(796)),
-        };
+            objects.Add(((int)HspObjectId.FaderInfo, E9bBody(11628)));
+        }
+
+        objects.Add(((int)HspObjectId.ConsoleStatus, E9bBody(796)));
         if (withChannelLevels)
         {
             objects.Add(((int)HspObjectId.ChannelLevels, E9bBody(11632)));
@@ -606,8 +612,9 @@ public class UsbSmartFadeDeviceTests
         };
         var clock = new VirtualClock();
         var options = new UsbDeviceOptions { LiveControlDate = liveControlDate == "today" ? Today(clock) : liveControlDate };
-        var pipe = new TimedPipe(console, clock);
-        var log = new RecordingSink();
+        var pipe = new TimedPipe(console, clock) { Order = order };
+        var log = new RecordingSink { Order = order };
+        delay ??= order is null ? null : RecordingWait(order);
         var device = Create(() => pipe, options, _ => log, clock, delay?.Invoke(clock), marker);
         var keysReported = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
         device.StateChanged += (_, change) =>
@@ -620,6 +627,18 @@ public class UsbSmartFadeDeviceTests
 
         return new LiveRig(device, console, pipe, options, keysReported.Task, clock, log);
     }
+
+    /// <summary>The virtual clock's plain delay, entered in <paramref name="order"/> as "wait": a write's slot wait is the loop's last step before the session asks the gate (SC-2 condition 5).</summary>
+    private static Func<VirtualClock, Func<TimeSpan, CancellationToken, Task>> RecordingWait(List<string> order) => clock => (wait, _) =>
+    {
+        lock (order)
+        {
+            order.Add("wait");
+        }
+
+        clock.Advance(wait);
+        return Task.CompletedTask;
+    };
 
     /// <summary>A device on the stand-in console, with its clock and its transfer log.</summary>
     private sealed record LiveRig(UsbSmartFadeDevice Device, AnsweringPipe Console, TimedPipe Pipe, UsbDeviceOptions Options, Task KeysReported, VirtualClock Clock, RecordingSink Log)
@@ -1861,6 +1880,239 @@ public class UsbSmartFadeDeviceTests
         Assert.Equal(0, rig.Device.LastSession!.WritesSent);
     }
 
+    /// <summary>The stand-in console answers bump 2's press as the 1248 answered SmartSoft's in E9e: FaderInfo seq 17675 (record 2 `ff 00 00 00`) and ChannelLevels seq 17679 (channel 2 at 0xFF), F174.</summary>
+    private static void AnswersBump2WithItsHold(AnsweringPipe console) =>
+        console.OnPress((byte)ClearedKey.Bump2, () =>
+        {
+            console.Report((int)HspObjectId.FaderInfo, Body(E9e, 17675));
+            console.Report((int)HspObjectId.ChannelLevels, Body(E9e, 17679));
+        });
+
+    /// <summary>A task that completes when the device reports channel <paramref name="channel"/> at <paramref name="level"/>.</summary>
+    private static Task ChannelReported(UsbSmartFadeDevice device, int channel, byte level)
+    {
+        var reported = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        device.StateChanged += (_, change) =>
+        {
+            if (change.ChannelLevels is { } levels && levels.TryGetValue(channel, out var now) && now == level)
+            {
+                reported.TrySetResult();
+            }
+        };
+        return reported.Task.WaitAsync(Timeout);
+    }
+
+    [Fact]
+    public async Task A_fader_waits_after_its_own_bump_until_the_console_has_reported_it_again_after_the_release()
+    {
+        // The first review of SC-5 item 10, major 1 (F174, VERIFIED): while bump 2 is held the console reports physical fader
+        // 2's FaderInfo record as `ff 00 00 00` and channel 2 at 0xFF (the stand-in answers the press with E9e seq 17675 and
+        // 17679, the console's answer to SmartSoft's press there), so the two agree and the matching level would be the bump's.
+        // Channel fader 2 is refused while the bump is held; after the release while the console has listed and delivered
+        // only PlaybackInfo (as E9e's first poll reply after the release, seq 17785, and its PlaybackInfo seq 17789), and still
+        // after FaderInfo seq 17796 alone (record 2 at 0x00); once ChannelLevels seq 17800 (channel 2 at 0x00) is in too, the
+        // drag goes: its matching event at 0x00, then 0x40. As SmartSoft's bytes: its bump 2 press and release (E9e seq 17656,
+        // 17782) and its event of index 0x01 in bank 1-24 (E9d seq 10006), with this session's counter and values.
+        var rig = LiveConsole();
+        AnswersBump2WithItsHold(rig.Console);
+        rig.Console.OnRelease((byte)ClearedKey.Bump2, () => rig.Console.Report((int)HspObjectId.PlaybackInfo, Body(E9e, 17789)));
+        await rig.Device.ConnectAsync(CancellationToken.None);
+        await rig.KeysReported.WaitAsync(Timeout);
+
+        var inHold = ChannelReported(rig.Device, 2, 0xFF);
+        await rig.Device.BumpChannelAsync(2, true, CancellationToken.None);
+        await inHold;
+        var held = await Assert.ThrowsAsync<InvalidOperationException>(() => rig.Device.SetChannelLevelAsync(2, 0x40, CancellationToken.None));
+        Assert.Contains("bump 2 is held: physical fader 2's reports carry the bump's level, not channel fader 2's", held.Message, StringComparison.Ordinal);
+
+        const string Released = "bump 2 was released and the console has not reported physical fader 2 again since (FaderInfo and ChannelLevels listed and delivered after the release)";
+        await rig.Device.BumpChannelAsync(2, false, CancellationToken.None);
+        await WaitUntil(() => rig.Console.Served((int)HspObjectId.PlaybackInfo) == 1);
+        await rig.Console.PauseAtNextPoll().WaitAsync(Timeout);   // PlaybackInfo is in, nothing else since the release
+        var afterRelease = await Assert.ThrowsAsync<InvalidOperationException>(() => rig.Device.SetChannelLevelAsync(2, 0x40, CancellationToken.None));
+        Assert.Contains(Released, afterRelease.Message, StringComparison.Ordinal);
+
+        rig.Console.Report((int)HspObjectId.FaderInfo, Body(E9e, 17796));
+        rig.Console.Resume();
+        await WaitUntil(() => rig.Console.Served((int)HspObjectId.FaderInfo) == 3);
+        await rig.Console.PauseAtNextPoll().WaitAsync(Timeout);   // FaderInfo is in, ChannelLevels not yet
+        var faderInfoOnly = await Assert.ThrowsAsync<InvalidOperationException>(() => rig.Device.SetChannelLevelAsync(2, 0x40, CancellationToken.None));
+        Assert.Contains(Released, faderInfoOnly.Message, StringComparison.Ordinal);
+        Assert.Equal(2, rig.Device.LastSession!.WritesSent);
+
+        var after = ChannelReported(rig.Device, 2, 0x00);
+        rig.Console.Report((int)HspObjectId.ChannelLevels, Body(E9e, 17800));
+        rig.Console.Resume();
+        await after;
+        await rig.Device.SetChannelLevelAsync(2, 0x40, CancellationToken.None);
+        await WaitUntil(() => rig.Device.LastSession!.WritesSent == 4);
+        await rig.Device.DisconnectAsync(CancellationToken.None);
+
+        Assert.Equal(new[]
+        {
+            WithCounter(E9e, 17656, 0x00), WithCounter(E9e, 17782, 0x01),
+            WithCounter(E9d, 10006, 0x02, value: 0x00, previous: 0x00), WithCounter(E9d, 10006, 0x03, value: 0x40, previous: 0x00),
+        }, Payloads(rig.Pipe));
+
+        // the matching event went only after both objects were fetched again after the release
+        var transfers = Recorded(rig.Pipe);
+        var headers = transfers.Select((t, i) => (t, i)).Where(x => IsDataHeader(x.t)).Select(x => x.i).ToArray();
+        int LastFetch(HspObjectId id) => transfers.FindLastIndex(headers[2], t => t.ToConsole && t.Data.Length == 12 && t.Data[0] == 2 && t.Data[4] == (int)id);
+        Assert.True(LastFetch(HspObjectId.FaderInfo) > headers[1] && LastFetch(HspObjectId.ChannelLevels) > headers[1], "the matching event went before the console reported the fader again");
+    }
+
+    [Fact]
+    public async Task A_fader_event_queued_behind_a_press_of_its_own_bump_is_dropped_unsent()
+    {
+        // The first review of SC-5 item 10, major 1, the queue: channel 2's matching event (0x00, read before the press) is
+        // queued behind bump 2's press, which has not gone yet. The press goes, the event waits through the hold (nothing but
+        // the release follows a press), and at its slot after the release it is dropped: the console has not reported physical
+        // fader 2 again (its last reports carry the bump, E9e seq 17675 / 17679). Only the press and the release go (E9e seq
+        // 17656, 17782); the UI's level is forgotten and the next drag matches again.
+        var rig = LiveConsole();
+        AnswersBump2WithItsHold(rig.Console);
+        await rig.Device.ConnectAsync(CancellationToken.None);
+        await rig.KeysReported.WaitAsync(Timeout);
+
+        await rig.Console.PauseAtNextPoll().WaitAsync(Timeout);
+        await rig.Device.BumpChannelAsync(2, true, CancellationToken.None);
+        await rig.Device.SetChannelLevelAsync(2, 0x40, CancellationToken.None);   // the press is queued, not sent: the reports are the fader's own
+        Assert.Equal(2, rig.Device.LastSession!.QueuedWrites);
+        rig.Console.Resume();
+        await WaitUntil(() => rig.Device.LastSession!.WritesSent == 1);
+        await rig.Device.BumpChannelAsync(2, false, CancellationToken.None);
+        await WaitUntil(() => rig.Device.LastSession!.WritesDropped == 1);
+        await rig.Device.DisconnectAsync(CancellationToken.None);
+
+        Assert.Equal(2, rig.Device.LastSession!.WritesSent);
+        Assert.Equal(new[] { WithCounter(E9e, 17656, 0x00), WithCounter(E9e, 17782, 0x01) }, Payloads(rig.Pipe));
+        Assert.Contains(rig.Log.Notes, n => n.StartsWith("queued write dropped unsent: bump 2 ", StringComparison.Ordinal) && n.Contains("(F174)", StringComparison.Ordinal));
+    }
+
+    [Fact]
+    public async Task No_note_is_written_between_the_gate_and_a_writes_header()
+    {
+        // The first review of SC-5 item 10, major 2 (SC-2 condition 5 and its 62 ms analysis: nothing may wait between the gate
+        // and the header, no I/O and no log note). The loop waits for a write's slot, then the session asks the gate and the
+        // write's own condition, runs its sent callback and the header goes. The pipe, the transfer log and the loop's waits
+        // are entered in one order: no note lies between a write's slot wait and its header, and the two notes the sent
+        // callbacks leave (the bank key sent, the fader matched) come after the payload they describe. The case is the
+        // automatic switch for channel 30, with the bytes of A_channel_of_bank_25_48_switches_the_bank_first_then_matches_its_fader_then_sends_the_drag.
+        var order = new List<string>();
+        var rig = LiveConsole(order: order);
+        AnswersFaders25To48(rig.Console);
+        var bank = BankReported(rig.Device, FaderBank.Channels25To48);
+        await rig.Device.ConnectAsync(CancellationToken.None);
+        await rig.KeysReported.WaitAsync(Timeout);
+
+        await rig.Device.SetChannelLevelAsync(30, 0x48, CancellationToken.None);
+        await bank;
+        await WaitUntil(() => rig.Device.LastSession!.WritesSent == 4);
+        await rig.Device.DisconnectAsync(CancellationToken.None);
+
+        string[] entries;
+        lock (order)
+        {
+            entries = order.ToArray();
+        }
+
+        // a Data header: 12 bytes, type 1 (F131); its payload is the next entry
+        var headers = Enumerable.Range(0, entries.Length).Where(i => entries[i].StartsWith("out 01", StringComparison.Ordinal) && entries[i].Length == "out ".Length + 24).ToArray();
+        Assert.Equal(4, headers.Length);
+        foreach (var header in headers)
+        {
+            var slotWait = Array.FindLastIndex(entries, header, e => e == "wait");
+            var answer = Array.FindLastIndex(entries, header, e => e.StartsWith("in ", StringComparison.Ordinal));
+            Assert.True(slotWait > answer, "the write's slot wait came before the console's last answer");
+            Assert.DoesNotContain(entries[(slotWait + 1)..header], e => e.StartsWith("note ", StringComparison.Ordinal));
+        }
+
+        int NoteAt(string start) => Array.FindIndex(entries, e => e.StartsWith("note " + start, StringComparison.Ordinal));
+        Assert.True(NoteAt("automatic bank switch (SC-5 condition 1) for channel fader 30: FADERS 25-48 sent") > headers[0] + 1, "the bank key's note came before its payload");
+        Assert.True(NoteAt("matched channel fader 30 at its reported level 0x00") > headers[2] + 1, "the matching event's note came before its payload");
+    }
+
+    [Fact]
+    public async Task A_bump_needs_the_consoles_FaderInfo_as_a_fader_does()
+    {
+        // The first review of SC-5 item 10, minor 4: a bump's own checks read its physical fader's FaderInfo record (byte 1 for
+        // a channel bump, byte 3 for a memory bump) and must not pass for want of it. The stand-in serves E9b's ConsoleStatus
+        // seq 796, ChannelLevels seq 11632 and LedStatus seq 11636 but no FaderInfo: no bump goes, in the bank the console
+        // shows or another, and nothing is sent.
+        var rig = LiveConsole(withFaderInfo: false);
+        await rig.Device.ConnectAsync(CancellationToken.None);
+        await rig.KeysReported.WaitAsync(Timeout);
+
+        var channelBump = await Assert.ThrowsAsync<InvalidOperationException>(() => rig.Device.BumpChannelAsync(7, true, CancellationToken.None));
+        Assert.Contains("the console has not reported its faders yet (FaderInfo", channelBump.Message, StringComparison.Ordinal);
+        var memoryBump = await Assert.ThrowsAsync<InvalidOperationException>(() => rig.Device.BumpMemoryAsync(1, 1, true, CancellationToken.None));
+        Assert.Contains("the console has not reported its faders yet (FaderInfo", memoryBump.Message, StringComparison.Ordinal);
+        await rig.Device.DisconnectAsync(CancellationToken.None);
+
+        Assert.Equal(0, rig.Device.LastSession!.WritesSent);
+        Assert.Equal(0, rig.Device.LastSession!.QueuedWrites);
+    }
+
+    [Fact]
+    public void Every_channel_sits_on_the_bank_and_physical_fader_E9d_moved_it_by()
+    {
+        // The first review of SC-5 item 10, minor 3: ChannelPosition is an explicit 48-row table, each row checked here against
+        // E9d's two SmartSoft passes (F171): a fader event of index i sent in channel mode (bank b from the console's latest
+        // ConsoleStatus) names channel c's position (b, i + 1) when the next ChannelLevels the console delivered changed channel
+        // c alone, to a level only events of that index and bank carried since the previous ChannelLevels. Every channel 1-48
+        // is named, each by one position only, the table's.
+        var capture = CaptureFile.Load(TestPaths.Capture("2026-11-02-e9d-smartsoft-every-fader-and-bump-twice.jsonl"));
+        var decoder = new HspSessionDecoder();
+        var assembler = new ConsoleStateAssembler(ConsoleCapabilities.SmartFade1248);
+        var named = Enumerable.Range(1, 48).ToDictionary(c => c, _ => new HashSet<(FaderBank, int)>());
+        var recent = new List<(FaderBank Bank, int Index, byte Value)>();
+        byte[]? levels = null;
+        var payloadDue = false;
+        foreach (var frame in capture.BulkFrames)
+        {
+            var toConsole = frame.Direction == CaptureDirection.Out;
+            if (toConsole && payloadDue && frame.Data.Length == 8 && frame.Data[3] == 0x14 && frame.Data[4] == 0x00 && frame.Data[5] <= 0x17
+                && assembler.FaderMode is { MemoryMode: false, NextMode: false } mode)
+            {
+                recent.Add((mode.Bank25To48 ? FaderBank.Channels25To48 : FaderBank.Channels1To24, frame.Data[5], frame.Data[6]));
+            }
+
+            if (toConsole)
+            {
+                payloadDue = frame.Data.Length == 12 && frame.Data[0] == 0x01;   // a Data header: its payload is the next transfer out (F131)
+            }
+
+            if (decoder.Feed(toConsole ? HspDirection.ToConsole : HspDirection.FromConsole, frame.Data) is not ObjectReceived received)
+            {
+                continue;
+            }
+
+            if (received.Payload.ObjectId == (int)HspObjectId.ChannelLevels)
+            {
+                var body = received.Payload.Body.ToArray();
+                var changed = levels is null ? Array.Empty<int>() : Enumerable.Range(1, 48).Where(c => body[c] != levels[c]).ToArray();
+                if (changed.Length == 1)
+                {
+                    var carriers = recent.Where(e => e.Value == body[changed[0]]).Select(e => (e.Bank, e.Index + 1)).Distinct().ToArray();
+                    if (carriers.Length == 1)
+                    {
+                        named[changed[0]].Add(carriers[0]);
+                    }
+                }
+
+                levels = body;
+                recent.Clear();
+            }
+
+            assembler.Apply(received);
+        }
+
+        foreach (var channel in Enumerable.Range(1, 48))
+        {
+            Assert.Equal(new[] { UsbSmartFadeDevice.ChannelPosition(channel) }, named[channel].ToArray());
+        }
+    }
+
     /// <summary>A sink that keeps nothing: the tests above check the bytes through the pipes, not the log.</summary>
     private sealed class DiscardingSink : ITransferSink
     {
@@ -1985,10 +2237,11 @@ public class UsbSmartFadeDeviceTests
         private readonly List<int> _dirty = new();
         private readonly Dictionary<int, int> _served = new();
         private readonly Dictionary<byte, Action> _onPress = new();
+        private readonly Dictionary<byte, Action> _onRelease = new();
         private readonly List<(int AtPoll, int Id, byte[] Body)> _scheduled = new();
         private int _polls;
         private readonly Queue<byte[]> _replies = new();
-        private readonly ManualResetEventSlim _resume = new(true);
+        private ManualResetEventSlim _resume = new(true);   // one per pause: a Resume then a new pause never unsets the one a paused poll waits on
         private bool _pauseRequested;
         private bool _dataSeen;
         private bool _relist;
@@ -2033,7 +2286,7 @@ public class UsbSmartFadeDeviceTests
         public void Dispose()
         {
             Close();
-            _resume.Set();
+            Resume();
         }
 
         /// <summary>The console's state changed: the next poll that follows no fetch lists the object, and its fetch delivers this body.</summary>
@@ -2059,6 +2312,15 @@ public class UsbSmartFadeDeviceTests
             lock (_lock)
             {
                 _onPress[code] = reaction;
+            }
+        }
+
+        /// <summary>As <see cref="OnPress"/>, for the release of the key with <paramref name="code"/> (kind 1, state 0; F133).</summary>
+        public void OnRelease(byte code, Action reaction)
+        {
+            lock (_lock)
+            {
+                _onRelease[code] = reaction;
             }
         }
 
@@ -2092,13 +2354,19 @@ public class UsbSmartFadeDeviceTests
             lock (_lock)
             {
                 Paused = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
-                _resume.Reset();
+                _resume = new ManualResetEventSlim(false);
                 _pauseRequested = true;
                 return Paused.Task;
             }
         }
 
-        public void Resume() => _resume.Set();
+        public void Resume()
+        {
+            lock (_lock)
+            {
+                _resume.Set();
+            }
+        }
 
         public void Write(ReadOnlySpan<byte> data)
         {
@@ -2125,6 +2393,10 @@ public class UsbSmartFadeDeviceTests
                     {
                         _onPress.TryGetValue(data[5], out reaction);
                     }
+                    else if (data.Length == 7 && data[4] == 0x01 && data[6] == 0x00)
+                    {
+                        _onRelease.TryGetValue(data[5], out reaction);
+                    }
                 }
 
                 reaction?.Invoke();
@@ -2150,6 +2422,7 @@ public class UsbSmartFadeDeviceTests
             }
 
             bool pause;
+            ManualResetEventSlim resume;
             lock (_lock)
             {
                 _polls++;
@@ -2161,6 +2434,7 @@ public class UsbSmartFadeDeviceTests
 
                 pause = _pauseRequested;
                 _pauseRequested = false;
+                resume = _resume;
                 if (pause)
                 {
                     Paused.TrySetResult();
@@ -2169,7 +2443,7 @@ public class UsbSmartFadeDeviceTests
 
             if (pause)
             {
-                _ = _resume.Wait(Timeout);
+                _ = resume.Wait(Timeout);
             }
 
             AnswerPoll();
@@ -2261,10 +2535,12 @@ public class UsbSmartFadeDeviceTests
         HeaderTooLong,
     }
 
-    /// <summary>A sink that keeps the session's notes (the transfers are checked through the pipes).</summary>
+    /// <summary>A sink that keeps the session's notes (the transfers are checked through the pipes), also in a shared order when given one.</summary>
     private sealed class RecordingSink : ITransferSink
     {
         private readonly List<string> _notes = new();
+
+        public List<string>? Order { get; init; }
 
         public IReadOnlyList<string> Notes
         {
@@ -2286,6 +2562,14 @@ public class UsbSmartFadeDeviceTests
             lock (_notes)
             {
                 _notes.Add(text);
+            }
+
+            if (Order is { } order)
+            {
+                lock (order)
+                {
+                    order.Add("note " + text);
+                }
             }
         }
 
@@ -2326,6 +2610,9 @@ public class UsbSmartFadeDeviceTests
 
         public List<(TimeSpan At, bool ToConsole, byte[] Data)> Transfers { get; } = new();
 
+        /// <summary>When given, every transfer is entered here too, as "out HEX" or "in HEX", in the order it happened.</summary>
+        public List<string>? Order { get; init; }
+
         public string Description => _inner.Description;
 
         public bool IsOpen => _inner.IsOpen;
@@ -2344,6 +2631,7 @@ public class UsbSmartFadeDeviceTests
                 Transfers.Add((_clock.Now, true, data.ToArray()));
             }
 
+            Enter("out ", data);
             _clock.Advance(TimeSpan.FromMilliseconds(1));
         }
 
@@ -2354,6 +2642,20 @@ public class UsbSmartFadeDeviceTests
             lock (Transfers)
             {
                 Transfers.Add((_clock.Now, false, buffer.ToArray()));
+            }
+
+            Enter("in ", buffer);
+        }
+
+        private void Enter(string direction, ReadOnlySpan<byte> data)
+        {
+            if (Order is { } order)
+            {
+                var entry = direction + Convert.ToHexString(data);
+                lock (order)
+                {
+                    order.Add(entry);
+                }
             }
         }
     }

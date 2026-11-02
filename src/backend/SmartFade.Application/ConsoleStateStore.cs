@@ -35,6 +35,7 @@ public sealed class ConsoleStateStore
     private bool _independentsReported;
     private int? _memoryPage;
     private FaderBank? _faderBank;
+    private IReadOnlyList<int>? _blinkingFaders;
     private PanelKeys? _keys;
     private IReadOnlyList<string>? _lcd;
     private CrossfaderState? _crossfader;
@@ -103,7 +104,8 @@ public sealed class ConsoleStateStore
                 _showFileName,
                 _firmwareVersion,
                 _writableControls,
-                _faderBank);
+                _faderBank,
+                _blinkingFaders);
         }
     }
 
@@ -137,6 +139,7 @@ public sealed class ConsoleStateStore
                 _independentsReported = false;
                 _memoryPage = null;
                 _faderBank = null;
+                _blinkingFaders = null;
                 _keys = null;
                 _lcd = null;
                 _crossfader = null;
@@ -247,6 +250,11 @@ public sealed class ConsoleStateStore
             if (change.FaderBank is { } faderBank)
             {
                 _faderBank = faderBank;
+            }
+
+            if (change.BlinkingFaders is { } blinking)
+            {
+                _blinkingFaders = blinking.ToArray();
             }
 
             if (change.Keys is { } keys)

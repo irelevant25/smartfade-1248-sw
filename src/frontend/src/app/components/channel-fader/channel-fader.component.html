@@ -60,6 +60,8 @@
       class="fader__label fader__bump"
       [class.fader__bump--armed]="bumpArmed()"
       [class.fader__bump--held]="held()"
+      [class.fader__bump--blinking]="bumpBlinking()"
+      [attr.title]="bumpBlinking() ? blinkingTitle : null"
       [style.--lit]="bumpLit()"
       [disabled]="disabled() || bumpDisabled()"
       [attr.aria-label]="bumpName()"

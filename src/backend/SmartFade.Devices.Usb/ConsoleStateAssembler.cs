@@ -58,6 +58,7 @@ public sealed class ConsoleStateAssembler
     private LedStatusObject? _leds;
     private IndependentStates? _independents;
     private (KeyLed Ind1, KeyLed Ind2)? _independentLeds;
+    private int[]? _blinkingFaders;
     private bool _channelLevelsReported;
     private bool _memoryMode;
     private int _memoryPage = 1;
@@ -104,10 +105,13 @@ public sealed class ConsoleStateAssembler
     public ReportedFaderMode? FaderMode => _faderMode;
 
     /// <summary>
-    /// The last FaderInfo delivered in this session, null before: record k byte 0 is physical fader k's post-MASTER level
-    /// (F82, F96, F176), bytes 0 and 1 a memory fader's level in memory mode (F112), byte 3 the page − 1 of the memory that
-    /// fader holds (H69 CONFIRMED, F113). Live control reads it only to choose the level a re-assigned fader is matched at
-    /// and to refuse (SC-5 condition 1 d).
+    /// The last FaderInfo delivered in this session, null before: record k belongs to physical fader k in every bank and mode
+    /// (F171, VERIFIED for records 1–24 in all three banks); its byte 0 is that fader's post-MASTER output (F82, F96, F176:
+    /// OBSERVED), which also carries a bump held on that fader (F174, VERIFIED: `ff 00 00 00` during a channel-bump hold, bytes 0
+    /// and 1 `ff ff` during a memory-bump hold), so it is the content's own level only while no bump of that fader is down;
+    /// bytes 0 and 1 a memory fader's level in memory mode (F112), byte 3 the page − 1 of the memory that fader holds (H69
+    /// CONFIRMED, F113). Live control reads it only to choose the level a re-assigned fader is matched at, and to refuse (SC-5
+    /// condition 1 d; the device keeps the fader of a bump it pressed out of that until the release is reported again).
     /// </summary>
     public FaderInfoObject? FaderInfo => _faderInfo;
 
@@ -123,6 +127,20 @@ public sealed class ConsoleStateAssembler
     /// from a steady LED that agrees with <see cref="Independents"/> (SC-5 class B5).
     /// </summary>
     public (KeyLed Ind1, KeyLed Ind2)? IndependentLeds => _independentLeds;
+
+    /// <summary>
+    /// The physical faders 1–24 whose LED, block k, the console shows blinking (its two phases differ, as F85 and F116 read a
+    /// blink), outside the page view and the record screens, whose LCD titles say blocks 1–24 mean pages or selectable memories
+    /// there (F113, F116); empty when none blinks, null until LedStatus has arrived. A mirror for the UI, display only (SC-5
+    /// condition 1 e): nothing is sent from it. Readings, from E9c S4: after a mode switch the re-assigned fader blinks until a
+    /// PC value reaches the content's level, `46 00 00 / 0A 00 00` in memory mode (seq 51473, 67160) and `00 46 00 / 00 0A 00` in
+    /// channel mode (seq 59535): F172 case (a) VERIFIED in part, (b) OBSERVED once, "blinking = unmatched" INFERRED from them; a
+    /// fader still holding a memory of another page blinks `C8 00 00 / 0A 00 00` (seq 80317, F172 case (c), OBSERVED once, H69)
+    /// although a PC value moves it at once; physical fader 2 blinked while it was moved on the panel after S4b (seq 76674,
+    /// 77680; OBSERVED once, not explained); and the page view's first LED report comes one exchange before its LCD title (seq
+    /// 47749, 80267, 84586), so its page blinks show here for that exchange.
+    /// </summary>
+    public IReadOnlyList<int>? BlinkingFaders => _blinkingFaders;
 
     /// <summary>Applies one delivered object; returns the change to report, or null when the object carries nothing the state model holds.</summary>
     public DeviceStateChange? Apply(ObjectReceived received)
@@ -234,7 +252,7 @@ public sealed class ConsoleStateAssembler
         // the MASTER below full (F85) is phase A != phase B and reads as "not active" here.
         _blackoutFromLeds = leds.Block(53) is { R1: 0, G1: 0, B1: 0xFF, R2: 0, G2: 0, B2: 0xFF };
         _independentLeds = leds.Blocks.Count >= 73 ? (Led(leds.Block(72)), Led(leds.Block(73))) : null;
-        return Combine(Combine(ReportMasters(), ReportMemoryFaders()), ReportKeys(leds));
+        return Combine(Combine(Combine(ReportMasters(), ReportMemoryFaders()), ReportKeys(leds)), ReportBlinking());
     }
 
     /// <summary>
@@ -424,7 +442,30 @@ public sealed class ConsoleStateAssembler
         var changed = !lines.SequenceEqual(DisplayLines);
         DisplayLines = lines;
         _functionScreen = IsFunctionScreen(lines);
-        return changed ? new DeviceStateChange(Lcd: lines) : null;
+        return Combine(changed ? new DeviceStateChange(Lcd: lines) : null, ReportBlinking());
+    }
+
+    /// <summary>
+    /// <see cref="BlinkingFaders"/> from the last LedStatus and the LCD's title: reported when it changes (a new LED report or
+    /// the LCD entering or leaving the page view or a record screen), else null.
+    /// </summary>
+    private DeviceStateChange? ReportBlinking()
+    {
+        if (_leds is not { } leds || leds.Blocks.Count < _capabilities.PhysicalFaders)
+        {
+            return null;
+        }
+
+        var blinking = _functionScreen
+            ? Array.Empty<int>()
+            : Enumerable.Range(1, _capabilities.PhysicalFaders).Where(fader => leds.Block(fader).PhasesDiffer).ToArray();
+        if (_blinkingFaders is { } before && before.SequenceEqual(blinking))
+        {
+            return null;
+        }
+
+        _blinkingFaders = blinking;
+        return new DeviceStateChange(BlinkingFaders: blinking);
     }
 
     /// <summary>Record 5 of PlaybackInfo, the main playback: the stack step (bytes 0-1, H76), Live (byte 2) and Next (byte 3) (F130 OBSERVED; structure F101).</summary>
@@ -472,6 +513,7 @@ public sealed class ConsoleStateAssembler
             MemoryPage = first.MemoryPage ?? second.MemoryPage,
             Keys = first.Keys ?? second.Keys,
             FaderBank = first.FaderBank ?? second.FaderBank,
+            BlinkingFaders = first.BlinkingFaders ?? second.BlinkingFaders,
         };
     }
 

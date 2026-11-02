@@ -384,6 +384,26 @@ describe('ChannelFaderComponent', () => {
       expect(button()!.style.getPropertyValue('--lit')).toBe('0.5');
     });
 
+    it('marks a bump the console blinks, for display only: it still bumps', () => {
+      set('bumpable', true);
+      expect(button()!.classList.contains('fader__bump--blinking')).toBe(false);
+      expect(button()!.hasAttribute('title')).toBe(false);
+
+      set('bumpBlinking', true);
+
+      expect(button()!.classList.contains('fader__bump--blinking')).toBe(true);
+      expect(button()!.getAttribute('aria-label')).toBe('Bump Channel 7, blinking on the console');
+      expect(button()!.getAttribute('title')).toContain('Blinking on the console');
+      expect(button()!.disabled).toBe(false);
+      pointer('pointerdown');
+      pointer('pointerup');
+      expect(bumps).toEqual([true, false]);
+
+      set('bumpBlinking', false);
+      expect(button()!.classList.contains('fader__bump--blinking')).toBe(false);
+      expect(button()!.getAttribute('aria-label')).toBe('Bump Channel 7');
+    });
+
     it('keeps the plain name, not the button, in the accent colour while the fader is up', () => {
       expect(element().querySelector('.fader__name')).not.toBeNull();
 

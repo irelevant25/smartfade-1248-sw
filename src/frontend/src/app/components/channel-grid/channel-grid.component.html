@@ -41,6 +41,7 @@
             [bumpable]="true"
             [bumpDisabled]="fader.bumpDisabled"
             [bumpLit]="fader.output / 255"
+            [bumpBlinking]="fader.bumpBlinking"
             (levelChange)="setLevel(fader.channel, $event)"
             (bumpChange)="bump(fader.channel, $event)"
             (navigate)="moveFocus(fader.channel, $event)"

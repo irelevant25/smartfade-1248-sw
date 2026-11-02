@@ -272,6 +272,19 @@
   }
 }
 
+// The console blinks this fader's LED (LedStatus): a dashed outline that blinks, apart from the armed look; display only.
+.fader__bump--blinking {
+  outline: 2px dashed rgba(var(--bump-rgb), 0.95);
+  outline-offset: 1px;
+  animation: bump-led-blink 0.8s steps(2, start) infinite;
+}
+
+@keyframes bump-led-blink {
+  to {
+    outline-color: transparent;
+  }
+}
+
 @keyframes fader-pulse {
   from {
     opacity: 0.35;
@@ -283,7 +296,8 @@
 
 @media (prefers-reduced-motion: reduce) {
   .fader__lamp--on,
-  .fader__bump--armed {
+  .fader__bump--armed,
+  .fader__bump--blinking {
     animation: none;
   }
 

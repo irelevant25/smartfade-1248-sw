@@ -131,12 +131,15 @@ public sealed record InputLevelsObject(byte Byte0, IReadOnlyList<byte> Levels)
 
 /// <summary>
 /// Object 15 (ChannelLevels): [n][n − 2 channel levels][2 trailing bytes]; channel c = body[c]
-/// (VERIFIED length F67; mapping OBSERVED for channels 1, 5, 7 and 25, F83 and the E3b record).
-/// The values are post-MASTER outputs, not fader positions (E3b: a full channel read 0x7F with the
-/// MASTER at 0x7F), and bump output appears in them. The two trailing bytes are read by sfEngine
-/// as the independents (H26, OPEN: always 0 so far).
+/// (VERIFIED length F67; mapping VERIFIED for channels 1–48 since E9c and E9d, F171: every channel of both banks moved
+/// its own byte). The values are post-MASTER outputs, not fader positions (E3b: a full channel read 0x7F with the
+/// MASTER at 0x7F, F96 OBSERVED; F176), and a held bump's level appears in them (F174, VERIFIED: 0xFF from the press to
+/// the release in every channel-bump hold), so they are a fader's own level only while nothing else drives the channel.
+/// The two trailing bytes are read by sfEngine as the independents (H26, OPEN: always 0 so far). Live control picks the
+/// level of a re-assigned fader's first event from this object (SC-5 condition 1 d), never while a bump it pressed is in it.
 /// </summary>
-[Evidence(EvidenceStatus.Observed, "F67, F83, F96, F97", "post-MASTER values; trailing bytes: H26; length VERIFIED (F67)")]
+[Evidence(EvidenceStatus.Verified, "F67, F171, F174", "length (F67); channel c = body[c] for channels 1-48 (F171, E9c + E9d); a held bump's level appears in it (F174)")]
+[Evidence(EvidenceStatus.Observed, "F83, F96, F176", "post-MASTER values; trailing bytes: H26")]
 public sealed record ChannelLevelsObject(int Count, IReadOnlyList<byte> Levels, byte Trailing1, byte Trailing2)
 {
     public static ChannelLevelsObject Decode(ReadOnlySpan<byte> body)
@@ -161,13 +164,17 @@ public sealed record ChannelLevelsObject(int Count, IReadOnlyList<byte> Levels, 
 
 /// <summary>
 /// Object 14 (FaderInfo): [count = 48][48 × 4-byte records][BUMPS][MASTER], 195 bytes. Record N
-/// byte 0 is the post-MASTER output of physical fader N in whatever mode and bank the console is in
-/// (OBSERVED for faders 1, 5 and 7, F82 and the E3b record; in bank 25-48 physical fader 1 still
-/// drives record 1, so records 25–48 are unused on the 1248). Record byte 1 moved during a memory
-/// bump (E3b); bytes 2–3 are UNKNOWN. body[194] = MASTER (OBSERVED, E3 + E3b); body[193] = BUMPS
-/// (OBSERVED in E3b: 104 changes with the four logged moves).
+/// belongs to physical fader N in whatever mode and bank the console is in (VERIFIED for records 1–24 in all three banks
+/// since E9c and E9d, F171; records 25–48 unused on the 1248); its byte 0 is that fader's post-MASTER output (F82, F96,
+/// F176: OBSERVED), bytes 0 and 1 a memory fader's level in memory mode (F112), byte 3 the page − 1 of the memory the fader
+/// holds (H69 CONFIRMED, F113), bytes 2–3 otherwise UNKNOWN. A held bump's level appears in the record: byte 0 for a channel
+/// bump (`ff 00 00 00`), bytes 0 and 1 for a memory bump (`ff ff 00 00`) (F174, VERIFIED), so byte 0 is the content's own
+/// level only while no bump of that fader is down. body[194] = MASTER (OBSERVED, E3 + E3b); body[193] = BUMPS (OBSERVED
+/// in E3b: 104 changes with the four logged moves). Live control picks the level of a re-assigned fader's first event from
+/// this object (SC-5 condition 1 d), never while a bump it pressed is in it.
 /// </summary>
-[Evidence(EvidenceStatus.Observed, "F82, F95, F96, F97, F99", "record byte 0 = post-MASTER output of the physical fader; bytes 2..3 UNKNOWN; layout VERIFIED in part (F82)")]
+[Evidence(EvidenceStatus.Verified, "F82 (layout, in part), F171, F174", "record N = physical fader N for records 1-24 in all three banks (F171); a held bump's level in byte 0, or bytes 0 and 1 (F174)")]
+[Evidence(EvidenceStatus.Observed, "F95, F96, F97, F99, F112, F176", "record byte 0 = post-MASTER output of the physical fader; bytes 2..3 UNKNOWN but for byte 3's page (H69)")]
 public sealed record FaderInfoObject(IReadOnlyList<byte> FaderLevels, IReadOnlyList<byte> RawRecords, byte Bumps, byte Master)
 {
     public const int RecordSize = 4;

@@ -15,6 +15,8 @@ interface FaderView {
   /** The device takes no level for this fader (a read-only console, or one cleared for other faders only). */
   readOnly: boolean;
   bumpDisabled: boolean;
+  /** The console blinks this fader's LED (the bank it shows, a real console only; F172): display only. */
+  bumpBlinking: boolean;
 }
 
 interface Bank {
@@ -61,9 +63,14 @@ export class ChannelGridComponent {
     // a drag starts from what the console says, not from a value the UI remembers (F141: the last mover wins without notice).
     const hardware = this._state.mode() === 'hardware';
     const bankSize = this._state.capabilities().physicalFaders;
+    // The console blinks the LED of physical fader k (1..24); it belongs to channel k or 24 + k as the console's bank says.
+    const blinking = this._state.blinkingFaders();
+    const shownBank = this._state.faderBank();
     const banks: Bank[] = [];
     for (let start = 0; start < channels.length; start += bankSize) {
-      const faders = channels.slice(start, start + bankSize).map<FaderView>((channel) =>
+      const consoleBank = start === 0 ? 'channels1To24' : 'channels25To48';
+      const blinkingHere = (physical: number) => shownBank === consoleBank && blinking.has(physical);
+      const faders = channels.slice(start, start + bankSize).map<FaderView>((channel, index) =>
         draft
           ? {
               channel: channel.channel,
@@ -73,6 +80,7 @@ export class ChannelGridComponent {
               output: channel.output,
               readOnly: false,
               bumpDisabled: bumpsDisabled || !writable(`channelBump:${channel.channel}`),
+              bumpBlinking: blinkingHere(index + 1),
             }
           : {
               channel: channel.channel,
@@ -83,6 +91,7 @@ export class ChannelGridComponent {
               output: channel.output,
               readOnly: readOnly || !writable(`channelFader:${channel.channel}`),
               bumpDisabled: bumpsDisabled || !writable(`channelBump:${channel.channel}`),
+              bumpBlinking: blinkingHere(index + 1),
             },
       );
       banks.push({ first: start + 1, last: start + faders.length, faders });

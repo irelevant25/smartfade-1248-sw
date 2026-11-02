@@ -65,6 +65,12 @@ export class ChannelFaderComponent {
   readonly bumpArmed = input(false);
   /** The bump button alone is inactive (the device accepts no bump), the fader stays usable. */
   readonly bumpDisabled = input(false);
+  /**
+   * The console blinks this fader's LED (a real console's LedStatus, outside its page view and record screens): shown as a
+   * blinking outline on the bump, display only. After a bank or mode switch the console treats the fader as unmatched and
+   * takes a PC move only once it reaches the content's level (F172); a fader still holding another page's memory blinks too.
+   */
+  readonly bumpBlinking = input(false);
 
   /** The user moved the fader to this level, 0-255. */
   readonly levelChange = output<number>();
@@ -105,9 +111,13 @@ export class ChannelFaderComponent {
     }
     return this.kind() === 'memory' ? `Memory ${label}` : `Channel ${label}`;
   });
-  protected readonly bumpName = computed(() =>
-    this.bumpArmed() ? `Select ${this.accessibleName()}` : `Bump ${this.accessibleName()}`,
+  protected readonly bumpName = computed(
+    () =>
+      (this.bumpArmed() ? `Select ${this.accessibleName()}` : `Bump ${this.accessibleName()}`) +
+      (this.bumpBlinking() ? ', blinking on the console' : ''),
   );
+  protected readonly blinkingTitle =
+    'Blinking on the console: unmatched after a bank or mode switch, so a move from here takes effect only once it reaches the level of what the fader now controls; or the fader still holds a memory of another page';
   protected readonly valueText = computed(
     () => `${this.percent()} percent${this.pending() ? ', waiting for the console' : ''}`,
   );

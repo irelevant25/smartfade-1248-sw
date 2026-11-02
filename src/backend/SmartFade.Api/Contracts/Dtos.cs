@@ -56,7 +56,8 @@ public sealed record ConsoleStateDto(
     string? ShowFileName,
     string? FirmwareVersion,
     IReadOnlyList<string>? WritableControls,
-    string? FaderBank = null);
+    string? FaderBank = null,
+    int[]? BlinkingFaders = null);
 
 public sealed record OutputsDto(IReadOnlyList<int> Outputs);
 

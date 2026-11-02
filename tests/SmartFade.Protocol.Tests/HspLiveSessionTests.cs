@@ -368,10 +368,13 @@ public class HspLiveSessionTests
     /// with its control back at 0x00, so SmartSoft's previous bytes stay this host's). The ranges hold every switch
     /// SmartSoft made: E9c S1 FADERS 25-48 (seq 24528) then index 0x00 and 0x01 in bank 25-48, FADERS MEMS (seq 36537) then
     /// the memory faders and bumps, the S4 mode cases, the held bumps, IND 1 / IND 2, up to the poll answered by NEXT mode's
-    /// BlindLevels listing (seq 97137; an id no read session accepts, F173); E9d's two passes, every fader in three banks and
-    /// every memory bump, each switch, bump 7 held 4.67 s and 3.42 s; E9e's channel bumps around FADERS 25-48. The three
-    /// coalesced previous bytes of E9d (seq 21367, 78433, 81351; the record's "Writes" row, as E9's seq 16560) are declared:
-    /// this host's previous byte is the value it last sent.
+    /// BlindLevels listing (seq 97137; an id no read session accepts, F173). The range's last two fader events (index 0x03,
+    /// headers 97131 and 97135) SmartSoft sent in NEXT mode, after its NEXT key (header 94596, not whitelisted, so
+    /// skipped): the session layer reproduces them, as it does every whitelisted event, while the device refuses every
+    /// control in NEXT mode (F173; FADERS_25_48_is_a_tap_from_bank_1_24_only_and_nothing_goes_in_NEXT_mode in the device
+    /// tests). E9d's two passes, every fader in three banks and every memory bump, each switch, bump 7 held 4.67 s and
+    /// 3.42 s; E9e's channel bumps around FADERS 25-48. The three coalesced previous bytes of E9d (seq 21367, 78433, 81351;
+    /// the record's "Writes" row, as E9's seq 16560) are declared: this host's previous byte is the value it last sent.
     /// </summary>
     [Theory]
     [InlineData(E9cFile, 17, 868, 97137, 10392, 1005, 61)]

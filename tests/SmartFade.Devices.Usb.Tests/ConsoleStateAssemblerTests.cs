@@ -288,6 +288,40 @@ public class ConsoleStateAssemblerTests
         Assert.Equal(before, assembler.Snapshot().Memories.Take(24).Select(m => m.Recorded).ToArray());
     }
 
+    [Fact]
+    public void The_blinking_faders_are_the_LED_blocks_1_to_24_whose_phases_differ_outside_the_page_view_and_the_record_screens()
+    {
+        // SC-5 condition 1 (e), the first review of SC-5 item 10, major 3: every object of E9c's first SmartSoft session (seq
+        // 868 to the poll answered by NEXT mode's BlindLevels listing, seq 97137, the range of the SC-5 golden replay) applied
+        // in the order the console delivered it. Each change, with the seq of the payload that made it (E9c record, S4; F172):
+        // 9221 the first LedStatus, nothing blinks; 47749 the page view's first LED report (its page keys) one exchange before
+        // its LCD title, 47753; 51473 FADERS MEMS with channel fader 1 left at 0x87 from the PC: block 1 `46 00 00 / 0A 00 00`
+        // until the PC's drag reached the memory's level, 56349 (case a); 59535 FADERS 1-24: block 1 `00 46 00 / 00 0A 00`
+        // until the drag passed 0x87, 59574 (case a); 67160 FADERS MEMS with physical fader 2 at 0x7E: block 2 until 73274
+        // (case b); 76674 and 77680 physical fader 2 moved on the panel (blinking, not explained) until 76735 and 77699; 80267
+        // the page view again until 80271; 80317 the page changed while memory fader 3 kept page 1's memory: block 3
+        // `C8 00 00 / 0A 00 00` until 84309 (case c, picked up at once); 84586 the page view once more until 84593.
+        var capture = CaptureFile.Load(TestPaths.Capture("2026-11-02-e9c-smartsoft-live-controls-every-bank.jsonl"));
+        var decoder = new HspSessionDecoder();
+        var assembler = new ConsoleStateAssembler(ConsoleCapabilities.SmartFade1248);
+        var changes = new List<string>();
+        foreach (var frame in capture.BulkFrames.Where(f => f.Seq >= 868 && f.Seq < 97137))
+        {
+            var direction = frame.Direction == CaptureDirection.Out ? HspDirection.ToConsole : HspDirection.FromConsole;
+            if (decoder.Feed(direction, frame.Data) is ObjectReceived received && assembler.Apply(received)?.BlinkingFaders is { } blinking)
+            {
+                changes.Add($"{frame.Seq}: {string.Join(' ', blinking)}".TrimEnd());
+                Assert.Equal(blinking, assembler.BlinkingFaders);
+            }
+        }
+
+        Assert.Equal(new[]
+        {
+            "9221:", "47749: 1 12", "47753:", "51473: 1", "56349:", "59535: 1", "59574:", "67160: 2", "73274:",
+            "76674: 2", "76735:", "77680: 2", "77699:", "80267: 12", "80271:", "80317: 3", "84309:", "84586: 1 12", "84593:",
+        }, changes);
+    }
+
     /// <summary>The same LedStatus object with block 52 (SOLO, INFERRED F100) set to its "on" value FF × 6.</summary>
     private static ObjectReceived WithSoloLit(ObjectReceived leds)
     {

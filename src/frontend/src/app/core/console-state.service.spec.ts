@@ -143,6 +143,24 @@ describe('ConsoleStateService', () => {
       expect(service.firmwareVersion()).toBeUndefined();
     });
 
+    it('keeps the blinking physical faders 1..24 a real console reports, and none without a list', () => {
+      expect(service.blinkingFaders().size).toBe(0);
+
+      service.applyConsoleStateChanged(createSampleState({ faderBank: 'channels1To24', blinkingFaders: [1, 12, 24] }));
+      expect([...service.blinkingFaders()]).toEqual([1, 12, 24]);
+
+      service.applyConsoleStateChanged(
+        createSampleState({ blinkingFaders: [0, 25, 2.5, -1, 3, Number.NaN] as number[] }),
+      );
+      expect([...service.blinkingFaders()]).toEqual([3]);
+
+      service.applyConsoleStateChanged(createSampleState({ blinkingFaders: null }));
+      expect(service.blinkingFaders().size).toBe(0);
+      service.applyConsoleStateChanged(createSampleState({ blinkingFaders: [5] }));
+      service.applyConsoleStateChanged(createSampleState());
+      expect(service.blinkingFaders().size).toBe(0);
+    });
+
     it('keeps exactly 48 channels when the snapshot lists fewer', () => {
       service.applyConsoleStateChanged(
         createSampleState({

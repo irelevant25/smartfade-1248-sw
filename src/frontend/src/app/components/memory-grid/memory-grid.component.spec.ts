@@ -213,6 +213,37 @@ describe('MemoryGridComponent', () => {
     expect(pageButton(12).classList.contains('memories__page--console')).toBe(true);
   });
 
+  it('marks the bump of each memory fader the console blinks, on the page the console shows in memory mode only', () => {
+    const blinking = () =>
+      bumpButtons().flatMap((button, index) =>
+        button.classList.contains('fader__bump--blinking') ? [index + 1] : [],
+      );
+    const report = (faderBank: 'channels1To24' | 'memories', memoryPage: number) => {
+      state.applyConsoleStateChanged(
+        createSampleState({
+          memoryPage,
+          faderBank,
+          blinkingFaders: [2, 3],
+          connection: { status: 'connected', mode: 'hardware', deviceDescription: 'SmartFade 1248, read-only' },
+        }),
+      );
+      fixture.detectChanges();
+    };
+
+    report('memories', 1);
+    expect(blinking()).toEqual([2, 3]);
+
+    // the user looks at another page: its memories are not the ones the console blinks
+    click(pageButton(3));
+    expect(blinking()).toEqual([]);
+    click(pageButton(1));
+    expect(blinking()).toEqual([2, 3]);
+
+    // in channel mode the LEDs belong to the channel faders
+    report('channels1To24', 1);
+    expect(blinking()).toEqual([]);
+  });
+
   it('disables the faders and bump buttons while commands are not possible', () => {
     enabled.set(false);
     fixture.detectChanges();

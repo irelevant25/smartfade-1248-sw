@@ -17,7 +17,9 @@ namespace SmartFade.Application;
 /// <see cref="WritableControls"/> the controls the device accepts commands for, null when every control of a
 /// supported command's kind is accepted (<see cref="DeviceControls"/>);
 /// <see cref="FaderBank"/> what the console's physical faders control when the device reports it (a real console,
-/// ConsoleStatus), else null (the simulator plays every bank at once).
+/// ConsoleStatus), else null (the simulator plays every bank at once);
+/// <see cref="BlinkingFaders"/> the physical faders 1–24 whose LED the console blinks (a real console's LedStatus, outside its
+/// page view and record screens; F172's unmatched fader among other readings), empty when none, null when not reported.
 /// </summary>
 public sealed record ConsoleState(
     ConnectionState Connection,
@@ -40,4 +42,5 @@ public sealed record ConsoleState(
     string? ShowFileName,
     string? FirmwareVersion,
     IReadOnlySet<string>? WritableControls = null,
-    FaderBank? FaderBank = null);
+    FaderBank? FaderBank = null,
+    IReadOnlyList<int>? BlinkingFaders = null);

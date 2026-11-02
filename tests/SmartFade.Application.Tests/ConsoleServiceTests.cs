@@ -514,7 +514,34 @@ public class ConsoleServiceTests
         Assert.Equal(new[] { ConnectionStatus.Connecting, ConnectionStatus.Connected }, statuses);
     }
 
-    /// <summary>A device that connects but never reports the effect of a command.</summary>
+    [Fact]
+    public async Task The_fader_bank_and_the_blinking_faders_reach_subscribers_with_the_full_state()
+    {
+        // SC-5 condition 1 (e), the first review of SC-5 item 10, major 3: a real console's fader bank (ConsoleStatus) and its
+        // blinking fader LEDs (LedStatus) come as changes of their own, and the UI receives both only with the full state, so
+        // each such change raises it, also alone (the bank alone raised nothing before).
+        var device = new SilentDevice();
+        var service = Create(device);
+        await service.ConnectAsync(CancellationToken.None);
+        var states = new List<ConsoleState>();
+        service.StateChanged += states.Add;
+
+        device.Report(new DeviceStateChange(FaderBank: FaderBank.Channels25To48));
+        device.Report(new DeviceStateChange(BlinkingFaders: new[] { 1, 12 }));
+        device.Report(new DeviceStateChange(BlinkingFaders: Array.Empty<int>()));
+
+        Assert.Equal(3, states.Count);
+        Assert.Equal(FaderBank.Channels25To48, states[0].FaderBank);
+        Assert.Null(states[0].BlinkingFaders);
+        Assert.Equal(new[] { 1, 12 }, states[1].BlinkingFaders);
+        Assert.Equal(FaderBank.Channels25To48, states[1].FaderBank);
+        Assert.Empty(states[2].BlinkingFaders!);
+
+        await service.DisconnectAsync(CancellationToken.None);
+        Assert.Null(service.GetState().BlinkingFaders);
+    }
+
+    /// <summary>A device that connects but never reports the effect of a command; a test may push a console-side change (<see cref="Report"/>).</summary>
     private sealed class SilentDevice : ISmartFadeDevice
     {
         public DeviceMode Mode => DeviceMode.Simulated;
@@ -527,11 +554,13 @@ public class ConsoleServiceTests
 
         public DeviceCommands SupportedCommands => DeviceCommands.All;
 
-#pragma warning disable CS0067 // never raised: that is the point of this device
+        /// <summary>Raised only by <see cref="Report"/>: no command of this device ever reports its effect.</summary>
         public event EventHandler<DeviceStateChange>? StateChanged;
-#pragma warning restore CS0067
 
         public event EventHandler<ConnectionState>? ConnectionChanged;
+
+        /// <summary>A change on the console's side, as a real console reports one by itself.</summary>
+        public void Report(DeviceStateChange change) => StateChanged?.Invoke(this, change);
 
         public Task ConnectAsync(CancellationToken cancellationToken)
         {

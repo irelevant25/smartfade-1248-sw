@@ -62,6 +62,18 @@ export class MemoryGridComponent {
   protected bumpDisabledFor(memory: MemoryStateDto): boolean {
     return (this.bumpsDisabled() || !this._state.writable(`memoryBump:${memory.number}`)) && !this.armedFor(memory);
   }
+
+  /**
+   * The console blinks this memory fader's LED: in memory mode, on the page the console shows, physical fader k is memory
+   * fader k (F171, F113); display only (F172: an unmatched fader after a mode switch, or one still holding another page's memory).
+   */
+  protected bumpBlinkingFor(memory: MemoryStateDto): boolean {
+    return (
+      this._state.faderBank() === 'memories' &&
+      this.consolePage() === memory.page &&
+      this._state.blinkingFaders().has(memory.fader)
+    );
+  }
   /** Until the console delivered memories, every memory shown is a placeholder (unrecorded, no label). */
   protected readonly reported = this._state.memoriesReported;
   /** Some memories delivered, others still placeholders (a read-only console sends them one at a time). */

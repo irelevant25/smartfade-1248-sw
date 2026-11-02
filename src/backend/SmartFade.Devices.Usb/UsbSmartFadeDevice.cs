@@ -38,7 +38,9 @@ namespace SmartFade.Devices.Usb;
 /// </summary>
 [Evidence(EvidenceStatus.Verified, "F51, F52, F53, F54, F55, F57", "the read-only session as SC-1 cleared it (2026-10-30)")]
 [Evidence(EvidenceStatus.Verified, "F131, F132, F133, F134", "live control, SC-2 classes A and B1 (2026-10-31): the whitelisted ConsoleEvents as SmartSoft's and the console's behaviour; a conditional GO, nothing sent before E11 on the owner's go")]
-[Evidence(EvidenceStatus.Verified, "F171, F172 (in part), F174, F175", "live control, SC-5 classes A2-A4, B3-B5 (2026-11-02, with the addenda): every physical fader and bump in three banks, the bank keys, IND 1 / 2, the automatic bank switch and the matching event; a conditional GO, nothing sent before the review and E11b on the owner's go")]
+[Evidence(EvidenceStatus.Verified, "F171, F174, F175", "live control, SC-5 classes A2-A4, B3-B5 (2026-11-02, with the addenda): every physical fader and bump in three banks, the bank keys, IND 1 / 2 as SmartSoft's events and the console's answers to them; a conditional GO, nothing sent before the review and E11b on the owner's go")]
+[Evidence(EvidenceStatus.Observed, "F172 (a) VERIFIED in part, (b) and (c) OBSERVED once; the 1-24 / 25-48 bank switch in none of its cases", "the automatic bank switch's matching event: after a mode switch the console ignored SmartSoft's events for a re-assigned fader until one reached the content's level (case a, E9c and both E9d passes); after a physical level (b) and a page change (c) once each; that a 1-24 / 25-48 switch behaves alike is INFERRED; a matching event from our own host is unobserved until E11b")]
+[Evidence(EvidenceStatus.Inferred, "F82, F96, F112, F174", "the matching level: ChannelLevels[c] agreeing with FaderInfo record k byte 0 (a memory fader: record k bytes 0 and 1) is read as the fader content's own level, which rules out a memory up on another fader and the stack (INFERRED), not a held bump (F174, VERIFIED: the bump's level is in both reports during a hold), so the physical fader of a bump this host pressed is refused until both objects were listed and delivered again after its release")]
 [Evidence(EvidenceStatus.Inferred, "F57, F116", "the interlock's freshness reading: a poll reply within two poll periods that listed no LedStatus means the key LEDs are current (F57: a list names what changed; F116: a record screen opens and closes with exactly one LedStatus payload, 28 of 28 and 4 of 4); not observed as a rule of the console")]
 [Evidence(EvidenceStatus.Observed, "write_rules.py 2026-10-31 (E9, E9b); E9c, E9d, E9e", "the console states SmartSoft sent each whitelisted control in; the device sends each control only in those states")]
 public sealed class UsbSmartFadeDevice : ISmartFadeDevice, IAsyncDisposable
@@ -101,6 +103,12 @@ public sealed class UsbSmartFadeDevice : ISmartFadeDevice, IAsyncDisposable
     private (FaderBank? Bank, int? Page)? _assignment;
     private HeldBump? _hold;
     private ITransferSink? _liveLog;
+
+    // The physical faders whose reports may carry a bump this session pressed (F174), from the press until the console has
+    // listed and delivered FaderInfo (and, for a channel bump, ChannelLevels) again after the release; and the notes the
+    // writes' sent callbacks leave for the transfer log, written at the next event, after the write's payload (all under _gate).
+    private readonly List<BumpShadow> _bumpShadows = new();
+    private readonly List<string> _pendingNotes = new();
     private ConnectionStatus _status = ConnectionStatus.Disconnected;
     private ConsoleStateAssembler _assembler;
     private CancellationTokenSource? _sessionStop;
@@ -729,6 +737,67 @@ public sealed class UsbSmartFadeDevice : ISmartFadeDevice, IAsyncDisposable
     /// <summary>A bump the UI holds (or waits to hold behind a switch): its control name, its key, what it was pressed for.</summary>
     private sealed record HeldBump(string Control, ClearedKey Key, Target Target);
 
+    /// <summary>
+    /// A bump this session pressed (SC-5 class B3, the first review of SC-5 item 10, major 1): from its press until the console
+    /// has listed and delivered FaderInfo (and, for a channel bump, ChannelLevels) again after its release, the reports of its
+    /// physical fader carry the bump's level, not the content's: F174 (VERIFIED) shows FaderInfo record k `ff 00 00 00` and
+    /// ChannelLevels[c] 0xFF in 16 of 16 channel-bump holds and record k `ff ff 00 00` in 51 of 51 memory-bump holds (E9c,
+    /// E9d, E9e); after a channel bump's release the first poll reply named neither object in 9 of 16 holds (E9c header seqs
+    /// 29262, 86165, 87996; E9d 27254; E9e 17655, 18352, 18882, 28382, 28803), after a memory bump's FaderInfo always (51 of 51),
+    /// and a memory bump of an empty memory changes no channel (E9c S3), so a memory bump waits for FaderInfo only. A fader
+    /// event of that physical fader, in any bank, is refused or dropped meanwhile (OBSERVED evidence, the rule INFERRED).
+    /// A bump held on the panel cannot be told apart from a fader at that level (the owner's acceptance for E11b).
+    /// Read and changed under <c>_gate</c> only.
+    /// </summary>
+    private sealed class BumpShadow
+    {
+        public required ClearedKey Key { get; init; }
+
+        public required int Physical { get; init; }
+
+        public required string Name { get; init; }
+
+        /// <summary>A channel bump: its level is in ChannelLevels too, so ChannelLevels must be reported again as well.</summary>
+        public required bool ChannelsToo { get; init; }
+
+        /// <summary>The press was taken for sending (until then the fader's reports are its own).</summary>
+        public bool PressSent { get; set; }
+
+        /// <summary>A poll reply came after the release was taken for sending.</summary>
+        public bool Released { get; set; }
+
+        public bool FaderInfoListed { get; set; }
+
+        public bool ChannelLevelsListed { get; set; }
+
+        public bool FaderInfoIn { get; set; }
+
+        public bool ChannelLevelsIn { get; set; }
+
+        /// <summary>FaderInfo (and ChannelLevels for a channel bump) listed after the release and then delivered: the fader's reports are its own again.</summary>
+        public bool Done => Released && FaderInfoIn && (ChannelLevelsIn || !ChannelsToo);
+    }
+
+    /// <summary>
+    /// Why a fader event of physical fader k waits for the console: a bump of that physical fader that this session pressed
+    /// and whose release the console has not reported again in FaderInfo (and ChannelLevels) (<see cref="BumpShadow"/>); null otherwise.
+    /// </summary>
+    private string? Shadowed(Target target)
+    {
+        if (_bumpShadows.FirstOrDefault(s => s.PressSent && s.Physical == target.Physical) is not { } shadow)
+        {
+            return null;
+        }
+
+        var objects = shadow.ChannelsToo ? "FaderInfo and ChannelLevels" : "FaderInfo";
+        return shadow.Released
+            ? $"{shadow.Name} was released and the console has not reported physical fader {shadow.Physical} again since ({objects} listed and delivered after the release): until then its reports may carry the bump's level, not {target.Name}'s (F174)"
+            : $"{shadow.Name} is held: physical fader {shadow.Physical}'s reports carry the bump's level, not {target.Name}'s, until the console has reported it again after the release ({objects} listed and delivered) (F174)";
+    }
+
+    /// <summary>The console state a channel or memory fader event needs, at its command and again right before it goes.</summary>
+    private string? FaderState(Target target) => NotIn(target) ?? MasterNotAtFull(target.Name) ?? Shadowed(target);
+
     /// <summary>The automatic bank switch in progress (SC-5 condition 1), one at a time; read and changed under <c>_gate</c> only.</summary>
     private sealed class BankSwitch
     {
@@ -763,12 +832,64 @@ public sealed class UsbSmartFadeDevice : ISmartFadeDevice, IAsyncDisposable
     }
 
     /// <summary>
-    /// Channel c's bank and physical fader: channels 1–24 are physical faders 1–24 in bank 1-24, channels 25–48 the same
-    /// faders in bank 25-48 (F171 VERIFIED: in bank 25-48 the fader labelled N moved ChannelLevels[N] through index N − 25,
-    /// both E9d passes). The physical number names the whitelist member through <see cref="PhysicalControls"/>' table.
+    /// Channel c's bank and physical fader, one explicit row per channel (the first review of SC-5 item 10, minor 3): each pair
+    /// observed in both E9d passes (F171, VERIFIED): channel N of bank 1-24 moved by index N − 1 (part A, also E9c S1), channel N
+    /// of bank 25-48 by the fader labelled N, index N − 25 (part B; 25 and 26 also E9c S2). The physical number then names the
+    /// whitelist member through <see cref="PhysicalControls"/>' table; nothing here is computed. Internal for the golden test
+    /// that checks every row against E9d.
     /// </summary>
-    private static (FaderBank Bank, int Physical) ChannelPosition(int channel) =>
-        channel <= 24 ? (FaderBank.Channels1To24, channel) : (FaderBank.Channels25To48, channel - 24);
+    internal static (FaderBank Bank, int Physical) ChannelPosition(int channel) => channel switch
+    {
+        1 => (FaderBank.Channels1To24, 1),
+        2 => (FaderBank.Channels1To24, 2),
+        3 => (FaderBank.Channels1To24, 3),
+        4 => (FaderBank.Channels1To24, 4),
+        5 => (FaderBank.Channels1To24, 5),
+        6 => (FaderBank.Channels1To24, 6),
+        7 => (FaderBank.Channels1To24, 7),
+        8 => (FaderBank.Channels1To24, 8),
+        9 => (FaderBank.Channels1To24, 9),
+        10 => (FaderBank.Channels1To24, 10),
+        11 => (FaderBank.Channels1To24, 11),
+        12 => (FaderBank.Channels1To24, 12),
+        13 => (FaderBank.Channels1To24, 13),
+        14 => (FaderBank.Channels1To24, 14),
+        15 => (FaderBank.Channels1To24, 15),
+        16 => (FaderBank.Channels1To24, 16),
+        17 => (FaderBank.Channels1To24, 17),
+        18 => (FaderBank.Channels1To24, 18),
+        19 => (FaderBank.Channels1To24, 19),
+        20 => (FaderBank.Channels1To24, 20),
+        21 => (FaderBank.Channels1To24, 21),
+        22 => (FaderBank.Channels1To24, 22),
+        23 => (FaderBank.Channels1To24, 23),
+        24 => (FaderBank.Channels1To24, 24),
+        25 => (FaderBank.Channels25To48, 1),
+        26 => (FaderBank.Channels25To48, 2),
+        27 => (FaderBank.Channels25To48, 3),
+        28 => (FaderBank.Channels25To48, 4),
+        29 => (FaderBank.Channels25To48, 5),
+        30 => (FaderBank.Channels25To48, 6),
+        31 => (FaderBank.Channels25To48, 7),
+        32 => (FaderBank.Channels25To48, 8),
+        33 => (FaderBank.Channels25To48, 9),
+        34 => (FaderBank.Channels25To48, 10),
+        35 => (FaderBank.Channels25To48, 11),
+        36 => (FaderBank.Channels25To48, 12),
+        37 => (FaderBank.Channels25To48, 13),
+        38 => (FaderBank.Channels25To48, 14),
+        39 => (FaderBank.Channels25To48, 15),
+        40 => (FaderBank.Channels25To48, 16),
+        41 => (FaderBank.Channels25To48, 17),
+        42 => (FaderBank.Channels25To48, 18),
+        43 => (FaderBank.Channels25To48, 19),
+        44 => (FaderBank.Channels25To48, 20),
+        45 => (FaderBank.Channels25To48, 21),
+        46 => (FaderBank.Channels25To48, 22),
+        47 => (FaderBank.Channels25To48, 23),
+        48 => (FaderBank.Channels25To48, 24),
+        _ => throw new ArgumentOutOfRangeException(nameof(channel), channel, "The 1248 has channels 1-48."),
+    };
 
     /// <summary>
     /// What the physical faders control as the console last reported it, among the three states SmartSoft sent controls in
@@ -870,11 +991,17 @@ public sealed class UsbSmartFadeDevice : ISmartFadeDevice, IAsyncDisposable
     }
 
     /// <summary>
-    /// SC-5 condition 1 (d), F172: the level a re-assigned physical fader is matched at, the target's reported level. A channel:
-    /// ChannelLevels[c], and only when FaderInfo record k byte 0 (the physical fader's post-MASTER level, F82, F96; with the
-    /// MASTER at full its own) reads the same, so that both reports name one level and no other source (a memory, a bump, the
-    /// stack) drives the channel; a memory fader: FaderInfo record k bytes 0 and 1, equal (F112: equal in all 26 memory-mode
-    /// samples; H71). Null with the reason when the level is not known or not one.
+    /// SC-5 condition 1 (d): the level a re-assigned physical fader is matched at, the target's reported level (F172: case (a),
+    /// a mode switch, VERIFIED in part; (b) and (c) OBSERVED once; a 1-24 / 25-48 switch in none of its cases, so INFERRED).
+    /// A channel: ChannelLevels[c] (which channel F171, VERIFIED), sent only when FaderInfo record k byte 0 reads the same.
+    /// Record k byte 0 is the physical fader's post-MASTER output (F82, F96: OBSERVED; with the MASTER at full, required, the
+    /// fader's own unless something else is added to it). The two agreeing is read as "no other source drives the channel": that
+    /// holds for a memory up on another fader and for the stack (INFERRED: they reach ChannelLevels, not that fader's record) and
+    /// is <b>contradicted for a held bump</b> (F174, VERIFIED: during a hold both read the bump's level, record k `ff 00 00 00`
+    /// and ChannelLevels[c] 0xFF), so a bump this session pressed keeps its fader out of here until its release is reported
+    /// (<see cref="Shadowed"/>); a bump held on the panel cannot be told apart (the owner's acceptance for E11b). A memory fader:
+    /// FaderInfo record k bytes 0 and 1, equal (F112: equal in all 26 memory-mode samples; H71), with the same caveat for a held
+    /// memory bump (`ff ff 00 00`, F174). Null with the reason when the level is not known or not one.
     /// </summary>
     private (byte? Level, string? Reason) MatchingLevel(Target target)
     {
@@ -916,7 +1043,7 @@ public sealed class UsbSmartFadeDevice : ISmartFadeDevice, IAsyncDisposable
         lock (_gate)
         {
             RequireRunning(session);
-            Refuse(RecordFunctionArmed(_assembler.Keys) ?? FadersUnreported() ?? MasterNotAtFull(target.Name));
+            Refuse(RecordFunctionArmed(_assembler.Keys) ?? FadersUnreported() ?? MasterNotAtFull(target.Name) ?? Shadowed(target));
             if (_switch is { } pending)
             {
                 Refuse(pending.Target == target.Bank && pending.Page == target.Page ? null : SwitchInProgress());
@@ -934,7 +1061,7 @@ public sealed class UsbSmartFadeDevice : ISmartFadeDevice, IAsyncDisposable
             Refuse(NotIn(target));
             if (_matched.Contains(fader))
             {
-                session.QueueFader(fader, level, () => Recheck(session, () => NotIn(target) ?? MasterNotAtFull(target.Name), holdWhileFaderInfoListed: true));
+                session.QueueFader(fader, level, () => Recheck(session, () => FaderState(target), holdWhileFaderInfoListed: true));
                 return Task.CompletedTask;
             }
 
@@ -971,7 +1098,7 @@ public sealed class UsbSmartFadeDevice : ISmartFadeDevice, IAsyncDisposable
 
         lock (_gate)
         {
-            var reason = ReferenceEquals(_liveSession, session) ? NotIn(target) ?? MasterNotAtFull(target.Name) : "the live-control session is ending";
+            var reason = ReferenceEquals(_liveSession, session) ? FaderState(target) : "the live-control session is ending";
             if (reason is null)
             {
                 var (now, why) = MatchingLevel(target);
@@ -983,17 +1110,16 @@ public sealed class UsbSmartFadeDevice : ISmartFadeDevice, IAsyncDisposable
     }
 
     /// <summary>
-    /// The matching event was taken for sending (on the session's thread): the fader counts as matched, and the UI's latest
-    /// level, when it differs, is queued behind it ("then the drag", SC-5 condition 1 d). Never throws: a write it follows
-    /// is already committed.
+    /// The matching event was taken for sending (on the session's thread, between the gate and the header): the fader counts
+    /// as matched, and the UI's latest level, when it differs, is queued behind it ("then the drag", SC-5 condition 1 d).
+    /// State only (the queue is memory); the note is written at the next event. Never throws: the write is already committed.
     /// </summary>
     private void MatchingSent(HspReadSession session, ClearedFader fader, Target target, byte level)
     {
-        string note;
         lock (_gate)
         {
             _matched.Add(fader);
-            note = $"matched {target.Name} at its reported level 0x{level:X2} (SC-5 condition 1 d, F172)";
+            var note = $"matched {target.Name} at its reported level 0x{level:X2} (SC-5 condition 1 d, F172)";
             if (_pendingLevels.TryGetValue(fader, out var wish) && wish.Target == target)
             {
                 _pendingLevels.Remove(fader);
@@ -1001,7 +1127,7 @@ public sealed class UsbSmartFadeDevice : ISmartFadeDevice, IAsyncDisposable
                 {
                     try
                     {
-                        session.QueueFader(fader, wish.Level, () => Recheck(session, () => NotIn(target) ?? MasterNotAtFull(target.Name), holdWhileFaderInfoListed: true));
+                        session.QueueFader(fader, wish.Level, () => Recheck(session, () => FaderState(target), holdWhileFaderInfoListed: true));
                     }
                     catch (InvalidOperationException ex)
                     {
@@ -1009,9 +1135,9 @@ public sealed class UsbSmartFadeDevice : ISmartFadeDevice, IAsyncDisposable
                     }
                 }
             }
-        }
 
-        SessionNote(note);
+            LeaveNote(note);
+        }
     }
 
     /// <summary>
@@ -1041,15 +1167,17 @@ public sealed class UsbSmartFadeDevice : ISmartFadeDevice, IAsyncDisposable
         : ReportedBank() == sw.From ? null
         : $"the console no longer shows {Describe(sw.From)}: {KeyName(sw.Key)} for {sw.Reason} is not sent";
 
-    /// <summary>The switch key's press was taken for sending (the session's thread): its report is now awaited, within <see cref="BankSwitchReportBound"/>.</summary>
+    /// <summary>
+    /// The switch key's press was taken for sending (the session's thread, between the gate and the header): its report is
+    /// now awaited, within <see cref="BankSwitchReportBound"/>. State only; the note is written at the next event.
+    /// </summary>
     private void SwitchKeySent(BankSwitch sw)
     {
         lock (_gate)
         {
             sw.KeySent = _clock.GetTimestamp();
+            LeaveNote($"{sw.Kind} (SC-5 condition 1) for {sw.Reason}: {KeyName(sw.Key)} sent, from {Describe(sw.From)} to {Describe(sw.Target)}; nothing else goes until the console reports it");
         }
-
-        SessionNote($"{sw.Kind} (SC-5 condition 1) for {sw.Reason}: {KeyName(sw.Key)} sent, from {Describe(sw.From)} to {Describe(sw.Target)}; nothing else goes until the console reports it");
     }
 
     /// <summary>
@@ -1114,7 +1242,7 @@ public sealed class UsbSmartFadeDevice : ISmartFadeDevice, IAsyncDisposable
             notes.Add($"{sw.Kind} done: the console reports {Describe(sw.Target)} {_clock.GetElapsedTime(sw.KeySent!.Value).TotalMilliseconds:F0} ms after {KeyName(sw.Key)} (SC-5 condition 1 c)");
             foreach (var (fader, pending) in _pendingLevels.ToArray())
             {
-                var (level, reason) = (NotIn(pending.Target) ?? MasterNotAtFull(pending.Target.Name)) is { } state ? (null, state) : MatchingLevel(pending.Target);
+                var (level, reason) = FaderState(pending.Target) is { } state ? (null, state) : MatchingLevel(pending.Target);
                 if (level is null)
                 {
                     _pendingLevels.Remove(fader);
@@ -1166,7 +1294,10 @@ public sealed class UsbSmartFadeDevice : ISmartFadeDevice, IAsyncDisposable
         lock (_gate)
         {
             RequireRunning(session);
-            Refuse(RecordFunctionArmed(_assembler.Keys)
+
+            // FaderInfo is required as for a fader (the first review of SC-5 item 10, minor 4): NotIn's own checks of the
+            // physical fader's record (byte 1 for a channel, byte 3 for a memory) read it, and must not pass for want of it.
+            Refuse(RecordFunctionArmed(_assembler.Keys) ?? FadersUnreported()
                 ?? (session.HoldInProgress || _switch?.Press is not null ? "another bump is held: one bump at a time is held from the PC (SmartSoft sent nothing between a press and its release, F133)" : null));
             if (_switch is { } pending)
             {
@@ -1192,14 +1323,28 @@ public sealed class UsbSmartFadeDevice : ISmartFadeDevice, IAsyncDisposable
     /// <summary>Queues a bump as a hold (released by the UI or the loop's 3 s bound, <see cref="HspReadLoop.MaxHold"/>) or, when the UI already let go, as a tap; asked again right before it goes.</summary>
     private void QueueBump(HspReadSession session, HeldBump bump, bool tap)
     {
-        if (tap)
+        // its physical fader's reports carry the bump from the press until they are reported again after the release (F174)
+        var shadow = new BumpShadow { Key = bump.Key, Physical = bump.Target.Physical, Name = bump.Target.Name, ChannelsToo = bump.Target.Channel is not null };
+        Func<HspWriteDecision> condition = () => Recheck(session, () => NotIn(bump.Target), holdWhileFaderInfoListed: false);
+        void PressSent()
         {
-            session.QueueKeyTap(bump.Key, () => Recheck(session, () => NotIn(bump.Target), holdWhileFaderInfoListed: false));
-            return;
+            lock (_gate)
+            {
+                shadow.PressSent = true;   // state only: this runs between the gate and the header
+            }
         }
 
-        session.QueueKeyHold(bump.Key, () => Recheck(session, () => NotIn(bump.Target), holdWhileFaderInfoListed: false));
-        _hold = bump;
+        if (tap)
+        {
+            session.QueueKeyTap(bump.Key, condition, sent: PressSent);
+        }
+        else
+        {
+            session.QueueKeyHold(bump.Key, condition, sent: PressSent);
+            _hold = bump;
+        }
+
+        _bumpShadows.Add(shadow);   // an older shadow of the same fader stays until its own release is reported
     }
 
     /// <summary>
@@ -1547,6 +1692,7 @@ public sealed class UsbSmartFadeDevice : ISmartFadeDevice, IAsyncDisposable
         }
         finally
         {
+            string[] lastNotes = Array.Empty<string>();
             lock (_gate)
             {
                 if (ReferenceEquals(_liveSession, session))
@@ -1557,12 +1703,19 @@ public sealed class UsbSmartFadeDevice : ISmartFadeDevice, IAsyncDisposable
                 if (ReferenceEquals(_liveLog, log))
                 {
                     _liveLog = null;
+                    lastNotes = _pendingNotes.ToArray();   // left by the last writes' sent callbacks: written below, before the log closes
                     ResetLiveState();
                 }
             }
 
             try
             {
+                foreach (var note in lastNotes)
+                {
+                    _logger.LogInformation("Live control: {Note}", note);
+                    log?.Note(note);
+                }
+
                 log?.Note($"polls {session.PollsSent}, fetches {session.FetchesSent}, lists {session.ListsReceived}, objects {session.ObjectsReceived}, writes {session.WritesSent}");
                 log?.Dispose();
             }
@@ -1665,6 +1818,12 @@ public sealed class UsbSmartFadeDevice : ISmartFadeDevice, IAsyncDisposable
     /// </summary>
     private void OnEvent(HspEvent evt, bool live)
     {
+        if (live)
+        {
+            WriteLeftNotes();    // the notes of the writes before this event, now after their payloads (MAJOR 2 of the review)
+            TrackShadows(evt);
+        }
+
         switch (evt)
         {
             case ReplyHeaderReceived { Header.MessageType: HspMessageType.PollReply } reply:
@@ -1687,6 +1846,10 @@ public sealed class UsbSmartFadeDevice : ISmartFadeDevice, IAsyncDisposable
                     lock (_gate)
                     {
                         change = _assembler.Apply(received);
+                        if (live)
+                        {
+                            ShadowsAfterObject(received.Payload.ObjectId);
+                        }
                     }
                 }
                 catch (Exception ex) when (ex is InvalidDataException or ArgumentException)
@@ -1747,6 +1910,62 @@ public sealed class UsbSmartFadeDevice : ISmartFadeDevice, IAsyncDisposable
             default:
                 break;
         }
+    }
+
+    /// <summary>
+    /// The bumps this session pressed (<see cref="BumpShadow"/>), on the session's thread: a poll reply after the release was
+    /// taken marks it released; a list after that naming FaderInfo or ChannelLevels marks it listed. The delivery of those
+    /// objects is tracked by <see cref="ShadowsAfterObject"/>, in the same lock as the assembler's update.
+    /// </summary>
+    private void TrackShadows(HspEvent evt)
+    {
+        lock (_gate)
+        {
+            if (_liveSession is not { } live || _bumpShadows.Count == 0)
+            {
+                return;
+            }
+
+            switch (evt)
+            {
+                case ReplyHeaderReceived { Header.MessageType: HspMessageType.PollReply }:
+                    var held = live.HeldKey;
+                    foreach (var shadow in _bumpShadows.Where(s => s.PressSent && !s.Released && s.Key != held))
+                    {
+                        shadow.Released = true;   // the release was taken before this poll (nothing goes between a press and its release)
+                    }
+
+                    break;
+                case DirtyListReceived list:
+                    foreach (var shadow in _bumpShadows.Where(s => s.Released))
+                    {
+                        shadow.FaderInfoListed |= list.List.Records.Any(r => r.ObjectId == (int)HspObjectId.FaderInfo);
+                        shadow.ChannelLevelsListed |= list.List.Records.Any(r => r.ObjectId == (int)HspObjectId.ChannelLevels);
+                    }
+
+                    break;
+            }
+        }
+    }
+
+    /// <summary>
+    /// Under <c>_gate</c>, right after the assembler applied a delivered object: FaderInfo or ChannelLevels listed after a
+    /// release counts as reported again, and a shadow whose release is so reported ends, never before the new report is in.
+    /// </summary>
+    private void ShadowsAfterObject(int objectId)
+    {
+        if (_bumpShadows.Count == 0)
+        {
+            return;
+        }
+
+        foreach (var shadow in _bumpShadows)
+        {
+            shadow.FaderInfoIn |= objectId == (int)HspObjectId.FaderInfo && shadow.FaderInfoListed;
+            shadow.ChannelLevelsIn |= objectId == (int)HspObjectId.ChannelLevels && shadow.ChannelLevelsListed;
+        }
+
+        _bumpShadows.RemoveAll(s => s.Done);
     }
 
     /// <summary>
@@ -1871,6 +2090,9 @@ public sealed class UsbSmartFadeDevice : ISmartFadeDevice, IAsyncDisposable
             {
                 _hold = null;
             }
+
+            // a bump whose press never went leaves its fader's reports as they were
+            _bumpShadows.RemoveAll(s => !s.PressSent && !live.IsKeyQueued(s.Key) && live.HeldKey != s.Key);
         }
 
         if (note is not null)
@@ -1887,21 +2109,64 @@ public sealed class UsbSmartFadeDevice : ISmartFadeDevice, IAsyncDisposable
         _switch = null;
         _assignment = null;
         _hold = null;
+        _bumpShadows.Clear();
+        _pendingNotes.Clear();
     }
 
     /// <summary>
-    /// A note in the live session's transfer log, written on the session's thread (SC-5 condition 1: the switch is logged as
-    /// one operation). It never throws: it may run inside a write's <c>sent</c> callback, after the write was committed; a log
-    /// that fails here fails the loop's own next write of it, which ends the session.
+    /// A note in the live session's transfer log, written on the session's thread from an event (SC-5 condition 1: the switch
+    /// is logged as one operation), never between the gate and a write's header: a write's <c>sent</c> callback leaves its
+    /// note with <see cref="LeaveNote"/> instead, and the notes left are written first, at the next event (after that write's
+    /// payload). It never throws; a log that fails here fails the loop's own next write of it, which ends the session.
     /// </summary>
     private void SessionNote(string text)
     {
+        string[] left;
         ITransferSink? log;
         lock (_gate)
         {
             log = _liveLog;
+            left = _pendingNotes.ToArray();
+            _pendingNotes.Clear();
         }
 
+        foreach (var note in left.Append(text))
+        {
+            WriteNote(log, note);
+        }
+    }
+
+    /// <summary>The notes the writes' sent callbacks left, written at an event of the session's thread (after the payload of the write that left them).</summary>
+    private void WriteLeftNotes()
+    {
+        string[] left;
+        ITransferSink? log;
+        lock (_gate)
+        {
+            if (_pendingNotes.Count == 0)
+            {
+                return;
+            }
+
+            log = _liveLog;
+            left = _pendingNotes.ToArray();
+            _pendingNotes.Clear();
+        }
+
+        foreach (var note in left)
+        {
+            WriteNote(log, note);
+        }
+    }
+
+    /// <summary>
+    /// For a write's <c>sent</c> callback, which runs between the gate and the write's header (SC-2 condition 5: nothing may
+    /// wait there, no I/O and no log note, the first review of SC-2 item 10, major 1): the note is only kept, under the lock.
+    /// </summary>
+    private void LeaveNote(string text) => _pendingNotes.Add(text);
+
+    private void WriteNote(ITransferSink? log, string text)
+    {
         _logger.LogInformation("Live control: {Note}", text);
         try
         {

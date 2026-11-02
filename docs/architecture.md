@@ -249,13 +249,23 @@ Decisions taken while building:
 Live control (`Device:Usb:LiveControlDate`) gained SC-5's classes, implemented by an Opus 5.5 agent at the owner's request:
 the typed whitelist in `HspOutbound` covers the 24 physical faders and bumps (`PhysicalControls`' explicit tables), FADERS
 25-48 and IND 1 / IND 2; `HspReadSession` holds a bump until its release is asked for (`QueueKeyHold`, `ReleaseKey`) and
-`HspReadLoop` bounds the hold to 3 s on its own clock; `UsbSmartFadeDevice` maps a channel or memory control to its
+`HspReadLoop` asks for its release 2.75 s after the press on its own clock (SC-5's 3 s bound; later only with a slow
+console, logged); `UsbSmartFadeDevice` maps a channel or memory control to its
 physical fader in the console's bank, runs the automatic bank switch as one operation (the FADERS key, then nothing until
 the console has reported the bank, within 2 s, else the session ends), sends each re-assigned fader's first event at the
-reported level, and refuses every control in NEXT mode, on another memory page or with the MASTER below full. The layers
+reported level, and refuses every control in NEXT mode or on another memory page, and a channel or memory fader with the
+MASTER below full. The layers
 are unchanged: the UI still sends domain commands only (`pressFaders25To48` is the one new hub method), the application
 knows nothing of banks or bytes, and the simulator answers the new key with `not_supported`. Nothing is sent before the
 `protocol-safety-reviewer` pass and the owner's go for E11b (safety-checks.md SC-5 "Implementation").
+
+The reviewer's first pass (NEEDS CHANGES) was answered in the working tree the same day: a physical fader whose bump this
+host pressed is refused, and a queued event for it dropped, until the console has listed and delivered FaderInfo (and, for
+a channel bump, ChannelLevels) again after the release (F174: its reports carry the bump meanwhile); a write's `sent`
+callback only changes state, its log note is written at the next event, after the payload; the assembler reports the
+console's blinking fader LEDs (`BlinkingFaders`, LedStatus blocks 1-24, outside the page view and the record screens) through
+`DeviceStateChange`, `ConsoleState` and the DTO, and the UI marks those bump buttons, display only (SC-5 condition 1 e); a
+change of the fader bank or of the blinking faders now raises the full state, which carries both.
 
 ## ASC show files as built (2026-10-31)
 

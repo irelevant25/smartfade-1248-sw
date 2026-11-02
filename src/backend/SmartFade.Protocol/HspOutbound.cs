@@ -134,7 +134,7 @@ public enum ClearedKey : byte
     /// <summary>Code 0x08, physical bump 9, LED block 9: memory bump 9 (E9c S3, E9d C); from a PC in channel mode only inside record functions (E9, E9b), so channel bump 9 rests on the addendum's rule.</summary>
     Bump9 = 0x08,
 
-    /// <summary>Code 0x09, physical bump 10: channel bump 10 (E9 inside COPY / EDIT MEM; E9c S5 held 2.67 s), memory bump 10 (E9d C).</summary>
+    /// <summary>Code 0x09, physical bump 10: channel bump 10 (E9 once in channel mode inside EDIT MEM, header seq 95535; E9c S5 held 2.67 s), memory bump 10 (E9 once in memory mode inside COPY, header seq 84654; E9d C).</summary>
     Bump10 = 0x09,
 
     /// <summary>Code 0x0A, physical bump 11: memory bump 11 (E9d C); channel bump by the addendum's rule.</summary>
