@@ -60,3 +60,18 @@ Reading: confirmed by the capture: 40 fader events for index 0x01 (0x02 .. 0x97 
 physical fader 2's own movement (FaderInfo record 2 0x1D .. 0x7E with no write, 01:01:13-01:01:14); the S4b readings above
 start from the physical fader at 0x7E, as the script intended, and the extra Simulator drag is one more pair of channel-mode
 drags of index 0x01 (the console followed them as in S1).
+
+--- Statement 2 (chat, 2026-11-02, after the E9c report and SC-5; verbatim) ---
+"1. ok
+2. ok
+3. I do not know"
+(followed by UI feedback: the CLEAR key's missing inactive look, the INDEPENDENTS section's height, inconsistent inactive
+classes across the keys, the page keys' cursor, and "without connecting the smartfade to the PC I cannot use the software in
+any way. I do not see a reason to do that. So, I prefer to be able to use the software even if device is not connected.")
+Reading: 1. E9d agreed: the guided script tools/usb-probe/e9d-guided-session.ps1 was written the same day (not run).
+2. The held-bump residual risk of SC-5 condition 2 (a process killed mid-hold leaves the bump down until the panel is
+pressed) is accepted by the owner ("ok"); recorded in SC-5. 3. The owner does not know what IND 1 / IND 2 drive on his rig;
+the captures answer for the current show and rig (IND 1 unpatched, IND 2 on DMX 47, nothing on DMX 47 with the rig on DMX
+5-16), recorded in SC-5 item 4. The UI feedback was applied the same day (one inactive look for every console key, CLEAR
+included; the INDEPENDENTS section as tall as its keys; the page keys' cursor; the simulated console connecting by itself
+when the backend link comes up, while the real console still needs a press of Connect).

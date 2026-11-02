@@ -387,6 +387,34 @@ level), H82 (the new codes), H107, H112, F96; the held-bump timings; the System 
 the safety check that extends SC-2 (no derivation replaces a capture: an index or a mode seen once in E9c
 needs E9d), the owner's implementation, a live session (E11b) under the same conditions as E11.
 
+### E9d runbook (the passive repeat SC-5 names; written 2026-11-02, not run)
+
+**Why:** SC-5 ([safety-checks.md](safety-checks.md)) clears a fader index or a bump only when it was seen in two sessions; E9c saw
+most of them once (the channel faders 2–24 of bank 1-24, two faders of bank 25-48, four memory faders, channel bump 1) and some never
+(faders 3–24 of bank 25-48, memory faders 4–8 and 10–24, most bumps). E9d gives the second session (and the first for the rest) in
+one capture with **two SmartSoft sessions**, counted as E3b's sessions were for E2; it clears nothing by itself. The owner agreed on
+2026-11-02.
+
+**Guided script:** `powershell -NoProfile -ExecutionPolicy Bypass -File tools/usb-probe/e9d-guided-session.ps1 -LogFile e9d-actions.txt`
+(the E9c gate; then per SmartSoft session one pass A–D below; about 20 minutes per session).
+
+**Actions per session ("Simulator" = SmartSoft's Console Simulator; waits are in the script):**
+
+- **A.** Every channel fader 1–24 once in bank 1-24 (up to about half, held 1 s, back to zero).
+- **B.** FADERS 25-48, then every fader labelled 25–48 once (the Simulator relabels its faders there: E9c's deviation), a bump held 2 s
+  under the fader labelled 25 (the bump in bank 25-48 E9c did not capture), FADERS 1-24.
+- **C.** FADERS MEMS, then every fader 1–24 once as a memory fader of page 1 (an empty memory moves only its record, F171), every
+  memory bump held 1 s, FADERS 1-24.
+- **D.** Bump 7 held 5 s (SC-5 bounds a hold to 3 s; the longer hold shows the console's own behaviour beyond it), then E9c's S4a case
+  once more (the Simulator's channel fader 1 at half, FADERS MEMS, the drag in memory mode, FADERS 1-24, the drag in channel mode).
+
+Then SmartSoft is closed and started again and the pass is repeated (session 2); the end: 30 s idle, SmartSoft closed, USBPcap stopped,
+the after-session SD save (must equal the backup).
+
+**Never in E9d:** the record keys, RATE, the wheel, GO, STACK, NEXT, PAUSE, CLEAR, any SmartSoft edit, page clicks in SmartSoft, show
+load or erase. **Evidence and what follows:** the split, the log and the two SD files into `docs/protocol/captures/` with an E9d record;
+SC-5's "after E9d" rows are then decided by an SC-5 addendum, per index and bump, from the two sessions.
+
 ### Next capture (proposed by the E2 analysis, 2026-10-28)
 
 *(Superseded 2026-10-29: item 2 was done as E3, see the E3 row above; the list is kept for the

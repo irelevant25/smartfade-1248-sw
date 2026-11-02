@@ -541,7 +541,7 @@ its side effects are understood, and the conditions hold. Everything else is NO-
 | 1 | Evidence status | **Yes for the classes cleared today, by SC-2's bar** | A2 index 0x00 VERIFIED (E9, E9b, E9c, E11); 0x04 (E9b + E9c) and 0x06 (E9 + E9c) in two sessions; the other 21 indices once (E9c), so after E9d. A3 (bank 25-48): 0x37 in two sessions (E9b + E9c); the indices there once (0x00, 0x01) or never, so after E9d. A4 (memory faders): 0x39 / 0x36 in many sessions; the indices as memory faders once (0x00, 0x01, 0x02, 0x08) or never, so after E9d. B3 (held bumps): 0x06 and memory 0x00 in three sessions, 0x09 in two; channel bump 1 once (after E9d); other bumps never. B4 (0x37) and B5 (0x47, 0x48) in two sessions with the same answer (F175, F115). F131 / F132 / F133 reproduced in a fourth capture. |
 | 2 | Side effects understood | **Yes for the cleared classes; the switch's rule is F172** | A fader event moves its physical fader's content at once once matched (F141, F171); after a switch nothing moves until matched (F172); a bank key changes what all 24 physical faders control, visible in ConsoleStatus body[0] / body[4] and the LEDs within one poll (F98, F175), and is what the owner asked for; IND 1 / 2 drive two outputs (DMX 97 / 98 by default, DMX 47 in this patch; F108, F115): live devices, the owner's rig decision; a held bump outputs at the BUMPS level until released (F174). Unobserved: a held bump longer than 2.85 s; a switch while a bump is held; a bump in bank 25-48. |
 | 3 | Backup | **Condition** | An SD save before every live session (the E11 guide's gate), compared with the after-session save. |
-| 4 | Rig | **Condition** | As SC-2; IND 1 / IND 2 added: the owner states what they drive on the rig before they are enabled in a session (a smoke machine or a cue light is the manual's example, F108). |
+| 4 | Rig | **Condition** | As SC-2; IND 1 / IND 2 added: the owner states what they drive on the rig before they are enabled in a session (a smoke machine or a cue light is the manual's example, F108). **2026-11-02: the owner does not know what they drive.** The captures do: IND 1 changed no DMX output in this show (unpatched; E9b, E9c), IND 2 drives DMX 47 (E8b, E9b, E9c), and the rig sits on DMX 5–16 (owner), so on this rig neither key reaches a fixture; the condition holds until the patch or the rig changes, and the guide asks again before a session. |
 | 5 | Firmware path untouched | **Yes** | Bulk transfers on interface 1 only; nothing new. |
 | 6 | Mode gating | **Condition (to build)** | The same write switch as SC-2 (`Device:Usb:LiveControlDate`); the automatic switch is a device-layer sequence (below), never a UI shortcut; the UI shows the console's bank (`faderBank`, since 2026-11-02) and an unmatched fader (the LED blink) from the console's own objects. |
 | 7 | No blind retries | **Condition (to build)** | As SC-2: one write, a failure ends the session. For a held bump the release is sent exactly once; if the session dies before it, the device must not resend on reconnect (the latch of SC-2 condition 4 holds). |
@@ -576,8 +576,8 @@ its side effects are understood, and the conditions hold. Everything else is NO-
    The switch back is the user's, or the next automatic switch. The physical faders now control the new bank: the UI says so.
 2. **A held bump is one operation with a bound:** press, the hold renewed by the UI, the release sent by the device when the UI
    releases or when the bound (3 s) expires, and before any Disconnect; a hold cannot span a bank switch (refused); the lost-release
-   case (a process killed mid-hold leaves the bump down until the panel is pressed, INFERRED) is accepted in writing by the owner before
-   E11b.
+   case (a process killed mid-hold leaves the bump down until the panel is pressed, INFERRED) **was accepted by the owner on 2026-11-02**
+   ("ok" in chat, recorded in the E9c owner-statements file).
 3. **One encoder, one whitelist** as SC-2: the indices and codes above as enums, nothing derived; golden tests over E9c (and E9d) for
    every new index and code, byte for byte, including the switch sequences SmartSoft used (0x39 then 0x00 …; 0x37 then 0x00 …).
 4. **The previous byte** stays this host's own last value per index (F132), across a bank switch too (SmartSoft's counter does not
@@ -590,8 +590,9 @@ its side effects are understood, and the conditions hold. Everything else is NO-
 One capture, SmartSoft's Simulator, two SmartSoft sessions (a restart between them, as E9c's S8; counted as the second session for
 what E9c saw once, as E3b's sessions were for E2): in each session every channel fader 1–24 once in bank 1-24, FADERS 25-48 then every
 fader 1–24 once (channels 25–48) and one held bump there, FADERS MEMS then every fader 1–24 once as memory faders of page 1 (empty
-memories move the record only) and every memory bump once, FADERS 1-24; a held bump of 5 s; the S4a case once more. Guided script to
-be written from the E9c one. Until E9d is recorded here, the "after E9d" classes are NO-GO.
+memories move the record only) and every memory bump once, FADERS 1-24; a held bump of 5 s; the S4a case once more. The owner agreed
+on 2026-11-02; the guided script `tools/usb-probe/e9d-guided-session.ps1` (written from the E9c one the same day, parse-checked, not run)
+does exactly this in two SmartSoft sessions. Until E9d is recorded here, the "after E9d" classes are NO-GO.
 
 ### What SC-5 does not clear
 
