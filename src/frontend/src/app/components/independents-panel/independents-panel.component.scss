@@ -22,33 +22,40 @@
   gap: 8px;
 }
 
-// IND 1 / IND 2: green keys, lit while the independent is on.
+// IND 1 / IND 2 in the shared key look (green, the console's key colour): the standard dark face, filled while the
+// independent is on (the owner, 2026-11-02: the same look as every other key, inactive included).
 .independents__key {
+  --key-rgb: 61, 220, 132;
+
   appearance: none;
   min-height: 44px;
-  border: 1px solid #1f5a3a;
-  border-radius: 6px;
-  background: linear-gradient(#13291d, #0d1c14);
-  color: #7fe3a8;
-  font: 700 0.8125rem var(--sf-font-ui);
-  letter-spacing: 0.16em;
+  padding: 0 6px;
+  border: 1px solid rgba(var(--key-rgb), 0.45);
+  border-radius: 4px;
+  background: linear-gradient(#242b33, #1a2026);
+  color: rgb(var(--key-rgb));
+  font: 700 0.75rem var(--sf-font-ui);
+  letter-spacing: 0.08em;
   text-transform: uppercase;
+  white-space: nowrap;
   cursor: pointer;
 
   &:hover:not(:disabled) {
-    border-color: var(--sf-ok);
+    border-color: rgb(var(--key-rgb));
+  }
+
+  &:active:not(:disabled) {
+    transform: translateY(1px);
   }
 
   // the inactive look is the shared rule in styles.scss (one look for every console key)
 }
 
 .independents__key--on {
-  border-color: #b9f5d2;
-  background: var(--sf-ok);
-  color: #06120a;
-  box-shadow:
-    0 0 18px rgba(61, 220, 132, 0.65),
-    inset 0 0 10px rgba(255, 255, 255, 0.3);
+  background: rgb(var(--key-rgb));
+  border-color: rgb(var(--key-rgb));
+  color: #0a0c0f;
+  box-shadow: 0 0 14px rgba(var(--key-rgb), 0.6);
 }
 
 // A state the real console has not reported: the key is drawn, but its light means nothing.

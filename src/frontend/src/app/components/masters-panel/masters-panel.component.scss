@@ -43,73 +43,70 @@
   min-height: 0;
 }
 
+// SOLO (white) and BLACKOUT (blue) in the shared key look (the owner, 2026-11-02: the same look as every other
+// key, inactive included): the console's key colour as --key-rgb on the standard dark face, the face filled with the
+// colour while the function is on; BLACKOUT blinks while the MASTER is below full (F5).
 .masters__toggle {
+  --key-rgb: 243, 246, 249;
+
   appearance: none;
-  min-height: 52px;
-  border-radius: 6px;
-  font: 700 0.8125rem var(--sf-font-ui);
-  letter-spacing: 0.16em;
+  min-height: 44px;
+  padding: 0 6px;
+  border: 1px solid rgba(var(--key-rgb), 0.45);
+  border-radius: 4px;
+  background: linear-gradient(#242b33, #1a2026);
+  color: rgb(var(--key-rgb));
+  font: 700 0.75rem var(--sf-font-ui);
+  letter-spacing: 0.08em;
   text-transform: uppercase;
+  white-space: nowrap;
   cursor: pointer;
+
+  &:hover:not(:disabled) {
+    border-color: rgb(var(--key-rgb));
+  }
+
+  &:active:not(:disabled) {
+    transform: translateY(1px);
+  }
+
   // the inactive look is the shared rule in styles.scss (one look for every console key)
 }
 
 // SOLO: the console lights its LED white while solo mode is on (E3b, F100).
 .masters__solo {
-  border: 1px solid var(--sf-border-strong);
-  background: linear-gradient(#242b33, #1a2026);
-  color: var(--sf-text-dim);
-
-  &:hover:not(:disabled) {
-    border-color: var(--sf-text);
-  }
+  --key-rgb: 243, 246, 249;
 }
 
-.masters__solo--on {
-  border-color: #fff;
-  background: #e9eef3;
-  color: #0a0c0f;
-  box-shadow:
-    0 0 18px rgba(255, 255, 255, 0.55),
-    inset 0 0 10px rgba(255, 255, 255, 0.6);
-}
-
-// BLACKOUT: blue on the owner's console; it blinks while the MASTER is below full (F5) and
-// lights up while blackout is on.
+// BLACKOUT: blue on the owner's console.
 .masters__blackout {
-  border: 1px solid #2a4a7a;
-  background: linear-gradient(#142640, #0d1a2e);
-  color: #8cc0ff;
+  --key-rgb: 78, 161, 255;
+}
 
-  &:hover:not(:disabled) {
-    border-color: #4ea1ff;
-  }
+.masters__solo--on,
+.masters__blackout--on {
+  background: rgb(var(--key-rgb));
+  border-color: rgb(var(--key-rgb));
+  color: #0a0c0f;
+  box-shadow: 0 0 14px rgba(var(--key-rgb), 0.6);
 }
 
 .masters__blackout--blink {
-  animation: blackout-blink 1s steps(2, start) infinite;
+  animation: masters-key-blink 1s steps(2, start) infinite;
 }
 
-.masters__blackout--on {
-  border-color: #9ccbff;
-  background: #2f7bff;
-  color: #fff;
-  box-shadow:
-    0 0 22px rgba(78, 161, 255, 0.7),
-    inset 0 0 12px rgba(255, 255, 255, 0.25);
-}
-
-@keyframes blackout-blink {
+@keyframes masters-key-blink {
   to {
-    background: #2f7bff;
-    color: #fff;
-    box-shadow: 0 0 14px rgba(78, 161, 255, 0.6);
+    background: rgb(var(--key-rgb));
+    border-color: rgb(var(--key-rgb));
+    color: #0a0c0f;
+    box-shadow: 0 0 14px rgba(var(--key-rgb), 0.6);
   }
 }
 
 @media (prefers-reduced-motion: reduce) {
   .masters__blackout--blink {
     animation: none;
-    border-color: #4ea1ff;
+    border-color: rgb(var(--key-rgb));
   }
 }
