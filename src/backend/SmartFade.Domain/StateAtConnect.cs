@@ -34,10 +34,13 @@ public enum MasterProbePhase
     /// <summary>The console reported its faders (the MASTER) in this session: no probe is needed.</summary>
     NotNeeded,
 
-    /// <summary>The probe (one bump tap of an unpatched channel) was queued or sent.</summary>
+    /// <summary>
+    /// The probe (one bump tap of an unpatched channel of either bank, with the automatic switch to its bank and back where the
+    /// console showed another; SC-4 clause 4 as amended on 2026-11-02, late evening) was queued, is under way or was sent.
+    /// </summary>
     Sent,
 
-    /// <summary>The probe could not run (the reason says why): one fader movement on the panel makes the console report the MASTER.</summary>
+    /// <summary>The probe could not run, or stopped without the MASTER (the reason says why): one fader movement on the panel makes the console report it.</summary>
     NotPossible,
 }
 

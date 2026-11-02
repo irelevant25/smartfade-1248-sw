@@ -45,9 +45,12 @@ namespace SmartFade.Devices.Usb;
 /// log and the UI say why), and the console's state and show arrive in the download it starts: the assembler takes the
 /// state objects, <see cref="ConsoleShowAssembler"/> the show, and every memory the download did not list is reported
 /// empty (INFERRED). Every control is refused from Connect until the download's last record (clauses 1, 2, 6). After the
-/// download, with live control and no FaderInfo reported yet, the device taps the bump of the first unpatched channel of the
-/// shown bank once (the MASTER probe, clause 4), after the automatic switch to bank 1-24 in memory mode; when it cannot, the
-/// UI asks for one fader movement on the panel.
+/// download, with live control and no FaderInfo reported yet, the device taps the bump of an unpatched channel once (the
+/// MASTER probe, clause 4, as amended on 2026-11-02, late evening): the first of the shown bank, else of the other channel
+/// bank (in memory mode bank 1-24's first, else bank 25-48's), after SC-5's automatic switch to that bank where needed and,
+/// once the tap's reports are in, the automatic switch back to the bank or mode the download reported, each switch one a PC
+/// was seen making (memory mode and bank 25-48 only through bank 1-24, <see cref="ProbeRoute"/>); every control is refused
+/// meanwhile. When it cannot, the UI asks for one fader movement on the panel.
 /// </para>
 /// </summary>
 [Evidence(EvidenceStatus.Verified, "F51, F52, F53, F54, F55, F57", "the read-only session as SC-1 cleared it (2026-10-30)")]
@@ -63,6 +66,7 @@ namespace SmartFade.Devices.Usb;
 [Evidence(EvidenceStatus.Verified, "F181, F182", "the start-up pair, SC-4 class E (2026-11-02, evening): SmartSoft's two System writes and the console's answers as SmartSoft's and the console's behaviour (20 sessions); a conditional GO, nothing sent before the review and E13 on the owner's go")]
 [Evidence(EvidenceStatus.Observed, "F185", "the states the 20 pairs were sent in; the pair is refused when the console already reported NEXT, BLACKOUT, a record function armed or bank 25-48 (SC-4 clause 3), sent blind otherwise, as SmartSoft sends it (S11.17)")]
 [Evidence(EvidenceStatus.Inferred, "F174, F178 (VERIFIED at BUMPS 0xFF); E8b channel 49, E9d channel 47 (OBSERVED)", "the MASTER probe (SC-4 clause 4): a bump press makes the console list FaderInfo with the MASTER and BUMPS; an unpatched channel changes no DMX; the probe itself unobserved until E13")]
+[Evidence(EvidenceStatus.Observed, "F133, F134 VERIFIED for FADERS 1-24 and FADERS MEMS from SmartSoft (E9 + E9b); F175 for FADERS 25-48 from SmartSoft (OBSERVED, second sessions) with F171 VERIFIED for the faders after it; F179 OBSERVED once for our host (E11b)", "the MASTER probe's switches (SC-4 clause 4 as amended on 2026-11-02, late evening), each a bank transition a PC host was seen making: bank 1-24 to 25-48 (SmartSoft E9b seq 51617, E9c 24528, E9d 18706 / 74718, E9e 19934 / 30238; our host E11b bus seq 25322 and 47929) and back (E9b 51978, E9c 28206, E9d 27831 / 85917, E9e 21374 / 31533; E11b 30193 and 48221), bank 1-24 to memory mode (E9 to E9d, e.g. E9d 29032; E11 attempt 3 bus 23677, E11b 34154) and back (e.g. E9d 44811; E11 attempt 3 32624, E11b 43651); memory mode to bank 25-48 and back never from a PC in any capture, so the probe goes through bank 1-24; every one of those switches came on memory page 1 (body[2] = 0), so a switching probe runs only there")]
 public sealed class UsbSmartFadeDevice : ISmartFadeDevice, IAsyncDisposable
 {
     private static readonly TimeSpan StopTimeout = TimeSpan.FromSeconds(20);
@@ -140,6 +144,7 @@ public sealed class UsbSmartFadeDevice : ISmartFadeDevice, IAsyncDisposable
     private MasterProbePhase _probe = MasterProbePhase.Pending;
     private string? _probeReason;
     private string? _probeNote;
+    private MasterProbeRun? _probeRun;
     private ConnectionStatus _status = ConnectionStatus.Disconnected;
     private ConsoleStateAssembler _assembler;
     private CancellationTokenSource? _sessionStop;
@@ -769,14 +774,19 @@ public sealed class UsbSmartFadeDevice : ISmartFadeDevice, IAsyncDisposable
 
     /// <summary>
     /// Why a control is refused while the start-up pair is under way (SC-4 clauses 1, 2 and 6: the pair is first or not at all,
-    /// nothing goes between its two writes nor during the download), else null.
+    /// nothing goes between its two writes nor during the download) or while the MASTER probe runs (clause 4 as amended on
+    /// 2026-11-02, late evening: its switches and its tap are the only writes until it has left the console in the bank or
+    /// mode the download reported, so no control can start a switch of its own or wait for one of the probe's), else null.
+    /// Under <c>_gate</c>.
     /// </summary>
-    private static string? StartupPairBusy(HspReadSession session) => session.StartupPair.Phase switch
+    private string? StartupPairBusy(HspReadSession session) => session.StartupPair.Phase switch
     {
         HspStartupPairPhase.Waiting => "the console's state at Connect is being requested: SmartSoft's start-up pair goes first (SC-4 clause 1)",
         HspStartupPairPhase.VersionRequested or HspStartupPairPhase.VersionAccepted => "the console's state at Connect is being requested: nothing goes between the start-up pair's two writes (SC-4 clause 1)",
         HspStartupPairPhase.DownloadRequested or HspStartupPairPhase.Downloading => "the console's state is being downloaded (SC-4 clause 2)",
-        _ => null,
+        _ => _probeRun is { } run
+            ? $"the MASTER probe is under way (SC-4 clause 4): the device taps the bump of channel {run.Bump.Target.Channel} in {Describe(run.Bump.Target.Bank)} and leaves the console in {Describe(run.Home)}, as the download reported it, before anything else goes"
+            : null,
     };
 
     /// <summary>
@@ -1006,7 +1016,7 @@ public sealed class UsbSmartFadeDevice : ISmartFadeDevice, IAsyncDisposable
 
         var bump = info.Bumps;
         bool Content(byte now, byte? before) => now != bump || now == before;
-        bool Reported(HspObjectId id, bool listed, int quiet) => !live.IsListedAndUnfetched(id) && (listed || quiet >= 2);
+        bool Reported(HspObjectId id, bool listed, int quiet) => ReportedAfterRelease(live, id, listed, quiet);
 
         if (!Reported(HspObjectId.FaderInfo, shadow.FaderInfoListed, shadow.FaderInfoQuiet)
             || !Content(info.RawRecords[(shadow.Physical - 1) * FaderInfoObject.RecordSize], shadow.PreFader))
@@ -1024,6 +1034,15 @@ public sealed class UsbSmartFadeDevice : ISmartFadeDevice, IAsyncDisposable
         return !shadow.AllFaders
             || (shadow.FaderInfoQuiet >= 2 && shadow.ChannelLevelsQuiet >= 2 && !live.IsListedAndUnfetched(HspObjectId.ChannelLevels));
     }
+
+    /// <summary>
+    /// An object's report after a bump's release, as the shadow counts it (<see cref="ShadowEnds"/>): listed after the release
+    /// and delivered, or unchanged for two poll replies after it (a list names what changed, F57, VERIFIED; every observed
+    /// release that changed a level was reported with at most one quiet poll reply before it), and nothing of it listed and
+    /// unfetched now. The two-reply count is INFERRED, as in the shadow's rule.
+    /// </summary>
+    private static bool ReportedAfterRelease(HspReadSession live, HspObjectId id, bool listed, int quiet) =>
+        !live.IsListedAndUnfetched(id) && (listed || quiet >= 2);
 
     /// <summary>
     /// Why a fader event of physical fader k waits for the console: a bump of that physical fader that this session pressed,
@@ -1577,8 +1596,12 @@ public sealed class UsbSmartFadeDevice : ISmartFadeDevice, IAsyncDisposable
         return Task.CompletedTask;
     }
 
-    /// <summary>Queues a bump as a hold (released by the UI or the loop's 3 s bound, <see cref="HspReadLoop.MaxHold"/>) or, when the UI already let go, as a tap; asked again right before it goes.</summary>
-    private void QueueBump(HspReadSession session, HeldBump bump, bool tap)
+    /// <summary>
+    /// Queues a bump as a hold (released by the UI or the loop's 3 s bound, <see cref="HspReadLoop.MaxHold"/>) or, when the UI
+    /// already let go, as a tap; asked again right before it goes, with <paramref name="also"/> (the MASTER probe's SOLO and
+    /// BLACKOUT, <see cref="ProbeLedRefusal"/>) when given. Returns its shadow.
+    /// </summary>
+    private BumpShadow QueueBump(HspReadSession session, HeldBump bump, bool tap, Func<string?>? also = null)
     {
         // its physical fader's reports carry the bump from the press until they read the content again after the release
         // (F174, ShadowEnds); with SOLO on every fader's may (F6, INFERRED)
@@ -1592,7 +1615,7 @@ public sealed class UsbSmartFadeDevice : ISmartFadeDevice, IAsyncDisposable
         Func<HspWriteDecision> condition = () =>
             session.IsListedAndUnfetched(HspObjectId.FaderInfo) || (shadow.ChannelsToo && session.IsListedAndUnfetched(HspObjectId.ChannelLevels))
                 ? HspWriteDecision.Hold($"the console listed FaderInfo{(shadow.ChannelsToo ? " or ChannelLevels" : string.Empty)} and it is not fetched yet: {bump.Target.Name}'s press waits for the level its fader reports now")
-                : Recheck(session, () => NotIn(bump.Target), holdWhileFaderInfoListed: false);
+                : Recheck(session, () => NotIn(bump.Target) ?? also?.Invoke(), holdWhileFaderInfoListed: false);
         void PressSent()
         {
             lock (_gate)
@@ -1619,6 +1642,7 @@ public sealed class UsbSmartFadeDevice : ISmartFadeDevice, IAsyncDisposable
         }
 
         _bumpShadows.Add(shadow);   // an older shadow of the same fader stays until its own release is reported
+        return shadow;
     }
 
     /// <summary>FaderInfo record k byte 0, the level physical fader k reports (F82, F171), or null before FaderInfo has arrived.</summary>
@@ -2011,6 +2035,12 @@ public sealed class UsbSmartFadeDevice : ISmartFadeDevice, IAsyncDisposable
                 {
                     _liveLog = null;
                     lastNotes = _pendingNotes.ToArray();   // left by the last writes' sent callbacks: written below, before the log closes
+                    if (_probeRun is { } probe)
+                    {
+                        // a stop or a fault inside the MASTER probe: nothing more of it goes, and the log says where the console was left
+                        lastNotes = lastNotes.Append($"MASTER probe interrupted by the session's end (SC-4 clause 4): the console was last reported in {(ReportedBank() is { } shown ? Describe(shown) : "no bank a PC sent controls in")}, the download reported {Describe(probe.Home)}").ToArray();
+                    }
+
                     ResetLiveState();
                 }
 
@@ -2131,7 +2161,8 @@ public sealed class UsbSmartFadeDevice : ISmartFadeDevice, IAsyncDisposable
     /// major 2): the interlocks read those objects, and an older reading must never stand for the console's state. A
     /// read-only session logs it and goes on, as SC-1 reviewed it. In a live session every completed exchange (an idle
     /// reply, a list, an object) also advances the automatic bank switch (<see cref="AdvanceSwitch"/>), which ends the
-    /// session as a deviation when the console does not report the new bank in time.
+    /// session as a deviation when the console does not report the new bank in time, and then the MASTER probe
+    /// (<see cref="AdvanceProbe"/>).
     /// </summary>
     private void OnEvent(HspEvent evt, HspReadSession session)
     {
@@ -2161,6 +2192,7 @@ public sealed class UsbSmartFadeDevice : ISmartFadeDevice, IAsyncDisposable
                 if (live && reply.Header.Length == 0)
                 {
                     AdvanceSwitch();   // an idle reply completes its exchange
+                    AdvanceProbe();
                 }
 
                 break;
@@ -2225,6 +2257,7 @@ public sealed class UsbSmartFadeDevice : ISmartFadeDevice, IAsyncDisposable
                 if (live)
                 {
                     AdvanceSwitch();
+                    AdvanceProbe();
                 }
 
                 break;
@@ -2233,6 +2266,7 @@ public sealed class UsbSmartFadeDevice : ISmartFadeDevice, IAsyncDisposable
                 if (live)
                 {
                     AdvanceSwitch();
+                    AdvanceProbe();
                 }
 
                 break;
@@ -2391,14 +2425,17 @@ public sealed class UsbSmartFadeDevice : ISmartFadeDevice, IAsyncDisposable
     }
 
     /// <summary>
-    /// The MASTER probe (SC-4 clause 4), under <c>_gate</c>: one tap of the bump of the first channel of the shown bank that no DMX
-    /// address names in the downloaded Patch (<see cref="ConsoleShowAssembler.UnpatchedChannel"/>), through the SC-5 bump path
-    /// (its shadow applies; the physical bump is the channel's, channel − 24 in bank 25-48, <see cref="ChannelPosition"/>), only
-    /// in a live-control session, with the record functions, SOLO and BLACKOUT off and NEXT off; in memory mode the automatic
-    /// switch to bank 1-24 goes first (SC-5 condition 1) and the tap follows once the console reported the bank. It is the one
-    /// bump of ours that goes before FaderInfo was reported, which is what it asks for: the checks of a fader's record that
-    /// need FaderInfo (a channel's fader still holding a memory, F112) cannot run for it. Returns null when queued (the note in
-    /// <see cref="_probeNote"/>), else why not.
+    /// The MASTER probe (SC-4 clause 4 and its amendment of 2026-11-02, late evening), under <c>_gate</c>: one tap of the bump
+    /// of a channel that no DMX address names in the downloaded Patch (<see cref="ConsoleShowAssembler.UnpatchedChannel"/>),
+    /// the first of the shown bank, else the first of the other channel bank (from memory mode bank 1-24's first, else bank
+    /// 25-48's), through the SC-5 bump path (its shadow applies; the physical bump is the channel's, channel − 24 in bank
+    /// 25-48, <see cref="ChannelPosition"/>), only in a live-control session, with the record functions, SOLO and BLACKOUT off
+    /// and NEXT off. When the console shows another bank or mode than the channel's, SC-5's automatic switch goes first and,
+    /// once the tap's reports are in, the switch back to the bank or mode the download reported (<see cref="ProbeRoute"/>,
+    /// <see cref="AdvanceProbe"/>), and only from memory page 1, where every PC switch of the captures came (body[2] = 0). It is
+    /// the one bump of ours that goes before FaderInfo was reported, which is what it asks for: the checks of a fader's record
+    /// that need FaderInfo (a channel's fader still holding a memory, F112) cannot run for it. Returns null when its first
+    /// write is queued (the note in <see cref="_probeNote"/>), else why not.
     /// </summary>
     private string? StartMasterProbe(HspReadSession session)
     {
@@ -2413,19 +2450,9 @@ public sealed class UsbSmartFadeDevice : ISmartFadeDevice, IAsyncDisposable
             return "the console did not report its key LEDs in the download";
         }
 
-        if (RecordFunctionArmed(keys) is { } armed)
+        if ((RecordFunctionArmed(keys) ?? ProbeLedRefusal()) is { } refused)
         {
-            return armed;
-        }
-
-        if (keys.Solo is not { Light: KeyLight.Off, Blinking: false })
-        {
-            return "SOLO is not off (LED block 52): a bump with SOLO on replaces the output (F6), so the probe is never sent under SOLO (SC-4 clause 4). Move one fader on the panel, or the MASTER, and the console reports it";
-        }
-
-        if (keys.Blackout is { Blinking: false, Light: not KeyLight.Off })
-        {
-            return "BLACKOUT is on (LED block 53 steady, F114): the probe is never sent under BLACKOUT (SC-4 clause 4)";
+            return refused;
         }
 
         if (ReportedBank() is not { } bank)
@@ -2433,41 +2460,286 @@ public sealed class UsbSmartFadeDevice : ISmartFadeDevice, IAsyncDisposable
             return WhyNoBank("the MASTER probe");
         }
 
+        // a FADERS key of the UI's taken between the download's last record and this lock: the probe never runs beside a switch
+        if (SwitchInProgress() is { } switching)
+        {
+            return $"{switching}: the probe does not run beside it. Move one fader on the panel, or the MASTER, and the console reports it";
+        }
+
         if (_show.PatchChannels is not { } patch)
         {
             return "the download did not deliver the Patch, so no unpatched channel can be chosen";
         }
 
-        var probeBank = bank == FaderBank.Memories ? FaderBank.Channels1To24 : bank;
-        if (ConsoleShowAssembler.UnpatchedChannel(patch, probeBank) is not { } channel)
+        // either channel bank (the amendment of 2026-11-02, late evening): the shown bank's first unpatched channel, else the
+        // other bank's; from memory mode bank 1-24's first, else bank 25-48's
+        var first = bank == FaderBank.Channels25To48 ? FaderBank.Channels25To48 : FaderBank.Channels1To24;
+        var other = first == FaderBank.Channels1To24 ? FaderBank.Channels25To48 : FaderBank.Channels1To24;
+        if ((ConsoleShowAssembler.UnpatchedChannel(patch, first) ?? ConsoleShowAssembler.UnpatchedChannel(patch, other)) is not { } channel)
         {
-            return $"every channel of {Describe(probeBank)} is patched (the downloaded Patch, F70), so there is no bump of an unpatched channel to tap: move one fader on the panel, or the MASTER, and the console reports it";
+            return "every channel of both banks is patched (the downloaded Patch, F70: each of channels 1-48 has a DMX address), so there is no bump of an unpatched channel to tap: move one fader on the panel, or the MASTER, and the console reports it";
         }
 
         var (channelBank, physical) = ChannelPosition(channel);
+        var route = ProbeRoute(bank, channelBank);
+        if (route.Length > 0 && _assembler.FaderMode!.MemoryPage != 1)
+        {
+            return $"the console shows memory page {_assembler.FaderMode.MemoryPage}: every bank or mode switch a PC was seen making came on page 1 (ConsoleStatus body[2] = 0, E9 to E11b) and whether the page outlasts one is UNKNOWN, so the probe does not switch to channel {channel}'s bank: move one fader on the panel, or the MASTER, and the console reports it";
+        }
+
         var target = new Target(channelBank, null, physical, $"bump {channel} (the MASTER probe)", channel);
-        var bump = new HeldBump(DeviceControls.ChannelBump(channel), PhysicalControls.Bump(physical), target);
+        var run = new MasterProbeRun
+        {
+            Bump = new HeldBump(DeviceControls.ChannelBump(channel), PhysicalControls.Bump(physical), target),
+            Home = bank,
+            Expected = bank,
+            Out = new Queue<FaderBank>(route),
+            Back = new Queue<FaderBank>(ProbeRoute(channelBank, bank)),
+        };
         try
         {
-            if (bank == FaderBank.Memories)
+            if (run.Out.TryDequeue(out var next))
             {
-                var sw = StartSwitch(session, target);
-                sw.Press = bump;
-                sw.PressReleased = true;   // a tap once the console reported bank 1-24
+                run.Leg = StartSwitch(session, ProbeLeg(run, next, back: false));
             }
             else
             {
                 Refuse(NotIn(target));
-                QueueBump(session, bump, tap: true);
+                run.Shadow = QueueBump(session, run.Bump, tap: true, also: ProbeLedRefusal);
             }
         }
         catch (InvalidOperationException ex)
         {
-            return bank == FaderBank.Memories ? $"the automatic switch to bank 1-24 was refused ({ex.Message})" : ex.Message;
+            return route.Length > 0 ? $"the automatic switch to {Describe(route[0])} was refused ({ex.Message})" : ex.Message;
         }
 
-        _probeNote = $"MASTER probe (SC-4 clause 4): bump {physical} of channel {channel}, unpatched (no DMX address names it in the downloaded Patch, F70), as a tap{(bank == FaderBank.Memories ? " after the automatic switch from memory mode to bank 1-24" : string.Empty)}; a bump press makes the console list FaderInfo with the MASTER and BUMPS (F174, F178, VERIFIED at BUMPS 0xFF), an unpatched channel changes no DMX (E8b channel 49, E9d channel 47: OBSERVED); the probe itself is unobserved until E13";
+        _probeRun = run;
+        string KeysOf(IEnumerable<FaderBank> banks) => string.Join(", then ", banks.Select(b => KeyName(BankKey(b))));
+        var where = route.Length == 0
+            ? $"in {Describe(channelBank)}, the bank the console shows"
+            : $"in {Describe(channelBank)}, after SC-5's automatic switch from {Describe(bank)} ({KeysOf(route)}) and, once the tap's reports are in, back to {Describe(bank)} as the download reported it ({KeysOf(run.Back)}): each switch a transition a PC was seen making (SmartSoft's FADERS 1-24 and FADERS MEMS F133 / F134 VERIFIED, its FADERS 25-48 F175 in second sessions; our host's F179 OBSERVED once; memory mode and bank 25-48 only through bank 1-24), the amendment of 2026-11-02, late evening";
+        _probeNote = $"MASTER probe (SC-4 clause 4): bump {physical} of channel {channel}, unpatched (no DMX address names it in the downloaded Patch, F70), as a tap {where}; a bump press makes the console list FaderInfo with the MASTER and BUMPS (F174, F178, VERIFIED at BUMPS 0xFF), an unpatched channel changes no DMX (E8b channel 49, E9d channel 47: OBSERVED); the probe itself is unobserved until E13";
         return null;
+    }
+
+    /// <summary>
+    /// The MASTER probe under way (SC-4 clause 4 as amended on 2026-11-02, late evening), read and changed under <c>_gate</c>
+    /// only: the channel's bump (a tap), the bank or mode the download reported (where the probe leaves the console), the
+    /// switches before the tap and after its reports (<see cref="ProbeRoute"/>), the bank the console must show at the next
+    /// step, the switch the probe started last and the tap's shadow once the tap is queued.
+    /// </summary>
+    private sealed class MasterProbeRun
+    {
+        public required HeldBump Bump { get; init; }
+
+        public required FaderBank Home { get; init; }
+
+        public required Queue<FaderBank> Out { get; init; }
+
+        /// <summary>The switches back to <see cref="Home"/>; planned from the channel's bank, or from where the probe is when FaderInfo came on the way out.</summary>
+        public required Queue<FaderBank> Back { get; set; }
+
+        /// <summary>The bank the console must report at the next step: the download's, then each completed switch's.</summary>
+        public required FaderBank Expected { get; set; }
+
+        /// <summary>The probe's switch in progress or just ended, until <see cref="AdvanceProbe"/> has taken its outcome.</summary>
+        public BankSwitch? Leg { get; set; }
+
+        /// <summary>The tap's shadow (<see cref="QueueBump"/>), once the tap is queued.</summary>
+        public BumpShadow? Shadow { get; set; }
+
+        /// <summary>The tap's reports are in (<see cref="ProbeTapReported"/>): the switches back may go.</summary>
+        public bool TapReported { get; set; }
+    }
+
+    /// <summary>
+    /// The MASTER probe's automatic switches from <paramref name="from"/> to <paramref name="to"/>, in order (the amendment of
+    /// 2026-11-02, late evening, rule 2: each a bank transition a committed capture shows a PC host making): none within the
+    /// same bank; one where a PC was seen sending that bank's key from that bank (<see cref="BankKeyNotFrom"/>: bank 1-24 to
+    /// 25-48 and back, SmartSoft in E9b to E9e and our host in E11b, F179; bank 1-24 to memory mode and back, SmartSoft in E9
+    /// to E9d and our host in E11 attempt 3 and E11b); else through bank 1-24, since no PC was ever seen switching memory mode
+    /// to bank 25-48 or back directly (OBSERVED: none in any capture).
+    /// </summary>
+    private static FaderBank[] ProbeRoute(FaderBank from, FaderBank to) =>
+        from == to ? Array.Empty<FaderBank>()
+        : BankKeyNotFrom(BankKey(to), from) is null ? new[] { to }
+        : new[] { FaderBank.Channels1To24, to };
+
+    /// <summary>What a switch of the probe's is for, as SC-5's switch takes it: a bank and a name (no page: none is ever changed, F113).</summary>
+    private static Target ProbeLeg(MasterProbeRun run, FaderBank bank, bool back) =>
+        new(bank, null, run.Bump.Target.Physical, back ? $"the MASTER probe's return to {Describe(run.Home)}" : $"the MASTER probe (bump {run.Bump.Target.Channel})", null);
+
+    /// <summary>
+    /// The MASTER probe's next step (SC-4 clause 4 as amended on 2026-11-02, late evening), on the session's thread after each
+    /// completed exchange, once <see cref="AdvanceSwitch"/> has run, so never while a switch of the probe's waits for the
+    /// console's report (SC-5 condition 1 c, the 2 s bound): the next switch towards the channel's bank, then the tap (SC-5's
+    /// bump path, its shadow and the gate as for any bump of ours), then, once the tap's reports are in
+    /// (<see cref="ProbeTapReported"/>), the switches back to the bank or mode the download reported, then the end. One write
+    /// of the probe's at a time: each step waits for the previous one's outcome. The probe stops where it is, with nothing
+    /// more of it sent (<see cref="EndProbe"/>), when one of its writes was dropped unsent, when the console shows another bank
+    /// than the probe expects (a key on the panel, or NEXT mode), or when a record function reads armed before its next write.
+    /// </summary>
+    private void AdvanceProbe()
+    {
+        var notes = new List<string>();
+        lock (_gate)
+        {
+            if (_probeRun is not { } run || _liveSession is not { } live || _switch is not null)
+            {
+                return;
+            }
+
+            try
+            {
+                StepProbe(live, run, notes);
+            }
+            catch (InvalidOperationException ex)
+            {
+                EndProbe(run, ex.Message, notes);   // SC-5's switch or bump path refused the next write
+            }
+        }
+
+        foreach (var note in notes)
+        {
+            SessionNote(note);
+        }
+    }
+
+    /// <summary>One step of <see cref="AdvanceProbe"/>, under <c>_gate</c>; a refusal of the next write throws, and the probe stops with it.</summary>
+    private void StepProbe(HspReadSession live, MasterProbeRun run, List<string> notes)
+    {
+        if (run.Leg is { } leg)
+        {
+            run.Leg = null;
+            if (leg.KeySent is null)
+            {
+                EndProbe(run, $"{KeyName(leg.Key)} for {leg.Reason} was dropped unsent", notes);
+                return;
+            }
+
+            run.Expected = leg.Target;   // AdvanceSwitch took it as done: the console reported the bank with its LEDs
+        }
+
+        if (ReportedBank() != run.Expected)
+        {
+            EndProbe(run, $"the console shows {(ReportedBank() is { } shown ? Describe(shown) : "no bank a PC sent controls in")}, not {Describe(run.Expected)} as the probe expects (a key on the panel, or NEXT mode)", notes);
+            return;
+        }
+
+        // FaderInfo reported on the way out, before the tap (a switch whose physical faders' contents differ lists it, or a fader
+        // moved on the panel): the clause's condition, "only when FaderInfo has not been reported since Connect", no longer holds,
+        // so neither the rest of the way out nor the tap is sent, and the probe goes home from where it is
+        if (!run.TapReported && run.Shadow is null && _assembler.FaderInfo is not null && _assembler.Masters is { } known)
+        {
+            run.TapReported = true;
+            run.Out.Clear();
+            run.Back = new Queue<FaderBank>(ProbeRoute(run.Expected, run.Home));
+            notes.Add($"MASTER probe: the console reported FaderInfo before the tap, the MASTER reads 0x{known.Master:X2} (FaderInfo body[194]), so neither the rest of the way out nor the tap of {run.Bump.Target.Name} is sent{(run.Back.Count > 0 ? $"; the switch back to {Describe(run.Home)} follows" : string.Empty)}");
+        }
+
+        if (run.Out.TryDequeue(out var outward))
+        {
+            Refuse(RecordFunctionArmed(_assembler.Keys));
+            run.Leg = StartSwitch(live, ProbeLeg(run, outward, back: false));
+            return;
+        }
+
+        if (!run.TapReported)
+        {
+            if (run.Shadow is not { } shadow)
+            {
+                // the clause's refusals asked again, now that the probe has come to the channel's bank, and again at the tap's slot
+                Refuse(RecordFunctionArmed(_assembler.Keys) ?? ProbeLedRefusal() ?? NotIn(run.Bump.Target));
+                run.Shadow = QueueBump(live, run.Bump, tap: true, also: ProbeLedRefusal);
+                return;
+            }
+
+            if (!shadow.PressSent)
+            {
+                if (!live.IsKeyQueued(shadow.Key) && live.HeldKey != shadow.Key)
+                {
+                    EndProbe(run, $"the tap of {run.Bump.Target.Name} was dropped unsent", notes);
+                }
+
+                return;
+            }
+
+            if (!ProbeTapReported(shadow, live))
+            {
+                return;   // its release, then FaderInfo and ChannelLevels after it: not all in yet
+            }
+
+            run.TapReported = true;
+            var then = run.Back.Count > 0 ? $"; the switch back to {Describe(run.Home)} follows" : string.Empty;
+            notes.Add(_assembler.Masters is { } masters
+                ? $"MASTER probe: the console reported the tap of {run.Bump.Target.Name}, the MASTER reads 0x{masters.Master:X2} (FaderInfo body[194]){then}"
+                : $"MASTER probe: the console listed no FaderInfo for the tap of {run.Bump.Target.Name} by two poll replies after its release{then}");
+        }
+
+        if (run.Back.TryDequeue(out var homeward))
+        {
+            Refuse(RecordFunctionArmed(_assembler.Keys));
+            run.Leg = StartSwitch(live, ProbeLeg(run, homeward, back: true));
+            return;
+        }
+
+        _probeRun = null;
+        var page = run.Home == FaderBank.Memories ? _assembler.FaderMode?.MemoryPage : null;
+        notes.Add(page is null or 1
+            ? $"MASTER probe done (SC-4 clause 4): the console shows {Describe(run.Home)}{(page is null ? string.Empty : ", page 1")}, as the download reported it"
+            : $"MASTER probe done (SC-4 clause 4): the console shows {Describe(run.Home)}, page {page}, where the download reported page 1 (a page change across a mode switch, never observed; no page change is sent from the PC, F113)");
+        if (_assembler.FaderInfo is null)
+        {
+            _probe = MasterProbePhase.NotPossible;
+            _probeReason = $"the console listed no FaderInfo for the MASTER probe's tap of {run.Bump.Target.Name}: move one fader on the panel, or the MASTER, and the console reports it";
+        }
+    }
+
+    /// <summary>
+    /// The probe's tap is reported, so the switch back may go (the amendment's rule 3): its shadow ended
+    /// (<see cref="ShadowEnds"/>), or its release was taken, a poll reply came after it, and FaderInfo and ChannelLevels were
+    /// each reported after it (<see cref="ReportedAfterRelease"/>: listed after it and delivered, or quiet for two poll
+    /// replies; nothing of either listed and unfetched). The shadow's level test is not asked here: it guards that physical
+    /// fader's events, which the shadow goes on doing until it ends; a tap that listed nothing (the channel's content already
+    /// at the bump's level, as in the owner's log, OBSERVED once) is reported by the two quiet replies. LedStatus is the
+    /// gate's: no write goes while it is listed and unfetched (SC-2 condition 5).
+    /// </summary>
+    private bool ProbeTapReported(BumpShadow shadow, HspReadSession live) =>
+        !_bumpShadows.Contains(shadow)
+        || (shadow.Released
+            && ReportedAfterRelease(live, HspObjectId.FaderInfo, shadow.FaderInfoListed, shadow.FaderInfoQuiet)
+            && ReportedAfterRelease(live, HspObjectId.ChannelLevels, shadow.ChannelLevelsListed, shadow.ChannelLevelsQuiet));
+
+    /// <summary>
+    /// The key LEDs the MASTER probe's tap never goes under (SC-4 clause 4), under <c>_gate</c>: SOLO not steady off (a bump with
+    /// SOLO on replaces the output, F6, DOCUMENTED; LED block 52, F100) or BLACKOUT lit and steady (block 53, F114, VERIFIED); its
+    /// blink is the MASTER below full (F85), which the probe is there to learn. Asked when the probe starts, before its tap is
+    /// queued (after a switch, later than the download) and at the tap's slot; null when neither.
+    /// </summary>
+    private string? ProbeLedRefusal() => _assembler.Keys switch
+    {
+        null => "the console did not report its key LEDs",
+        { Solo: not { Light: KeyLight.Off, Blinking: false } } => "SOLO is not off (LED block 52): a bump with SOLO on replaces the output (F6), so the probe is never sent under SOLO (SC-4 clause 4). Move one fader on the panel, or the MASTER, and the console reports it",
+        { Blackout: { Blinking: false, Light: not KeyLight.Off } } => "BLACKOUT is on (LED block 53 steady, F114): the probe is never sent under BLACKOUT (SC-4 clause 4)",
+        _ => null,
+    };
+
+    /// <summary>
+    /// The probe stops where it is (under <c>_gate</c>): nothing more of it is sent, neither a retry nor a switch back, since the
+    /// console's state is no longer the one the probe planned for; the transfer log says why and where the console is, and
+    /// without FaderInfo the UI asks for one fader movement with the reason.
+    /// </summary>
+    private void EndProbe(MasterProbeRun run, string reason, List<string> notes)
+    {
+        _probeRun = null;
+        var why = reason.StartsWith("Refused: ", StringComparison.Ordinal) ? reason["Refused: ".Length..].TrimEnd('.') : reason;
+        var shown = ReportedBank() is { } bank ? Describe(bank) : "no bank a PC sent controls in";
+        notes.Add($"MASTER probe stopped (SC-4 clause 4): {why}; nothing more of it is sent, no retry and no switch back: the console shows {shown}, the download reported {Describe(run.Home)}");
+        if (_assembler.FaderInfo is null)
+        {
+            _probe = MasterProbePhase.NotPossible;
+            _probeReason = $"the MASTER probe stopped ({why}): move one fader on the panel, or the MASTER, and the console reports it";
+        }
     }
 
     /// <summary>
@@ -2688,7 +2960,7 @@ public sealed class UsbSmartFadeDevice : ISmartFadeDevice, IAsyncDisposable
         }
     }
 
-    /// <summary>A new session, or the end of one: nothing matched, nothing pending, no switch, no hold (all under <c>_gate</c>).</summary>
+    /// <summary>A new session, or the end of one: nothing matched, nothing pending, no switch, no hold, no MASTER probe under way (all under <c>_gate</c>).</summary>
     private void ResetLiveState()
     {
         _matched.Clear();
@@ -2698,6 +2970,7 @@ public sealed class UsbSmartFadeDevice : ISmartFadeDevice, IAsyncDisposable
         _hold = null;
         _bumpShadows.Clear();
         _pendingNotes.Clear();
+        _probeRun = null;
     }
 
     /// <summary>

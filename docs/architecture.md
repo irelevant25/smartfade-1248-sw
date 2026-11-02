@@ -287,7 +287,9 @@ Sequence and StepContent lengths); a session without the switch is SC-1's, uncha
 gate (the report's freshness; refused when the console already reported NEXT, BLACKOUT, a record function armed or bank
 25-48), refuses every command until the download is complete, assembles the show (`ConsoleShowAssembler`, domain
 `ConsoleShow` in wire units) and reports undelivered memories empty, and with live control taps the bump of the first
-unpatched channel of the shown bank once when FaderInfo is still unreported (the MASTER probe). The application carries
+unpatched channel of the shown bank once when FaderInfo is still unreported (the MASTER probe; amended 2026-11-02, late
+evening: of either channel bank, with SC-5's automatic switch there and back to the bank or mode the download reported, every
+command refused meanwhile, safety-checks.md SC-4 clause 4). The application carries
 `StateAtConnect` and `ConsoleShow` through `DeviceStateChange`, `ConsoleState` and two new events; the API maps the show to
 the editor's `ShowFileDto` (`ConsoleShowMapper`: the console's file forms, nothing the download lacks) for
 `GET /api/console/show` and `consoleShowChanged`, and the UI shows STATE AT CONNECT, the download's progress, the Connect

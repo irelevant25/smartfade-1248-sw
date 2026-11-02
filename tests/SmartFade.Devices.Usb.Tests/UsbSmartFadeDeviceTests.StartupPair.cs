@@ -27,6 +27,18 @@ public partial class UsbSmartFadeDeviceTests
     /// <summary>E2's download (list seq 192, last record seq 820): SOLO lit with the MASTER below full (F185).</summary>
     private static readonly Lazy<CapturedDownload> E2Download = new(() => LoadDownload(E2.Value, 192, 820));
 
+    private static readonly Lazy<CaptureFile> E12b = new(() => CaptureFile.Load(TestPaths.Capture("2026-10-31-e12b-smartsoft-patch-stack-edits-repeat.jsonl")));
+
+    /// <summary>The Patch record of a download (F70: one Patch object, a = b = c = 0).</summary>
+    private static readonly DirtyObjectRecord PatchRecord = new((int)HspObjectId.Patch, 0, 0, 0);
+
+    /// <summary>
+    /// E12b's edited Patch as the console delivered it in E12b's second download (seq 87317, F162; SmartSoft's W3 byte for byte,
+    /// the E12b record): channel 47 on DMX 100, so every channel 1–48 has a DMX address (DMX 47 still drives channel 50; channel
+    /// 49, IND 1, none). With E12's own edited Patch, the only captured kind with no unpatched channel in either bank.
+    /// </summary>
+    private static byte[] AllChannelsPatched() => Body(E12b, 87317);
+
     [Fact]
     public void The_start_up_pair_switch_needs_the_USB_mode_and_today()
     {
@@ -39,14 +51,20 @@ public partial class UsbSmartFadeDeviceTests
     }
 
     [Fact]
-    public void The_MASTER_probes_channel_is_the_first_of_the_shown_bank_that_no_DMX_address_names()
+    public void The_MASTER_probes_channel_is_the_first_of_a_bank_that_no_DMX_address_names()
     {
-        // E2's Patch (seq 212, F70): DMX 47 drives channel 50, DMX 97 channel 24; channels 47 and 49 are unpatched
+        // E2's Patch (seq 212, F70): DMX 47 drives channel 50, DMX 97 channel 24; channels 47 and 49 are unpatched, so bank 1-24
+        // has none and the probe takes bank 25-48's (the amendment of 2026-11-02, late evening); E12b's edited Patch has none in
+        // either bank
         var patch = Body(E2, 212)[2..];
+        var allPatched = AllChannelsPatched()[2..];
 
         Assert.Null(ConsoleShowAssembler.UnpatchedChannel(patch, FaderBank.Channels1To24));
         Assert.Equal(47, ConsoleShowAssembler.UnpatchedChannel(patch, FaderBank.Channels25To48));
         Assert.Throws<ArgumentOutOfRangeException>(() => ConsoleShowAssembler.UnpatchedChannel(patch, FaderBank.Memories));
+        Assert.Null(ConsoleShowAssembler.UnpatchedChannel(allPatched, FaderBank.Channels1To24));
+        Assert.Null(ConsoleShowAssembler.UnpatchedChannel(allPatched, FaderBank.Channels25To48));
+        Assert.Equal(50, allPatched[46]);
     }
 
     [Fact]
@@ -75,8 +93,10 @@ public partial class UsbSmartFadeDeviceTests
     [Fact]
     public async Task The_pair_goes_where_SmartSoft_sent_it_and_every_control_waits_for_the_downloads_last_record()
     {
+        // E3's download with E12b's edited Patch (every channel 1-48 has a DMX address): the MASTER probe finds no channel in
+        // either bank and does not run, so the UI asks for one MASTER movement and nothing but the pair and the UI's key goes
         var clock = new VirtualClock();
-        var console = new PairConsole(Body(E3, 97), E3Download.Value);
+        var console = new PairConsole(Body(E3, 97), E3Download.Value.With((PatchRecord, AllChannelsPatched())));
         var log = new RecordingSink();
         var device = Create(() => console, new UsbDeviceOptions { LiveControlDate = Today(clock), StartupPairDate = Today(clock) }, _ => log, clock);
         var states = new List<StateAtConnect>();
@@ -155,9 +175,10 @@ public partial class UsbSmartFadeDeviceTests
             seen.Select(s => s.Phase).Distinct().ToArray());
         var last = seen[^1];
         Assert.Equal((157, 157), (last.Records, last.Delivered));
-        Assert.Contains("every channel of channel mode, bank 1-24 is patched", last.MasterProbeReason, StringComparison.Ordinal);
+        Assert.Contains("every channel of both banks is patched", last.MasterProbeReason, StringComparison.Ordinal);
 
-        // the show of the download (SHOW04, F70-F77) and the state: every memory reported, 16 recorded (the others INFERRED empty)
+        // the show of the download (SHOW04, F70-F77, with E12b's Patch: DMX 47 still drives channel 50) and the state: every
+        // memory reported, 16 recorded (the others INFERRED empty)
         Assert.NotNull(show);
         Assert.Equal("SHOW04.ASC", show.FileName);
         Assert.Equal(50, show.Patch!.ChannelAt(47));
@@ -173,7 +194,7 @@ public partial class UsbSmartFadeDeviceTests
         Assert.Contains(log.Notes, n => n.StartsWith("start-up pair on (SC-4)", StringComparison.Ordinal));
         Assert.Contains(log.Notes, n => n.Contains("System 09 00 00 sent after reply header #40", StringComparison.Ordinal));
         Assert.Contains(log.Notes, n => n.Contains("the download listed 157 records in 792 bytes", StringComparison.Ordinal));
-        Assert.Contains(log.Notes, n => n.StartsWith("MASTER probe not sent: every channel of channel mode, bank 1-24 is patched", StringComparison.Ordinal));
+        Assert.Contains(log.Notes, n => n.StartsWith("MASTER probe not sent: every channel of both banks is patched", StringComparison.Ordinal));
     }
 
     [Fact]
@@ -212,9 +233,358 @@ public partial class UsbSmartFadeDeviceTests
             },
             console.Payloads.ToArray());
         Assert.Equal(MasterProbePhase.Sent, last!.MasterProbe);
-        Assert.Contains(log.Notes, n => n.StartsWith("MASTER probe (SC-4 clause 4): bump 23 of channel 47, unpatched", StringComparison.Ordinal));
+        Assert.Contains(log.Notes, n => n.StartsWith("MASTER probe (SC-4 clause 4): bump 23 of channel 47, unpatched", StringComparison.Ordinal) && n.Contains("as a tap in channel mode, bank 25-48, the bank the console shows", StringComparison.Ordinal));
+        Assert.Contains("MASTER probe done (SC-4 clause 4): the console shows channel mode, bank 25-48, as the download reported it", log.Notes);
+        Assert.DoesNotContain(log.Notes, n => n.Contains("automatic bank switch", StringComparison.Ordinal));
         var snapshot = await device.GetSnapshotAsync(CancellationToken.None);
         Assert.Equal(0xFF, snapshot.Masters.Master);
+    }
+
+    /// <summary>
+    /// The stand-in console answers the MASTER probe's keys as the 1248 answered SmartSoft's in E9d: FADERS 25-48 with
+    /// ConsoleStatus seq 18715 (bank 25-48) and LedStatus seq 18719; FADERS 1-24 with ConsoleStatus seq 27840 (bank 1-24) and
+    /// LedStatus seq 27848, its answer from bank 25-48 (from memory mode the same ConsoleStatus body, seq 44818); FADERS MEMS
+    /// with seq 29039 (memory mode, page 1) and 29045; and the press and the release of bump 23 each with FaderInfo and
+    /// ChannelLevels read as before the tap (F168: a 47–78 ms tap made the console list the live objects at the press and at
+    /// the release, every fetched object equal to its value before the press): E9b seq 11628 (every fader at zero, the MASTER
+    /// and BUMPS at full) and seq 11632 (every channel at zero). A key left unanswered gets no report (SC-5's 2 s bound).
+    /// </summary>
+    private static void AnswersTheProbe(PairConsole console, bool faders25To48 = true, bool faders1To24 = true)
+    {
+        if (faders25To48)
+        {
+            console.OnPress((byte)ClearedKey.Faders25To48, () =>
+            {
+                console.Report((int)HspObjectId.ConsoleStatus, Body(E9d, 18715));
+                console.Report((int)HspObjectId.LedStatus, Body(E9d, 18719));
+            });
+        }
+
+        if (faders1To24)
+        {
+            console.OnPress((byte)ClearedKey.Faders1To24, () =>
+            {
+                console.Report((int)HspObjectId.ConsoleStatus, Body(E9d, 27840));
+                console.Report((int)HspObjectId.LedStatus, Body(E9d, 27848));
+            });
+        }
+
+        console.OnPress((byte)ClearedKey.FadersMems, () =>
+        {
+            console.Report((int)HspObjectId.ConsoleStatus, Body(E9d, 29039));
+            console.Report((int)HspObjectId.LedStatus, Body(E9d, 29045));
+        });
+        void Tap()
+        {
+            console.Report((int)HspObjectId.FaderInfo, E9bBody(11628));
+            console.Report((int)HspObjectId.ChannelLevels, E9bBody(11632));
+        }
+
+        console.OnPress((byte)ClearedKey.Bump23, Tap);
+        console.OnRelease((byte)ClearedKey.Bump23, Tap);
+    }
+
+    [Fact]
+    public async Task From_bank_1_24_the_MASTER_probe_switches_to_bank_25_48_taps_channel_47s_bump_and_switches_back_once_the_taps_reports_are_in()
+    {
+        // The usual start, SC-4 clause 4 as amended on 2026-11-02, late evening: E3's download shows channel mode, bank 1-24,
+        // whose 24 channels are all patched, and channel 47 is not (F70; physical fader 23 of bank 25-48). The device switches
+        // there by SC-5's automatic switch (FADERS 25-48 as a tap, SmartSoft's E9d seq 18706 / 18711), taps bump 23 once the
+        // console reported the bank (E9d seq 44086 / 44199), and only after the tap's reports were delivered switches back
+        // (FADERS 1-24, E9d seq 27831 / 27836): the console is left in bank 1-24 as found. Every payload with this session's
+        // counter; every control is refused while the probe runs, and the probe's refusal is gone after it.
+        var clock = new VirtualClock();
+        var console = new PairConsole(Body(E3, 97), E3Download.Value);
+        AnswersTheProbe(console);
+        var pipe = new TimedPipe(console, clock);
+        var log = new RecordingSink();
+        var device = Create(() => pipe, new UsbDeviceOptions { LiveControlDate = Today(clock), StartupPairDate = Today(clock) }, _ => log, clock);
+        StateAtConnect? last = null;
+        FaderBank? bank = null;
+        device.StateChanged += (_, change) =>
+        {
+            last = change.StateAtConnect ?? last;
+            bank = change.FaderBank ?? bank;
+        };
+
+        var switching = console.PauseAtPress((byte)ClearedKey.Faders25To48);
+        await device.ConnectAsync(CancellationToken.None);
+        await switching.WaitAsync(Timeout);
+        foreach (var control in new Func<Task>[]
+        {
+            () => device.PressFaders1To24Async(CancellationToken.None),
+            () => device.SetChannelLevelAsync(30, 0x10, CancellationToken.None),
+            () => device.BumpChannelAsync(47, true, CancellationToken.None),
+            () => device.SetSoloAsync(true, CancellationToken.None),
+        })
+        {
+            var refused = await Assert.ThrowsAsync<InvalidOperationException>(control);
+            Assert.Contains("the MASTER probe is under way (SC-4 clause 4): the device taps the bump of channel 47 in channel mode, bank 25-48 and leaves the console in channel mode, bank 1-24", refused.Message, StringComparison.Ordinal);
+        }
+
+        console.Resume();
+        await WaitUntil(() => log.Notes.Any(n => n.StartsWith("MASTER probe done", StringComparison.Ordinal)));
+        var after = await Assert.ThrowsAsync<InvalidOperationException>(() => device.PressFaders1To24Async(CancellationToken.None));
+        Assert.Contains("FADERS 1-24 was sent from a PC only from memory mode or bank 25-48", after.Message, StringComparison.Ordinal);
+        await device.DisconnectAsync(CancellationToken.None);
+
+        Assert.Equal(
+            new[]
+            {
+                Frame(E3.Value, 90, CaptureDirection.Out), Frame(E3.Value, 173, CaptureDirection.Out),
+                WithCounter(E9d, 18706, 0x02), WithCounter(E9d, 18711, 0x03),
+                WithCounter(E9d, 44086, 0x04), WithCounter(E9d, 44199, 0x05),
+                WithCounter(E9d, 27831, 0x06), WithCounter(E9d, 27836, 0x07),
+            },
+            console.Payloads.ToArray());
+        Assert.Equal(FaderBank.Channels1To24, bank);
+        Assert.Equal(MasterProbePhase.Sent, last!.MasterProbe);
+        Assert.Equal(0xFF, (await device.GetSnapshotAsync(CancellationToken.None)).Masters.Master);
+
+        // the switch back went only once the tap's reports were in: every FaderInfo and ChannelLevels the console listed after
+        // the bump's release was fetched before FADERS 1-24's header (a write otherwise goes before pending fetches)
+        var transfers = Recorded(pipe);
+        var release = transfers.FindIndex(t => t.ToConsole && t.Data.Length == 7 && t.Data[4] == 0x01 && t.Data[5] == (byte)ClearedKey.Bump23 && t.Data[6] == 0x00);
+        var back = transfers.FindIndex(t => t.ToConsole && t.Data.Length == 7 && t.Data[4] == 0x01 && t.Data[5] == (byte)ClearedKey.Faders1To24 && t.Data[6] == 0x01) - 1;
+        Assert.True(release > 0 && IsDataHeader(transfers[back]) && back > release);
+        var listedAfterRelease = 0;
+        for (var i = release; i < back; i++)
+        {
+            var data = transfers[i].Data;
+            if (transfers[i].ToConsole || data.Length < 7 || data[4] != (int)HspObjectId.DirtyObjects || data[2] + (data[3] << 8) != data.Length - 5)
+            {
+                continue;
+            }
+
+            for (var r = 0; r < ((data[5] << 8) | data[6]); r++)
+            {
+                int id = data[7 + 5 * r];
+                if (id is (int)HspObjectId.FaderInfo or (int)HspObjectId.ChannelLevels)
+                {
+                    listedAfterRelease++;
+                    Assert.Contains(transfers.Skip(i).Take(back - i), t => t.ToConsole && t.Data.Length == 12 && t.Data[0] == 2 && t.Data[4] == id);
+                }
+            }
+        }
+
+        Assert.True(listedAfterRelease >= 2, "the console's report of the release was not listed before the switch back");
+
+        Assert.Contains(log.Notes, n => n.StartsWith("MASTER probe (SC-4 clause 4): bump 23 of channel 47, unpatched", StringComparison.Ordinal)
+            && n.Contains("as a tap in channel mode, bank 25-48, after SC-5's automatic switch from channel mode, bank 1-24 (FADERS 25-48) and, once the tap's reports are in, back to channel mode, bank 1-24 as the download reported it (FADERS 1-24)", StringComparison.Ordinal));
+        Assert.Contains(log.Notes, n => n.StartsWith("automatic bank switch (SC-5 condition 1) for the MASTER probe (bump 47): FADERS 25-48 sent, from channel mode, bank 1-24 to channel mode, bank 25-48", StringComparison.Ordinal));
+        Assert.Contains("MASTER probe: the console reported the tap of bump 47 (the MASTER probe), the MASTER reads 0xFF (FaderInfo body[194]); the switch back to channel mode, bank 1-24 follows", log.Notes);
+        Assert.Contains(log.Notes, n => n.StartsWith("automatic bank switch (SC-5 condition 1) for the MASTER probe's return to channel mode, bank 1-24: FADERS 1-24 sent, from channel mode, bank 25-48 to channel mode, bank 1-24", StringComparison.Ordinal));
+        Assert.Contains("MASTER probe done (SC-4 clause 4): the console shows channel mode, bank 1-24, as the download reported it", log.Notes);
+    }
+
+    [Fact]
+    public async Task From_memory_mode_the_MASTER_probe_goes_through_bank_1_24_to_bank_25_48_and_back_to_memory_mode()
+    {
+        // E3's download with the console in memory mode, page 1 (E9d seq 29039 / 29045 served for its ConsoleStatus and
+        // LedStatus). Channel 47 is the only unpatched channel and sits in bank 25-48; no PC was ever seen switching memory mode
+        // and bank 25-48 directly (none in any capture), so the probe goes memory mode → bank 1-24 → bank 25-48 (FADERS 1-24 as
+        // SmartSoft sent it from memory mode, E9d seq 44811 / 44820; FADERS 25-48, 18706 / 18711), taps bump 23 (44086 / 44199)
+        // and comes back bank 25-48 → bank 1-24 → memory mode (FADERS 1-24, 27831 / 27836; FADERS MEMS, 29032 / 29041), each
+        // switch after the console's report of the one before: the console is left in memory mode, page 1, as found.
+        var clock = new VirtualClock();
+        var download = E3Download.Value.With(
+            (new DirtyObjectRecord((int)HspObjectId.ConsoleStatus, 0, 0, 0), Body(E9d, 29039)),
+            (new DirtyObjectRecord((int)HspObjectId.LedStatus, 0, 0, 0), Body(E9d, 29045)));
+        var console = new PairConsole(Body(E3, 97), download);
+        AnswersTheProbe(console);
+        var log = new RecordingSink();
+        var device = Create(() => console, new UsbDeviceOptions { LiveControlDate = Today(clock), StartupPairDate = Today(clock) }, _ => log, clock);
+        FaderBank? bank = null;
+        device.StateChanged += (_, change) => bank = change.FaderBank ?? bank;
+
+        await device.ConnectAsync(CancellationToken.None);
+        await WaitUntil(() => log.Notes.Any(n => n.StartsWith("MASTER probe done", StringComparison.Ordinal)));
+        await device.DisconnectAsync(CancellationToken.None);
+
+        Assert.Equal(
+            new[]
+            {
+                Frame(E3.Value, 90, CaptureDirection.Out), Frame(E3.Value, 173, CaptureDirection.Out),
+                WithCounter(E9d, 44811, 0x02), WithCounter(E9d, 44820, 0x03),
+                WithCounter(E9d, 18706, 0x04), WithCounter(E9d, 18711, 0x05),
+                WithCounter(E9d, 44086, 0x06), WithCounter(E9d, 44199, 0x07),
+                WithCounter(E9d, 27831, 0x08), WithCounter(E9d, 27836, 0x09),
+                WithCounter(E9d, 29032, 0x0A), WithCounter(E9d, 29041, 0x0B),
+            },
+            console.Payloads.ToArray());
+        Assert.Equal(FaderBank.Memories, bank);
+        Assert.Equal(4, log.Notes.Count(n => n.StartsWith("automatic bank switch done: the console reports", StringComparison.Ordinal)));
+        Assert.Contains(log.Notes, n => n.StartsWith("MASTER probe (SC-4 clause 4): bump 23 of channel 47, unpatched", StringComparison.Ordinal)
+            && n.Contains("after SC-5's automatic switch from memory mode (FADERS 1-24, then FADERS 25-48) and, once the tap's reports are in, back to memory mode as the download reported it (FADERS 1-24, then FADERS MEMS)", StringComparison.Ordinal));
+        Assert.Contains("MASTER probe done (SC-4 clause 4): the console shows memory mode, page 1, as the download reported it", log.Notes);
+    }
+
+    [Fact]
+    public async Task When_a_switch_makes_the_console_report_FaderInfo_the_MASTER_probe_sends_no_tap_and_goes_home_from_there()
+    {
+        // From memory mode, page 1 (E9d seq 29039 / 29045 in E3's download) the first switch is FADERS 1-24, which the console
+        // answers as it answered SmartSoft's from memory mode at E9c seq 56947: ConsoleStatus seq 56954, FaderInfo seq 56960 (the
+        // MASTER at full, record 1 at 0x87) and LedStatus seq 56964, all three named by the list at seq 56950 (OBSERVED; first
+        // lists naming FaderInfo after a mode switch also at E9 seq 75726, E9b 80262, E9d 50035). Clause 4's own condition (only
+        // while FaderInfo has not been reported) no longer holds: neither FADERS 25-48 nor the tap goes, and the probe goes home
+        // from bank 1-24, FADERS MEMS (E9d seq 29032 / 29041).
+        var clock = new VirtualClock();
+        var download = E3Download.Value.With(
+            (new DirtyObjectRecord((int)HspObjectId.ConsoleStatus, 0, 0, 0), Body(E9d, 29039)),
+            (new DirtyObjectRecord((int)HspObjectId.LedStatus, 0, 0, 0), Body(E9d, 29045)));
+        var console = new PairConsole(Body(E3, 97), download);
+        AnswersTheProbe(console);
+        console.OnPress((byte)ClearedKey.Faders1To24, () =>
+        {
+            console.Report((int)HspObjectId.ConsoleStatus, Body(E9c, 56954));
+            console.Report((int)HspObjectId.FaderInfo, Body(E9c, 56960));
+            console.Report((int)HspObjectId.LedStatus, Body(E9c, 56964));
+        });
+        var log = new RecordingSink();
+        var device = Create(() => console, new UsbDeviceOptions { LiveControlDate = Today(clock), StartupPairDate = Today(clock) }, _ => log, clock);
+        FaderBank? bank = null;
+        StateAtConnect? last = null;
+        device.StateChanged += (_, change) =>
+        {
+            bank = change.FaderBank ?? bank;
+            last = change.StateAtConnect ?? last;
+        };
+
+        await device.ConnectAsync(CancellationToken.None);
+        await WaitUntil(() => log.Notes.Any(n => n.StartsWith("MASTER probe done", StringComparison.Ordinal)));
+        await device.DisconnectAsync(CancellationToken.None);
+
+        Assert.Equal(
+            new[]
+            {
+                Frame(E3.Value, 90, CaptureDirection.Out), Frame(E3.Value, 173, CaptureDirection.Out),
+                WithCounter(E9d, 44811, 0x02), WithCounter(E9d, 44820, 0x03),
+                WithCounter(E9d, 29032, 0x04), WithCounter(E9d, 29041, 0x05),
+            },
+            console.Payloads.ToArray());
+        Assert.Contains("MASTER probe: the console reported FaderInfo before the tap, the MASTER reads 0xFF (FaderInfo body[194]), so neither the rest of the way out nor the tap of bump 47 (the MASTER probe) is sent; the switch back to memory mode follows", log.Notes);
+        Assert.Contains("MASTER probe done (SC-4 clause 4): the console shows memory mode, page 1, as the download reported it", log.Notes);
+        Assert.Equal(FaderBank.Memories, bank);
+        Assert.Equal(MasterProbePhase.Sent, last!.MasterProbe);
+    }
+
+    /// <summary>
+    /// The clause's SOLO and BLACKOUT refusals are asked again when the probe has come to the channel's bank: the console answers
+    /// FADERS 25-48 with bank 25-48 (E9d seq 18715) and LEDs that show SOLO lit (E9c seq 87881, block 52) or BLACKOUT on (E8b
+    /// seq 26999, block 53 steady). The tap is not sent; the probe stops where it is, with no switch back, and the UI asks for
+    /// one movement with the reason.
+    /// </summary>
+    [Theory]
+    [InlineData("E9c", 87881, "SOLO is not off (LED block 52)")]
+    [InlineData("E8b", 26999, "BLACKOUT is on (LED block 53 steady, F114)")]
+    public async Task SOLO_or_BLACKOUT_reported_with_the_switch_stops_the_MASTER_probe_before_its_tap(string capture, int ledStatusSeq, string reason)
+    {
+        var clock = new VirtualClock();
+        var console = new PairConsole(Body(E3, 97), E3Download.Value);
+        AnswersTheProbe(console);
+        console.OnPress((byte)ClearedKey.Faders25To48, () =>
+        {
+            console.Report((int)HspObjectId.ConsoleStatus, Body(E9d, 18715));
+            console.Report((int)HspObjectId.LedStatus, Body(capture == "E9c" ? E9c : E8b, ledStatusSeq));
+        });
+        var log = new RecordingSink();
+        var device = Create(() => console, new UsbDeviceOptions { LiveControlDate = Today(clock), StartupPairDate = Today(clock) }, _ => log, clock);
+        StateAtConnect? last = null;
+        device.StateChanged += (_, change) => last = change.StateAtConnect ?? last;
+
+        await device.ConnectAsync(CancellationToken.None);
+        await WaitUntil(() => last?.MasterProbe == MasterProbePhase.NotPossible);
+        await device.DisconnectAsync(CancellationToken.None);
+
+        Assert.Equal(4, console.Payloads.Count);   // the pair and FADERS 25-48: no tap, no switch back
+        Assert.Contains($"the MASTER probe stopped ({reason}", last!.MasterProbeReason, StringComparison.Ordinal);
+        Assert.Contains(log.Notes, n => n.StartsWith($"MASTER probe stopped (SC-4 clause 4): {reason}", StringComparison.Ordinal)
+            && n.EndsWith("no retry and no switch back: the console shows channel mode, bank 25-48, the download reported channel mode, bank 1-24", StringComparison.Ordinal));
+    }
+
+    [Theory]
+    [InlineData(false, "the console did not report channel mode, bank 25-48 with its LEDs within 2 s of FADERS 25-48", 4, "channel mode, bank 1-24")]
+    [InlineData(true, "the console did not report channel mode, bank 1-24 with its LEDs within 2 s of FADERS 1-24", 8, "channel mode, bank 25-48")]
+    public async Task A_switch_of_the_MASTER_probe_the_console_does_not_report_within_two_seconds_ends_the_session_as_a_deviation(bool answersBank25To48, string error, int payloads, string leftIn)
+    {
+        // SC-5 condition 1 (c) for the probe's switches as for any: the stand-in does not answer FADERS 25-48 (the switch there)
+        // or FADERS 1-24 (the switch back); two seconds after the key's press, on the loop's clock, the session ends with that
+        // reason, nothing else is sent after the key's tap, and the log says where the console was last reported.
+        var clock = new VirtualClock();
+        var console = new PairConsole(Body(E3, 97), E3Download.Value);
+        AnswersTheProbe(console, faders25To48: answersBank25To48, faders1To24: false);
+        var log = new RecordingSink();
+        var device = Create(() => console, new UsbDeviceOptions { LiveControlDate = Today(clock), StartupPairDate = Today(clock) }, _ => log, clock);
+        var ended = WaitForStatus(device, ConnectionStatus.Error);
+
+        await device.ConnectAsync(CancellationToken.None);
+        var state = await ended;
+
+        Assert.Contains(error, state.Error, StringComparison.Ordinal);
+        Assert.Contains("(SC-5 condition 1 c); the session ends as a deviation", state.Error, StringComparison.Ordinal);
+        Assert.Equal(payloads, console.Payloads.Count);
+        Assert.Contains(log.Notes, n => n.StartsWith($"MASTER probe interrupted by the session's end (SC-4 clause 4): the console was last reported in {leftIn}, the download reported channel mode, bank 1-24", StringComparison.Ordinal));
+    }
+
+    [Fact]
+    public async Task A_record_function_armed_during_the_MASTER_probe_stops_it_before_the_switch_back_and_nothing_more_goes()
+    {
+        // As the usual case, but the console answers bump 23's press with REC MEM lit too (LedStatus E9b seq 83953; SC-2
+        // condition 5). The tap's release is owed and goes (a press is never left without its release); the tap's reports come
+        // in, then the switch back is refused (no write while a record function is armed): the probe stops where it is, with no
+        // retry and no switch back, and the log says where the console was left. FaderInfo came with the tap, so the MASTER is
+        // known and the UI does not ask for a movement; the next control meets the record function's refusal, not the probe's.
+        var clock = new VirtualClock();
+        var console = new PairConsole(Body(E3, 97), E3Download.Value);
+        AnswersTheProbe(console);
+        console.OnPress((byte)ClearedKey.Bump23, () =>
+        {
+            console.Report((int)HspObjectId.FaderInfo, E9bBody(11628));
+            console.Report((int)HspObjectId.ChannelLevels, E9bBody(11632));
+            console.Report((int)HspObjectId.LedStatus, E9bBody(83953));
+        });
+        var log = new RecordingSink();
+        var device = Create(() => console, new UsbDeviceOptions { LiveControlDate = Today(clock), StartupPairDate = Today(clock) }, _ => log, clock);
+        StateAtConnect? last = null;
+        device.StateChanged += (_, change) => last = change.StateAtConnect ?? last;
+
+        await device.ConnectAsync(CancellationToken.None);
+        await WaitUntil(() => log.Notes.Any(n => n.StartsWith("MASTER probe stopped", StringComparison.Ordinal)));
+        var refused = await Assert.ThrowsAsync<InvalidOperationException>(() => device.PressFaders1To24Async(CancellationToken.None));
+        Assert.Contains("REC MEM is lit or blinking", refused.Message, StringComparison.Ordinal);
+        await device.DisconnectAsync(CancellationToken.None);
+
+        Assert.Equal(6, console.Payloads.Count);
+        Assert.Equal(WithCounter(E9d, 44199, 0x05), console.Payloads[^1]);   // the tap's release is the last write
+        Assert.Contains(log.Notes, n => n.StartsWith("MASTER probe stopped (SC-4 clause 4): REC MEM is lit or blinking", StringComparison.Ordinal)
+            && n.EndsWith("; nothing more of it is sent, no retry and no switch back: the console shows channel mode, bank 25-48, the download reported channel mode, bank 1-24", StringComparison.Ordinal));
+        Assert.Equal(MasterProbePhase.Sent, last!.MasterProbe);
+    }
+
+    [Fact]
+    public async Task The_MASTER_probe_does_not_switch_away_from_a_memory_page_other_than_1()
+    {
+        // E3's download with the console in memory mode on page 2 (ConsoleStatus E9c seq 42230, body[2] = 1; LedStatus E9d seq
+        // 29045): channel 47 needs two switches, and every bank or mode switch a PC was seen making came on page 1 (whether the
+        // page outlasts one is UNKNOWN), so the probe does not run and the UI asks for one MASTER movement: the pair alone goes.
+        var clock = new VirtualClock();
+        var download = E3Download.Value.With(
+            (new DirtyObjectRecord((int)HspObjectId.ConsoleStatus, 0, 0, 0), Body(E9c, 42230)),
+            (new DirtyObjectRecord((int)HspObjectId.LedStatus, 0, 0, 0), Body(E9d, 29045)));
+        var console = new PairConsole(Body(E3, 97), download);
+        var log = new RecordingSink();
+        var device = Create(() => console, new UsbDeviceOptions { LiveControlDate = Today(clock), StartupPairDate = Today(clock) }, _ => log, clock);
+        StateAtConnect? last = null;
+        device.StateChanged += (_, change) => last = change.StateAtConnect ?? last;
+
+        await device.ConnectAsync(CancellationToken.None);
+        await WaitUntil(() => last?.MasterProbe == MasterProbePhase.NotPossible);
+        console.EndAfterPolls(60);
+        await WaitUntil(() => device.Status != ConnectionStatus.Connected);
+
+        Assert.Contains("the console shows memory page 2: every bank or mode switch a PC was seen making came on page 1", last!.MasterProbeReason, StringComparison.Ordinal);
+        Assert.Equal(2, console.Payloads.Count);
+        Assert.Contains(log.Notes, n => n.StartsWith("MASTER probe not sent: the console shows memory page 2", StringComparison.Ordinal));
     }
 
     [Theory]
@@ -415,9 +785,9 @@ public partial class UsbSmartFadeDeviceTests
     /// <summary>
     /// A stand-in console for the start-up pair. The first poll lists the objects given for Connect (if any); after `09 00 00`
     /// the next free poll lists ConsoleVersion (unless <see cref="ListsNoVersion"/>), whose fetch delivers the version body given;
-    /// after `07 00 00` the next free poll lists the captured download, whose fetches deliver its bodies; a key press runs the
-    /// reaction set for its code; <see cref="Report"/> lists an object at the next free poll; every other poll is idle. After
-    /// <see cref="EndAfterPolls"/> more polls it fails the next read (the session ends, as a replay's end does).
+    /// after `07 00 00` the next free poll lists the captured download, whose fetches deliver its bodies; a key press or release
+    /// runs the reaction set for its code; <see cref="Report"/> lists an object at the next free poll; every other poll is idle.
+    /// After <see cref="EndAfterPolls"/> more polls it fails the next read (the session ends, as a replay's end does).
     /// </summary>
     private sealed class PairConsole : IHspPipe
     {
@@ -428,6 +798,7 @@ public partial class UsbSmartFadeDeviceTests
         private readonly Dictionary<DirtyObjectRecord, byte[]> _bodies = new();
         private readonly List<DirtyObjectRecord> _dirty = new();
         private readonly Dictionary<byte, Action> _onPress = new();
+        private readonly Dictionary<byte, Action> _onRelease = new();
         private readonly List<byte[]> _payloads = new();
         private readonly List<int> _systemWritesAfterReplies = new();
         private DirtyObjectRecord? _fetched;
@@ -436,6 +807,7 @@ public partial class UsbSmartFadeDeviceTests
         private int _downloadServed;
         private int _replyHeaders;
         private int? _pauseAtRecord;
+        private byte? _pauseAtPress;
         private int? _endAfter;
         private ManualResetEventSlim? _paused;
         private TaskCompletionSource? _pausedSignal;
@@ -513,6 +885,26 @@ public partial class UsbSmartFadeDeviceTests
             }
         }
 
+        public void OnRelease(byte code, Action reaction)
+        {
+            lock (_lock)
+            {
+                _onRelease[code] = reaction;
+            }
+        }
+
+        /// <summary>The next press of <paramref name="code"/> waits inside the pipe, after its reaction ran, until <see cref="Resume"/>.</summary>
+        public Task PauseAtPress(byte code)
+        {
+            lock (_lock)
+            {
+                _pauseAtPress = code;
+                _paused = new ManualResetEventSlim(false);
+                _pausedSignal = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+                return _pausedSignal.Task;
+            }
+        }
+
         /// <summary>The poll that would deliver the download's <paramref name="record"/>-th record waits until <see cref="Resume"/>.</summary>
         public Task PauseAtDownloadRecord(int record)
         {
@@ -548,6 +940,7 @@ public partial class UsbSmartFadeDeviceTests
             {
                 _payloadDue = false;
                 Action? reaction = null;
+                ManualResetEventSlim? pause = null;
                 lock (_lock)
                 {
                     _payloads.Add(data.ToArray());
@@ -565,13 +958,20 @@ public partial class UsbSmartFadeDeviceTests
                             _downloadDue = true;
                         }
                     }
-                    else if (data.Length == 7 && data[4] == 0x01 && data[6] == 0x01)
+                    else if (data.Length == 7 && data[4] == 0x01)
                     {
-                        _onPress.TryGetValue(data[5], out reaction);
+                        (data[6] == 0x01 ? _onPress : _onRelease).TryGetValue(data[5], out reaction);
+                        if (data[6] == 0x01 && _pauseAtPress == data[5])
+                        {
+                            _pauseAtPress = null;
+                            pause = _paused;
+                            _pausedSignal?.TrySetResult();
+                        }
                     }
                 }
 
                 reaction?.Invoke();
+                _ = pause?.Wait(Timeout);
                 return;
             }
 

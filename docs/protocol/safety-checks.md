@@ -1149,6 +1149,37 @@ Cleared for building, reviewing and one first session E13 on the owner's go, not
    fader movement on the panel instead. The channel's bump LED blinks once and ChannelLevels[c] reads 0xFF for the tap; nothing on
    the stage changes (OBSERVED for unpatched channels, INFERRED for a channel whose only address is on a dimmer that is not in use).
    The owner accepts the probe in writing; the SC-5 matching rule and every other interlock are unchanged.
+
+   **Amendment (2026-11-02, late evening):** proposed by the coordinating assistant after the implementation's finding (reading (8)
+   of the Implementation below: in the owner's show every channel of bank 1-24 is patched, so from the usual start the probe found
+   no channel and the UI asked for the panel movement the owner refuses) and accepted by the owner with "continue" the same late
+   evening. The text above stays as written; this paragraph changes it as follows. **The probe chooses an unpatched channel of
+   either channel bank:** the first of the shown bank, else the first of the other channel bank; from memory mode bank 1-24's
+   first, else bank 25-48's. When that channel's bank is not the one the console shows, the device first switches there by SC-5's
+   automatic switch (the bank's FADERS key as a tap; every further write held until the console reports the bank with its LEDs,
+   within 2 s, else the session ends as a deviation: SC-5 condition 1 and its Implementation; F179: the console followed our
+   host's switch in E11b), taps the channel's bump through SC-5's bump path as before, waits until the tap's reports are in (its
+   release taken and a poll reply after it, then FaderInfo and ChannelLevels each listed after the release and delivered, or
+   unchanged for two poll replies, as the bump shadow counts them; LedStatus held by the gate as for every write), and then
+   switches back by the same automatic switch to the bank or mode the download reported, so that the console is left as it was
+   found. **Each switch is a bank transition a committed capture shows a PC host making** (read with a scratch script over every
+   committed JSONL, 2026-11-02, late evening: 60 PC bank-key presses, SmartSoft's 43 in E9 to E9e and E12 and our host's 17 in E11
+   attempt 3, E11b and its later log-only runs, all on memory page 1): bank 1-24 → 25-48 (SmartSoft: E9b seq
+   51617, E9c 24528, E9d 18706 and 74718, E9e 19934 and 30238; our host: E11b bus seq 25322 for channel fader 30 and 47929 for the
+   UI's key), 25-48 → 1-24 (E9b 51978, E9c 28206, E9d 27831 and 85917, E9e 21374 and 31533; E11b 30193 for channel fader 2 and
+   48221), bank 1-24 → memory mode (E9 to E9d and E12, e.g. E9d 29032; E11 attempt 3 bus 23677, E11b 34154) and memory mode → 1-24
+   (E9 to E9d, e.g. E9d 44811; E11 attempt 3 32624, E11b 43651). **Memory mode → bank 25-48 and bank 25-48 → memory mode were
+   never sent from a PC in any capture**, so from memory mode the probe goes through bank 1-24 both ways (memory mode → 1-24 →
+   25-48, the tap, 25-48 → 1-24 → memory mode: four switches, each one of the observed transitions). No capture shows a bank or
+   mode switch away from memory page 1 (E8, E8b and E9c returned to page 1 before every switch), so a probe that needs a switch
+   runs only on page 1; on another page, no probe and the UI asks for the movement. When all 48 channels are patched, no probe: the
+   UI asks for one MASTER movement as before. The amended probe uses only SC-5's cleared classes (the three FADERS keys as taps from
+   the banks SmartSoft sent them from, the channel bumps 1–48 as taps; no key, index or payload added), refuses every control
+   while it runs, runs once per session, and keeps the clause's refusals (read-only, SOLO, BLACKOUT, a record function armed,
+   NEXT, no bank, no Patch). Unobserved until E13: the probe itself and a bump of bank 25-48 from our host (SmartSoft's in E9d and
+   E9e, F174); OBSERVED once for our host: the switch (F179); as SmartSoft's, FADERS 1-24 and FADERS MEMS VERIFIED (F133, F134)
+   and FADERS 25-48 seen in second sessions (F175, OBSERVED, with F171 VERIFIED for the faders after it); the FaderInfo listing at
+   a press: F174 / F178. **The written yes to the probe at the E13 gate covers the amended probe.**
 5. **One encoder, one whitelist, golden tests.** The two bodies as enum members with their evidence (F181), the placement and the version
    gate replayed over the 20 SmartSoft sessions (the pair's bytes, the ConsoleVersion gate, the download accepted record by record), the
    refusal of controls during the download, the switch's refusals (no `StartupPairDate` → no pair; a date not today → the backend refuses
@@ -1169,6 +1200,11 @@ acceptances once more).
 - The owner gives the go after reading this section and accepts in writing: the residual of item 3 (a state never seen), the blind window
   of 7.2–7.6 s, the recovery path after a cut download (a SmartSoft start), and the MASTER probe of clause 4 (a bump tap of an unpatched
   channel sent by the device once after the download; one panel fader movement instead when every channel of the shown bank is patched).
+  *(Amended 2026-11-02, late evening, with clause 4's amendment: the probe accepted is the amended one, a bump tap of an unpatched
+  channel of either bank, with SC-5's automatic switch to that channel's bank and back to the bank or mode the download reported
+  where the console shows another, through bank 1-24 from memory mode, only from memory page 1, every control refused while it runs;
+  one panel fader movement instead when all 48 channels are patched or the probe cannot run or stops. In his show that is channel 47,
+  bump 23 of bank 25-48: from the usual start FADERS 25-48, the tap, FADERS 1-24.)*
   *(His answers of 2026-11-02, evening, in chat: to the blind window "And?", to the recovery "Hm what?" (explained: keep SmartSoft
   installed as the way out), to the MASTER "the smartsoft do it without me doing anything so the solution should be somewhere there"
   (answered by the probe); the written yes is still open.)*
@@ -1236,6 +1272,30 @@ What was built, where:
   in the downloaded Patch; its bump as a tap through SC-5's bump path (`QueueBump`, the shadow and the gate as for any bump);
   the transfer log notes "MASTER probe (SC-4 clause 4): bump N of channel c, unpatched …" with the readings' statuses, or "MASTER
   probe not sent: …" with the reason, which the UI shows as "Move the MASTER once on the console".
+  *Amended the same late evening (clause 4's amendment; an Opus 5.5 subagent at the owner's request, his "continue", under the
+  coordinating assistant, which writes none of the sending code; in the working tree for the reviewer):* `StartMasterProbe` takes the
+  first unpatched channel of the shown bank, else of the other channel bank (from memory mode bank 1-24's, else 25-48's;
+  `ConsoleShowAssembler.UnpatchedChannel` for each), and plans the switches with `ProbeRoute`: none in the channel's own bank; one
+  where `BankKeyNotFrom` (SC-5's table of the bank keys SmartSoft sent from each bank) allows that bank's key; else through bank 1-24
+  (memory mode ↔ 25-48, never sent from a PC). A plan with a switch is refused off memory page 1. The probe (`MasterProbeRun`) then
+  runs as one write at a time on the session's thread (`AdvanceProbe`, after `AdvanceSwitch` at every completed exchange, never
+  while a switch waits for its report): each switch through `StartSwitch` (SC-5's key tap, its barrier and 2 s bound, its notes
+  "automatic bank switch … for the MASTER probe (bump c)" and "… for the MASTER probe's return to …"), the tap through `QueueBump`
+  once the console reported the channel's bank, and the switches back only once the tap's reports are in (`ProbeTapReported`: the
+  tap's shadow ended, or its release taken with a poll reply after it and FaderInfo and ChannelLevels each listed after it and
+  delivered or quiet for two poll replies, `ReportedAfterRelease`, the shadow's own count). Every control is refused while the probe
+  runs ("the MASTER probe is under way (SC-4 clause 4): …", `StartupPairBusy`). The probe stops, with no retry and no switch back
+  (`EndProbe`, "MASTER probe stopped (SC-4 clause 4): …, nothing more of it is sent …: the console shows …, the download reported
+  …"), when one of its writes was dropped unsent, the console reports another bank than the probe expects (a panel key, NEXT mode) or
+  a record function reads armed before its next write; a switch not reported within 2 s ends the session as SC-5 says, and the end
+  notes "MASTER probe interrupted by the session's end …" with where the console was last reported. The log notes the tap's report
+  ("the MASTER reads 0x..") and the end ("MASTER probe done (SC-4 clause 4): the console shows …, as the download reported it"); a
+  tap that brought no FaderInfo still switches back, and the UI then asks for the movement. Before the tap, now later than the
+  download, the record functions, SOLO and BLACKOUT are asked again, and SOLO and BLACKOUT once more at the tap's slot
+  (`ProbeLedRefusal`, `QueueBump`'s `also`); FaderInfo reported on the way out (a mode switch can list it: the first list after
+  the key named FaderInfo at E9 seq 75726, E9b 80262, E9c 56950 and E9d 50035, OBSERVED) ends the way out without the tap, by the
+  clause's own condition, and the probe goes home from where it is; a switch already in progress when the download ends (a UI key
+  taken in that moment) refuses the probe.
 - **The switch and the UI (items 6, 7).** `Device:Usb:StartupPairDate` (`UsbDeviceOptions`, `ValidateStartupPairDate`: set without
   `Device:Mode=Usb` or for another day, the backend refuses to start; checked again at Connect and at the gate); one pair per
   Connect, none after a refusal or an end in the same session. The state carries `stateAtConnect` (docs/api.md), with the events
@@ -1251,6 +1311,19 @@ What was built, where:
   its refusals (every channel patched, SOLO, read-only), the version mismatch, no version listed, the four clause-3 refusals with
   the console's bodies, one pair per Connect, the switch. API: the mapper against SHOW04, the times, the hosting refusals; the
   application's store. 525 backend tests (were 442), 356 frontend tests (were 340).
+  *Amended probe (2026-11-02, late evening), the same stand-in answering the probe's keys with the console's own E9d answers to
+  SmartSoft's (FADERS 25-48 seq 18715 / 18719, FADERS 1-24 27840 / 27848, FADERS MEMS 29039 / 29045) and the tap's press and release
+  with FaderInfo and ChannelLevels as before it (E9b seq 11628 / 11632, F168):* from bank 1-24 (E3's download) the probe sends
+  FADERS 25-48, bump 23, FADERS 1-24 (SmartSoft's E9d seq 18706 / 18711, 44086 / 44199, 27831 / 27836 with this session's
+  counter), refuses every control meanwhile, and sends FADERS 1-24 only after every FaderInfo and ChannelLevels listed after the
+  release was fetched (it fails when the switch back goes at the release's first poll reply); from memory mode, page 1, it goes
+  through bank 1-24 both ways (E9d 44811 / 44820, 18706 / 18711, 44086 / 44199, 27831 / 27836, 29032 / 29041) and ends in memory
+  mode; with E12b's edited Patch (seq 87317, every channel 1-48 patched) no probe and the reason "every channel of both banks is
+  patched"; a switch not reported within 2 s, there or back, ends the session as a deviation with the interrupted-probe note; REC
+  MEM lit at the tap (E9b seq 83953) stops the probe before the switch back, nothing more sent; memory page 2 (E9c seq 42230) no
+  probe; FADERS 1-24 from memory mode answered with FaderInfo (E9c seq 56954 / 56960 / 56964) sends no tap and goes home by
+  FADERS MEMS; SOLO lit (E9c seq 87881) or BLACKOUT on (E8b seq 26999) reported with the switch stops the probe before the tap.
+  The in-bank probe of bank 25-48 (no switch) is unchanged. 534 backend tests (were 525); the frontend unchanged.
 
 **Readings where the text was narrowed or extended, for the reviewer.** (1) The placement is SmartSoft's own count (#40, #79), not
 "at least one exchange": stricter, and it reproduces all 20 placements byte for byte; the pair goes about 1.3 s and 2.5 s after
@@ -1261,12 +1334,44 @@ Connect, not only from `07`, so that the pair stays first (clause 6). (5) The do
 listed within two free replies, else a fault (the text says nothing of a missing download). (6) Undelivered memories reported empty
 is an INFERRED display reading. (7) The probe is the one bump of ours sent before FaderInfo, so the checks of a fader's record that
 need it (a channel's physical fader still holding a memory, F112; SC-5's first review, minor 4) cannot run for it; in memory mode it
-leaves the console in channel mode, bank 1-24 (nothing switches back). (8) **Finding for the owner:** in his current show (the Patch
+leaves the console in channel mode, bank 1-24 (nothing switches back). *(Superseded by clause 4's amendment, 2026-11-02, late
+evening, text kept: the probe now switches back to the bank or mode the download reported, so the console is left as found; the
+first sentence of this reading stands.)* (8) **Finding for the owner:** in his current show (the Patch
 of every download from E2 to E9e but E12b's edited one; SHOW29.ASC = SHOW04.ASC by SHA-256, F184) channels 1–24 are all patched and
 only 47 and 49 are not, and the pair is refused in bank 25-48 when the
 console reported that bank first, so with the usual start in channel mode, bank 1-24, the probe finds no channel and the UI asks for
 one MASTER movement; the probe runs only when the console is in bank 25-48 unreported, or with a show that leaves a channel of the
-shown bank unpatched.
+shown bank unpatched. *(Answered by clause 4's amendment, 2026-11-02, late evening, text kept: the probe now looks in the other
+channel bank too, so from the usual start it takes channel 47, physical bump 23 of bank 25-48: FADERS 25-48, the tap, FADERS 1-24;
+from memory mode, page 1, FADERS 1-24, FADERS 25-48, the tap, FADERS 1-24, FADERS MEMS. Channel 49 is IND 1, no fader.)*
+
+**Readings of the amendment (2026-11-02, late evening), for the reviewer.** (9) "After the tap's reports were delivered … or, when
+the tap listed nothing, after the bump shadow ended by its existing rule" is built as: the shadow ended, or its release taken with a
+poll reply after it and FaderInfo and ChannelLevels each reported after it by the shadow's own count (listed after the release and
+delivered, or unchanged for two poll replies; nothing of either listed and unfetched), without the shadow's level test. The existing
+rule cannot end without FaderInfo, which a tap that listed nothing never brings (the channel's content already at the bump's level,
+as in the owner's log, OBSERVED once), so its quiet part alone lets the switch back go; the shadow itself goes on guarding that
+fader's events until it ends. (10) The switch back goes also when the tap brought no FaderInfo (the console left as found; the UI
+then asks for the movement, the probe's phase NotPossible with "the console listed no FaderInfo …"). (11) A plan with a switch runs
+only on memory page 1 (ConsoleStatus body[2] = 0): all 60 PC bank-key presses of the captures came there and no capture shows a
+switch on another page (narrowed). (12) Every control is refused from the probe's first write until it ends: the amendment says
+nothing of the UI meanwhile, and a control would otherwise start a switch of its own or wait for one of the probe's (extended). (13)
+"The switch refused or timing out → the session ends as SC-5 says" is read as SC-5 has it: a switch the console does not report
+within 2 s ends the session as a deviation (condition 1 c); a refusal (a write dropped unsent, a record function armed before the
+probe's next write, the console in another bank than expected, i.e. a panel key or NEXT) stops the probe where it is, with no retry
+and no switch back, and the session goes on as after any refused control. (14) A stop or a fault inside the probe leaves the console
+where it was; the transfer log says where. (15) From memory mode the probe goes through bank 1-24 both ways, four switches each
+observed from a PC, rather than not probing there (rule 2's first option). (16) The route from bank 25-48 when only bank 1-24 has an
+unpatched channel (FADERS 1-24, the tap, FADERS 25-48) and the memory-mode case with an unpatched channel in bank 1-24 (FADERS 1-24,
+the tap, FADERS MEMS) come from the same rule and transitions but no captured Patch exercises them (the captured Patches leave
+channel 47 alone unpatched, or none), so no device test covers them with captured bytes. (17) FaderInfo reported on the way out,
+before the tap, ends the way out: neither the rest of the switches there nor the tap is sent, and the probe goes home from where
+it is (the clause's own condition "only when FaderInfo has not been reported since Connect"; fewer writes than the amendment's
+sequence; extended). (18) The clause's refusals are asked again before the tap (the record functions, SOLO, BLACKOUT) and SOLO and
+BLACKOUT once more at its slot, since the tap now comes a switch later than the download; a refusal there stops the probe with no
+switch back (no FADERS key was sent from a PC with SOLO lit or BLACKOUT on either: at all 60 presses block 52 read steady off, and
+block 53 steady off at 58 and the MASTER's blink, F85, at 2; the same scratch read). (19) A switch already in progress when
+the download ends refuses the probe (a UI key taken between the last record and the probe; never seen, closed for safety).
 
 ### What SC-4 does not clear
 

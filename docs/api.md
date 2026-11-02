@@ -171,9 +171,13 @@ interface StateAtConnectDto {                       // SmartSoft's start-up pair
                                                     // version gate, a stop)
   masterProbe: 'pending' | 'notNeeded' | 'sent' | 'notPossible';
                                                     // the download carries no FaderInfo (the MASTER): with live control the
-                                                    // device taps the bump of an unpatched channel once after it (SC-4 clause 4);
-                                                    // notPossible: the UI asks for one MASTER movement on the panel
-  masterProbeReason: string | null;                 // why the probe could not run
+                                                    // device taps the bump of an unpatched channel once after it (SC-4 clause 4;
+                                                    // amended 2026-11-02, late evening: a channel of either bank, with the
+                                                    // automatic bank switch there and back to the bank or mode the console showed,
+                                                    // every control refused meanwhile); sent: queued, under way or done;
+                                                    // notPossible: it could not run or ended without the MASTER, and the UI asks
+                                                    // for one MASTER movement on the panel
+  masterProbeReason: string | null;                 // why the probe could not run (or ended without the MASTER)
 }
 
 interface ErrorDto {
@@ -234,7 +238,10 @@ With the state at Connect (safety check SC-4, `stateAtConnect` not null) the rea
 Connect until the download's last record, with one of three reasons in `errorOccurred`: "the console's state at Connect is
 being requested: SmartSoft's start-up pair goes first", "… nothing goes between the start-up pair's two writes", and, from the
 second message until the last record, "the console's state is being downloaded". After it the commands are refused or taken
-as before. The pair itself is no command: the device sends it, once per Connect, or says in `stateAtConnect.reason` why not.
+as before, except while the MASTER probe runs (SC-4 clause 4 as amended on 2026-11-02, late evening: from its first write until
+it has left the console in the bank or mode the download reported: up to four bank switches and one tap, each waiting for the
+console's report): "the MASTER probe is under way". The
+pair and the probe are no commands: the device sends them, once per Connect, or says in `stateAtConnect` why not.
 
 Server → client:
 
