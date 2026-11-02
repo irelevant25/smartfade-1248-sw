@@ -2211,6 +2211,69 @@ public class UsbSmartFadeDeviceTests
         }, Payloads(rig.Pipe));
     }
 
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public async Task A_bump_press_waits_for_its_faders_current_report(bool ledStatusFirst)
+    {
+        // The fourth review of SC-5 item 10, minor H: a write goes before pending fetches, so a press taken while FaderInfo and
+        // ChannelLevels are listed and not fetched would keep the previous report as the content's level. Channel fader 5 stands
+        // at 0x82 (seq 4146 / 4150 of the owner's later E11b session) and reaches full just as bump 5's press is queued, in one
+        // of the two list orders that session shows. Without LedStatus (list seq 4019: FaderInfo seq 4023, record 5
+        // `ff 00 00 00`; ChannelLevels seq 4027, channel 5 at 0xFF; most memory-mode lists carry no LedStatus either) the gate
+        // passes at the slot right after the list, and only the press's own wait keeps it back: the transfer log notes it.
+        // LedStatus first (list seq 9297, a move to full on the panel: LedStatus seq 9301, FaderInfo seq 9309, ChannelLevels seq
+        // 9313): the gate waits for LedStatus and, after any object reply, finds the last poll reply older than two poll
+        // periods by the write's slot (the fetch delay, the poll after it and the write after that poll come to at least 62 ms),
+        // so the press waits there too. Either way the press goes after both objects, its shadow keeps 0xFF as the content's
+        // level, the bump at full changes nothing (as in the owner's log, seq 4571 / 4609) and the shadow ends after two quiet
+        // replies; the drag goes, matched at 0xFF. As SmartSoft's bytes: E9d seq 38764 / 38879 (code 0x04) and 11362 (index 0x04).
+        var rig = LiveConsole();
+        var afterRelease = new TaskCompletionSource<Task>(TaskCreationOptions.RunContinuationsAsynchronously);
+        rig.Console.OnRelease((byte)ClearedKey.Bump5, () => afterRelease.TrySetResult(rig.Console.PauseAtNextPoll()));
+        await rig.Device.ConnectAsync(CancellationToken.None);
+        await rig.KeysReported.WaitAsync(Timeout);
+        await ReportFader5(rig, 4146, 4150, 0x82);
+
+        await rig.Console.PauseAtNextPoll().WaitAsync(Timeout);
+        if (ledStatusFirst)
+        {
+            rig.Console.Report((int)HspObjectId.LedStatus, Body(E11bLater, 9301));
+        }
+
+        rig.Console.Report((int)HspObjectId.FaderInfo, Body(E11bLater, ledStatusFirst ? 9309 : 4023));
+        rig.Console.Report((int)HspObjectId.ChannelLevels, Body(E11bLater, ledStatusFirst ? 9313 : 4027));
+        await rig.Device.BumpChannelAsync(5, true, CancellationToken.None);
+        rig.Console.Resume();
+        await WaitUntil(() => rig.Device.LastSession!.WritesSent == 1);
+        await rig.Device.BumpChannelAsync(5, false, CancellationToken.None);
+        await (await afterRelease.Task.WaitAsync(Timeout)).WaitAsync(Timeout);   // the release is out; the poll after it waits
+        await rig.Console.ResumeAndPauseAtNextPoll().WaitAsync(Timeout);         // one quiet reply
+        await rig.Console.ResumeAndPauseAtNextPoll().WaitAsync(Timeout);         // two
+        await rig.Device.SetChannelLevelAsync(5, 0x40, CancellationToken.None);
+        rig.Console.Resume();
+        await WaitUntil(() => rig.Device.LastSession!.WritesSent == 4);
+        await rig.Device.DisconnectAsync(CancellationToken.None);
+
+        Assert.Equal(new[]
+        {
+            WithCounter(E9d, 38764, 0x00), WithCounter(E9d, 38879, 0x01),
+            WithCounter(E9d, 11362, 0x02, value: 0xFF, previous: 0x00), WithCounter(E9d, 11362, 0x03, value: 0x40, previous: 0xFF),
+        }, Payloads(rig.Pipe));
+
+        // the press went only after the third FaderInfo and ChannelLevels of the session were fetched (the session's first, the
+        // fader at 0x82, the fader at full)
+        var transfers = Recorded(rig.Pipe);
+        var press = transfers.FindIndex(IsDataHeader);
+        int FetchesBefore(HspObjectId id) => transfers.Take(press).Count(t => t.ToConsole && t.Data.Length == 12 && t.Data[0] == 2 && t.Data[4] == (int)id);
+        Assert.Equal(3, FetchesBefore(HspObjectId.FaderInfo));
+        Assert.Equal(3, FetchesBefore(HspObjectId.ChannelLevels));
+        if (!ledStatusFirst)
+        {
+            Assert.Contains(rig.Log.Notes, n => n.Contains("bump 5's press waits for the level its fader reports now", StringComparison.Ordinal));
+        }
+    }
+
     [Fact]
     public async Task A_fader_event_queued_behind_a_press_of_its_own_bump_is_dropped_unsent()
     {

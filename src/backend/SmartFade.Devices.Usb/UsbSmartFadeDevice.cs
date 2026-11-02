@@ -43,7 +43,7 @@ namespace SmartFade.Devices.Usb;
 [Evidence(EvidenceStatus.Verified, "F171, F174, F175", "live control, SC-5 classes A2-A4, B3-B5 (2026-11-02, with the addenda): every physical fader and bump in three banks, the bank keys, IND 1 / 2 as SmartSoft's events and the console's answers to them; a conditional GO, nothing sent before the review and E11b on the owner's go")]
 [Evidence(EvidenceStatus.Observed, "F172 (a) VERIFIED in part, (b) and (c) OBSERVED once; the 1-24 / 25-48 bank switch in none of its cases", "the automatic bank switch's matching event: after a mode switch the console ignored SmartSoft's events for a re-assigned fader until one reached the content's level (case a, E9c and both E9d passes); after a physical level (b) and a page change (c) once each; that a 1-24 / 25-48 switch behaves alike is INFERRED; a matching event from our own host is unobserved until E11b")]
 [Evidence(EvidenceStatus.Inferred, "F82, F96, F112, F174", "the matching level: ChannelLevels[c] agreeing with FaderInfo record k byte 0 (a memory fader: record k bytes 0 and 1) is read as the fader content's own level, which rules out a memory up on another fader and the stack (INFERRED), not a held bump (F174, VERIFIED: the bump's level is in both reports during a hold), so the physical fader of a bump this host pressed is refused until its reports read the content again after the release (BumpShadow)")]
-[Evidence(EvidenceStatus.Observed, "F97, F174, F178 VERIFIED; the owner's later E11b session (backend-6.jsonl seq 4571 / 4609) OBSERVED once, log-only", "the bump shadow's end: a held bump reads the BUMPS level in FaderInfo record k and ChannelLevels[c] (F97, F174, F178), a press that changed a level was listed within 16-67 ms (F174, F178), a tap's press may be reported after its release (F168), and a bump on a fader whose content was already at the bump's level listed nothing at the press nor at the release (the owner's log); the rule built on them (a report after the release at a level other than the bump's or at the pre-press level, or two quiet poll replies after it) is INFERRED")]
+[Evidence(EvidenceStatus.Observed, "F97, F174, F178 VERIFIED at BUMPS 0xFF; the owner's later E11b session (backend-6.jsonl seq 4571 / 4609) OBSERVED once, log-only", "the bump shadow's end: a held bump reads the BUMPS level in FaderInfo record k and ChannelLevels[c] (VERIFIED at BUMPS 0xFF, F97, F174, F178; 0x81 once in memory mode, F178; below full in channel mode never captured, there INFERRED), every observed release that changed a level was reported with at most one quiet poll reply before it (SmartSoft's E9c 7, E9d 52, E9e 8 releases; ours E11 attempt 3 4, E11b 3), a tap's press may be reported after its release (F168), and a bump on a fader whose content was already at the bump's level listed nothing at the press nor at the release (the owner's log); the rule built on them (a report after the release at a level other than the bump's or at the pre-press level, or two quiet poll replies after it) is INFERRED")]
 [Evidence(EvidenceStatus.Observed, "F125 (OBSERVED once, timed, E8b); F114 VERIFIED for the LED", "BLACKOUT zeroes FaderInfo record k byte 0 and ChannelLevels[c] and leaves the MASTER byte at 0xFF (E8b seq 26987, 26991, 26999; the content back at 27754 / 27762), so during a blackout the reported level is not the content's: channel and memory fader events go only while LED block 53 reads steady off (F114: steady blue while BLACKOUT is on); how the console answers a matching event at 0x00 during a blackout is UNKNOWN (never sent, never captured)")]
 [Evidence(EvidenceStatus.Inferred, "F6 (DOCUMENTED), F125, F176", "a bump held with SOLO on replaces the output (F6), so the other faders' reports may carry it too, ChannelLevels at least and FaderInfo as BLACKOUT (F125) and the MASTER (F176) do: unobserved (E9c's only SOLO-mode hold, header 87996, had nothing else up), so a bump of ours under SOLO keeps every physical fader waiting until FaderInfo and ChannelLevels were reported after its release")]
 [Evidence(EvidenceStatus.Inferred, "F57, F116", "the interlock's freshness reading: a poll reply within two poll periods that listed no LedStatus means the key LEDs are current (F57: a list names what changed; F116: a record screen opens and closes with exactly one LedStatus payload, 28 of 28 and 4 of 4); not observed as a rule of the console")]
@@ -746,16 +746,20 @@ public sealed class UsbSmartFadeDevice : ISmartFadeDevice, IAsyncDisposable
     /// A bump this session pressed (SC-5 class B3; the first review of SC-5 item 10, major 1; the end rule the owner asked for on
     /// 2026-11-02): from its press the reports of its physical fader may carry the bump's level, not the content's, so a fader
     /// event of that physical fader, in any bank, is refused or dropped until <see cref="ShadowEnds"/>. A held bump reads the
-    /// BUMPS level in FaderInfo record k byte 0 (`ff 00 00 00` channel, `ff ff 00 00` memory) and ChannelLevels[c]: F97 at BUMPS
-    /// 0xFF, F174 in 16 of 16 channel-bump and 51 of 51 memory-bump holds, F178 (no object marks a press), VERIFIED. After a
+    /// BUMPS level in FaderInfo record k byte 0 (`ff 00 00 00` channel, `ff ff 00 00` memory) and ChannelLevels[c]: VERIFIED at
+    /// BUMPS 0xFF (F97, F174 in 16 of 16 channel-bump and 51 of 51 memory-bump holds, F178: no object marks a press); at 0x81
+    /// once, in memory mode (F178); below full in channel mode never captured, so there the reading is INFERRED. After a
     /// channel bump's release the first poll reply named neither object in 9 of 16 holds (E9c header seqs 29262, 86165, 87996;
     /// E9d 27254; E9e 17655, 18352, 18882, 28382, 28803); a short tap's press may be reported after its release (F168); a bump
     /// on a fader whose content was already at the bump's level listed nothing at the press nor at the release (the owner's
     /// later E11b session, `2026-11-02-e11b-second-live-control-session.backend-6.jsonl` seq 4571 / 4609, OBSERVED once,
     /// log-only), where the first rule (both objects listed and delivered after the release) never ended and kept channel fader
-    /// 5 refused; the owner rejected that. A bump held on the panel cannot be told apart from a fader at that level (F178; the
-    /// owner's acceptance for E11b). With SOLO on the shadow covers every physical fader (<see cref="AllFaders"/>, the re-check
-    /// of item 10, minor C). Read and changed under <c>_gate</c> only.
+    /// 5 refused; the owner rejected that. Where the reports cannot tell the bump from the content (F178: a held bump reads as
+    /// its fader at that level), the shadow still fails closed: a bump held on the panel at the same time keeps the bump's
+    /// level in the reports after our release (the owner's acceptance for E11b); and a content that reaches the bump's level
+    /// during our hold, or just before the press and not yet reported (narrowed by the press's wait, the fourth review's minor
+    /// H), reads as the bump after the release; either way the fader waits until it is moved. With SOLO on the shadow covers
+    /// every physical fader (<see cref="AllFaders"/>, the re-check of item 10, minor C). Read and changed under <c>_gate</c> only.
     /// </summary>
     private sealed class BumpShadow
     {
@@ -812,11 +816,13 @@ public sealed class UsbSmartFadeDevice : ISmartFadeDevice, IAsyncDisposable
     /// and the console's latest report of physical fader k in FaderInfo (and, for a channel bump, of channel c in
     /// ChannelLevels) is the content's again, that is (a) reported after the release (listed after it, and delivered) or (b)
     /// unchanged for two poll replies after the release (idle, or a list naming other objects only: a list names what changed,
-    /// F57, VERIFIED), and reading a level other than the bump's (BUMPS, FaderInfo body[193]: a held bump reads it, F97, F174)
-    /// or the level reported before the press (the release restored it). A report at the bump's level that differs from the
-    /// pre-press level keeps the shadow: a tap's press reported after its release (F168). Case (b) is the bump that changed
-    /// nothing, the content already at the bump's level: nothing listed at the press nor at the release (the owner's log), and
-    /// every observed press that changed a level was listed within 16-67 ms (F174, F178). With SOLO on both objects must also
+    /// F57, VERIFIED), and reading a level other than the bump's (BUMPS, FaderInfo body[193]: a held bump reads it, VERIFIED at
+    /// BUMPS 0xFF, F97, F174, F178; INFERRED below full in channel mode) or the level reported when the press was taken (the
+    /// release restored it). A report at the bump's level that differs from the pre-press level keeps the shadow: a tap's press
+    /// reported after its release (F168). Case (b) is the bump that changed nothing, the content already at the bump's level:
+    /// nothing listed at the press nor at the release (the owner's log); every observed release that changed a level was
+    /// reported with at most one quiet poll reply before it (SmartSoft's E9c 7, E9d 52, E9e 8 releases; ours E11 attempt 3 4,
+    /// E11b 3), so two quiet replies leave a margin of one. With SOLO on both objects must also
     /// have been quiet for two poll replies, so that the other faders' reports are no longer the bump's either (INFERRED).
     /// Nothing listed and not yet fetched counts. The rule is INFERRED; its readings carry the statuses given.
     /// </summary>
@@ -1406,7 +1412,16 @@ public sealed class UsbSmartFadeDevice : ISmartFadeDevice, IAsyncDisposable
         // its physical fader's reports carry the bump from the press until they read the content again after the release
         // (F174, ShadowEnds); with SOLO on every fader's may (F6, INFERRED)
         var shadow = new BumpShadow { Key = bump.Key, Target = bump.Target, AllFaders = SoloNotOff() };
-        Func<HspWriteDecision> condition = () => Recheck(session, () => NotIn(bump.Target), holdWhileFaderInfoListed: false);
+
+        // The press waits while FaderInfo (and, for a channel bump, ChannelLevels) is listed and not fetched, so that the level its
+        // shadow keeps as the content's is the console's current report (the fourth review of item 10, minor H): a write goes
+        // before pending fetches, and right after a list naming either object without LedStatus the gate passes (E9d: 38 of 513
+        // such channel-mode lists, 348 of 430 memory-mode ones). Where LedStatus is listed too, the gate's wait for it and its
+        // freshness (the write's slot after an object reply comes later than two poll periods) keep the write back as well.
+        Func<HspWriteDecision> condition = () =>
+            session.IsListedAndUnfetched(HspObjectId.FaderInfo) || (shadow.ChannelsToo && session.IsListedAndUnfetched(HspObjectId.ChannelLevels))
+                ? HspWriteDecision.Hold($"the console listed FaderInfo{(shadow.ChannelsToo ? " or ChannelLevels" : string.Empty)} and it is not fetched yet: {bump.Target.Name}'s press waits for the level its fader reports now")
+                : Recheck(session, () => NotIn(bump.Target), holdWhileFaderInfoListed: false);
         void PressSent()
         {
             lock (_gate)

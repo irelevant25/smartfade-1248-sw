@@ -662,8 +662,8 @@ assistant, which writes none of the sending code (CLAUDE.md); written for the `p
 pass of item 10 (committed as 98cb499 the same day, before the pass). **It clears nothing: nothing is sent before that pass and the owner's go for E11b** (with USBPcap, the backup and the
 conditions above). The first pass (NEEDS CHANGES, "Review (SC-5 item 10)" below) was answered by the same agent in the working tree
 the same day; "Changes after the first pass" at the end of this section lists each finding with what changed and its test,
-"Changes after the re-check" does the same for the second pass, and "Changes after E11b" for the bump shadow's end rule the owner
-asked for after his bump test. What was built, where:
+"Changes after the re-check" does the same for the second pass, "Changes after E11b" for the bump shadow's end rule the owner
+asked for after his bump test, and "Changes after the fourth pass" for that rule's review. What was built, where:
 
 - **One encoder, one whitelist (condition 3).** `HspOutbound.cs`: `ClearedFader` = `Fader1` … `Fader24` (0x00–0x17), `Master`,
   `Bumps`; `ClearedKey` = `Bump1` … `Bump24` (0x00–0x17), `Go`, `Solo`, `Blackout`, `Faders1To24`, `Faders25To48` (0x37), `FadersMems`,
@@ -851,17 +851,21 @@ a console):**
   fader 5 stayed refused. The owner rejected that. `ShadowEnds` now ends a shadow once its release has been taken and a poll reply came
   after it, and the console's latest report of record k (and, for a channel bump, ChannelLevels[c]) is the content's again: (a) reported
   after the release (listed after it and delivered) or (b) unchanged for two poll replies after the release, and reading a level other
-  than the bump's (BUMPS, FaderInfo body[193]: a held bump reads it, F97, F174, F178, VERIFIED) or the level reported when the press was
-  taken (the release restored it). A report at the bump's level that differs from the pre-press level keeps the shadow: a tap's press
-  reported after its release (F168). Case (b) is the bump that changed nothing (the owner's log; every press that changed a level was
-  listed within 16-67 ms, F174, F178). Nothing listed and not yet fetched counts. The rule is INFERRED. Two readings go beyond the
+  than the bump's (BUMPS, FaderInfo body[193]: a held bump reads it, VERIFIED at BUMPS 0xFF, F97, F174, F178; 0x81 once in memory mode,
+  F178; below full in channel mode never captured, INFERRED there) or the level reported when the press was taken (the release restored
+  it). A report at the bump's level that differs from the pre-press level keeps the shadow: a tap's press
+  reported after its release (F168). Case (b) is the bump that changed nothing (the owner's log; every observed release that changed a
+  level was reported with at most one quiet poll reply before it, SmartSoft's E9c 7, E9d 52, E9e 8 releases, ours E11 attempt 3 4,
+  E11b 3, so two quiet replies leave a margin of one). Nothing listed and not yet fetched counts. The rule is INFERRED. Two readings go beyond the
   owner's wording and are for the reviewer: a "quiet" poll reply is an idle reply or a list that names neither object (F57, VERIFIED: a
   list names what changed; with a stack running PlaybackInfo is listed at every poll, E8, and idle replies alone would keep the shadow),
   counted per object and from the release rather than from the press, the level test applying in both cases; and a second press taken
   while the first bump's shadow of the same target still waits keeps the first one's pre-press levels (its bump may still show then).
   With SOLO on (`AllFaders`) both objects must also have been quiet for two poll replies, so that a tap's late press report cannot end
-  the wait while the other faders may still read muted (INFERRED). The fail-closed edge now remains only while the console keeps
-  reporting the bump's level after the release: a bump held on the panel at the same time (Acceptance 6). Tests:
+  the wait while the other faders may still read muted (INFERRED). Fail closed where the reports cannot tell the bump from the content
+  (F178, a held bump reads as its fader at that level): a bump held on the panel at the same time keeps the bump's level in the reports
+  after our release (Acceptance 6), and a content that reaches the bump's level during our hold, or just before the press and not yet
+  reported (narrowed by the fourth pass's minor H), reads as the bump after the release; in both the fader waits until it is moved. Tests:
   `A_bump_that_changed_nothing_ends_its_shadow_after_two_quiet_poll_replies_and_the_drag_then_goes` (the owner's full-fader case: seq
   4506 / 4510, nothing listed; refused with one quiet reply, the drag goes after the second, matched at 0xFF),
   `A_bump_on_a_fader_at_half_ends_its_shadow_when_the_level_before_the_press_is_reported_after_the_release` (seq 4146 / 4150, 4227 /
@@ -873,6 +877,29 @@ a console):**
   end at the release, no level test, no pre-press clause, one quiet reply, a report alone, a listed and unfetched report counted, no
   SOLO quiet, no inheritance). SmartSoft's bytes for bump 5: E9d seq 38764 / 38879 (code 0x04, memory bump 5 there: the same physical
   bump in every bank, F171, F174).
+
+**Changes after the fourth pass (the same agent, 2026-11-02, in the working tree; nothing run against a console):**
+
+- *Minor H, the pre-press level is the current report.* A bump's press now waits while FaderInfo (and, for a channel bump,
+  ChannelLevels) is listed and not fetched (its condition in `QueueBump`), so the level its shadow keeps as the content's is the
+  console's current report: a write goes before pending fetches. Where the console lists LedStatus with them the gate already kept the
+  press back: it waits while LedStatus is pending, and after any object reply the write's slot comes at least 62 ms plus the
+  transfers after the list's poll reply (the fetch delay, the poll after the fetch, the write after that poll, at their floors), more
+  than two poll periods (at most 62 ms), so the report is stale until the next poll reply. The case the new wait closes is a list
+  naming FaderInfo or ChannelLevels without LedStatus (E9d: 38 of 513 such channel-mode lists and 348 of 430 memory-mode ones; LedStatus
+  first in 71 of the 475 channel-mode lists naming it, none in memory mode). The optional "no pre-press level while another target's
+  shadow waits on the same physical fader" is not taken: that shadow's bump was released before the bank, mode or page change between
+  the two targets, the new press waits for the FaderInfo that change lists, and a null level would lock the new target's fader when its
+  content is at the bump's level. Test: `A_bump_press_waits_for_its_faders_current_report` with two list orders from the owner's later
+  E11b session, both ending with the drag matched at 0xFF after two quiet replies: FaderInfo and ChannelLevels without LedStatus (list
+  seq 4019: seq 4023 / 4027; the transfer log notes the wait; it fails without the wait, the press then keeping 0x82 from seq 4146 /
+  4150 and the shadow never ending) and LedStatus first (list seq 9297, a move to full on the panel: seq 9301, 9309, 9313; held by the
+  gate as well, so it passes either way).
+- *Nits I, J, K.* "A held bump reads the BUMPS level" is given per level: VERIFIED at BUMPS 0xFF (F97, F174, F178), 0x81 once in memory
+  mode (F178), never captured below full in channel mode (INFERRED there). The quiet path cites the reply count instead of
+  milliseconds: every observed release that changed a level was reported with at most one quiet poll reply before it (SmartSoft's E9c
+  7, E9d 52, E9e 8 releases; ours E11 attempt 3 4, E11b 3; counted again here with the same result), so two quiet replies leave a margin
+  of one. The fail-closed edges are worded in full in "Changes after E11b" and in `BumpShadow`'s comment.
 
 **Readings the reviewer must check (where the text of SC-5 was read, narrowed or extended):**
 
@@ -975,6 +1002,26 @@ the same way); with SOLO on, a channel bump of ours that changes neither report 
 objects. **Nothing on the review side is open before E11b; the review clears nothing for sending.** What remains is the owner's, as
 "Conditions for E11b" lists it: the SD backup and its name, USBPcap before the Zadig bind, the versions, Acceptances 1 to 7 and the rig
 answer at the gate, no SD save or load while connected, and the go on the day.
+
+**Fourth pass (2026-11-02, evening, `protocol-safety-reviewer`, over 1144940: the bump shadow's end rule the owner asked for after
+using the software): PASS**, no blocker, no major. Confirmed: `ShadowEnds` (`UsbSmartFadeDevice.cs:823`) cannot end a shadow on a
+report at the bump's level unless the level before the press equalled it; the release must be taken and a poll reply seen after it,
+lists before the release not counted (a tap's late press report, test `:2077`); BUMPS body[193] and record k come from the same
+FaderInfo snapshot; in every captured bump release that changed a level (E9c 7, E9d 52, E9e 8, E11 attempt 3 4, E11b 3) at most one
+quiet reply came before FaderInfo or ChannelLevels was listed, never two (in our own host up to 112 ms: bump 7's release in E11b, the
+second reply); a second press on the same target inherits the waiting shadow's pre-press values (`:1417`); `PressSent` memory-only under
+the gate (`:1409-1423`); the per-object quiet count rests on F57; the whitelist, `DataHeader`, `HspReadSession.cs`, `HspReadLoop.cs`, the
+read-only session, the simulator and the other interlocks untouched; every test byte from a committed capture (backend-6 seqs 4146 /
+4150, 4227 / 4231, 4296 / 4300, 4446 / 4450, 4506 / 4510; E9d 38764 / 38879, 11362; the owner's two cases confirmed: pseq 29 / 30 listed
+after one idle reply, pseq 38 / 39 six idle replies and nothing listed). One minor and three nits, fixed the same evening by the
+subagent (442 backend tests), the reviewer's confirmation pending:
+
+| # | Finding | Status |
+|---|---|---|
+| MINOR H | The pre-press value can be stale: the bump press's condition did not hold while FaderInfo or ChannelLevels was listed and unfetched (`:1409`); reachable when such a list carries no LedStatus (the subagent's recount of E9d: 38 of 513 channel-mode lists and 348 of 430 memory-mode lists; with LedStatus first the gate already held the press). Safe direction: a fader moved to the bump's level within one poll before our bump keeps its shadow (the lockout, rarely); the unsafe direction would also need two quiet replies before the release's report, never observed. | **Fixed 2026-11-02 by the subagent, confirmation pending:** the press holds while FaderInfo (and ChannelLevels for a channel bump) is listed and unfetched (`QueueBump` `:1421`, the log notes "…bump 5's press waits for the level its fader reports now"); test `A_bump_press_waits_for_its_faders_current_report` (`UsbSmartFadeDeviceTests.cs:2217`, both list orders from backend-6: seq 4019 / 4023 / 4027 without LedStatus, which fails without the wait, and 9297 / 9301 / 9309 / 9313 with LedStatus first). The optional null pre-press value was not taken: it would lock the new target's fader whenever its content is at the bump's level. |
+| NIT I | "a held bump reads body[193]" tagged VERIFIED holds at BUMPS 0xFF only (F97; F178 has 0x81 once, memory mode; channel mode below full never captured). | **Fixed:** per BUMPS level in the tag (`:46`), the `BumpShadow` doc (`:747-750`), `ShadowEnds` and "Changes after E11b" (VERIFIED at 0xFF, 0x81 once, INFERRED below full in channel mode). |
+| NIT J | The quiet path's docs cited "listed within 16-67 ms"; the bound that matters is the reply count (at most one quiet reply before the release's report in every observed release; up to 112 ms in our host). | **Fixed:** the reply count cited (`:824`, the tag, "Changes after E11b"), recounted by the subagent with the same result. |
+| NIT K | "the fail-closed edge remains only while a bump is held on the panel" was incomplete: also when the content reaches the bump's level during our hold or just before the press; both fail closed, inherent to F178. | **Fixed:** both edges named (`:757`, "Changes after E11b"); the second narrowed by MINOR H's wait. |
 
 ### Conditions for E11b (the second write session, the first with SC-5's classes) and what to record
 
