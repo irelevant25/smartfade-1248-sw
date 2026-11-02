@@ -94,20 +94,24 @@ interface ConsoleStateDto {
                                                     // "setBumps", "setSolo", "bumpChannel", "setMemoryLevel",
                                                     // "bumpMemory", "recordMemory", "storeMemory", "setIndependent",
                                                     // "clearChannels", "clearMemories"); the key taps "pressGo",
-                                                    // "pressFadersMems" and "pressFaders1To24" come only from a device
-                                                    // that models the stack and the fader mode (the real console with
-                                                    // live control, SC-2 class B1); a read-only real console reports
-                                                    // none: the UI disables the rest
+                                                    // "pressFadersMems", "pressFaders1To24" and "pressFaders25To48" come
+                                                    // only from a device that models the stack and the fader mode (the
+                                                    // real console with live control, SC-2 class B1, SC-5 class B4); a
+                                                    // read-only real console reports none: the UI disables the rest
   writableControls: string[] | null;                // the individual controls the device accepts commands for, or null
-                                                    // (a real console with live control, SC-2, names its whitelist here)
+                                                    // (a real console with live control, SC-2 / SC-5, names its whitelist here)
                                                     // when every control of a supported command's kind is accepted (the
                                                     // simulator). Names: "channelFader:N" / "channelBump:N" (N = 1..48),
                                                     // "memoryFader:N" / "memoryBump:N" (N = memory number 1..288),
                                                     // "master", "bumps", "solo", "blackout", "independent:1|2", "go",
-                                                    // "fadersMems", "faders1To24", "recMem", "editMem", "copy", "clear".
-                                                    // A device cleared for a few controls (the real console under SC-2)
-                                                    // names exactly those; the UI enables nothing else and the device
-                                                    // still refuses the rest itself
+                                                    // "fadersMems", "faders1To24", "faders25To48", "recMem", "editMem",
+                                                    // "copy", "clear". A device cleared for some controls only (the real
+                                                    // console under SC-2 / SC-5: every channel fader and bump 1..48, every
+                                                    // memory fader and bump, MASTER, BUMPS, SOLO, BLACKOUT, IND 1 / 2, GO
+                                                    // and the three FADERS keys; never CLEAR or a record key) names
+                                                    // exactly those; the UI enables nothing else and the device still
+                                                    // refuses, with its reason, what the console's reported state does
+                                                    // not allow (another page, NEXT mode, a record function armed …)
   channels: ChannelStateDto[];                      // exactly 48 entries
   masters: MastersDto;
   outputs: number[];                                // 512 DMX output levels 0..255 (simulator model; real: OBSERVED object)
@@ -169,16 +173,26 @@ returns the content.
 | `setSolo(on)` | `boolean` | bump mode: off = pile-on, on = solo (simulator) |
 | `pressGo()` | — | GO as a tap (press and release as one operation): the next step of the stack; `not_supported` on the simulator; the real console takes it only in channel mode, bank 1-24, with STACK dim and no record function armed (SC-2) |
 | `pressFadersMems()` | — | FADERS MEMS as a tap: the physical faders to memory mode; `not_supported` on the simulator |
-| `pressFaders1To24()` | — | FADERS 1-24 as a tap: the physical faders to channel mode, bank 1-24; `not_supported` on the simulator |
-| `bumpChannel(channel, pressed)` | `number 1..48`, `boolean` | the bump button under a channel fader went down (`true`) or up (`false`); a client must send the release it owes |
-| `setMemoryLevel(page, fader, level)` | `number 1..12`, `number 1..24`, `number 0..255` | moves a memory fader (`invalid_memory` when the address is out of range) |
-| `bumpMemory(page, fader, pressed)` | `number 1..12`, `number 1..24`, `boolean` | the bump button under a memory fader went down or up |
+| `pressFaders1To24()` | — | FADERS 1-24 as a tap: the physical faders to channel mode, bank 1-24; `not_supported` on the simulator; the real console takes it only from memory mode or bank 25-48 |
+| `pressFaders25To48()` | — | FADERS 25-48 as a tap: the physical faders to channel mode, bank 25-48; `not_supported` on the simulator; the real console takes it only from channel mode, bank 1-24 (SC-5 class B4) |
+| `bumpChannel(channel, pressed)` | `number 1..48`, `boolean` | the bump button under a channel fader went down (`true`) or up (`false`); a client must send the release it owes. The real console with live control holds the bump until the release, at most 3 s (the device releases it then, and before a disconnect), one bump at a time (SC-5 class B3) |
+| `setMemoryLevel(page, fader, level)` | `number 1..12`, `number 1..24`, `number 0..255` | moves a memory fader (`invalid_memory` when the address is out of range); the real console takes it only for the page it shows (no page change is sent) |
+| `bumpMemory(page, fader, pressed)` | `number 1..12`, `number 1..24`, `boolean` | the bump button under a memory fader went down or up; held as `bumpChannel` on the real console |
 | `recordMemory(page, fader)` | `number 1..12`, `number 1..24` | REC MEM: stores the current look into the memory (F107) |
 | `storeMemory(page, fader, levels)` | `number 1..12`, `number 1..24`, `number[48]` of `0..255` | EDIT MEM: replaces the memory's channel levels; all zero deletes it (`invalid_argument` for a wrong count, `invalid_level` for a value out of range) |
 | `getMemory(page, fader)` | `number 1..12`, `number 1..24` | returns `MemoryDto`, or `null` after an `errorOccurred` to the caller (`invalid_memory`, `not_connected`) |
-| `setIndependent(number, on)` | `number 1..2`, `boolean` | IND 1 / IND 2 on or off (`invalid_argument` for another number) |
+| `setIndependent(number, on)` | `number 1..2`, `boolean` | IND 1 / IND 2 on or off (`invalid_argument` for another number); the real console toggles it with one tap from a steady LED, in channel mode, bank 1-24 (SC-5 class B5) |
 | `clearChannels()` | — | the console's CLEAR pressed twice: every channel fader to zero (desired levels drop at once, the device confirms) |
 | `clearMemories()` | — | CLEAR pressed three times: every memory fader to zero; nothing is erased (F109) |
+
+On the real console with live control a fader or bump of another bank than the console shows (a
+channel of 25-48 in bank 1-24, a memory fader in channel mode …) starts the device's automatic bank
+switch (safety check SC-5 condition 1): the device presses the console's FADERS key for that bank,
+sends nothing else until the console has reported the new bank (else, after 2 s, the connection ends
+in `error`), then moves the fader first to the level the console reports for it and only then to the
+level asked for. The console's faders then control the new bank, as after a press on the panel;
+`faderBank` in the state says which. Nothing in the contract changes for this: the commands and their
+arguments are the ones above.
 
 Server → client:
 

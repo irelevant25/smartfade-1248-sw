@@ -222,7 +222,8 @@ Decisions taken while building:
   **Layout pass (2026-11-02, owner feedback after E11):** the right-hand columns are, in the owner's
   order, FADERS (the console's keys MEMORIES, 25-48, 1-24, NEXT in their colours; the key of the bank
   a real console reports is lit, from the new `faderBank` of the state contract; MEMORIES and 1-24
-  are taps where the device accepts them, 25-48 and NEXT inactive), CROSSFADER (RATE under PAUSE,
+  are taps where the device accepts them, 25-48 and NEXT inactive; *since SC-5, later that day, 25-48 is a tap too
+  where the device accepts it, NEXT stays inactive*), CROSSFADER (RATE under PAUSE,
   CLEAR under STACK and RATE, two keys wide), RECORD, and MASTERS with INDEPENDENTS as its own
   section underneath (`sf-fader-mode-keys`, `sf-independents-panel`); the memory grid's head lost
   its mode keys. Still UI over reported data: nothing new is sent.
@@ -242,6 +243,19 @@ Decisions taken while building:
   colour with every control read-only. The first live session is experiment E8 (runbook in
   `docs/protocol/reverse-engineering.md`), still waiting for the owner's go *(E8 ran on 2026-10-30:
   861 s, no fault; record in `docs/protocol/captures/`; the readings it gave are shown by the UI)*.
+
+## SC-5 implemented (2026-11-02, commit 98cb499, review pending)
+
+Live control (`Device:Usb:LiveControlDate`) gained SC-5's classes, implemented by an Opus 5.5 agent at the owner's request:
+the typed whitelist in `HspOutbound` covers the 24 physical faders and bumps (`PhysicalControls`' explicit tables), FADERS
+25-48 and IND 1 / IND 2; `HspReadSession` holds a bump until its release is asked for (`QueueKeyHold`, `ReleaseKey`) and
+`HspReadLoop` bounds the hold to 3 s on its own clock; `UsbSmartFadeDevice` maps a channel or memory control to its
+physical fader in the console's bank, runs the automatic bank switch as one operation (the FADERS key, then nothing until
+the console has reported the bank, within 2 s, else the session ends), sends each re-assigned fader's first event at the
+reported level, and refuses every control in NEXT mode, on another memory page or with the MASTER below full. The layers
+are unchanged: the UI still sends domain commands only (`pressFaders25To48` is the one new hub method), the application
+knows nothing of banks or bytes, and the simulator answers the new key with `not_supported`. Nothing is sent before the
+`protocol-safety-reviewer` pass and the owner's go for E11b (safety-checks.md SC-5 "Implementation").
 
 ## ASC show files as built (2026-10-31)
 
@@ -338,6 +352,11 @@ write path would be built once that happens, so that nothing of it is improvised
 - **Matching is the console's business.** Outside an edit the PC's fader took effect at once; the
   physical faders are not motorised and stay where they are. The UI shows the console's level, and
   the "unmatched" blink the console puts on a bump LED is shown as reported, nothing more.
+  *(Superseded in part 2026-11-02 by SC-5, text kept: after a bank, mode or page change the console ignores PC events
+  for a re-assigned fader until one equals the new content's level (F172), so the device now sends a fader's first
+  event at the console's reported level and the user's level after it, and switches the bank itself for a control of
+  another bank, pressing that bank's FADERS key and waiting for the console's report; see "SC-5 implemented" below and
+  safety-checks.md SC-5 "Implementation".)*
 - **Recording stays on the console's keys.** The owner's write mode includes REC MEM, EDIT MEM and
   COPY as key presses only (owner decision 2026-10-30), so the console remains in charge of its show
   data; whether those keys can be cleared at all is SC-2's question after E9b, and the Memory

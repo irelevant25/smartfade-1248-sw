@@ -36,6 +36,10 @@ console's firmware.
   item 10) found changes, fixed the same day; the second pass (re-check, 2026-10-31, evening) found no blocker or
   major left, three minors and three nits open, and cleared nothing: nothing may be sent before SC-2's E11
   conditions are met and the owner gives the go for E11. Claude never writes that code (see "Current state").
+  **2026-11-02: the owner instructed that SC-5's extension (every fader index of the three banks, the bounded
+  holds, the bank keys, IND 1 / 2, the automatic bank-switch sequence) be implemented by an Opus 5.5 subagent at his
+  request, under Claude's coordination, with the `protocol-safety-reviewer` pass before E11b; Claude (Fable) itself
+  still writes none of the sending code.**
 - Never touch the console bootloader / firmware update path.
 - Never retry commands with side effects blindly.
 - Golden protocol tests may only use bytes from a committed capture in `docs/protocol/captures/`.
@@ -348,6 +352,19 @@ refused a second long repetitive session, with reason (the omission was the anal
 done; the next step is the owner's implementation at the extension points, then the reviewer, then E11b.** The UI's
 SOLO, BLACKOUT, IND 1 / 2 keys took the shared key look the same day. **Nothing is sent before the owner implements the switch sequence and
 the holds at the extension points, the reviewer passes them and E11b runs with USBPcap.**
+**SC-5 implemented 2026-11-02, midday (commit 98cb499), by an Opus 5.5 subagent at the owner's request, Claude coordinating and
+writing none of it** (`safety-checks.md` SC-5 "Implementation" lists what was built, the golden tests over E9c / E9d / E9e and nine
+readings where SC-5's text was narrowed or extended, for the reviewer; the run line is unchanged, "Commands" below): the whitelist as
+explicit tables for the 24 physical faders and bumps in the three banks (F171), FADERS 25-48 (`pressFaders25To48`), IND 1 / 2, holds
+bounded to 3 s and released before any Disconnect, the automatic bank switch as one device-layer sequence (the FADERS key as a tap,
+every write but a release held until the console reports the bank within 2 s, else the session ends) and a fader's first event at its
+reported level (F172); 421 backend and 304 frontend tests. **SC-5 addendum 3** clears channel bump 1 of bank 1-24, which the addendum
+rows had left out (the analyst's omission; its evidence is stronger than the row's). The E11b guide
+`tools/usb-probe/e11b-guided-session.ps1` is written and parse-checked, not run (the SC-5 gate and acceptances; W0 from the panel now
+includes a move of channel fader 1, because the implementation refuses a channel fader until the console has listed ChannelLevels and
+E11 attempt 3's W0 never made it; W1–W10 as "Conditions for E11b" in `safety-checks.md`; its row in the experiments table of
+`reverse-engineering.md`). **The `protocol-safety-reviewer` pass (SC-5 item 10) over 98cb499 is the next gate; nothing is sent before it
+passes, its findings are fixed by the Opus subagent, and the owner gives the go for E11b.**
 
 ## Commands
 
@@ -415,7 +432,12 @@ taps GO, FADERS MEMS and FADERS 1-24 through the port, the API and the UI: `pres
 `not_supported` on the simulator) behind the record-function
 interlock, shows LIVE CONTROL beside HARDWARE and names the writable controls to the UI; everything else stays as
 in the read-only mode. Run only as the SC-2 E11 script says (backup first, USBPcap in parallel; the guided script
-`tools/usb-probe/e11-guided-session.ps1` refuses to start it before the re-check's items are closed and the acceptances given). After a Data write
+`tools/usb-probe/e11-guided-session.ps1` refuses to start it before the re-check's items are closed and the acceptances given).
+**SC-5's classes (implemented 2026-11-02 by an Opus 5.5 agent at the owner's request, commit 98cb499, the `protocol-safety-reviewer` pass
+and E11b's go pending; `safety-checks.md` SC-5 "Implementation"):** the same switch also sends every channel fader and bump 1-48, the memory
+faders and bumps of the page the console shows, IND 1 / IND 2 and the key tap FADERS 25-48 (`pressFaders25To48`), a bump held at most 3 s; a
+control of another bank first sends that bank's FADERS key and waits for the console's report (2 s, else the session ends), and a fader's first
+event carries its reported level. After a Data write
 that did not complete, the device refuses to connect until the backend restarts and `INCOMPLETE-WRITE.txt` in
 `Device:Usb:CaptureLogDirectory` is removed by the owner, after reading the transfer log.
 
