@@ -419,7 +419,23 @@ during it, a per-day switch `Device:Usb:StartupPairDate`, E13 as the first sessi
 quiet replies; the reviewer's fourth pass PASS, its minor and nits fixed and confirmed the same evening, 0909c84: the press waits for the
 fader's current report; 442 backend tests). The Show menu's "Save to card" became "Save as file…" (the PC cannot write the console's
 card); the owner's wish that an opened file replace the console's show while connected is SmartSoft's "send show" (F121, never
-captured): a path of its own (E14 passive first), offered, not decided.
+captured): a path of its own (E14 passive first), offered, not decided. **His answers later that evening** (`reverse-engineering.md`
+"Owner decisions on scope"): "1. yes to SC-4"; a loaded file is to replace the console's show while connected (SmartSoft's "send
+show", F121: wanted, so E14, a passive capture, then SC-7 with his written acceptance); every record key but SNAPSHOT from the UI
+(SC-3 after E15, a passive capture of the four record flows from the Simulator). **SC-4 implemented 2026-11-02, evening (f282aa0),
+by an Opus 5.5 agent at the owner's request, Claude writing none of it** (`safety-checks.md` SC-4 "Implementation": the two System
+bodies as a typed whitelist, every other value unrepresentable; the placement at reply headers 40 / 79 and the version gate; the
+download taken whole, its bounds raised only with the switch and replayed byte for byte over all 20 captured downloads; every control
+refused until its last record; the console's state and show assembled for the UI, `GET /api/console/show`; the MASTER probe; the badge
+STATE AT CONNECT). **Clause 4 amended the same late evening (d002705, the same agent, on the owner's "continue"):** the probe takes an
+unpatched channel of either channel bank and switches there and back by SC-5's automatic switch (each transition one a committed capture
+shows a PC host making, 60 presses; memory mode routed through bank 1-24; only from memory page 1; every control refused while it runs;
+in the owner's show channel 47 = bump 23 of bank 25-48), because his show patches every channel of bank 1-24; 534 backend and 356
+frontend tests. **Claude's own attempt to write the E14 / E15 guides was stopped by its safety system (f9c2802, not repeated); the E13,
+E14 and E15 guided scripts were written by an Opus 5.5 agent on the owner's "continue" (d91bfa4; parse-checked, not run;
+`tools/usb-probe/README.md` and the experiments table).** The `protocol-safety-reviewer` pass over SC-4 (item 10) runs next; nothing
+is cleared and nothing is sent before it passes and the owner gives the go for E13 on the day; the E13 guide refuses to start unless
+the SC-4 review table in `safety-checks.md` records a PASS.
 
 ## Commands
 
@@ -502,7 +518,10 @@ that did not complete, the device refuses to connect until the backend restarts 
 the backend refuses to start; without `Device:Mode=Usb` too): every Connect then sends SmartSoft's start-up pair (System `09 00 00`,
 then `07 00 00`) once, where SmartSoft sends it, unless the console already reported NEXT, BLACKOUT, a record function armed or bank
 25-48, and downloads the console's state and show (STATE AT CONNECT in the UI); every control is refused until the download's last
-record (`safety-checks.md` SC-4 "Implementation").
+record, then, with live control on, the MASTER probe: one bump tap of an unpatched channel of either channel bank, through SC-5's
+automatic switch there and back where that channel's bank is not the shown one, every control refused while it runs (in the owner's
+show bump 23 of bank 25-48, channel 47; `safety-checks.md` SC-4 "Implementation" and clause 4's amendment of 2026-11-02, late
+evening). The reviewer's pass over SC-4 is pending: not before it and E13's go.
 
 ## Working style
 
