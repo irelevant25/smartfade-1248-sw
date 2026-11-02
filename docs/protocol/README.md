@@ -180,8 +180,9 @@ matched the physical-fader reading: **F171 (the index names the physical fader, 
 VERIFIED, F172 (a switch does not carry a level; a PC fader must match first) VERIFIED in part, H111 CONFIRMED; 77 facts are
 VERIFIED** (never clearance). The SC-5 addendum lifts the "after E9d" rows: every channel fader of both banks and every memory fader of
 the shown page, the memory bumps as bounded holds and the bump of bank 25-48's first fader are now GO (conditional) under SC-5's
-conditions; the channel bumps 2–6, 8, 9, 11–24 and 26–48 wait for E9e. Nothing is sent before the owner implements, the reviewer
-passes and E11b runs.
+conditions; the channel bumps 2–6, 8, 9, 11–24 and 26–48 were cleared the same day by SC-5 addendum 2 on the physical-control rule, with E9e
+cut to a four-bump spot check (record `captures/2026-11-02-e9e-smartsoft-channel-bumps-spot-check.md`: the four bumps as predicted in two sessions, the control passed). Nothing is sent
+before the owner implements, the reviewer passes and E11b runs.
 
 ## Version landscape
 

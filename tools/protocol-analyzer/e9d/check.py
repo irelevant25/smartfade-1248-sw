@@ -88,6 +88,12 @@ for (t0, t1, text) in bounds:
         ok_idx = fader_idx == [n - 25]
         ok_obj = (1 + 4 * (n - 25)) in changed[14] and n in changed[15] and (1 + n) in changed[13]
         verdict = f"index {fader_idx} {'OK' if ok_idx else 'UNEXPECTED'}; objects {'OK' if ok_obj else 'MISMATCH'} (14:{sorted(changed[14])[:4]} 15:{sorted(changed[15])[:4]} 13:{sorted(changed[13])[:4]} 22:{sorted(changed[22])[:4]})"
+    elif part == "a" and "sim bump" in rest:
+        # E9e: a channel bump of bank 1-24 held about 1 s: code N - 1; ChannelLevels[N] and DMX N at 0xFF while held
+        n = int(re.search(r"sim bump (\d+)", rest).group(1))
+        ok_code = [h[0] for h in holds] == [n - 1]
+        ok_obj = n in changed[15] and (1 + n) in changed[13] and (1 + 4 * (n - 1)) in changed[14] and values[15].get(n) in (0x00, 0xFF)
+        verdict = f"code {[hex(h[0]) for h in holds]} held {[round(h[1], 2) for h in holds]} s {'OK' if ok_code else 'UNEXPECTED'}; objects {'OK' if ok_obj else 'MISMATCH'} (15:{sorted(changed[15])[:4]} 13:{sorted(changed[13])[:4]} 14:{sorted(changed[14])[:4]} 22:{sorted(changed[22])[:4]})"
     elif part == "b" and "bump labelled" in rest:
         n = int(re.search(r"labelled (\d+)", rest).group(1))
         ok_code = [h[0] for h in holds] == [n - 25]

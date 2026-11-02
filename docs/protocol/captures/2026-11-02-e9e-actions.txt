@@ -1,0 +1,55 @@
+2026-11-02 10:57:26.321 START guided E9e session (PC clock, local time)
+2026-11-02 10:57:40.641 backup taken: SHOW28.ASC (copy it into smartfade-sd-card-backup/ after the session)
+2026-11-02 10:57:42.740 owner answer: console powered off since e9d = n
+2026-11-02 10:58:22.453 owner answer: rig today = 12 channels light on address 5 (3 addresses per each sublight in that lights)
+2026-11-02 10:58:22.559 memory integrity: off
+2026-11-02 10:58:23.414 interface 1 driver service: ETCHSP (ETC's driver)
+2026-11-02 10:58:23.417 usbpcap file name suggested to the owner: e9e-20261102-1058.pcap
+2026-11-02 10:58:35.676 usbpcap running (owner)
+2026-11-02 10:58:41.648 starting position set (owner)
+2026-11-02 10:58:43.126 smartsoft start #1 (Start-Process by the script)
+2026-11-02 10:58:56.161 smartsoft online #1 (owner)
+2026-11-02 10:59:56.165 wait 60 s done (baseline: SmartSoft online, nothing touched (the System pair and the download))
+2026-11-02 11:01:39.899 s1 simulator opened
+2026-11-02 11:01:54.904 wait 15 s done (s1 simulator open, untouched)
+2026-11-02 11:02:01.065 s1 a sim bump 2 held 1 s
+2026-11-02 11:02:04.076 wait 3 s done (s1 after bump 2)
+2026-11-02 11:02:08.888 s1 a sim bump 12 held 1 s
+2026-11-02 11:02:11.893 wait 3 s done (s1 after bump 12)
+2026-11-02 11:02:14.940 s1 a sim bump 24 held 1 s
+2026-11-02 11:02:17.944 wait 3 s done (s1 after bump 24)
+2026-11-02 11:02:22.953 wait 5 s done (s1 after part A)
+2026-11-02 11:02:26.795 s1 b sim faders 25-48
+2026-11-02 11:02:31.809 wait 5 s done (s1 b bank 25-48)
+2026-11-02 11:02:35.017 s1 b sim bump labelled 48 held 1 s
+2026-11-02 11:02:38.032 wait 3 s done (s1 after bump labelled 48)
+2026-11-02 11:02:42.669 s1 b sim faders 1-24
+2026-11-02 11:02:52.680 wait 10 s done (s1 after part B)
+2026-11-02 11:02:54.723 smartsoft close #1 start
+2026-11-02 11:02:58.433 smartsoft closed #1
+2026-11-02 11:03:08.449 wait 10 s done (between sessions 1 and 2)
+2026-11-02 11:03:09.854 smartsoft start #2 (Start-Process by the script)
+2026-11-02 11:03:22.568 smartsoft online #2 (owner)
+2026-11-02 11:03:52.583 wait 30 s done (session 2 download)
+2026-11-02 11:03:54.986 s2 simulator opened
+2026-11-02 11:04:09.999 wait 15 s done (s2 simulator open, untouched)
+2026-11-02 11:04:14.720 s2 a sim bump 2 held 1 s
+2026-11-02 11:04:17.733 wait 3 s done (s2 after bump 2)
+2026-11-02 11:04:19.456 s2 a sim bump 12 held 1 s
+2026-11-02 11:04:22.467 wait 3 s done (s2 after bump 12)
+2026-11-02 11:04:24.650 s2 a sim bump 24 held 1 s
+2026-11-02 11:04:27.665 wait 3 s done (s2 after bump 24)
+2026-11-02 11:04:32.670 wait 5 s done (s2 after part A)
+2026-11-02 11:04:35.555 s2 b sim faders 25-48
+2026-11-02 11:04:40.567 wait 5 s done (s2 b bank 25-48)
+2026-11-02 11:04:45.279 s2 b sim bump labelled 48 held 1 s
+2026-11-02 11:04:48.292 wait 3 s done (s2 after bump labelled 48)
+2026-11-02 11:04:50.189 s2 b sim faders 1-24
+2026-11-02 11:05:00.198 wait 10 s done (s2 after part B)
+2026-11-02 11:05:30.212 wait 30 s done (end of actions)
+2026-11-02 11:05:32.713 smartsoft close #2 start
+2026-11-02 11:05:35.993 smartsoft closed #2
+2026-11-02 11:05:41.228 usbpcap stopped (owner)
+2026-11-02 11:05:52.429 owner answer: end positions = as they were when we started
+2026-11-02 11:06:04.560 after-session save: SHOW29.ASC (copy it into smartfade-sd-card-backup/ with the backup)
+2026-11-02 11:06:04.561 END guided E9e session

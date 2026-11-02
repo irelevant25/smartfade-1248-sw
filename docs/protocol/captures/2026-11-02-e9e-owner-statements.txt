@@ -1,0 +1,25 @@
+E9e (2026-11-02, 10:57-11:06 local time; the four-bump spot check of SC-5 addendum 2, SmartSoft's Console Simulator in two
+sessions while USBPcap recorded; our software not involved): the owner's statements, verbatim, with the assistant's reading.
+Evidence class: owner statements (not a capture). The guided session's own log is 2026-11-02-e9e-actions.txt (55 lines).
+
+--- Statement 1 (chat, 2026-11-02, before the session; verbatim) ---
+"And, are you kidding me? If I am not wrong the new guided session you created is exactly the same as the last one. Again
+moving and pressing MANY MANY bumps and faders again. Are you really kidding me? Do you know how annoying it was the last
+time? But I said to myself that once I can handle. But twice? NO. Why?"
+Reading: the first E9e script (commit 1a7136c) asked for every channel bump of both banks in two sessions (96 presses) after
+E9d's 192 controls. The owner refused a second long repetitive session; the omission of the channel bumps from E9d was the
+assistant's. SC-5 addendum 2 (safety-checks.md) cleared those bumps on the physical-control rule instead and cut E9e to a
+four-bump spot check per session (commit e2c5dd4), which the owner then ran.
+
+--- From the action log (the owner's typed answers) ---
+10:57:40 backup taken: SHOW28.ASC (copied; byte-identical to SHOW27.ASC and to every save since SHOW23).
+10:57:42 console powered off since e9d = n
+  Reading: no power cycle between E9d (ended 10:14) and E9e (10:57); E9e's two SmartSoft sessions are a restart apart.
+10:58:22 rig today = "12 channels light on address 5 (3 addresses per each sublight in that lights)"
+  Reading: one fixture at DMX 5-16, three addresses per cell; nothing on DMX 2, 12, 24 or 48, so the spot-check bumps lit no
+  fixture (the capture, not the eyes, decides).
+11:05:52 end positions = "as they were when we started"
+11:06:04 after-session save: SHOW29.ASC (copied; byte-identical to SHOW28.ASC: no show data changed).
+
+--- Statement 2 (chat, 2026-11-02, after the session; verbatim) ---
+"done"

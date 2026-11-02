@@ -341,7 +341,11 @@ the bounded hold, one encoder and whitelist with golden tests over E9c and E9d);
 physical-control rule by addendum 2** (their codes VERIFIED as memory bumps; the rule held in 100 of 100 fader and bump cases; residual
 risk a wrong channel flashing, live and visible), with **E9e cut to a four-bump spot check per session** (`tools/usb-probe/e9e-guided-session.ps1`,
 about a minute each) as the control, which the owner may decline in writing: the first E9e script asked for 96 presses and the owner
-refused a second long repetitive session, with reason (the omission was the analyst's); STACK, PAUSE, NEXT, CLEAR stay NO-GO. The UI's
+refused a second long repetitive session, with reason (the omission was the analyst's); STACK, PAUSE, NEXT, CLEAR stay NO-GO.
+**E9e run 2026-11-02, 10:57–11:06** (record `docs/protocol/captures/2026-11-02-e9e-smartsoft-channel-bumps-spot-check.md`): the four bumps
+(2, 12, 24 of bank 1-24; the one labelled 48 of bank 25-48) lit their own channel in both sessions, 0 framing errors, `SHOW29.ASC` =
+`SHOW28.ASC`: the control of addendum 2 passed, nothing changes. **All passive captures for the automatic bank switch and the holds are
+done; the next step is the owner's implementation at the extension points, then the reviewer, then E11b.** The UI's
 SOLO, BLACKOUT, IND 1 / 2 keys took the shared key look the same day. **Nothing is sent before the owner implements the switch sequence and
 the holds at the extension points, the reviewer passes them and E11b runs with USBPcap.**
 

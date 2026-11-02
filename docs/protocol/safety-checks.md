@@ -621,7 +621,9 @@ bank 1-24 and bank 25-48 and the 24 memory faders and 24 memory bumps of E9c and
 unknown, whether a channel bump other than 1, 7, 10 and 25 lights a channel other than its own, would be a live, visible, self-correcting
 surprise, below the risk already accepted for the MASTER and BLACKOUT events. E9e is kept as a four-bump spot check per session, about a
 minute each, as the control of that inference; the owner may decline it in writing, in which case the inference stands alone and is
-recorded as such.
+recorded as such. **E9e run 2026-11-02, 10:57–11:06 (record `captures/2026-11-02-e9e-smartsoft-channel-bumps-spot-check.md`): the four bumps in both sessions as predicted (codes 0x01,
+0x0B, 0x17 in bank 1-24 → channels 2, 12, 24; 0x17 in bank 25-48 → channel 48), 0 framing errors, `SHOW29.ASC` = `SHOW28.ASC`: the control
+passed, the inference stands, the decision above is unchanged.**
 
 ### What SC-5 does not clear
 
