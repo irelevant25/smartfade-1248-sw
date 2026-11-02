@@ -35,3 +35,5 @@ During the session (the guide's log, docs/protocol/captures/2026-11-02-e11b-acti
 
 After the session (chat): "session done". SHOW30.ASC and SHOW31.ASC were copied into smartfade-sd-card-backup/ by the owner
 before the analysis started (both 15 944 bytes, byte-identical).
+
+After the five later backend sessions (chat, 2026-11-02, evening), asked for one more SD save to compare with SHOW31.ASC: "There is not need for another file in this case then I did not changed anything." (declined; the classes used change no show data; recorded as log-only evidence without an SD pair.)

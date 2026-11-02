@@ -59,8 +59,10 @@ the per-write answer bytes and the ConsoleStatus timeline, both derivable from t
   bump shadow ("the console has not reported physical fader 5 again since"), the fail-closed edge the implementation documents (a
   bump that changes neither report keeps its fader refused until both objects are listed again): a usability defect, listed as a
   follow-up with a proposed rule (the shadow ends at the release when the press itself was not followed by a FaderInfo or
-  ChannelLevels listing, because then the release changes nothing either; the reviewer decides). No SD save after these sessions
-  yet (asked of the owner; the classes used change no show data).
+  ChannelLevels listing, because then the release changes nothing either; the reviewer decides). **No SD save after these
+  sessions:** asked, the owner declined on 2026-11-02 ("There is not need for another file in this case then I did not changed
+  anything"); the classes used change no show data, so the five sessions stand as log-only evidence without an SD pair, by his
+  statement.
 
 ## The session (the backend's clock, t = 0 at Connect 14:59:19 local)
 
