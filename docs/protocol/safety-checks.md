@@ -281,6 +281,11 @@ things in it are unobserved (items 2 and 11 below) and the session ends on the f
    notice; H89: SmartSoft's own fader jumped the output because its control started from its own position).
    A PC fader starts from the reported level before it may move, so the first event cannot jump the output
    by more than the user's own drag.
+   *(Annotated 2026-11-02 after SC-5's first review pass, MAJOR 1: while a bump of that physical fader is held, the reported level
+   is the bump's level (F174 VERIFIED: FaderInfo record k byte 0 and ChannelLevels[c] read 0xFF from the press to the release), so a
+   drag started then would carry the bump's level, not the content's; SC-5's device holds a fader's events across its own bump hold
+   until both objects were reported after the release, and a bump held on the panel meanwhile is the owner's accepted residual risk
+   at the E11b gate; see SC-5 condition 1 (d) and its review table.)*
 7. **Cadence as observed.** Writes are placed where SmartSoft placed them and the SC-1 floors hold for every
    transfer; the read loop keeps fetching what the console lists after an event (FaderInfo, LedStatus,
    ConsoleStatus, PlaybackInfo: F134), so the UI shows the effect from the console, not from the command.
@@ -574,6 +579,15 @@ its side effects are understood, and the conditions hold. Everything else is NO-
    session ends as a deviation); (d) send the first fader event with **the target's reported level** (ChannelLevels[c] for a channel,
    FaderInfo record k bytes 0 and 1 for a memory fader), then the drag; (e) show the bank and the LED blink from the console's objects.
    The switch back is the user's, or the next automatic switch. The physical faders now control the new bank: the UI says so.
+   *(Annotated 2026-11-02 after the first review pass, MAJOR 1: "the target's reported level" is the bump's level while a bump of
+   that physical fader is held, F174 VERIFIED: in 16 of 16 channel-bump holds FaderInfo record k read `ff 00 00 00` and
+   ChannelLevels[c] 0xFF from the press to the release, in 51 of 51 memory-bump holds the record read `ff ff 00 00`; and in 9 of 16
+   channel-bump holds the first reply after the release listed neither object. So the matching event of a fader is not sent from the
+   press of our own bump on that fader until FaderInfo and ChannelLevels have been delivered after the release; a bump held on the
+   PANEL while the UI moves the same fader cannot be told from a fader at full (F178, VERIFIED the same day: no object marks a press)
+   and is a residual risk accepted by the coordinating assistant at the owner's delegation (the review table, MAJOR 1 (ii)) and
+   acknowledged at the E11b gate, like F141. What the console does with a matching event at a bump's level is UNKNOWN: unobserved in
+   every capture.)*
 2. **A held bump is one operation with a bound:** press, the hold renewed by the UI, the release sent by the device when the UI
    releases or when the bound (3 s) expires, and before any Disconnect; a hold cannot span a bank switch (refused); the lost-release
    case (a process killed mid-hold leaves the bump down until the panel is pressed, INFERRED) **was accepted by the owner on 2026-11-02**
@@ -638,7 +652,9 @@ the implementation's reading 2 below is confirmed by this addendum, and the owne
 The SC-5 classes were implemented on 2026-11-02 by an Opus 5.5 subagent at the owner's request, under the coordinating
 assistant, which writes none of the sending code (CLAUDE.md); written for the `protocol-safety-reviewer`
 pass of item 10 (committed as 98cb499 the same day, before the pass). **It clears nothing: nothing is sent before that pass and the owner's go for E11b** (with USBPcap, the backup and the
-conditions above). What was built, where:
+conditions above). The first pass (NEEDS CHANGES, "Review (SC-5 item 10)" below) was answered by the same agent in the working tree
+the same day; "Changes after the first pass" at the end of this section lists each finding with what changed and its test. What was
+built, where:
 
 - **One encoder, one whitelist (condition 3).** `HspOutbound.cs`: `ClearedFader` = `Fader1` … `Fader24` (0x00–0x17), `Master`,
   `Bumps`; `ClearedKey` = `Bump1` … `Bump24` (0x00–0x17), `Go`, `Solo`, `Blackout`, `Faders1To24`, `Faders25To48` (0x37), `FadersMems`,
@@ -657,11 +673,11 @@ conditions above). What was built, where:
   the release due at once and a fault sends it when no exchange is open (SC-2's paths, condition 4).
 - **The device (`UsbSmartFadeDevice.cs`).**
   - *Controls and states.* Channel faders 1–48: channels 1–24 are physical faders 1–24 in bank 1-24, channels 25–48 the same faders
-    in bank 25-48 (F171); memory faders of the page the console shows (F113), only while the physical fader holds that page's memory
+    in bank 25-48 (F171; an explicit 48-row table since the first pass); memory faders of the page the console shows (F113), only while the physical fader holds that page's memory
     (FaderInfo record k byte 3 = page − 1, H69 CONFIRMED); every channel and memory fader only with the MASTER at full (SC-2
     condition 6 extended: every PC event of E9c and E9d in memory mode or bank 25-48 came at full); a channel fader whose
     FaderInfo record byte 1 is not 0 (a memory left up across FADERS 1-24, F112's limit) refused. Bumps 1–48 and the memory bumps
-    as holds, one at a time; IND 1 / IND 2 as toggles from a steady LED (blocks 72 / 73) that the Independents object, once
+    as holds, one at a time, only once FaderInfo has arrived (since the first pass); IND 1 / IND 2 as toggles from a steady LED (blocks 72 / 73) that the Independents object, once
     delivered, does not contradict, in channel mode, bank 1-24 (every PC press of E9b and E9c); FADERS 25-48 only from bank 1-24.
     NEXT mode on or unknown (ConsoleStatus body[6], F173) refuses every control, and so does memory mode entered from bank 25-48
     (the bank flag kept, F98): no PC control was seen in either but NEXT's fader events, once, which make the console list
@@ -676,18 +692,21 @@ conditions above). What was built, where:
     waiting bump its hold (a tap when the UI let go meanwhile) (d). The UI's own FADERS keys go through the same wait and bound.
   - *Matching (condition 1 d, F172).* Every physical fader is unmatched at Connect and after every reported change of bank, mode or
     page; its first event carries the target's reported level, ChannelLevels[c] for a channel (sent only when FaderInfo record k byte
-    0 reads the same, else refused: another source drives the channel; refused too until the console has delivered ChannelLevels in
-    the session) and FaderInfo record k bytes 0 = 1 for a memory fader. The UI's level waits device-side and is queued only once the
+    0 reads the same, else refused: another source drives the channel, a reading INFERRED for a memory up on another fader or the
+    stack and contradicted for a bump held on that fader, F174, hence the bump's shadow added after the first pass; refused too until
+    the console has delivered ChannelLevels in the session) and FaderInfo record k bytes 0 = 1 for a memory fader. The UI's level waits device-side and is queued only once the
     matching event was taken for sending, so it can never replace it in the queue; the matching event is asked again right before it
     goes (held while FaderInfo or ChannelLevels is listed and unfetched, dropped when the state or the level changed).
   - *Holds.* Press and release from the same code path (`PressBump`, `ReleaseBump`); released by the UI, by the loop's bound, by a
     stop, and at once when the console reports another bank or page (a hold does not span a bank switch, condition 2); a switch or a
-    second bump while one is held is refused. The incomplete-write latch is unchanged.
+    second bump while one is held is refused. The incomplete-write latch is unchanged. Since the first pass a bump this host pressed
+    keeps its physical fader out of matching and fader events until the console has reported that fader again after the release.
   - *Logged as one operation.* The transfer log gets a note when the bank key goes, when the console's report completes the switch
     (with its delay), for each control queued or not sent after it (with the reason), when a fader is matched, when the bound asks for
-    a release and when a hold is released by a bank change.
+    a release and when a hold is released by a bank change. Since the first pass the notes of the bank key and of a matched fader,
+    which their writes' `sent` callbacks leave, are written at the next event, after the payload, never between the gate and the header.
 - **`ConsoleStateAssembler.cs`** exposes FaderInfo, whether ChannelLevels arrived, the Independents object, the IND LEDs and
-  `ReportedFaderMode.NextMode` (body[6]); read only to refuse or to choose a matching level.
+  `ReportedFaderMode.NextMode` (body[6]); read only to refuse or to choose a matching level; since the first pass also `BlinkingFaders`, for the UI only.
 - **Port, API, UI.** `DeviceCommands.PressFaders25To48`, `DeviceControls.Faders25To48`, `ISmartFadeDevice.PressFaders25To48Async`,
   `ConsoleService.PressFaders25To48Async`, the hub method `pressFaders25To48` (docs/api.md), `not_supported` on the simulator, the UI's
   FADERS 25-48 key as a tap when the device supports and names it; the faders, bumps and IND keys are enabled from `writableControls`
@@ -716,12 +735,68 @@ deviation, the barrier (a console answering three polls late; the test fails wit
 switch (E9e 19934 … 20835), FADERS 25-48 and NEXT mode, IND 1 (E9c 90315 / 90324) and a contradicting Independents object, an unknown
 and an ambiguous matching level.
 
+**Changes after the first pass (the same agent, 2026-11-02, in the working tree; nothing run against a console):**
+
+- *Blocker, the statuses on the hardware path.* `UsbSmartFadeDevice`'s class `[Evidence]` reads F171, F174 and F175 VERIFIED
+  (SmartSoft's events and the console's answers to them); F172 at each case's own status, (a) VERIFIED in part, (b) and (c) OBSERVED
+  once, the 1-24 / 25-48 bank switch in none of its cases, a matching event from our own host unobserved until E11b; and the reading
+  "FaderInfo record k agreeing with ChannelLevels[c] means no other source drives the channel" INFERRED for a memory up on another fader
+  and for the stack, contradicted for a held bump (F174). The doc comments of `MatchingLevel` and `ConsoleStateAssembler.FaderInfo` say
+  the same.
+- *Major 1, a held bump's level is never matched.* `BumpShadow`: from the press of a bump this host sent until FaderInfo (and, for a
+  channel bump, ChannelLevels) has been listed after its release and then delivered, a fader command for its physical fader, in any
+  bank, is refused, and an event already queued for it is dropped at its slot (`Shadowed`, part of `FaderState`, asked at the command
+  and again right before the write). Evidence: F174 (16 of 16 channel-bump holds read record k `ff 00 00 00` and ChannelLevels[c] 0xFF,
+  51 of 51 memory-bump holds `ff ff 00 00`); after the release the first poll reply named neither object in 9 of 16 channel holds (E9c
+  header seqs 29262, 86165, 87996; E9d 27254; E9e 17655, 18352, 18882, 28382, 28803) and FaderInfo at once after 51 of 51 memory
+  holds, and a memory bump of an empty memory changes no channel, so a memory bump waits for FaderInfo only (the rule INFERRED from that
+  OBSERVED evidence). Fail closed: a bump that changed neither report (its fader's content already at full) leaves the fader refused
+  until the console lists both objects again for another reason (a panel move of that fader does it). A bump held on the panel cannot be
+  told from a fader at that level (case a: not detected, the owner's written acceptance at the E11b gate). Tests: `A_fader_waits_after_its_own_bump_until_the_console_has_reported_it_again_after_the_release`
+  (E9e seq 17675 / 17679 during the hold; after the release PlaybackInfo seq 17789 alone, as E9e's first reply after it, then
+  FaderInfo seq 17796 alone, both refused; with ChannelLevels seq 17800 the matching event at 0x00 and the drag go) and
+  `A_fader_event_queued_behind_a_press_of_its_own_bump_is_dropped_unsent`; each fails without the shadow, with a shadow that ends at
+  the release, and with one that ends at FaderInfo alone.
+- *Major 2, nothing between the gate and the header.* `SwitchKeySent` and `MatchingSent`, the `sent` callbacks that run between the
+  gate and the header, change state only and leave their note under the lock (`LeaveNote`); `WriteLeftNotes` writes the notes left at
+  the session thread's next event, after the payload (at the session's end before the log closes). Test:
+  `No_note_is_written_between_the_gate_and_a_writes_header` (the pipe, the transfer log and the loop's waits recorded in one order: for
+  every Data header no note between its slot wait and the header, and the two notes after their payloads; it fails when a callback
+  writes its note itself). This also answers the nit on the "FADERS ... sent" note written before its header.
+- *Major 3, the unmatched fader shown (condition 1 e, item 6).* `ConsoleStateAssembler.BlinkingFaders`: the physical faders 1-24 whose
+  LedStatus block shows two different phases (a blink, F85, F116), empty while the LCD shows the page view or a record screen (blocks
+  1-24 mean pages or selectable memories there, F113, F116); carried by `DeviceStateChange`, `ConsoleState` and the DTO
+  (`blinkingFaders`, docs/api.md) to the UI, which marks the bump button of channel k or 24 + k (by `faderBank`) or of memory fader k
+  on the console's page with a blinking outline and "blinking on the console". Display only: nothing is sent from it. The readings,
+  all from E9c S4: unmatched after a mode switch, `46 00 00 / 0A 00 00` in memory mode (seq 51473, case a; 67160, case b) and
+  `00 46 00 / 00 0A 00` in channel mode (seq 59535, case a), "blinking = unmatched" INFERRED from them; a fader still holding another
+  page's memory, `C8 00 00 / 0A 00 00` (seq 80317, case c), though a PC value moves it at once; physical fader 2 while it was moved on
+  the panel (seq 76674, 77680; not explained); the page view's first LED report, one exchange before its LCD title (seq 47749, 80267,
+  84586). The 1-24 / 25-48 switch is in none of F172's cases, so the mirror claims nothing there beyond the console's own LED. A change
+  of the fader bank or of the blinking faders now raises the full state, which carries both (the bank alone raised nothing before, a gap
+  of the first implementation). Tests: `The_blinking_faders_are_the_LED_blocks_1_to_24_whose_phases_differ_outside_the_page_view_and_the_record_screens`
+  (every change over E9c S1, seq 868 ... 97136, as listed above), `The_fader_bank_and_the_blinking_faders_reach_subscribers_with_the_full_state`,
+  and the specs of the state service, the fader, the channel grid and the memory grid.
+- *Minor 3.* `ChannelPosition` is an explicit 48-row table; `Every_channel_sits_on_the_bank_and_physical_fader_E9d_moved_it_by` checks
+  every row against E9d's two passes (each channel named by the fader event whose value the next ChannelLevels showed on that channel
+  alone; it fails with one row changed).
+- *Minor 4.* A bump needs FaderInfo as a fader does (`FadersUnreported` in `PressBump`, fail closed): `A_bump_needs_the_consoles_FaderInfo_as_a_fader_does`
+  (a channel bump and a memory bump refused, nothing sent).
+- *Minor 5.* ChannelLevelsObject cites F67, F171 and F174 VERIFIED and F83, F96, F176 OBSERVED; FaderInfoObject F82 (layout, in part),
+  F171 and F174 VERIFIED and F95, F96, F97, F99, F112, F176 OBSERVED, with their doc comments.
+- *Nits.* `Bump10`'s evidence note separates the modes (E9's channel-mode press inside EDIT MEM, header seq 95535; its memory-mode press
+  inside COPY, header seq 84654); the replay's summary says that the E9c range's last two fader events (headers 97131, 97135) were
+  SmartSoft's in NEXT mode, reproduced by the session layer and refused by the device; docs/api.md and docs/architecture.md give the
+  hold bound as released 2.75 s after the press on the device's clock, later only with a slow console, logged, and the MASTER rule for
+  channel and memory faders only. In the device tests the stand-in console's pause got its own event per pause (a Resume followed at
+  once by the next pause could unset the event before the paused poll saw it).
+
 **Readings the reviewer must check (where the text of SC-5 was read, narrowed or extended):**
 
 1. Class B4 says FADERS 25-48 "from the two states SmartSoft sent it in (from bank 1-24 or memory mode)"; every PC press of E9b, E9c, E9d
    and E9e came from bank 1-24, so it is sent from bank 1-24 only (a channel of bank 25-48 from memory mode is refused until FADERS 1-24).
-2. Channel bump 1 of bank 1-24 (code 0x00, once, E9c S2) is named in neither addendum row; it is sent like the other channel bumps, which
-   rest on less evidence (addendum 2's rule); to be confirmed.
+2. Channel bump 1 of bank 1-24 (code 0x00, once, E9c S2) was named in neither addendum row and is sent like the other channel bumps;
+   SC-5 addendum 3 (written after this implementation) clears it, and the owner acknowledges it at the E11b gate.
 3. Condition 1 (d)'s "ChannelLevels[c] for a channel" is kept, with FaderInfo record k byte 0 required to agree, and ChannelLevels
    required in the session: the console lists only what changed, so a channel fader is refused until the console has reported its
    channels (a channel fader or bump moved on the panel does it). E11 attempt 3's W0 panel actions gave 25 lists before the first
@@ -736,13 +811,49 @@ and an ambiguous matching level.
 7. A bump of another bank starts the automatic switch, then the hold (SmartSoft's own sequence in E9d B and E9e: FADERS 25-48, then the
    bump); SC-5 describes the switch for fader events.
 8. The hold bound is measured header to header and asked for at 2.75 s; a console answering polls 170–500 ms late (never observed)
-   could carry a hold past 3 s, which is logged, not prevented. While a bump is held, fader events wait (nothing goes between a press and
-   its release, as SmartSoft), up to 3 s.
+   could carry a hold past 3 s, which is logged, not prevented. While a bump is held, the other faders' events wait for its release
+   (nothing goes between a press and its release, as SmartSoft); its own fader's are refused (first pass, major 1).
 9. The UI's memory fader thumb shows the user's request for up to 1.5 s before the report wins again (unchanged); the device's matching
    event keeps the first event at the reported level regardless.
 
 Run line (E11b, on the owner's go only, after the reviewer's pass): unchanged, `dotnet run --project src/backend/SmartFade.Api --
 --Device:Mode=Usb --Device:Usb:ConfirmDate=<today> --Device:Usb:LiveControlDate=<today>`.
+
+### Review (SC-5 item 10)
+
+**First pass (2026-11-02, `protocol-safety-reviewer`, over 98cb499 and the docs of 72e4d6d): NEEDS CHANGES, one blocker and three
+majors; every byte from the whitelist, no NO-GO key, invented byte, retry or firmware path reachable, the read-only session and the
+simulator unchanged, the golden replays reproduced count for count by the reviewer's own port** (build 0 warnings, 421 tests green).
+The code fixes went to the Opus 5.5 subagent that wrote the implementation (CLAUDE.md), the decisions to the owner, the docs to the
+coordinating assistant; the fixes were made the same afternoon (428 backend and 308 frontend tests green, the subagent broke each new
+guard on purpose and saw its test fail), and nothing goes to E11b before the re-check. Findings and what was done:
+
+| # | Finding | Status |
+|---|---|---|
+| BLOCKER | The matching-level comments (`UsbSmartFadeDevice.cs` MatchingLevel, the class `[Evidence]`, `ConsoleStateAssembler.cs`) state as fact, without a status word, that FaderInfo record k byte 0 is the physical fader's own level and that an agreeing ChannelLevels[c] means no other source drives the channel, and call the matching event VERIFIED; F174 contradicts the reading for a bump, and F172 is VERIFIED for its mode case only (the page case OBSERVED once, the bank case 1-24 / 25-48 in none of its cases). | **Fixed 2026-11-02 by the subagent, waits for the re-check:** tags and status words only: the class `[Evidence]` (`UsbSmartFadeDevice.cs:41-43`) now three tags (F171 / F174 / F175 VERIFIED as SmartSoft's events and the console's answers; F172 per case, (a) VERIFIED in part, (b) and (c) OBSERVED once, the 1-24 / 25-48 switch in none; "no other source" INFERRED for a memory or the stack, contradicted for a held bump), the `MatchingLevel` doc (`:992-1005`) and `ConsoleStateAssembler.FaderInfo` (`:107-116`, byte 0 OBSERVED, carries a held bump) likewise; our own host's matching event unobserved until E11b. |
+| MAJOR 1 | The matching level can be a held bump's level: during a bump hold on physical fader k, and after our own channel-bump release when the first reply lists neither FaderInfo nor ChannelLevels (9 of 16 holds in E9c / E9d / E9e), the matching event and the UI's drag carry the bump's level; if the console takes the fader as matched, the content keeps the bump level when the bump ends (the jump SC-2 condition 6 and SC-5 condition 1 (d) exist to prevent). | **(i) Fixed 2026-11-02 by the subagent, waits for the re-check:** `BumpShadow` (`UsbSmartFadeDevice.cs:740-779`): a bump pressed by this host blocks its physical fader from the press until FaderInfo has been listed again after the release and delivered (a channel bump needs ChannelLevels too), checked at the command (`:1046`) and again before the write (`Recheck`, `RecheckMatching`, `CompleteSwitch` through `FaderState`, so a queued event is dropped); fail closed: a bump that changes neither report (content already at full) keeps its fader refused until both objects are listed again. Tests `A_fader_waits_after_its_own_bump_until_the_console_has_reported_it_again_after_the_release` (`UsbSmartFadeDeviceTests.cs:1906`, the stand-in console with E9e's in-hold bodies seq 17675 / 17679, PlaybackInfo 17789 alone after the release, FaderInfo 17796 alone, then ChannelLevels 17800) and `A_fader_event_queued_behind_a_press_of_its_own_bump_is_dropped_unsent` (`:1965`). (iii) condition 1 (d) and SC-2 condition 6 annotated with F174 (done). **(ii) The panel case:** not detectable on the device side as far as the review saw; the owner left the decision to the coordinating assistant on 2026-11-02 (chat: "I will leave that on you"), which first had the `capture-analyst` (Opus 5.5, read-only, the same afternoon) compare a held bump against a fader at full in every object of the existing captures: **not distinguishable in any observed object at BUMPS 0xFF** (F178: 19 of 19 channel holds and 57 of 57 memory holds, panel and PC, read as fader k at 0xFF with the same content in FaderInfo, ChannelLevels, OutputLevels, LedStatus and DisplayContent, in both directions, across E3, E3b, E8, E8b, E9, E9b, E9c, E9d, E9e and E11 attempt 3; ConsoleStatus is not listed at a press, no other LED block or LCD cell changes, no object marks the press). **Decision (the coordinating assistant, 2026-11-02, at the owner's delegation): the residual risk is accepted, not refused in code**, on these grounds: it is live and visible, changes no show data, ends with the next move of that fader (F141), is never exercised by E11b's steps, and the console's answer to a matching event at a bump's level is UNKNOWN; the owner acknowledges it at the E11b gate (Acceptance 6), and it is revisited if it ever shows. A one-off passive panel capture could still look for a marker under conditions never captured (`reverse-engineering.md` "Next capture (proposed by the SC-5 review, 2026-11-02)"). E11b's own steps never move a fader during or right after a bump of the same physical fader. |
+| MAJOR 2 | A synchronous transfer-log write with flush and a logger call run between the gate's freshness check and the Data header for every bank key press and every matching event (`SwitchKeySent`, `MatchingSent` → `SessionNote` inside the session's `Sent` callback); SC-2 MAJOR 1 was closed on "no await, I/O or log note" there and the 62 ms analysis depends on it. | **Fixed 2026-11-02 by the subagent, waits for the re-check:** `SwitchKeySent` (`:1174`) and `MatchingSent` (`:1117`) change state and `LeaveNote` under the lock only; `WriteLeftNotes` (`:2140`, at the top of `OnEvent`) writes the notes after the payload, pending notes before the log closes (`:1706`). Test `No_note_is_written_between_the_gate_and_a_writes_header` (`UsbSmartFadeDeviceTests.cs:1993`: the pipe, the sink and the slot waits in one ordered list; for each of the four Data headers of the channel-30 switch no note between the slot wait and the header, both notes after their payloads). |
+| MAJOR 3 | Condition 1 (e) and item 6's display half not built: only the bank reaches the contract; the UI's bump is lit from the output level, the console's unmatched blink (F172: block k's two triples differ, `46 00 00 / 0A 00 00`) is shown nowhere. | **Fixed 2026-11-02 by the subagent, waits for the re-check, as a narrower reading:** the captures show the blink as two different phases of a LedStatus block (F85, F116; E9c S4 seq 51473, 67160 `46 00 00 / 0A 00 00`, 59535 `00 46 00 / 00 0A 00` for unmatched faders), but also for a fader holding another page's memory (seq 80317), once for fader 2 moved on the panel (seq 76674, 77680, unexplained) and in the page view's first LED report (seq 47749, 80267, 84586), so the mirror is named `BlinkingFaders`, not "unmatched": the assembler reports LED blocks 1–24 whose phases differ (`ConsoleStateAssembler.cs:143`, `ReportBlinking` `:452`; empty while the LCD shows the page view or a record screen), through `DeviceStateChange`, `ConsoleState`, the DTO (`docs/api.md` `blinkingFaders`) to the UI (channel k or 24 + k by `faderBank`, memory fader k on the console's page; display only); golden test over all 19 changes of E9c seq 868–97136 (`ConsoleStateAssemblerTests.cs:292`); a pre-existing gap fixed on the way (`ConsoleService.cs:369`: a bank change alone reached no subscriber). |
+| MINOR 1 | Channel bump 1 of bank 1-24 was sent by the code before any row cleared it; addendum 3 (written after the implementation) clears it, the E11b gate did not name it, reading 2 still said "to be confirmed". | **Done 2026-11-02:** a gate line in `e11b-guided-session.ps1` (the owner acknowledges addendum 3), reading 2 updated by the subagent. |
+| MINOR 2 | SC-5 clears no hold longer than 3 s; the loop asks for the release at 2.75 s and can send it only after the next completed exchange, so a console replying near the 500 ms timeout could carry the release to about 3.8 s; logged, not prevented (reading 8); every reply in every capture came within 12 ms. | **Accepted by the owner 2026-11-02 (chat, after the first pass; "every reply came within 12 ms"): the logged overrun stands, no lead change; the guide's Acceptance 7 confirms it on the day. |
+| MINOR 3 | `ChannelPosition` computes the physical fader as `channel − 24` while the docs say "no arithmetic" (each of the 48 pairs is observed, F171). | **Fixed 2026-11-02 by the subagent:** `ChannelPosition` (`UsbSmartFadeDevice.cs:841`) an explicit 48-row table; golden test `Every_channel_sits_on_the_bank_and_physical_fader_E9d_moved_it_by` (`UsbSmartFadeDeviceTests.cs:2057`) derives every row from E9d's two passes. |
+| MINOR 4 | `NotIn`'s own refusals (record byte 1 for a channel, byte 3 for a memory) pass when FaderInfo has not arrived; faders are protected by `FadersUnreported`, `PressBump` is not. | **Fixed 2026-11-02 by the subagent:** `PressBump` (`:1291-1301`) checks `FadersUnreported()` first; test `A_bump_needs_the_consoles_FaderInfo_as_a_fader_does` (`:2036`). |
+| MINOR 5 | The `[Evidence]` of `ChannelLevelsObject` and `FaderInfoObject` still says OBSERVED for a few channels and faders while the device picks a transmitted value from them. | **Fixed 2026-11-02 by the subagent:** `SimpleObjects.cs:141-142` (ChannelLevels: F67, F171, F174 VERIFIED; F83, F96, F176 OBSERVED) and `:176-177` (FaderInfo: F82 in part, F171, F174 VERIFIED; F95, F96, F97, F99, F112, F176 OBSERVED). |
+| NIT | "at most 3 s" in docs/api.md and CLAUDE.md overstates the bound; "refuses every control with the MASTER below full" in architecture.md too broad; Bump10's evidence note mixes modes; the E9c replay range holds two NEXT-mode fader events the device would refuse; the "FADERS … sent" note is written before the header. | **Fixed 2026-11-02** (CLAUDE.md by the assistant; `docs/api.md:191`, `docs/architecture.md:252-256`, `HspOutbound.cs:137`, `HspLiveSessionTests.cs:371-374` by the subagent; the last with MAJOR 2). |
+
+Confirmed correct by the reviewer (file-and-line in its report): the enums exactly SC-2 plus SC-5; `PhysicalControls` two explicit
+24-row tables; `DataHeader` the only producer of a Data header; the whitelist test reading every value from capture byte 5; the NO-GO
+payloads (E9 73006, E9b 47230, E9c 93437, 94597, 102688), the System write, ChannelText and Memory refused; 0x32, 0x38, 0x3A, 0x3B,
+0x3E, 0x41, 0x42 unrepresentable; `QueueKeyHold` bump codes only; the per-member evidence by the reviewer's own count (bump 1 of bank
+1-24 E9c 29262, bump 10 E9c 86727, the E9e codes in both sessions, 0x37 in four captures always from bank 1-24, 0x47 / 0x48 in E9b
+and E9c from bank 1-24, every index in all three states in both E9d sessions); `BankKeyNotFrom` matching every observed origin; the
+switch (refusals, tap, wait, the 2 s bound with a wide margin: ConsoleStatus and LedStatus listed 17–80 ms after every SmartSoft bank
+key, delivered within 177 ms, FaderInfo in the same list whenever it changed; the barrier); the previous byte per index never reset;
+the holds (released once, at the bound, before a Disconnect, on a bank or page change; a switch or a second bump refused while one is
+held; the fault release and the latch unchanged); the 62 ms gate for every new write but MAJOR 2; no retries; the read-only session,
+the simulator and the mode gating unchanged; every replay count and skip reproduced and each skip by a rule (condition 8's first
+steps, the STACK / PAUSE / NEXT writes); the E11b guide's W0 (a panel move of a channel fader listed ChannelLevels with FaderInfo in
+E8 18 of 18, E8b 18 of 18, E3 42 of 42) and its W-steps; the layering (no bytes in the UI).
 
 ### Conditions for E11b (the second write session, the first with SC-5's classes) and what to record
 
@@ -757,7 +868,12 @@ Run line (E11b, on the owner's go only, after the reviewer's pass): unchanged, `
   ignores a PC fader until an event equals the new content's level; the device sends the reported level first; a wrong first event moves
   nothing and the bump LED blinks); the bounded hold (released by the device at 3 s at the latest or before any Disconnect) with the
   lost-release residual risk accepted on 2026-11-02; the last mover (F141) and MASTER's whole-output effect; the rig (memory 3 of page 1
-  and channels 1, 2, 5 and 30 may light on whatever is patched to them; IND 1 is unpatched and IND 2 drives DMX 47 in this show, E8b).
+  and channels 1, 2, 5 and 30 may light on whatever is patched to them; IND 1 is unpatched and IND 2 drives DMX 47 in this show, E8b);
+  and, since the first review pass: addendum 3 (channel bump 1 of bank 1-24), the residual risk of a bump held on the panel while the
+  UI moves the same fader (review MAJOR 1 (ii): not detectable, F178; the console's answer to a matching event at a bump's level
+  UNKNOWN; accepted by the coordinating assistant at the owner's delegation on 2026-11-02, acknowledged at the gate; the guide's own
+  steps never do it) and the hold overrun with a slow console (review MINOR 2: the release asked at 2.75 s goes at the next
+  write slot, about 3.8 s at worst with replies near the 500 ms timeout, never seen, logged; accepted by the owner on 2026-11-02 in chat, confirmed at the gate).
 - Script (`tools/usb-probe/e11b-guided-session.ps1`, written 2026-11-02 from the E11 one, parse-checked, not run), read-only first:
   connect, idle 60 s, W0 from the panel (FADERS MEMS, FADERS 1-24, SOLO on and off, the MASTER down and back, and channel fader 1 up a
   little and back to zero, so that the console lists ChannelLevels: the implementation refuses a channel fader until the console has

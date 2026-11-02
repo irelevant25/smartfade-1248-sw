@@ -904,6 +904,22 @@ is shorter than the full lists after edits (E12b 807 bytes, E12 812), which a re
 **E12b clears no message:** SC-1's clearance (poll and listed fetch, read-only) is unchanged, and no encoder for any of E12b's messages may
 exist in the solution.
 
+### Next capture (proposed by the SC-5 review, 2026-11-02): a marker for a bump press, if any
+
+The `capture-analyst` compared every held bump against a fader at full on the same physical fader across E3, E3b, E8, E8b, E9, E9b,
+E9c, E9d, E9e and E11 attempt 3 and found no object that marks a press (F178, VERIFIED: the same bytes in both directions at BUMPS
+0xFF). The SC-5 review's MAJOR 1 (ii) (a bump held on the panel while the UI moves the same fader) is therefore a residual risk
+accepted by the coordinating assistant at the owner's delegation, not a refusal in code. Only conditions never captured could still
+hold a marker. One passive, panel-only capture would cover them (SmartSoft passive or our SC-1 read-only session, USBPcap, a timed log,
+SOLO off, each bump held about 3 s); optional, no decision depends on it:
+
+1. Channel mode, BUMPS at full: fader 1 at about half, hold bump 1; then fader 1 at full, hold bump 1.
+2. BUMPS at about half: fader 1 at full, hold bump 1 (does record 1 drop? this settles F126's open point); fader 1 at zero, hold bump 1;
+   raise fader 1 until record 1 equals the BUMPS byte.
+3. BUMPS at zero, fader 1 at zero: hold bump 1 (does the channel-mode LED go full while the record stays at zero, as the memory-mode
+   case of E3 did?).
+4. Steps 1 to 3 again in memory mode on memory fader 1.
+
 ## Hardware evidence requested
 
 Things that cannot be determined from the supplied materials:

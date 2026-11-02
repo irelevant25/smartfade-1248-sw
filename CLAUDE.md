@@ -363,8 +363,18 @@ rows had left out (the analyst's omission; its evidence is stronger than the row
 `tools/usb-probe/e11b-guided-session.ps1` is written and parse-checked, not run (the SC-5 gate and acceptances; W0 from the panel now
 includes a move of channel fader 1, because the implementation refuses a channel fader until the console has listed ChannelLevels and
 E11 attempt 3's W0 never made it; W1–W10 as "Conditions for E11b" in `safety-checks.md`; its row in the experiments table of
-`reverse-engineering.md`). **The `protocol-safety-reviewer` pass (SC-5 item 10) over 98cb499 is the next gate; nothing is sent before it
-passes, its findings are fixed by the Opus subagent, and the owner gives the go for E11b.**
+`reverse-engineering.md`). **The first `protocol-safety-reviewer` pass (SC-5 item 10, 2026-11-02, over 98cb499) was NEEDS CHANGES:** one
+blocker (unmarked protocol readings in the matching-level comments), three majors (MAJOR 1: a held bump's level is the "reported level"
+a matching event would carry, F174; MAJOR 2: a log note between the gate and the Data header; MAJOR 3: the console's unmatched blink
+not shown), five minors, five nits; every byte from the whitelist, nothing NO-GO reachable, the replays reproduced by the reviewer's
+own port. **The Opus subagent fixed its items the same afternoon** (a `BumpShadow` holds a fader's events from our own bump press until
+FaderInfo and ChannelLevels were delivered after the release; the notes are written after the payload; `BlinkingFaders`, a display-only
+mirror of the LED blocks whose phases differ, reaches the UI; an explicit 48-row channel table; bumps need FaderInfo; 428 backend and
+308 frontend tests), the owner accepted the hold overrun with a slow console (MINOR 2, chat) and left the panel-bump case (MAJOR 1 (ii))
+to Claude, which had the `capture-analyst` (Opus 5.5) compare a held bump against a fader at full in every object of ten captures: **no
+object marks a press (F178, VERIFIED)**, so the case is accepted as a residual risk at the owner's delegation, recorded in the SC-5
+review table and acknowledged at the E11b gate. **The re-check pass is the next gate; nothing is sent before it passes and the owner
+gives the go for E11b.**
 
 ## Commands
 
@@ -435,7 +445,8 @@ in the read-only mode. Run only as the SC-2 E11 script says (backup first, USBPc
 `tools/usb-probe/e11-guided-session.ps1` refuses to start it before the re-check's items are closed and the acceptances given).
 **SC-5's classes (implemented 2026-11-02 by an Opus 5.5 agent at the owner's request, commit 98cb499, the `protocol-safety-reviewer` pass
 and E11b's go pending; `safety-checks.md` SC-5 "Implementation"):** the same switch also sends every channel fader and bump 1-48, the memory
-faders and bumps of the page the console shows, IND 1 / IND 2 and the key tap FADERS 25-48 (`pressFaders25To48`), a bump held at most 3 s; a
+faders and bumps of the page the console shows, IND 1 / IND 2 and the key tap FADERS 25-48 (`pressFaders25To48`), a bump held until the UI releases it or 2.75 s after the press on the
+device's clock (later only with a slow console, logged); a
 control of another bank first sends that bank's FADERS key and waits for the console's report (2 s, else the session ends), and a fader's first
 event carries its reported level. After a Data write
 that did not complete, the device refuses to connect until the backend restarts and `INCOMPLETE-WRITE.txt` in
