@@ -174,6 +174,15 @@ keys seen once before were seen again (F175); a PC fader reads post-MASTER (F176
 download holds 158 records (F177). **74 facts are VERIFIED** (F165 in part); E9c clears nothing: the safety check SC-5 decides the classes
 for the automatic switch and the held bumps, with E9d for what E9c saw once.
 
+**E9d (2026-11-02, morning, passive; record `captures/2026-11-02-e9d-smartsoft-every-fader-and-bump-twice.md`):** after a console power cycle, SmartSoft's Simulator was driven
+through every fader and bump of every bank in two sessions (2 855 writes, 0 framing errors, no show data changed), and every step
+matched the physical-fader reading: **F171 (the index names the physical fader, in every bank and mode) and F174 (held bumps) are
+VERIFIED, F172 (a switch does not carry a level; a PC fader must match first) VERIFIED in part, H111 CONFIRMED; 77 facts are
+VERIFIED** (never clearance). The SC-5 addendum lifts the "after E9d" rows: every channel fader of both banks and every memory fader of
+the shown page, the memory bumps as bounded holds and the bump of bank 25-48's first fader are now GO (conditional) under SC-5's
+conditions; the channel bumps 2–6, 8, 9, 11–24 and 26–48 wait for E9e. Nothing is sent before the owner implements, the reviewer
+passes and E11b runs.
+
 ## Version landscape
 
 | Artifact | Version | Relationship |

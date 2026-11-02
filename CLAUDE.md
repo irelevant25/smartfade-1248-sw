@@ -329,6 +329,18 @@ bank 1-24 (no bump in bank 25-48); S4b's physical step was first done in the Sim
 (`docs/protocol/safety-checks.md`) decides the classes for the automatic bank switch and held bumps (its rule from F172: after the switch
 the first event must equal the target's reported level), with E9d for what E9c saw once;** then the owner's implementation and a live
 session E11b. Still open: whether a held bump's lost-release case is accepted in writing.
+**E9d done 2026-11-02, 09:47–10:14** (passive, after a console power cycle; the owner accepted the held-bump risk and agreed to E9d the same
+morning; record `docs/protocol/captures/2026-11-02-e9d-smartsoft-every-fader-and-bump-twice.md`): in two SmartSoft sessions every channel
+fader 1–24, FADERS 25-48 with every fader there and one held bump, memory faders 1–24 and memory bumps 1–24 of page 1, bump 7 held up to
+4.67 s and E9c's mode-switch case; 2 855 writes, 0 framing errors, `e9d/check.py` 228 steps as expected (channel 47 unpatched in this
+show: no DMX), `SHOW27.ASC` = `SHOW26.ASC`. **F171 (the index names the physical fader, every bank and mode) and F174 (held bumps)
+VERIFIED, F172 VERIFIED in part (the mode case), H111 CONFIRMED, H79 / H81's mode case CONFIRMED; 77 facts VERIFIED** (never clearance).
+**The SC-5 addendum lifts the "after E9d" rows:** every channel fader of both banks and every memory fader of the shown page, the memory
+bumps as holds bounded to 3 s and the bump of bank 25-48's first fader are GO (conditional) under SC-5's conditions (the switch sequence,
+the bounded hold, one encoder and whitelist with golden tests over E9c and E9d); **the channel bumps 2–6, 8, 9, 11–24 and 26–48 wait for
+E9e** (a short passive capture, guided script `tools/usb-probe/e9e-guided-session.ps1`); STACK, PAUSE, NEXT, CLEAR stay NO-GO. The UI's
+SOLO, BLACKOUT, IND 1 / 2 keys took the shared key look the same day. **Nothing is sent before the owner implements the switch sequence and
+the holds at the extension points, the reviewer passes them and E11b runs with USBPcap.**
 
 ## Commands
 

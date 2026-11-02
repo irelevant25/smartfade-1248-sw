@@ -1,0 +1,32 @@
+E9d (2026-11-02, 09:47-10:14 local time; SmartSoft's Console Simulator driving every fader and bump of every bank in two
+SmartSoft sessions while USBPcap recorded; our software not involved): the owner's statements, verbatim, with the
+assistant's reading. Evidence class: owner statements (not a capture). The guided session's own log is
+2026-11-02-e9d-actions.txt (464 lines); the owner's typed answers are in it and are quoted below.
+
+--- From the action log (the owner's typed answers) ---
+09:48:04 backup taken: SHOW26.ASC (copied; 15 944 bytes, SHA-256 559636399c1d82e0f95e737c961bfee31f88962fe8c486bbc6eba7f7d2177a90,
+  equal to SHOW25.ASC and to every save since SHOW23).
+09:48:09 console powered off since e9c = y
+  Reading: a power cycle between E9c (ended 01:20) and E9d (09:47): E9d's two SmartSoft sessions are independent of E9c's
+  (the inbound counter restarted; the connect-time list is the power-on pair of H65).
+09:48:35 rig today = "12 channels light on address 5"
+  Reading: one fixture with twelve DMX channels at DMX 5-16 (as in every session since E3b); nothing on DMX 25-48 or 47 or 97.
+09:49:33 page 1 recorded memories = "1, 2, 3, 4, 5, 6, 7, 8, 13, 21"
+  Reading: the memories whose faders and bumps move channels in part C; the other fourteen move only their FaderInfo record.
+10:01:10 s1 d memory fader 1 after switch = "blinking, and no light from memory 1"
+10:12:25 s2 d memory fader 1 after switch = "blinking, and no light from memory 1"
+  Reading (both passes, as E9c S4a): after FADERS MEMS with the PC's channel 1 at half, memory fader 1 was unmatched (its
+  bump LED blinking) and memory 1 stayed dark; the PC's drag moved nothing until it reached zero.
+10:01:39 s1 d channel 1 after round trip = "half as before"
+10:12:51 s2 d channel 1 after round trip = "half as before"
+  Reading: channel 1 kept its PC level through memory mode and back, in both passes.
+10:14:04 end positions = "as they were on the start"
+10:14:18 after-session save: SHOW27.ASC (copied; byte-identical to SHOW26.ASC: no show data changed).
+
+--- Statement 1 (chat, 2026-11-02, after the session; verbatim) ---
+"Done."
+Then, while the capture was being processed: "Buttons/Bumps SOLO and BLACKOUT in inactive state does not looks the same as
+all other buttons/bumps in inactive state."
+Reading: the session ran to its end with no deviation reported; the second sentence is UI feedback (SOLO and BLACKOUT had
+their own face colours, so their dimmed look differed from the other keys'), applied the same day: SOLO, BLACKOUT, IND 1
+and IND 2 now use the shared key face with the console's key colour, like the FADERS and record keys.

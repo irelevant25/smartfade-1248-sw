@@ -1,0 +1,464 @@
+2026-11-02 09:47:35.737 START guided E9d session (PC clock, local time)
+2026-11-02 09:48:04.980 backup taken: SHOW26.ASC (copy it into smartfade-sd-card-backup/ after the session)
+2026-11-02 09:48:09.565 owner answer: console powered off since e9c = y
+2026-11-02 09:48:35.035 owner answer: rig today = 12 channels light on address 5
+2026-11-02 09:48:35.140 memory integrity: off
+2026-11-02 09:48:36.031 interface 1 driver service: ETCHSP (ETC's driver)
+2026-11-02 09:48:36.035 usbpcap file name suggested to the owner: e9d-20261102-0948.pcap
+2026-11-02 09:48:51.181 usbpcap running (owner)
+2026-11-02 09:49:04.157 starting position set (owner)
+2026-11-02 09:49:33.788 owner answer: page 1 recorded memories = 1, 2, 3, 4, 5, 6, 7, 8, 13, 21
+2026-11-02 09:49:35.710 smartsoft start #1 (Start-Process by the script)
+2026-11-02 09:50:14.901 smartsoft online #1 (owner)
+2026-11-02 09:51:14.920 wait 60 s done (baseline: SmartSoft online, nothing touched (the System pair and the download))
+2026-11-02 09:51:32.476 s1 simulator opened
+2026-11-02 09:51:47.492 wait 15 s done (s1 simulator open, untouched)
+2026-11-02 09:51:58.614 s1 a sim fader 1 half and back
+2026-11-02 09:52:00.617 wait 2 s done (s1 after fader 1)
+2026-11-02 09:52:07.178 s1 a sim fader 2 half and back
+2026-11-02 09:52:09.182 wait 2 s done (s1 after fader 2)
+2026-11-02 09:52:13.429 s1 a sim fader 3 half and back
+2026-11-02 09:52:15.441 wait 2 s done (s1 after fader 3)
+2026-11-02 09:52:18.138 s1 a sim fader 4 half and back
+2026-11-02 09:52:20.145 wait 2 s done (s1 after fader 4)
+2026-11-02 09:52:25.135 s1 a sim fader 5 half and back
+2026-11-02 09:52:27.150 wait 2 s done (s1 after fader 5)
+2026-11-02 09:52:32.070 s1 a sim fader 6 half and back
+2026-11-02 09:52:34.079 wait 2 s done (s1 after fader 6)
+2026-11-02 09:52:37.551 s1 a sim fader 7 half and back
+2026-11-02 09:52:39.557 wait 2 s done (s1 after fader 7)
+2026-11-02 09:52:42.488 s1 a sim fader 8 half and back
+2026-11-02 09:52:44.498 wait 2 s done (s1 after fader 8)
+2026-11-02 09:52:46.767 s1 a sim fader 9 half and back
+2026-11-02 09:52:48.780 wait 2 s done (s1 after fader 9)
+2026-11-02 09:52:51.218 s1 a sim fader 10 half and back
+2026-11-02 09:52:53.227 wait 2 s done (s1 after fader 10)
+2026-11-02 09:52:55.099 s1 a sim fader 11 half and back
+2026-11-02 09:52:57.104 wait 2 s done (s1 after fader 11)
+2026-11-02 09:53:00.520 s1 a sim fader 12 half and back
+2026-11-02 09:53:02.532 wait 2 s done (s1 after fader 12)
+2026-11-02 09:53:03.973 s1 a sim fader 13 half and back
+2026-11-02 09:53:05.977 wait 2 s done (s1 after fader 13)
+2026-11-02 09:53:07.452 s1 a sim fader 14 half and back
+2026-11-02 09:53:09.455 wait 2 s done (s1 after fader 14)
+2026-11-02 09:53:11.474 s1 a sim fader 15 half and back
+2026-11-02 09:53:13.484 wait 2 s done (s1 after fader 15)
+2026-11-02 09:53:17.352 s1 a sim fader 16 half and back
+2026-11-02 09:53:19.368 wait 2 s done (s1 after fader 16)
+2026-11-02 09:53:21.317 s1 a sim fader 17 half and back
+2026-11-02 09:53:23.327 wait 2 s done (s1 after fader 17)
+2026-11-02 09:53:25.055 s1 a sim fader 18 half and back
+2026-11-02 09:53:27.070 wait 2 s done (s1 after fader 18)
+2026-11-02 09:53:28.562 s1 a sim fader 19 half and back
+2026-11-02 09:53:30.567 wait 2 s done (s1 after fader 19)
+2026-11-02 09:53:32.472 s1 a sim fader 20 half and back
+2026-11-02 09:53:34.475 wait 2 s done (s1 after fader 20)
+2026-11-02 09:53:35.665 s1 a sim fader 21 half and back
+2026-11-02 09:53:37.672 wait 2 s done (s1 after fader 21)
+2026-11-02 09:53:38.715 s1 a sim fader 22 half and back
+2026-11-02 09:53:40.721 wait 2 s done (s1 after fader 22)
+2026-11-02 09:53:41.794 s1 a sim fader 23 half and back
+2026-11-02 09:53:43.807 wait 2 s done (s1 after fader 23)
+2026-11-02 09:53:45.104 s1 a sim fader 24 half and back
+2026-11-02 09:53:47.110 wait 2 s done (s1 after fader 24)
+2026-11-02 09:53:52.117 wait 5 s done (s1 after part A)
+2026-11-02 09:54:03.020 s1 b sim faders 25-48
+2026-11-02 09:54:08.033 wait 5 s done (s1 b bank 25-48)
+2026-11-02 09:54:24.861 s1 b sim fader labelled 25 half and back
+2026-11-02 09:54:26.873 wait 2 s done (s1 after fader labelled 25)
+2026-11-02 09:54:28.455 s1 b sim fader labelled 26 half and back
+2026-11-02 09:54:30.465 wait 2 s done (s1 after fader labelled 26)
+2026-11-02 09:54:32.106 s1 b sim fader labelled 27 half and back
+2026-11-02 09:54:34.120 wait 2 s done (s1 after fader labelled 27)
+2026-11-02 09:54:36.329 s1 b sim fader labelled 28 half and back
+2026-11-02 09:54:38.348 wait 2 s done (s1 after fader labelled 28)
+2026-11-02 09:54:40.953 s1 b sim fader labelled 29 half and back
+2026-11-02 09:54:42.970 wait 2 s done (s1 after fader labelled 29)
+2026-11-02 09:54:44.719 s1 b sim fader labelled 30 half and back
+2026-11-02 09:54:46.723 wait 2 s done (s1 after fader labelled 30)
+2026-11-02 09:54:48.600 s1 b sim fader labelled 31 half and back
+2026-11-02 09:54:50.606 wait 2 s done (s1 after fader labelled 31)
+2026-11-02 09:54:52.481 s1 b sim fader labelled 32 half and back
+2026-11-02 09:54:54.494 wait 2 s done (s1 after fader labelled 32)
+2026-11-02 09:54:57.275 s1 b sim fader labelled 33 half and back
+2026-11-02 09:54:59.288 wait 2 s done (s1 after fader labelled 33)
+2026-11-02 09:55:01.099 s1 b sim fader labelled 34 half and back
+2026-11-02 09:55:03.108 wait 2 s done (s1 after fader labelled 34)
+2026-11-02 09:55:04.978 s1 b sim fader labelled 35 half and back
+2026-11-02 09:55:06.986 wait 2 s done (s1 after fader labelled 35)
+2026-11-02 09:55:09.029 s1 b sim fader labelled 36 half and back
+2026-11-02 09:55:11.032 wait 2 s done (s1 after fader labelled 36)
+2026-11-02 09:55:13.424 s1 b sim fader labelled 37 half and back
+2026-11-02 09:55:15.429 wait 2 s done (s1 after fader labelled 37)
+2026-11-02 09:55:16.761 s1 b sim fader labelled 38 half and back
+2026-11-02 09:55:18.765 wait 2 s done (s1 after fader labelled 38)
+2026-11-02 09:55:19.899 s1 b sim fader labelled 39 half and back
+2026-11-02 09:55:21.914 wait 2 s done (s1 after fader labelled 39)
+2026-11-02 09:55:22.866 s1 b sim fader labelled 40 half and back
+2026-11-02 09:55:24.877 wait 2 s done (s1 after fader labelled 40)
+2026-11-02 09:55:26.090 s1 b sim fader labelled 41 half and back
+2026-11-02 09:55:28.099 wait 2 s done (s1 after fader labelled 41)
+2026-11-02 09:55:29.200 s1 b sim fader labelled 42 half and back
+2026-11-02 09:55:31.212 wait 2 s done (s1 after fader labelled 42)
+2026-11-02 09:55:32.338 s1 b sim fader labelled 43 half and back
+2026-11-02 09:55:34.346 wait 2 s done (s1 after fader labelled 43)
+2026-11-02 09:55:36.105 s1 b sim fader labelled 44 half and back
+2026-11-02 09:55:38.114 wait 2 s done (s1 after fader labelled 44)
+2026-11-02 09:55:40.185 s1 b sim fader labelled 45 half and back
+2026-11-02 09:55:42.192 wait 2 s done (s1 after fader labelled 45)
+2026-11-02 09:55:43.781 s1 b sim fader labelled 46 half and back
+2026-11-02 09:55:45.793 wait 2 s done (s1 after fader labelled 46)
+2026-11-02 09:55:47.405 s1 b sim fader labelled 47 half and back
+2026-11-02 09:55:49.414 wait 2 s done (s1 after fader labelled 47)
+2026-11-02 09:55:50.285 s1 b sim fader labelled 48 half and back
+2026-11-02 09:55:52.288 wait 2 s done (s1 after fader labelled 48)
+2026-11-02 09:55:59.878 s1 b sim bump labelled 25 held 2 s
+2026-11-02 09:56:04.894 wait 5 s done (s1 after b bump)
+2026-11-02 09:56:08.586 s1 b sim faders 1-24
+2026-11-02 09:56:13.600 wait 5 s done (s1 after part B)
+2026-11-02 09:56:27.175 s1 c sim faders mems
+2026-11-02 09:56:32.188 wait 5 s done (s1 c memory mode)
+2026-11-02 09:56:41.193 s1 c sim memory fader 1 half and back
+2026-11-02 09:56:43.201 wait 2 s done (s1 after memory fader 1)
+2026-11-02 09:56:45.331 s1 c sim memory fader 2 half and back
+2026-11-02 09:56:47.337 wait 2 s done (s1 after memory fader 2)
+2026-11-02 09:56:49.095 s1 c sim memory fader 3 half and back
+2026-11-02 09:56:51.100 wait 2 s done (s1 after memory fader 3)
+2026-11-02 09:56:54.518 s1 c sim memory fader 4 half and back
+2026-11-02 09:56:56.525 wait 2 s done (s1 after memory fader 4)
+2026-11-02 09:56:59.111 s1 c sim memory fader 5 half and back
+2026-11-02 09:57:01.128 wait 2 s done (s1 after memory fader 5)
+2026-11-02 09:57:03.648 s1 c sim memory fader 6 half and back
+2026-11-02 09:57:05.651 wait 2 s done (s1 after memory fader 6)
+2026-11-02 09:57:07.498 s1 c sim memory fader 7 half and back
+2026-11-02 09:57:09.514 wait 2 s done (s1 after memory fader 7)
+2026-11-02 09:57:11.177 s1 c sim memory fader 8 half and back
+2026-11-02 09:57:13.185 wait 2 s done (s1 after memory fader 8)
+2026-11-02 09:57:14.685 s1 c sim memory fader 9 half and back
+2026-11-02 09:57:16.700 wait 2 s done (s1 after memory fader 9)
+2026-11-02 09:57:18.250 s1 c sim memory fader 10 half and back
+2026-11-02 09:57:20.257 wait 2 s done (s1 after memory fader 10)
+2026-11-02 09:57:21.558 s1 c sim memory fader 11 half and back
+2026-11-02 09:57:23.560 wait 2 s done (s1 after memory fader 11)
+2026-11-02 09:57:24.752 s1 c sim memory fader 12 half and back
+2026-11-02 09:57:26.757 wait 2 s done (s1 after memory fader 12)
+2026-11-02 09:57:30.574 s1 c sim memory fader 13 half and back
+2026-11-02 09:57:32.587 wait 2 s done (s1 after memory fader 13)
+2026-11-02 09:57:33.682 s1 c sim memory fader 14 half and back
+2026-11-02 09:57:35.697 wait 2 s done (s1 after memory fader 14)
+2026-11-02 09:57:36.449 s1 c sim memory fader 15 half and back
+2026-11-02 09:57:38.456 wait 2 s done (s1 after memory fader 15)
+2026-11-02 09:57:39.414 s1 c sim memory fader 16 half and back
+2026-11-02 09:57:41.423 wait 2 s done (s1 after memory fader 16)
+2026-11-02 09:57:42.380 s1 c sim memory fader 17 half and back
+2026-11-02 09:57:44.385 wait 2 s done (s1 after memory fader 17)
+2026-11-02 09:57:45.747 s1 c sim memory fader 18 half and back
+2026-11-02 09:57:47.750 wait 2 s done (s1 after memory fader 18)
+2026-11-02 09:57:48.685 s1 c sim memory fader 19 half and back
+2026-11-02 09:57:50.699 wait 2 s done (s1 after memory fader 19)
+2026-11-02 09:57:52.564 s1 c sim memory fader 20 half and back
+2026-11-02 09:57:54.581 wait 2 s done (s1 after memory fader 20)
+2026-11-02 09:57:55.559 s1 c sim memory fader 21 half and back
+2026-11-02 09:57:57.565 wait 2 s done (s1 after memory fader 21)
+2026-11-02 09:57:59.497 s1 c sim memory fader 22 half and back
+2026-11-02 09:58:01.510 wait 2 s done (s1 after memory fader 22)
+2026-11-02 09:58:03.519 s1 c sim memory fader 23 half and back
+2026-11-02 09:58:05.534 wait 2 s done (s1 after memory fader 23)
+2026-11-02 09:58:06.886 s1 c sim memory fader 24 half and back
+2026-11-02 09:58:08.888 wait 2 s done (s1 after memory fader 24)
+2026-11-02 09:58:13.965 s1 c sim memory bump 1 held 1 s
+2026-11-02 09:58:15.978 wait 2 s done (s1 after memory bump 1)
+2026-11-02 09:58:19.474 s1 c sim memory bump 2 held 1 s
+2026-11-02 09:58:21.480 wait 2 s done (s1 after memory bump 2)
+2026-11-02 09:58:23.011 s1 c sim memory bump 3 held 1 s
+2026-11-02 09:58:25.024 wait 2 s done (s1 after memory bump 3)
+2026-11-02 09:58:28.518 s1 c sim memory bump 4 held 1 s
+2026-11-02 09:58:30.536 wait 2 s done (s1 after memory bump 4)
+2026-11-02 09:58:32.570 s1 c sim memory bump 5 held 1 s
+2026-11-02 09:58:34.579 wait 2 s done (s1 after memory bump 5)
+2026-11-02 09:58:36.052 s1 c sim memory bump 6 held 1 s
+2026-11-02 09:58:38.054 wait 2 s done (s1 after memory bump 6)
+2026-11-02 09:58:40.193 s1 c sim memory bump 7 held 1 s
+2026-11-02 09:58:42.198 wait 2 s done (s1 after memory bump 7)
+2026-11-02 09:58:43.160 s1 c sim memory bump 8 held 1 s
+2026-11-02 09:58:45.163 wait 2 s done (s1 after memory bump 8)
+2026-11-02 09:58:46.212 s1 c sim memory bump 9 held 1 s
+2026-11-02 09:58:48.227 wait 2 s done (s1 after memory bump 9)
+2026-11-02 09:58:49.405 s1 c sim memory bump 10 held 1 s
+2026-11-02 09:58:51.408 wait 2 s done (s1 after memory bump 10)
+2026-11-02 09:58:52.571 s1 c sim memory bump 11 held 1 s
+2026-11-02 09:58:54.579 wait 2 s done (s1 after memory bump 11)
+2026-11-02 09:58:56.109 s1 c sim memory bump 12 held 1 s
+2026-11-02 09:58:58.127 wait 2 s done (s1 after memory bump 12)
+2026-11-02 09:58:59.504 s1 c sim memory bump 13 held 1 s
+2026-11-02 09:59:01.515 wait 2 s done (s1 after memory bump 13)
+2026-11-02 09:59:02.640 s1 c sim memory bump 14 held 1 s
+2026-11-02 09:59:04.657 wait 2 s done (s1 after memory bump 14)
+2026-11-02 09:59:05.977 s1 c sim memory bump 15 held 1 s
+2026-11-02 09:59:07.991 wait 2 s done (s1 after memory bump 15)
+2026-11-02 09:59:09.314 s1 c sim memory bump 16 held 1 s
+2026-11-02 09:59:11.326 wait 2 s done (s1 after memory bump 16)
+2026-11-02 09:59:12.368 s1 c sim memory bump 17 held 1 s
+2026-11-02 09:59:14.383 wait 2 s done (s1 after memory bump 17)
+2026-11-02 09:59:15.408 s1 c sim memory bump 18 held 1 s
+2026-11-02 09:59:17.424 wait 2 s done (s1 after memory bump 18)
+2026-11-02 09:59:18.417 s1 c sim memory bump 19 held 1 s
+2026-11-02 09:59:20.435 wait 2 s done (s1 after memory bump 19)
+2026-11-02 09:59:21.544 s1 c sim memory bump 20 held 1 s
+2026-11-02 09:59:23.554 wait 2 s done (s1 after memory bump 20)
+2026-11-02 09:59:24.497 s1 c sim memory bump 21 held 1 s
+2026-11-02 09:59:26.505 wait 2 s done (s1 after memory bump 21)
+2026-11-02 09:59:28.663 s1 c sim memory bump 22 held 1 s
+2026-11-02 09:59:30.666 wait 2 s done (s1 after memory bump 22)
+2026-11-02 09:59:32.187 s1 c sim memory bump 23 held 1 s
+2026-11-02 09:59:34.191 wait 2 s done (s1 after memory bump 23)
+2026-11-02 09:59:35.256 s1 c sim memory bump 24 held 1 s
+2026-11-02 09:59:37.260 wait 2 s done (s1 after memory bump 24)
+2026-11-02 09:59:39.793 s1 c sim faders 1-24
+2026-11-02 09:59:44.799 wait 5 s done (s1 after part C)
+2026-11-02 10:00:00.123 s1 d sim bump 7 held 5 s
+2026-11-02 10:00:05.126 wait 5 s done (s1 after d bump 7)
+2026-11-02 10:00:17.828 s1 d sim fader 1 half, left
+2026-11-02 10:00:22.829 wait 5 s done (s1 d channel 1 at half from the PC)
+2026-11-02 10:00:38.753 s1 d sim faders mems with pc level
+2026-11-02 10:00:43.766 wait 5 s done (s1 d memory mode with pc level)
+2026-11-02 10:01:10.315 owner answer: s1 d memory fader 1 after switch = blinking, and no light from memory 1
+2026-11-02 10:01:15.962 s1 d sim memory fader 1 full and zero
+2026-11-02 10:01:20.965 wait 5 s done (s1 after d memory fader 1)
+2026-11-02 10:01:26.013 s1 d sim faders 1-24 back
+2026-11-02 10:01:31.025 wait 5 s done (s1 d channel mode again)
+2026-11-02 10:01:39.771 owner answer: s1 d channel 1 after round trip = half as before
+2026-11-02 10:01:43.417 s1 d sim fader 1 full and zero cleanup
+2026-11-02 10:01:53.423 wait 10 s done (s1 after part D)
+2026-11-02 10:02:03.207 smartsoft close #1 start
+2026-11-02 10:02:07.632 smartsoft closed #1
+2026-11-02 10:02:17.637 wait 10 s done (between sessions 1 and 2)
+2026-11-02 10:02:19.574 smartsoft start #2 (Start-Process by the script)
+2026-11-02 10:02:32.995 smartsoft online #2 (owner)
+2026-11-02 10:03:02.999 wait 30 s done (session 2 download)
+2026-11-02 10:03:08.944 s2 simulator opened
+2026-11-02 10:03:23.950 wait 15 s done (s2 simulator open, untouched)
+2026-11-02 10:03:40.596 s2 a sim fader 1 half and back
+2026-11-02 10:03:42.603 wait 2 s done (s2 after fader 1)
+2026-11-02 10:03:50.197 s2 a sim fader 2 half and back
+2026-11-02 10:03:52.213 wait 2 s done (s2 after fader 2)
+2026-11-02 10:03:53.992 s2 a sim fader 3 half and back
+2026-11-02 10:03:55.995 wait 2 s done (s2 after fader 3)
+2026-11-02 10:03:57.845 s2 a sim fader 4 half and back
+2026-11-02 10:03:59.850 wait 2 s done (s2 after fader 4)
+2026-11-02 10:04:01.468 s2 a sim fader 5 half and back
+2026-11-02 10:04:03.479 wait 2 s done (s2 after fader 5)
+2026-11-02 10:04:06.206 s2 a sim fader 6 half and back
+2026-11-02 10:04:08.222 wait 2 s done (s2 after fader 6)
+2026-11-02 10:04:09.945 s2 a sim fader 7 half and back
+2026-11-02 10:04:11.950 wait 2 s done (s2 after fader 7)
+2026-11-02 10:04:13.596 s2 a sim fader 8 half and back
+2026-11-02 10:04:15.601 wait 2 s done (s2 after fader 8)
+2026-11-02 10:04:17.334 s2 a sim fader 9 half and back
+2026-11-02 10:04:19.348 wait 2 s done (s2 after fader 9)
+2026-11-02 10:04:20.815 s2 a sim fader 10 half and back
+2026-11-02 10:04:22.823 wait 2 s done (s2 after fader 10)
+2026-11-02 10:04:24.297 s2 a sim fader 11 half and back
+2026-11-02 10:04:26.304 wait 2 s done (s2 after fader 11)
+2026-11-02 10:04:27.777 s2 a sim fader 12 half and back
+2026-11-02 10:04:29.780 wait 2 s done (s2 after fader 12)
+2026-11-02 10:04:31.402 s2 a sim fader 13 half and back
+2026-11-02 10:04:33.405 wait 2 s done (s2 after fader 13)
+2026-11-02 10:04:34.739 s2 a sim fader 14 half and back
+2026-11-02 10:04:36.755 wait 2 s done (s2 after fader 14)
+2026-11-02 10:04:37.763 s2 a sim fader 15 half and back
+2026-11-02 10:04:39.770 wait 2 s done (s2 after fader 15)
+2026-11-02 10:04:40.988 s2 a sim fader 16 half and back
+2026-11-02 10:04:43.000 wait 2 s done (s2 after fader 16)
+2026-11-02 10:04:46.667 s2 a sim fader 17 half and back
+2026-11-02 10:04:48.683 wait 2 s done (s2 after fader 17)
+2026-11-02 10:04:50.404 s2 a sim fader 18 half and back
+2026-11-02 10:04:52.407 wait 2 s done (s2 after fader 18)
+2026-11-02 10:04:59.144 s2 a sim fader 19 half and back
+2026-11-02 10:05:01.157 wait 2 s done (s2 after fader 19)
+2026-11-02 10:05:02.511 s2 a sim fader 20 half and back
+2026-11-02 10:05:04.520 wait 2 s done (s2 after fader 20)
+2026-11-02 10:05:05.707 s2 a sim fader 21 half and back
+2026-11-02 10:05:07.713 wait 2 s done (s2 after fader 21)
+2026-11-02 10:05:08.904 s2 a sim fader 22 half and back
+2026-11-02 10:05:10.916 wait 2 s done (s2 after fader 22)
+2026-11-02 10:05:12.270 s2 a sim fader 23 half and back
+2026-11-02 10:05:14.272 wait 2 s done (s2 after fader 23)
+2026-11-02 10:05:15.238 s2 a sim fader 24 half and back
+2026-11-02 10:05:17.253 wait 2 s done (s2 after fader 24)
+2026-11-02 10:05:22.260 wait 5 s done (s2 after part A)
+2026-11-02 10:05:27.976 s2 b sim faders 25-48
+2026-11-02 10:05:32.992 wait 5 s done (s2 b bank 25-48)
+2026-11-02 10:05:37.829 s2 b sim fader labelled 25 half and back
+2026-11-02 10:05:39.845 wait 2 s done (s2 after fader labelled 25)
+2026-11-02 10:05:44.883 s2 b sim fader labelled 26 half and back
+2026-11-02 10:05:46.900 wait 2 s done (s2 after fader labelled 26)
+2026-11-02 10:05:48.879 s2 b sim fader labelled 27 half and back
+2026-11-02 10:05:50.890 wait 2 s done (s2 after fader labelled 27)
+2026-11-02 10:05:52.217 s2 b sim fader labelled 28 half and back
+2026-11-02 10:05:54.222 wait 2 s done (s2 after fader labelled 28)
+2026-11-02 10:05:55.468 s2 b sim fader labelled 29 half and back
+2026-11-02 10:05:57.477 wait 2 s done (s2 after fader labelled 29)
+2026-11-02 10:06:00.691 s2 b sim fader labelled 30 half and back
+2026-11-02 10:06:02.694 wait 2 s done (s2 after fader labelled 30)
+2026-11-02 10:06:04.886 s2 b sim fader labelled 31 half and back
+2026-11-02 10:06:06.889 wait 2 s done (s2 after fader labelled 31)
+2026-11-02 10:06:08.280 s2 b sim fader labelled 32 half and back
+2026-11-02 10:06:10.289 wait 2 s done (s2 after fader labelled 32)
+2026-11-02 10:06:17.133 s2 b sim fader labelled 33 half and back
+2026-11-02 10:06:19.146 wait 2 s done (s2 after fader labelled 33)
+2026-11-02 10:06:20.529 s2 b sim fader labelled 34 half and back
+2026-11-02 10:06:22.537 wait 2 s done (s2 after fader labelled 34)
+2026-11-02 10:06:24.382 s2 b sim fader labelled 35 half and back
+2026-11-02 10:06:26.395 wait 2 s done (s2 after fader labelled 35)
+2026-11-02 10:06:28.107 s2 b sim fader labelled 36 half and back
+2026-11-02 10:06:30.119 wait 2 s done (s2 after fader labelled 36)
+2026-11-02 10:06:32.072 s2 b sim fader labelled 37 half and back
+2026-11-02 10:06:34.088 wait 2 s done (s2 after fader labelled 37)
+2026-11-02 10:06:37.596 s2 b sim fader labelled 38 half and back
+2026-11-02 10:06:39.600 wait 2 s done (s2 after fader labelled 38)
+2026-11-02 10:06:41.150 s2 b sim fader labelled 39 half and back
+2026-11-02 10:06:43.160 wait 2 s done (s2 after fader labelled 39)
+2026-11-02 10:06:44.561 s2 b sim fader labelled 40 half and back
+2026-11-02 10:06:46.563 wait 2 s done (s2 after fader labelled 40)
+2026-11-02 10:06:48.296 s2 b sim fader labelled 41 half and back
+2026-11-02 10:06:50.310 wait 2 s done (s2 after fader labelled 41)
+2026-11-02 10:06:56.147 s2 b sim fader labelled 42 half and back
+2026-11-02 10:06:58.163 wait 2 s done (s2 after fader labelled 42)
+2026-11-02 10:06:59.843 s2 b sim fader labelled 43 half and back
+2026-11-02 10:07:01.851 wait 2 s done (s2 after fader labelled 43)
+2026-11-02 10:07:03.768 s2 b sim fader labelled 44 half and back
+2026-11-02 10:07:05.771 wait 2 s done (s2 after fader labelled 44)
+2026-11-02 10:07:07.407 s2 b sim fader labelled 45 half and back
+2026-11-02 10:07:09.425 wait 2 s done (s2 after fader labelled 45)
+2026-11-02 10:07:11.190 s2 b sim fader labelled 46 half and back
+2026-11-02 10:07:13.192 wait 2 s done (s2 after fader labelled 46)
+2026-11-02 10:07:15.057 s2 b sim fader labelled 47 half and back
+2026-11-02 10:07:17.074 wait 2 s done (s2 after fader labelled 47)
+2026-11-02 10:07:18.412 s2 b sim fader labelled 48 half and back
+2026-11-02 10:07:20.415 wait 2 s done (s2 after fader labelled 48)
+2026-11-02 10:07:24.347 s2 b sim bump labelled 25 held 2 s
+2026-11-02 10:07:29.355 wait 5 s done (s2 after b bump)
+2026-11-02 10:07:31.628 s2 b sim faders 1-24
+2026-11-02 10:07:36.639 wait 5 s done (s2 after part B)
+2026-11-02 10:07:39.907 s2 c sim faders mems
+2026-11-02 10:07:44.923 wait 5 s done (s2 c memory mode)
+2026-11-02 10:07:55.936 s2 c sim memory fader 1 half and back
+2026-11-02 10:07:57.952 wait 2 s done (s2 after memory fader 1)
+2026-11-02 10:07:59.528 s2 c sim memory fader 2 half and back
+2026-11-02 10:08:01.541 wait 2 s done (s2 after memory fader 2)
+2026-11-02 10:08:03.224 s2 c sim memory fader 3 half and back
+2026-11-02 10:08:05.241 wait 2 s done (s2 after memory fader 3)
+2026-11-02 10:08:07.721 s2 c sim memory fader 4 half and back
+2026-11-02 10:08:09.739 wait 2 s done (s2 after memory fader 4)
+2026-11-02 10:08:11.160 s2 c sim memory fader 5 half and back
+2026-11-02 10:08:13.167 wait 2 s done (s2 after memory fader 5)
+2026-11-02 10:08:14.372 s2 c sim memory fader 6 half and back
+2026-11-02 10:08:16.377 wait 2 s done (s2 after memory fader 6)
+2026-11-02 10:08:17.439 s2 c sim memory fader 7 half and back
+2026-11-02 10:08:19.452 wait 2 s done (s2 after memory fader 7)
+2026-11-02 10:08:20.738 s2 c sim memory fader 8 half and back
+2026-11-02 10:08:22.749 wait 2 s done (s2 after memory fader 8)
+2026-11-02 10:08:23.920 s2 c sim memory fader 9 half and back
+2026-11-02 10:08:25.935 wait 2 s done (s2 after memory fader 9)
+2026-11-02 10:08:27.503 s2 c sim memory fader 10 half and back
+2026-11-02 10:08:29.510 wait 2 s done (s2 after memory fader 10)
+2026-11-02 10:08:30.399 s2 c sim memory fader 11 half and back
+2026-11-02 10:08:32.414 wait 2 s done (s2 after memory fader 11)
+2026-11-02 10:08:33.411 s2 c sim memory fader 12 half and back
+2026-11-02 10:08:35.427 wait 2 s done (s2 after memory fader 12)
+2026-11-02 10:08:36.393 s2 c sim memory fader 13 half and back
+2026-11-02 10:08:38.408 wait 2 s done (s2 after memory fader 13)
+2026-11-02 10:08:39.319 s2 c sim memory fader 14 half and back
+2026-11-02 10:08:41.323 wait 2 s done (s2 after memory fader 14)
+2026-11-02 10:08:42.074 s2 c sim memory fader 15 half and back
+2026-11-02 10:08:44.086 wait 2 s done (s2 after memory fader 15)
+2026-11-02 10:08:45.627 s2 c sim memory fader 16 half and back
+2026-11-02 10:08:47.636 wait 2 s done (s2 after memory fader 16)
+2026-11-02 10:08:48.669 s2 c sim memory fader 17 half and back
+2026-11-02 10:08:50.679 wait 2 s done (s2 after memory fader 17)
+2026-11-02 10:08:54.851 s2 c sim memory fader 18 half and back
+2026-11-02 10:08:56.863 wait 2 s done (s2 after memory fader 18)
+2026-11-02 10:08:57.949 s2 c sim memory fader 19 half and back
+2026-11-02 10:08:59.966 wait 2 s done (s2 after memory fader 19)
+2026-11-02 10:09:01.133 s2 c sim memory fader 20 half and back
+2026-11-02 10:09:03.141 wait 2 s done (s2 after memory fader 20)
+2026-11-02 10:09:04.430 s2 c sim memory fader 21 half and back
+2026-11-02 10:09:06.433 wait 2 s done (s2 after memory fader 21)
+2026-11-02 10:09:07.824 s2 c sim memory fader 22 half and back
+2026-11-02 10:09:09.830 wait 2 s done (s2 after memory fader 22)
+2026-11-02 10:09:11.534 s2 c sim memory fader 23 half and back
+2026-11-02 10:09:13.547 wait 2 s done (s2 after memory fader 23)
+2026-11-02 10:09:14.458 s2 c sim memory fader 24 half and back
+2026-11-02 10:09:16.471 wait 2 s done (s2 after memory fader 24)
+2026-11-02 10:09:19.051 s2 c sim memory bump 1 held 1 s
+2026-11-02 10:09:21.058 wait 2 s done (s2 after memory bump 1)
+2026-11-02 10:09:23.561 s2 c sim memory bump 2 held 1 s
+2026-11-02 10:09:25.569 wait 2 s done (s2 after memory bump 2)
+2026-11-02 10:09:27.173 s2 c sim memory bump 3 held 1 s
+2026-11-02 10:09:29.186 wait 2 s done (s2 after memory bump 3)
+2026-11-02 10:09:30.186 s2 c sim memory bump 4 held 1 s
+2026-11-02 10:09:32.191 wait 2 s done (s2 after memory bump 4)
+2026-11-02 10:09:35.141 s2 c sim memory bump 5 held 1 s
+2026-11-02 10:09:37.152 wait 2 s done (s2 after memory bump 5)
+2026-11-02 10:09:38.135 s2 c sim memory bump 6 held 1 s
+2026-11-02 10:09:40.146 wait 2 s done (s2 after memory bump 6)
+2026-11-02 10:09:41.003 s2 c sim memory bump 7 held 1 s
+2026-11-02 10:09:43.011 wait 2 s done (s2 after memory bump 7)
+2026-11-02 10:09:44.100 s2 c sim memory bump 8 held 1 s
+2026-11-02 10:09:46.114 wait 2 s done (s2 after memory bump 8)
+2026-11-02 10:09:47.368 s2 c sim memory bump 9 held 1 s
+2026-11-02 10:09:49.383 wait 2 s done (s2 after memory bump 9)
+2026-11-02 10:09:50.380 s2 c sim memory bump 10 held 1 s
+2026-11-02 10:09:52.388 wait 2 s done (s2 after memory bump 10)
+2026-11-02 10:09:53.391 s2 c sim memory bump 11 held 1 s
+2026-11-02 10:09:55.407 wait 2 s done (s2 after memory bump 11)
+2026-11-02 10:09:57.230 s2 c sim memory bump 12 held 1 s
+2026-11-02 10:09:59.242 wait 2 s done (s2 after memory bump 12)
+2026-11-02 10:10:00.413 s2 c sim memory bump 13 held 1 s
+2026-11-02 10:10:02.425 wait 2 s done (s2 after memory bump 13)
+2026-11-02 10:10:03.626 s2 c sim memory bump 14 held 1 s
+2026-11-02 10:10:05.638 wait 2 s done (s2 after memory bump 14)
+2026-11-02 10:10:07.150 s2 c sim memory bump 15 held 1 s
+2026-11-02 10:10:09.162 wait 2 s done (s2 after memory bump 15)
+2026-11-02 10:10:10.048 s2 c sim memory bump 16 held 1 s
+2026-11-02 10:10:12.062 wait 2 s done (s2 after memory bump 16)
+2026-11-02 10:10:12.745 s2 c sim memory bump 17 held 1 s
+2026-11-02 10:10:14.758 wait 2 s done (s2 after memory bump 17)
+2026-11-02 10:10:15.841 s2 c sim memory bump 18 held 1 s
+2026-11-02 10:10:17.857 wait 2 s done (s2 after memory bump 18)
+2026-11-02 10:10:18.882 s2 c sim memory bump 19 held 1 s
+2026-11-02 10:10:20.884 wait 2 s done (s2 after memory bump 19)
+2026-11-02 10:10:22.009 s2 c sim memory bump 20 held 1 s
+2026-11-02 10:10:24.023 wait 2 s done (s2 after memory bump 20)
+2026-11-02 10:10:24.877 s2 c sim memory bump 21 held 1 s
+2026-11-02 10:10:26.891 wait 2 s done (s2 after memory bump 21)
+2026-11-02 10:10:28.404 s2 c sim memory bump 22 held 1 s
+2026-11-02 10:10:30.419 wait 2 s done (s2 after memory bump 22)
+2026-11-02 10:10:31.357 s2 c sim memory bump 23 held 1 s
+2026-11-02 10:10:33.359 wait 2 s done (s2 after memory bump 23)
+2026-11-02 10:10:34.368 s2 c sim memory bump 24 held 1 s
+2026-11-02 10:10:36.383 wait 2 s done (s2 after memory bump 24)
+2026-11-02 10:10:37.992 s2 c sim faders 1-24
+2026-11-02 10:10:43.008 wait 5 s done (s2 after part C)
+2026-11-02 10:10:48.842 s2 d sim bump 7 held 5 s
+2026-11-02 10:10:53.845 wait 5 s done (s2 after d bump 7)
+2026-11-02 10:10:58.408 s2 d sim fader 1 half, left
+2026-11-02 10:11:03.412 wait 5 s done (s2 d channel 1 at half from the PC)
+2026-11-02 10:11:08.373 s2 d sim faders mems with pc level
+2026-11-02 10:11:13.379 wait 5 s done (s2 d memory mode with pc level)
+2026-11-02 10:12:25.451 owner answer: s2 d memory fader 1 after switch = blinking, and no light from memory 1
+2026-11-02 10:12:32.401 s2 d sim memory fader 1 full and zero
+2026-11-02 10:12:37.404 wait 5 s done (s2 after d memory fader 1)
+2026-11-02 10:12:39.366 s2 d sim faders 1-24 back
+2026-11-02 10:12:44.371 wait 5 s done (s2 d channel mode again)
+2026-11-02 10:12:51.396 owner answer: s2 d channel 1 after round trip = half as before
+2026-11-02 10:12:55.813 s2 d sim fader 1 full and zero cleanup
+2026-11-02 10:13:05.823 wait 10 s done (s2 after part D)
+2026-11-02 10:13:35.830 wait 30 s done (end of actions)
+2026-11-02 10:13:38.451 smartsoft close #2 start
+2026-11-02 10:13:42.028 smartsoft closed #2
+2026-11-02 10:13:47.234 usbpcap stopped (owner)
+2026-11-02 10:14:04.810 owner answer: end positions = as they were on the start
+2026-11-02 10:14:18.338 after-session save: SHOW27.ASC (copy it into smartfade-sd-card-backup/ with the backup)
+2026-11-02 10:14:18.340 END guided E9d session
