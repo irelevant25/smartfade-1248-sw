@@ -129,6 +129,13 @@ public sealed class ConsoleService : IDisposable
         return EnqueueAsync("pressFaders1To24", _device.PressFaders1To24Async, cancellationToken);
     }
 
+    /// <summary>FADERS 25-48 as a tap: the physical faders to channel mode, bank 25-48.</summary>
+    public Task PressFaders25To48Async(CancellationToken cancellationToken)
+    {
+        EnsureCommandAllowed(DeviceCommands.PressFaders25To48);
+        return EnqueueAsync("pressFaders25To48", _device.PressFaders25To48Async, cancellationToken);
+    }
+
     /// <summary>Presses (true) or releases (false) the bump button under a channel fader.</summary>
     public Task BumpChannelAsync(int channel, bool pressed, CancellationToken cancellationToken)
     {

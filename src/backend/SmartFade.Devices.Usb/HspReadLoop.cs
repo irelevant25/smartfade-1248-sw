@@ -61,11 +61,33 @@ public sealed class TransferLogException : IOException
 /// release is still sent before the loop ends if no exchange is open (SC-2 condition 4); otherwise
 /// <see cref="ReleaseAfterFault"/> says it could not be.
 /// </para>
+/// <para>
+/// A held bump (SC-5 class B3) is bounded here, on the loop's clock, whatever its owner does: once
+/// <see cref="MaxHold"/> − <see cref="HoldReleaseLead"/> has passed since its press header, the loop asks the session for
+/// its release, which goes at the next write slot (SC-5 condition 2); a release that still went out later than
+/// <see cref="MaxHold"/> after its press is noted in the transfer log as a deviation.
+/// </para>
 /// </summary>
 public sealed class HspReadLoop
 {
     /// <summary>Transfers allowed after a stop request while the session is not idle (E3b's longest list took 157 fetches × 3 transfers).</summary>
     public const int MaxDrainTransfers = 2000;
+
+    /// <summary>
+    /// SC-5 condition 2: the longest a bump stays held from the PC, its press header to its release header. 3 s is the bound
+    /// the SC-5 addendum keeps (every longer hold was a single observation of its length: 4.67 s and 3.42 s in E9d, 3.35 s in
+    /// E9b; each shown and ended cleanly, F174).
+    /// </summary>
+    public static readonly TimeSpan MaxHold = TimeSpan.FromSeconds(3);
+
+    /// <summary>
+    /// How long before <see cref="MaxHold"/> the loop asks for a held bump's release. The release goes at the next write slot,
+    /// which came 46.6–76.7 ms after a press in E11 attempt 3 (OBSERVED: a tap's press to its release, our host, the default
+    /// timings), so the hold ends by about 2.83 s; only a console answering a poll more than about 170 ms late could carry it
+    /// past 3 s (never observed: every reply came within 12 ms up to E12; the reply timeout is 500 ms), and the transfer log
+    /// notes such a hold as a deviation.
+    /// </summary>
+    public static readonly TimeSpan HoldReleaseLead = TimeSpan.FromMilliseconds(250);
 
     private readonly IHspPipe _pipe;
     private readonly UsbDeviceOptions _options;
@@ -75,6 +97,9 @@ public sealed class HspReadLoop
     private long? _lastFetch;
     private long? _lastPayload;
     private long? _lastWrite;
+    private long _lastWriteHeader;
+    private long? _pressHeader;
+    private ClearedKey? _pressedKey;
     private ClearedKey? _releaseInFlight;
     private ClearedKey? _pressInFlight;
 
@@ -188,6 +213,9 @@ public sealed class HspReadLoop
                 }
             }
 
+            // SC-5 condition 2: a held bump's release is asked for at the bound, whatever its owner does.
+            ReleaseHoldAtBound();
+
             // SC-2 condition 5 (review of item 10, major 1): the slot is waited for first, and only then does the session
             // choose, asking the gate and the write's own condition; between their answer and the header nothing waits.
             var expected = Session.PeekNextKind();
@@ -233,6 +261,7 @@ public sealed class HspReadLoop
                     // SC-2 conditions 7 and 8: the header, then its payload, both logged; nothing is read back (F131).
                     // Its slot was met before the session chose it (writeSlotMet), and no transfer has happened since.
                     WriteData(next, pendingRecords);
+                    TrackHold(next.Payload!);
                     continue;
                 }
 
@@ -311,6 +340,7 @@ public sealed class HspReadLoop
         _releaseInFlight = keyEvent && payload[6] == 0x00 ? (ClearedKey)payload[5] : null;
         _pressInFlight = keyEvent && payload[6] == 0x01 ? (ClearedKey)payload[5] : null;
         var started = _clock.GetUtcNow();
+        _lastWriteHeader = _clock.GetTimestamp();
         try
         {
             _pipe.Write(write.Bytes);
@@ -340,6 +370,54 @@ public sealed class HspReadLoop
         _lastWrite = _clock.GetTimestamp();
         _releaseInFlight = null;
         _pressInFlight = null;
+    }
+
+    /// <summary>
+    /// SC-5 condition 2, on the loop's clock: once a key whose press this loop wrote has been held for
+    /// <see cref="MaxHold"/> − <see cref="HoldReleaseLead"/>, its release is asked for (a no-op for a tap, whose release is
+    /// due at once, and for a hold whose release is already due).
+    /// </summary>
+    private void ReleaseHoldAtBound()
+    {
+        if (_pressHeader is not { } pressed || Session.HeldKey is not { } key || key != _pressedKey)
+        {
+            return;
+        }
+
+        var held = _clock.GetElapsedTime(pressed);
+        if (held >= MaxHold - HoldReleaseLead && Session.ReleaseKey(key))
+        {
+            Note($"hold bound: the release of {key} is due {held.TotalMilliseconds:F0} ms after its press (SC-5 condition 2: at most {MaxHold.TotalSeconds:F0} s)");
+        }
+    }
+
+    /// <summary>After a key event went out (F133: kind 1, state 1 press / 0 release): a press starts the hold's clock; a release ends it, noted as a deviation when it came later than <see cref="MaxHold"/>.</summary>
+    private void TrackHold(byte[] payload)
+    {
+        if (payload.Length != 7 || payload[4] != 0x01)
+        {
+            return;
+        }
+
+        var key = (ClearedKey)payload[5];
+        if (payload[6] == 0x01)
+        {
+            _pressHeader = _lastWriteHeader;
+            _pressedKey = key;
+            return;
+        }
+
+        if (_pressHeader is { } pressed && _pressedKey == key)
+        {
+            var held = _clock.GetElapsedTime(pressed, _lastWriteHeader);
+            if (held > MaxHold)
+            {
+                Note($"deviation: {key} was held {held.TotalMilliseconds:F0} ms, beyond the {MaxHold.TotalSeconds:F0} s bound (SC-5 condition 2)");
+            }
+        }
+
+        _pressHeader = null;
+        _pressedKey = null;
     }
 
     /// <summary>Best effort when the session ends with a key held: sends the release when the session allows it, and records the outcome; never throws.</summary>

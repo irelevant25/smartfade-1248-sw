@@ -230,6 +230,9 @@ public sealed class SimulatedSmartFadeDevice : ISmartFadeDevice
     /// <summary>Not modelled, as <see cref="PressFadersMemsAsync"/>.</summary>
     public Task PressFaders1To24Async(CancellationToken cancellationToken) => throw new NotSupportedException("The simulator has no fader mode: its channel and memory faders are separate.");
 
+    /// <summary>Not modelled, as <see cref="PressFadersMemsAsync"/>.</summary>
+    public Task PressFaders25To48Async(CancellationToken cancellationToken) => throw new NotSupportedException("The simulator has no fader mode: its channel and memory faders are separate.");
+
     public Task SetIndependentAsync(int number, bool on, CancellationToken cancellationToken)
     {
         if (number < 1 || number > Capabilities.Independents)

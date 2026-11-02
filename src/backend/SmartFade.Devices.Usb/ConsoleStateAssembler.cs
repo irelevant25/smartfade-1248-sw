@@ -8,11 +8,12 @@ namespace SmartFade.Devices.Usb;
 /// <summary>
 /// The fader mode, bank and memory page as ConsoleStatus last reported them: body[0] = 0x00 channel mode / 0x01 memory
 /// mode (F87, F98), body[4] = 0x00 bank 1-24 / 0x01 bank 25-48 (F98), body[2] = the memory page − 1 (F113, VERIFIED for
-/// the structure, E8 + E8b). The mode and bank bytes are OBSERVED; their readings as mode and bank are HYPOTHESIS,
-/// strongly supported (H53). Used only to refuse (live control keeps each control in the state it was seen in), never
-/// to send.
+/// the structure, E8 + E8b), body[6] = 0x01 while NEXT mode is on (<paramref name="NextMode"/>; F173: toggled by the NEXT
+/// key in E12b and E9c, OBSERVED; null when body[6] is absent or carries a value never seen). The mode and bank bytes are
+/// OBSERVED; their readings as mode and bank are HYPOTHESIS, strongly supported (H53). Used only to refuse (live control
+/// keeps each control in the state it was seen in), never to send.
 /// </summary>
-public sealed record ReportedFaderMode(bool MemoryMode, bool Bank25To48, int MemoryPage);
+public sealed record ReportedFaderMode(bool MemoryMode, bool Bank25To48, int MemoryPage, bool? NextMode = null);
 
 /// <summary>
 /// Turns the objects the console delivers into the application's actual state, for display.
@@ -56,6 +57,8 @@ public sealed class ConsoleStateAssembler
     private bool? _blackoutFromLeds;
     private LedStatusObject? _leds;
     private IndependentStates? _independents;
+    private (KeyLed Ind1, KeyLed Ind2)? _independentLeds;
+    private bool _channelLevelsReported;
     private bool _memoryMode;
     private int _memoryPage = 1;
     private bool _pageReported;
@@ -99,6 +102,27 @@ public sealed class ConsoleStateAssembler
 
     /// <summary>The fader mode, bank and memory page as ConsoleStatus last reported them; null until it has arrived, or when it carried a value never observed.</summary>
     public ReportedFaderMode? FaderMode => _faderMode;
+
+    /// <summary>
+    /// The last FaderInfo delivered in this session, null before: record k byte 0 is physical fader k's post-MASTER level
+    /// (F82, F96, F176), bytes 0 and 1 a memory fader's level in memory mode (F112), byte 3 the page − 1 of the memory that
+    /// fader holds (H69 CONFIRMED, F113). Live control reads it only to choose the level a re-assigned fader is matched at
+    /// and to refuse (SC-5 condition 1 d).
+    /// </summary>
+    public FaderInfoObject? FaderInfo => _faderInfo;
+
+    /// <summary>True once ChannelLevels has been delivered in this session (before that <see cref="ChannelLevels"/> holds placeholders).</summary>
+    public bool ChannelLevelsReported => _channelLevelsReported;
+
+    /// <summary>IND 1 / IND 2 as the Independents object last reported them (record byte 0, F115); null until it has arrived.</summary>
+    public IndependentStates? Independents => _independents;
+
+    /// <summary>
+    /// The LEDs of IND 1 and IND 2, blocks 72 and 73 (F115: `00 0A 00 00 0A 00` off, `00 FF 00 00 FF 00` on; the identities
+    /// INFERRED, H72), read as the other key LEDs; null until LedStatus has arrived. Live control's IND toggles start only
+    /// from a steady LED that agrees with <see cref="Independents"/> (SC-5 class B5).
+    /// </summary>
+    public (KeyLed Ind1, KeyLed Ind2)? IndependentLeds => _independentLeds;
 
     /// <summary>Applies one delivered object; returns the change to report, or null when the object carries nothing the state model holds.</summary>
     public DeviceStateChange? Apply(ObjectReceived received)
@@ -165,6 +189,7 @@ public sealed class ConsoleStateAssembler
 
     private DeviceStateChange ApplyChannelLevels(ChannelLevelsObject levels)
     {
+        _channelLevelsReported = true;
         var changed = new Dictionary<int, byte>();
         for (var channel = 1; channel <= _channelLevels.Length && channel <= levels.Levels.Count; channel++)
         {
@@ -208,6 +233,7 @@ public sealed class ConsoleStateAssembler
         // LED is BLACKOUT's is INFERRED from the owner's account and the manual, F5). Its blink with
         // the MASTER below full (F85) is phase A != phase B and reads as "not active" here.
         _blackoutFromLeds = leds.Block(53) is { R1: 0, G1: 0, B1: 0xFF, R2: 0, G2: 0, B2: 0xFF };
+        _independentLeds = leds.Blocks.Count >= 73 ? (Led(leds.Block(72)), Led(leds.Block(73))) : null;
         return Combine(Combine(ReportMasters(), ReportMemoryFaders()), ReportKeys(leds));
     }
 
@@ -260,9 +286,10 @@ public sealed class ConsoleStateAssembler
         var raw = status.Raw.Span;
         _memoryMode = raw.Length > 0 && raw[0] == 1;
 
-        // Only the values seen (0x00 / 0x01 for mode and bank, F98) make a reading; anything else leaves it unknown.
+        // Only the values seen (0x00 / 0x01 for mode and bank, F98) make a reading; anything else leaves it unknown. NEXT
+        // mode (body[6], F173) likewise: 0x00 / 0x01 or unknown (null), which live control treats as "not off".
         _faderMode = raw.Length > 4 && raw[0] <= 1 && raw[4] <= 1
-            ? new ReportedFaderMode(MemoryMode: raw[0] == 1, Bank25To48: raw[4] == 1, MemoryPage: raw[2] + 1)
+            ? new ReportedFaderMode(MemoryMode: raw[0] == 1, Bank25To48: raw[4] == 1, MemoryPage: raw[2] + 1, NextMode: raw.Length > 6 && raw[6] <= 1 ? raw[6] == 1 : null)
             : null;
 
         // What the physical faders control, for the UI's FADERS keys (F98: memory mode wins over the bank flag,

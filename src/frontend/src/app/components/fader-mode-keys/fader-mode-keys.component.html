@@ -23,8 +23,9 @@
       [class.faders__key--lit]="bank() === 'channels25To48'"
       [class.faders__key--led]="reported()"
       [attr.aria-pressed]="reported() ? bank() === 'channels25To48' : null"
-      disabled
+      [disabled]="!enabled() || !can25To48()"
       [attr.title]="upperTitle()"
+      (click)="press25To48()"
     >
       25-48
     </button>

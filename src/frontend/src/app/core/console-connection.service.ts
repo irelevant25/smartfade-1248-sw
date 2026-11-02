@@ -126,6 +126,10 @@ export class ConsoleConnectionService {
     return this._send('pressFaders1To24');
   }
 
+  sendPressFaders25To48(): Promise<void> {
+    return this._send('pressFaders25To48');
+  }
+
   sendMemoryLevel(page: number, fader: number, level: number): Promise<void> {
     return this._send('setMemoryLevel', page, fader, level);
   }

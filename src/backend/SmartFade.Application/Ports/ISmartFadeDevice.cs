@@ -68,6 +68,9 @@ public interface ISmartFadeDevice
     /// <summary>FADERS 1-24 as a tap: the physical faders to channel mode, bank 1-24. Only a device reporting <see cref="DeviceCommands.PressFaders1To24"/> accepts it.</summary>
     Task PressFaders1To24Async(CancellationToken cancellationToken);
 
+    /// <summary>FADERS 25-48 as a tap: the physical faders to channel mode, bank 25-48. Only a device reporting <see cref="DeviceCommands.PressFaders25To48"/> accepts it.</summary>
+    Task PressFaders25To48Async(CancellationToken cancellationToken);
+
     /// <summary>Moves a memory fader: the playback level of one memory.</summary>
     Task SetMemoryLevelAsync(int page, int fader, byte level, CancellationToken cancellationToken);
 

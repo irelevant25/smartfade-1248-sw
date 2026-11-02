@@ -56,6 +56,7 @@ describe('ChannelService', () => {
   let sendPressGo: Mock<() => Promise<void>>;
   let sendPressFadersMems: Mock<() => Promise<void>>;
   let sendPressFaders1To24: Mock<() => Promise<void>>;
+  let sendPressFaders25To48: Mock<() => Promise<void>>;
   let state: ConsoleStateService;
   let service: ChannelService;
 
@@ -79,6 +80,7 @@ describe('ChannelService', () => {
     sendPressGo = vi.fn().mockResolvedValue(undefined);
     sendPressFadersMems = vi.fn().mockResolvedValue(undefined);
     sendPressFaders1To24 = vi.fn().mockResolvedValue(undefined);
+    sendPressFaders25To48 = vi.fn().mockResolvedValue(undefined);
 
     TestBed.configureTestingModule({
       providers: [
@@ -105,6 +107,7 @@ describe('ChannelService', () => {
             sendPressGo,
             sendPressFadersMems,
             sendPressFaders1To24,
+            sendPressFaders25To48,
           },
         },
       ],
@@ -312,15 +315,17 @@ describe('ChannelService', () => {
     });
   });
 
-  describe('key taps (GO, FADERS MEMS, FADERS 1-24)', () => {
+  describe('key taps (GO, FADERS MEMS, FADERS 1-24, FADERS 25-48)', () => {
     it('sends each tap right away', () => {
       service.pressGo();
       service.pressFadersMems();
       service.pressFaders1To24();
+      service.pressFaders25To48();
 
       expect(sendPressGo).toHaveBeenCalledTimes(1);
       expect(sendPressFadersMems).toHaveBeenCalledTimes(1);
       expect(sendPressFaders1To24).toHaveBeenCalledTimes(1);
+      expect(sendPressFaders25To48).toHaveBeenCalledTimes(1);
       expect(frames.pending).toBe(0);
     });
 
@@ -330,9 +335,11 @@ describe('ChannelService', () => {
       service.pressGo();
       service.pressFadersMems();
       service.pressFaders1To24();
+      service.pressFaders25To48();
 
       expect(sendPressGo).not.toHaveBeenCalled();
       expect(sendPressFadersMems).not.toHaveBeenCalled();
+      expect(sendPressFaders25To48).not.toHaveBeenCalled();
       expect(sendPressFaders1To24).not.toHaveBeenCalled();
     });
   });

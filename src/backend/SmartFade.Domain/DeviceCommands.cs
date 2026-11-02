@@ -36,6 +36,8 @@ public enum DeviceCommands
     PressFadersMems = 16384,
     /// <summary>FADERS 1-24: the physical faders to channel mode, bank 1-24 (a key tap). Not in <see cref="All"/>.</summary>
     PressFaders1To24 = 32768,
-    /// <summary>Every command the simulator models. The three key taps above are outside it: a real console with live control (SC-2 class B1) reports them.</summary>
+    /// <summary>FADERS 25-48: the physical faders to channel mode, bank 25-48 (a key tap). Not in <see cref="All"/>.</summary>
+    PressFaders25To48 = 65536,
+    /// <summary>Every command the simulator models. The four key taps above are outside it: a real console with live control (SC-2 class B1, SC-5 class B4) reports them.</summary>
     All = SetChannelLevel | SetMaster | SetBlackout | SetBumps | SetSolo | BumpChannel | SetMemoryLevel | BumpMemory | RecordMemory | StoreMemory | SetIndependent | ClearChannels | ClearMemories,
 }

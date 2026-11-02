@@ -108,7 +108,7 @@ public class HostingTests
         });
         Assert.Contains("LiveControlDate", Assert.ThrowsAny<Exception>(() => stale.CreateClient()).ToString(), StringComparison.Ordinal);
 
-        // live control for today: the device names the SC-2 whitelist and nothing else. The same two guards as above keep
+        // live control for today: the device names the SC-2 / SC-5 whitelist and nothing else. The same two guards as above keep
         // this host off real hardware (the pipe factory is replaced; the path is one the WinUSB pipe refuses).
         using var live = new WebApplicationFactory<Program>().WithWebHostBuilder(b =>
         {
@@ -123,11 +123,24 @@ public class HostingTests
         Assert.NotNull(state);
         Assert.Contains("setMaster", state.SupportedCommands);
         Assert.Contains("pressGo", state.SupportedCommands);
+        Assert.Contains("pressFaders25To48", state.SupportedCommands);
+        Assert.Contains("setMemoryLevel", state.SupportedCommands);
+        Assert.Contains("setIndependent", state.SupportedCommands);
         Assert.DoesNotContain("recordMemory", state.SupportedCommands);
+        Assert.DoesNotContain("storeMemory", state.SupportedCommands);
+        Assert.DoesNotContain("clearChannels", state.SupportedCommands);
+        Assert.DoesNotContain("clearMemories", state.SupportedCommands);
         Assert.NotNull(state.WritableControls);
         Assert.Contains("channelFader:1", state.WritableControls);
+        Assert.Contains("channelFader:48", state.WritableControls);
+        Assert.Contains("channelBump:25", state.WritableControls);
+        Assert.Contains("memoryFader:288", state.WritableControls);
+        Assert.Contains("independent:2", state.WritableControls);
+        Assert.Contains("faders25To48", state.WritableControls);
         Assert.Contains("go", state.WritableControls);
-        Assert.DoesNotContain("channelFader:2", state.WritableControls);
+        Assert.DoesNotContain("clear", state.WritableControls);
+        Assert.DoesNotContain("recMem", state.WritableControls);
+        Assert.DoesNotContain("channelFader:49", state.WritableControls);
     }
 
     [Fact]

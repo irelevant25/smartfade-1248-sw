@@ -6,11 +6,12 @@ import { ConsoleStateService } from '../../core/console-state.service';
  * The console's FADERS keys (manual F7; the owner's order and colours, 2026-11-02): MEMORIES (red),
  * 25-48 (green), 1-24 (green) and NEXT (blue). The 24 physical faders control one bank at a time, and
  * a real console reports which one (`faderBank`, ConsoleStatus, F98): the key of that bank is lit, as
- * its LED is on the console. MEMORIES and 1-24 are taps on a device that models the mode and names
- * the controls writable (the real console with live control, SC-2 class B1: the key codes SmartSoft
- * sends, E9 / E9b); 25-48 was seen from SmartSoft once and is not cleared; NEXT (the blind NEXT
- * mode of the manual, "Live or Next mode") was never observed from a PC. The simulator plays every
- * bank at once, so the keys mean nothing there and say so.
+ * its LED is on the console. MEMORIES, 25-48 and 1-24 are taps on a device that models the mode and
+ * names the controls writable (the real console with live control: SC-2 class B1 for MEMORIES and
+ * 1-24, SC-5 class B4 for 25-48; the key codes SmartSoft sends, E9 to E9e; the console refuses a key
+ * from a bank SmartSoft never sent it from and says why); NEXT (the blind NEXT mode of the manual,
+ * "Live or Next mode") is NO-GO under SC-5 and stays inactive. The simulator plays every bank at once,
+ * so the keys mean nothing there and say so.
  */
 @Component({
   selector: 'sf-fader-mode-keys',
@@ -31,6 +32,9 @@ export class FaderModeKeysComponent {
   );
   protected readonly can1To24 = computed(
     () => this._state.supports('pressFaders1To24') && this._state.writable('faders1To24'),
+  );
+  protected readonly can25To48 = computed(
+    () => this._state.supports('pressFaders25To48') && this._state.writable('faders25To48'),
   );
   protected readonly note = computed(() => {
     const mode = this._state.mode();
@@ -58,12 +62,14 @@ export class FaderModeKeysComponent {
         : 'FADERS 1-24: not available on this device',
   );
   protected readonly upperTitle = computed(() =>
-    this.reported()
-      ? `${this._ledTitle}; FADERS 25-48 is not cleared for sending (seen from SmartSoft once, E9b)`
-      : 'FADERS 25-48: not cleared for sending yet (seen from SmartSoft once, E9b)',
+    this.can25To48()
+      ? 'FADERS 25-48 on the console: the physical faders to channels 25-48 (a key tap)'
+      : this.reported()
+        ? this._ledTitle
+        : 'FADERS 25-48: not available on this device',
   );
   protected readonly nextTitle =
-    'NEXT: levels set blind into the Next fader of the crossfader (manual, "Live or Next mode"); not available yet';
+    'NEXT: levels set blind into the Next fader of the crossfader (manual, "Live or Next mode"); not sent from the PC (SC-5: NO-GO)';
 
   protected pressMems(): void {
     this._channels.pressFadersMems();
@@ -71,5 +77,9 @@ export class FaderModeKeysComponent {
 
   protected press1To24(): void {
     this._channels.pressFaders1To24();
+  }
+
+  protected press25To48(): void {
+    this._channels.pressFaders25To48();
   }
 }

@@ -50,6 +50,8 @@ public sealed class ConsoleHub : Hub
 
     public Task PressFaders1To24() => Guard(() => _console.PressFaders1To24Async(Context.ConnectionAborted), awaitExecution: false);
 
+    public Task PressFaders25To48() => Guard(() => _console.PressFaders25To48Async(Context.ConnectionAborted), awaitExecution: false);
+
     public Task BumpChannel(int channel, bool pressed) =>
         Guard(() => _console.BumpChannelAsync(channel, pressed, Context.ConnectionAborted), awaitExecution: false);
 

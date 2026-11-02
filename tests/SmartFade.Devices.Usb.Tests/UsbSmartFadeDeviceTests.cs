@@ -461,8 +461,9 @@ public class UsbSmartFadeDeviceTests
     }
 
     private const DeviceCommands LiveCommands = DeviceCommands.SetChannelLevel | DeviceCommands.SetMaster | DeviceCommands.SetBumps
-        | DeviceCommands.SetBlackout | DeviceCommands.SetSolo | DeviceCommands.BumpChannel | DeviceCommands.BumpMemory
-        | DeviceCommands.PressGo | DeviceCommands.PressFadersMems | DeviceCommands.PressFaders1To24;
+        | DeviceCommands.SetBlackout | DeviceCommands.SetSolo | DeviceCommands.BumpChannel | DeviceCommands.SetMemoryLevel
+        | DeviceCommands.BumpMemory | DeviceCommands.SetIndependent | DeviceCommands.PressGo | DeviceCommands.PressFadersMems
+        | DeviceCommands.PressFaders1To24 | DeviceCommands.PressFaders25To48;
 
     private static string Today(VirtualClock clock) => DateOnly.FromDateTime(clock.GetLocalNow().DateTime).ToString("yyyy-MM-dd");
 
@@ -498,8 +499,15 @@ public class UsbSmartFadeDeviceTests
         Assert.Contains(DeviceControls.Go, live.WritableControls!);
         Assert.Contains(DeviceControls.FadersMems, live.WritableControls!);
         Assert.Contains(DeviceControls.Faders1To24, live.WritableControls!);
-        Assert.DoesNotContain(DeviceControls.ChannelFader(2), live.WritableControls!);
-        Assert.DoesNotContain(DeviceControls.ChannelBump(9), live.WritableControls!);
+        Assert.Contains(DeviceControls.Faders25To48, live.WritableControls!);
+        Assert.Contains(DeviceControls.ChannelFader(48), live.WritableControls!);    // SC-5: every physical fader in every bank
+        Assert.Contains(DeviceControls.ChannelBump(9), live.WritableControls!);
+        Assert.Contains(DeviceControls.MemoryFader(288), live.WritableControls!);
+        Assert.Contains(DeviceControls.Independent(2), live.WritableControls!);
+        Assert.DoesNotContain(DeviceControls.Clear, live.WritableControls!);        // NO-GO: CLEAR and the record keys (SC-3)
+        Assert.DoesNotContain(DeviceControls.RecMem, live.WritableControls!);
+        Assert.DoesNotContain(DeviceControls.EditMem, live.WritableControls!);
+        Assert.DoesNotContain(DeviceControls.Copy, live.WritableControls!);
         Assert.Contains("live control", live.Description, StringComparison.Ordinal);
         await Assert.ThrowsAsync<InvalidOperationException>(() => live.SetMasterAsync(1, CancellationToken.None));   // no session yet
     }
@@ -515,25 +523,29 @@ public class UsbSmartFadeDeviceTests
         await connected;
         await pipe.FirstWrite.Task.WaitAsync(Timeout);   // the first poll is out and its reply is held back
 
-        // outside the whitelist (SC-2 condition 1, item 6)
-        await Assert.ThrowsAsync<NotSupportedException>(() => device.SetChannelLevelAsync(2, 1, CancellationToken.None));
-        await Assert.ThrowsAsync<NotSupportedException>(() => device.BumpChannelAsync(10, true, CancellationToken.None));
+        // outside the whitelist (SC-2 condition 1, item 6; SC-5's NO-GO): the record functions, CLEAR, controls the 1248 lacks
         await Assert.ThrowsAsync<NotSupportedException>(() => device.RecordMemoryAsync(1, 1, CancellationToken.None));
-        await Assert.ThrowsAsync<NotSupportedException>(() => device.SetIndependentAsync(1, true, CancellationToken.None));
-
-        // whitelisted codes never sent from a PC in that state with the record keys off (E9, E9b): bump 9 anywhere,
-        // channel bump 1, memory bump 7
-        await Assert.ThrowsAsync<NotSupportedException>(() => device.BumpChannelAsync(9, true, CancellationToken.None));
-        await Assert.ThrowsAsync<NotSupportedException>(() => device.BumpChannelAsync(1, true, CancellationToken.None));
-        await Assert.ThrowsAsync<NotSupportedException>(() => device.BumpMemoryAsync(1, 7, true, CancellationToken.None));
+        await Assert.ThrowsAsync<NotSupportedException>(() => device.StoreMemoryAsync(1, 1, new byte[48], CancellationToken.None));
+        await Assert.ThrowsAsync<NotSupportedException>(() => device.ClearChannelLevelsAsync(CancellationToken.None));
+        await Assert.ThrowsAsync<NotSupportedException>(() => device.ClearMemoryLevelsAsync(CancellationToken.None));
+        await Assert.ThrowsAsync<NotSupportedException>(() => device.SetChannelLevelAsync(49, 1, CancellationToken.None));
+        await Assert.ThrowsAsync<NotSupportedException>(() => device.BumpChannelAsync(0, true, CancellationToken.None));
+        await Assert.ThrowsAsync<NotSupportedException>(() => device.SetMemoryLevelAsync(13, 1, 1, CancellationToken.None));
+        await Assert.ThrowsAsync<NotSupportedException>(() => device.SetIndependentAsync(3, true, CancellationToken.None));
 
         // inside it, but the console has reported nothing yet (SC-2 conditions 5, 6, 8)
         var refused = await Assert.ThrowsAsync<InvalidOperationException>(() => device.SetMasterAsync(1, CancellationToken.None));
         Assert.Contains("key LEDs", refused.Message, StringComparison.Ordinal);
         await Assert.ThrowsAsync<InvalidOperationException>(() => device.SetChannelLevelAsync(1, 1, CancellationToken.None));
+        await Assert.ThrowsAsync<InvalidOperationException>(() => device.SetChannelLevelAsync(30, 1, CancellationToken.None));
+        await Assert.ThrowsAsync<InvalidOperationException>(() => device.SetMemoryLevelAsync(1, 1, 1, CancellationToken.None));
         await Assert.ThrowsAsync<InvalidOperationException>(() => device.SetSoloAsync(true, CancellationToken.None));
+        await Assert.ThrowsAsync<InvalidOperationException>(() => device.SetIndependentAsync(1, true, CancellationToken.None));
         await Assert.ThrowsAsync<InvalidOperationException>(() => device.BumpChannelAsync(7, true, CancellationToken.None));
+        await Assert.ThrowsAsync<InvalidOperationException>(() => device.BumpMemoryAsync(1, 7, true, CancellationToken.None));
         await Assert.ThrowsAsync<InvalidOperationException>(() => device.PressGoAsync(CancellationToken.None));
+        await Assert.ThrowsAsync<InvalidOperationException>(() => device.PressFaders25To48Async(CancellationToken.None));
+        await device.BumpChannelAsync(7, false, CancellationToken.None);   // a release with nothing held: nothing to send, no error
 
         var ended = WaitForStatus(device, ConnectionStatus.Error);
         pipe.Release();
@@ -560,10 +572,11 @@ public class UsbSmartFadeDeviceTests
 
     /// <summary>
     /// A live device on a stand-in console that reports the state SmartSoft saw before its first MASTER event of E9b
-    /// (header seq 13143, payload 13144): FaderInfo seq 11628 (MASTER and BUMPS at full), ConsoleStatus seq 796 (channel
-    /// mode, bank 1-24, page 1) and LedStatus seq 11636 (REC MEM, EDIT MEM, COPY, REC SEQ, SOLO and BLACKOUT off, STACK
-    /// dim), served in that order, so the key LEDs are reported last. <paramref name="delay"/> replaces the virtual
-    /// clock's plain delay; the transfer log's notes are kept.
+    /// (header seq 13143, payload 13144): FaderInfo seq 11628 (every fader at zero, MASTER and BUMPS at full), ConsoleStatus
+    /// seq 796 (channel mode, bank 1-24, page 1, NEXT off), ChannelLevels seq 11632 (every channel at zero; left out with
+    /// <paramref name="withChannelLevels"/> false) and LedStatus seq 11636 (REC MEM, EDIT MEM, COPY, REC SEQ, SOLO,
+    /// BLACKOUT, IND 1 and IND 2 off, STACK dim), served in that order, so the key LEDs are reported last.
+    /// <paramref name="delay"/> replaces the virtual clock's plain delay; the transfer log's notes are kept.
     /// </summary>
     private static LiveRig LiveConsole(
         bool relistAfterWrites = false,
@@ -571,12 +584,21 @@ public class UsbSmartFadeDeviceTests
         IncompleteWriteMarker? marker = null,
         string? liveControlDate = "today",
         int failDataTransfer = 0,
-        ConsoleFault faultAfterWrite = ConsoleFault.None)
+        ConsoleFault faultAfterWrite = ConsoleFault.None,
+        bool withChannelLevels = true)
     {
-        var console = new AnsweringPipe(
+        var objects = new List<(int, byte[])>
+        {
             ((int)HspObjectId.FaderInfo, E9bBody(11628)),
             ((int)HspObjectId.ConsoleStatus, E9bBody(796)),
-            ((int)HspObjectId.LedStatus, E9bBody(11636)))
+        };
+        if (withChannelLevels)
+        {
+            objects.Add(((int)HspObjectId.ChannelLevels, E9bBody(11632)));
+        }
+
+        objects.Add(((int)HspObjectId.LedStatus, E9bBody(11636)));
+        var console = new AnsweringPipe(objects.ToArray())
         {
             RelistFaderInfoAfterWrites = relistAfterWrites,
             FailDataTransfer = failDataTransfer,
@@ -675,37 +697,36 @@ public class UsbSmartFadeDeviceTests
     [Fact]
     public async Task Live_control_sends_each_control_only_in_the_console_state_SmartSoft_sent_it_in()
     {
-        var (device, console, pipe, _, keysReported) = LiveConsole();
+        var rig = LiveConsole();
+        var (device, _, pipe, _, keysReported) = rig;
         await device.ConnectAsync(CancellationToken.None);
         await keysReported.WaitAsync(Timeout);
 
-        // channel mode, bank 1-24: memory bump 1 needs memory mode, FADERS 1-24 is sent only from memory mode or bank 25-48
-        var memoryBump = await Assert.ThrowsAsync<InvalidOperationException>(() => device.BumpMemoryAsync(1, 1, true, CancellationToken.None));
-        Assert.Contains("channel mode", memoryBump.Message, StringComparison.Ordinal);
+        // channel mode, bank 1-24: FADERS 1-24 is sent only from memory mode or bank 25-48, a memory of another page never
+        // (no page change from the PC, F113)
         var faders = await Assert.ThrowsAsync<InvalidOperationException>(() => device.PressFaders1To24Async(CancellationToken.None));
         Assert.Contains("bank 1-24", faders.Message, StringComparison.Ordinal);
+        var page = await Assert.ThrowsAsync<InvalidOperationException>(() => device.SetMemoryLevelAsync(2, 1, 0x10, CancellationToken.None));
+        Assert.Contains("memory page is 1, not 2", page.Message, StringComparison.Ordinal);
 
-        // SOLO and BLACKOUT already read off, and a bump's release alone: nothing to send
+        // SOLO, BLACKOUT, IND 1 and IND 2 already read off, and a bump's release alone: nothing to send
         await device.SetSoloAsync(false, CancellationToken.None);
         await device.SetBlackoutAsync(false, CancellationToken.None);
+        await device.SetIndependentAsync(1, false, CancellationToken.None);
+        await device.SetIndependentAsync(2, false, CancellationToken.None);
         await device.BumpChannelAsync(7, pressed: false, CancellationToken.None);
 
-        // channel fader 1 with the MASTER at full: sent, as SmartSoft's first channel fader 1 event of E9b (seq 8038)
-        // but for this session's counter, the level and the previous byte
+        // channel fader 1 with the MASTER at full: its first event in the session carries its reported level (ChannelLevels[1]
+        // = FaderInfo record 1 = 0x00; SC-5 condition 1 d, F172), then the UI's level, as SmartSoft's first channel fader 1
+        // event of E9b (seq 8038) but for this session's counter, the level and the previous byte
         await device.SetChannelLevelAsync(1, 0x10, CancellationToken.None);
-        await console.DataWritten.Task.WaitAsync(Timeout);
-        await console.PollAfterData.Task.WaitAsync(Timeout);
+        await WaitUntil(() => device.LastSession!.WritesSent == 2);
         await device.DisconnectAsync(CancellationToken.None);
 
-        Assert.Equal(1, device.LastSession!.WritesSent);
-        var transfers = Recorded(pipe);
-        var header = transfers.FindIndex(t => t.ToConsole && t.Data.Length == 12 && t.Data[0] == 1);
-        var e9b = CaptureFile.Load(TestPaths.Capture("2026-10-31-e9b-smartsoft-writes-repeat.jsonl"));
-        var expected = Frame(e9b, 8038, CaptureDirection.Out).ToArray();
-        expected[0] = 0x00;
-        expected[6] = 0x10;
-        expected[7] = 0x00;
-        Assert.Equal(expected, transfers[header + 1].Data);
+        Assert.Equal(2, device.LastSession!.WritesSent);
+        var payloads = Recorded(pipe).Where(t => t.ToConsole && t.Data.Length != 12).Select(t => t.Data).ToArray();
+        Assert.Equal(new[] { WithCounter(E9b, 8038, 0x00, value: 0x00, previous: 0x00), WithCounter(E9b, 8038, 0x01, value: 0x10, previous: 0x00) }, payloads);
+        Assert.Contains("matched channel fader 1 at its reported level 0x00 (SC-5 condition 1 d, F172)", rig.Log.Notes);
     }
 
     [Fact]
@@ -720,8 +741,8 @@ public class UsbSmartFadeDeviceTests
         await device.SetMasterAsync(0xC0, CancellationToken.None);
         await device.PressGoAsync(CancellationToken.None);                 // a tap: press, then release
         await device.SetBumpsAsync(0x80, CancellationToken.None);
-        await device.SetChannelLevelAsync(1, 0x20, CancellationToken.None); // held while FaderInfo is listed and not fetched
-        await WaitUntil(() => device.LastSession!.WritesSent == 5);
+        await device.SetChannelLevelAsync(1, 0x20, CancellationToken.None); // its matching event (held while FaderInfo is listed and not fetched), then the level
+        await WaitUntil(() => device.LastSession!.WritesSent == 6);
         await device.DisconnectAsync(CancellationToken.None);               // returns after the poll exchange that follows the last write
 
         Assert.Equal(0, device.LastSession!.WritesDropped);
@@ -801,7 +822,7 @@ public class UsbSmartFadeDeviceTests
             }
         }
 
-        Assert.Equal(5, writes);
+        Assert.Equal(6, writes);
     }
 
     /// <summary>
@@ -1219,8 +1240,9 @@ public class UsbSmartFadeDeviceTests
     public async Task Channel_fader_1_waits_while_the_console_has_listed_FaderInfo_it_has_not_delivered_and_goes_after_it()
     {
         // SC-2 condition 6 (the second pass of item 10, MINOR A): channel fader 1 is sent only with the MASTER at full, so a
-        // listed FaderInfo (where the MASTER is reported) that is not fetched yet holds it. The console lists FaderInfo again
-        // (the same E9b seq 11628 body: MASTER and BUMPS at full); the event goes only after that object is in.
+        // listed FaderInfo (where the MASTER is reported) that is not fetched yet holds it, and with SC-5 its first event, the
+        // matching event at its reported level, is held the same way. The console lists FaderInfo again (the same E9b seq 11628
+        // body: MASTER and BUMPS at full); the events go only after that object is in.
         var rig = LiveConsole();
         await rig.Device.ConnectAsync(CancellationToken.None);
         await rig.KeysReported.WaitAsync(Timeout);
@@ -1231,11 +1253,12 @@ public class UsbSmartFadeDeviceTests
         rig.Console.Resume();
         await rig.Console.DataWritten.Task.WaitAsync(Timeout);
         await rig.Console.PollAfterData.Task.WaitAsync(Timeout);
+        await WaitUntil(() => rig.Device.LastSession!.WritesSent == 2);
         await rig.Device.DisconnectAsync(CancellationToken.None);
 
-        Assert.Equal(1, rig.Device.LastSession!.WritesSent);
+        Assert.Equal(2, rig.Device.LastSession!.WritesSent);   // the matching event, then the level
         Assert.Equal(0, rig.Device.LastSession.WritesDropped);
-        Assert.Contains("write held back: the console listed FaderInfo (the MASTER) and it is not fetched yet", rig.Log.Notes);
+        Assert.Contains("write held back: the console listed FaderInfo or ChannelLevels (the level a re-assigned fader is matched at) and it is not fetched yet", rig.Log.Notes);
         var transfers = Recorded(rig.Pipe);
         var faderInfoFetch = transfers.FindLastIndex(t => t.ToConsole && t.Data.Length == 12 && t.Data[0] == 2 && t.Data[4] == (int)HspObjectId.FaderInfo);
         var header = transfers.FindIndex(IsDataHeader);
@@ -1364,6 +1387,480 @@ public class UsbSmartFadeDeviceTests
         }
     }
 
+    private static readonly Lazy<CaptureFile> E9c = new(() => CaptureFile.Load(TestPaths.Capture("2026-11-02-e9c-smartsoft-live-controls-every-bank.jsonl")));
+
+    private static readonly Lazy<CaptureFile> E9d = new(() => CaptureFile.Load(TestPaths.Capture("2026-11-02-e9d-smartsoft-every-fader-and-bump-twice.jsonl")));
+
+    private static readonly Lazy<CaptureFile> E9e = new(() => CaptureFile.Load(TestPaths.Capture("2026-11-02-e9e-smartsoft-channel-bumps-spot-check.jsonl")));
+
+    /// <summary>The body of the object the console delivered in the capture's payload frame with that JSONL seq.</summary>
+    private static byte[] Body(Lazy<CaptureFile> capture, int seq) => Frame(capture.Value, seq, CaptureDirection.In)[5..];
+
+    /// <summary>SmartSoft's payload with that JSONL seq, with this session's counter (and a value and previous byte) in place of its own.</summary>
+    private static byte[] WithCounter(Lazy<CaptureFile> capture, int seq, byte counter, byte? value = null, byte? previous = null)
+    {
+        var bytes = Frame(capture.Value, seq, CaptureDirection.Out).ToArray();   // a copy: the capture's bytes stay as recorded
+        bytes[0] = counter;
+        if (value is { } v)
+        {
+            bytes[6] = v;
+        }
+
+        if (previous is { } p)
+        {
+            bytes[7] = p;
+        }
+
+        return bytes;
+    }
+
+    private static byte[][] Payloads(TimedPipe pipe) =>
+        Recorded(pipe).Where(t => t.ToConsole && t.Data.Length != 12).Select(t => t.Data).ToArray();
+
+    /// <summary>The virtual time between the Data headers of the first two writes.</summary>
+    private static TimeSpan FirstTwoHeadersApart(TimedPipe pipe)
+    {
+        var headers = Recorded(pipe).Where(IsDataHeader).Select(t => t.At).ToArray();
+        return headers[1] - headers[0];
+    }
+
+    /// <summary>A task that completes when the device reports that its physical faders control <paramref name="bank"/>.</summary>
+    private static Task BankReported(UsbSmartFadeDevice device, FaderBank bank)
+    {
+        var reported = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        device.StateChanged += (_, change) =>
+        {
+            if (change.FaderBank == bank)
+            {
+                reported.TrySetResult();
+            }
+        };
+        return reported.Task.WaitAsync(Timeout);
+    }
+
+    /// <summary>The stand-in console answers FADERS 25-48 as the 1248 answered SmartSoft's in E9d: ConsoleStatus seq 18715 (bank 25-48), LedStatus seq 18719 (block 56 lit).</summary>
+    private static void AnswersFaders25To48(AnsweringPipe console) =>
+        console.OnPress((byte)ClearedKey.Faders25To48, () =>
+        {
+            console.Report((int)HspObjectId.ConsoleStatus, Body(E9d, 18715));
+            console.Report((int)HspObjectId.LedStatus, Body(E9d, 18719));
+        });
+
+    [Fact]
+    public async Task A_channel_of_bank_25_48_switches_the_bank_first_then_matches_its_fader_then_sends_the_drag()
+    {
+        // SC-5 condition 1. The console shows bank 1-24 (E9b seq 796). A drag of channel 30 queues FADERS 25-48 as a tap
+        // (a, b); nothing else goes until the console has reported bank 25-48 with its LEDs (c; the stand-in answers the press
+        // with E9d's ConsoleStatus seq 18715 and LedStatus seq 18719, the console's own answer to SmartSoft's key there); then
+        // physical fader 6's first event carries channel 30's reported level (d; ChannelLevels[30] = FaderInfo record 6 = 0x00),
+        // and only then the UI's newest level. As SmartSoft's bytes: its FADERS 25-48 press and release (E9d seq 18706, 18711)
+        // and its first event of index 0x05 in bank 25-48 (E9d seq 21637), with this session's counter, value and previous byte.
+        var rig = LiveConsole();
+        AnswersFaders25To48(rig.Console);
+        var bank = BankReported(rig.Device, FaderBank.Channels25To48);
+        await rig.Device.ConnectAsync(CancellationToken.None);
+        await rig.KeysReported.WaitAsync(Timeout);
+
+        await rig.Console.PauseAtNextPoll().WaitAsync(Timeout);
+        await rig.Device.SetChannelLevelAsync(30, 0x40, CancellationToken.None);
+        await rig.Device.SetChannelLevelAsync(30, 0x48, CancellationToken.None);   // a newer level while the switch waits: the newest wins
+        var refused = await Assert.ThrowsAsync<InvalidOperationException>(() => rig.Device.SetChannelLevelAsync(5, 0x10, CancellationToken.None));
+        Assert.Contains("automatic bank switch to channel mode, bank 25-48 is in progress", refused.Message, StringComparison.Ordinal);
+        await Assert.ThrowsAsync<InvalidOperationException>(() => rig.Device.SetMasterAsync(0x80, CancellationToken.None));
+        rig.Console.Resume();
+        await bank;
+        await WaitUntil(() => rig.Device.LastSession!.WritesSent == 4);
+        await rig.Device.DisconnectAsync(CancellationToken.None);
+
+        Assert.Equal(4, rig.Device.LastSession!.WritesSent);
+        Assert.Equal(new[]
+        {
+            WithCounter(E9d, 18706, 0x00), WithCounter(E9d, 18711, 0x01),
+            WithCounter(E9d, 21637, 0x02, value: 0x00, previous: 0x00), WithCounter(E9d, 21637, 0x03, value: 0x48, previous: 0x00),
+        }, Payloads(rig.Pipe));
+
+        // the matching event went only after the console's report was in: ConsoleStatus and LedStatus fetched before its header
+        var transfers = Recorded(rig.Pipe);
+        var headers = transfers.Select((t, i) => (t, i)).Where(x => IsDataHeader(x.t)).Select(x => x.i).ToArray();
+        int LastFetch(HspObjectId id) => transfers.FindLastIndex(headers[2], t => t.ToConsole && t.Data.Length == 12 && t.Data[0] == 2 && t.Data[4] == (int)id);
+        Assert.True(LastFetch(HspObjectId.ConsoleStatus) > headers[1] && LastFetch(HspObjectId.LedStatus) > headers[1], "the matching event went before the console's report");
+        Assert.Contains(rig.Log.Notes, n => n.StartsWith("automatic bank switch (SC-5 condition 1) for channel fader 30: FADERS 25-48 sent", StringComparison.Ordinal));
+        Assert.Contains(rig.Log.Notes, n => n.StartsWith("automatic bank switch done: the console reports channel mode, bank 25-48", StringComparison.Ordinal));
+        Assert.Contains("matched channel fader 30 at its reported level 0x00 (SC-5 condition 1 d, F172)", rig.Log.Notes);
+    }
+
+    [Fact]
+    public async Task An_event_queued_behind_our_bank_key_waits_for_the_consoles_report_and_never_reaches_the_new_bank()
+    {
+        // SC-5 condition 1 (c), the barrier. Channel 5's matching event goes first; its drag (0x20) is then queued behind
+        // FADERS 25-48, which channel 30 asked for. The console answers the key late (the stand-in reports bank 25-48 three
+        // polls after the press, slower than in any capture): the gate holds the drag until that report, and its own
+        // condition then drops it, since index 0x04 would now move channel 29; channel 30 is matched and goes. As SmartSoft's
+        // bytes: E9d seq 11362 (index 0x04 in bank 1-24), 18706 / 18711 (FADERS 25-48), 21637 (index 0x05 in bank 25-48).
+        var rig = LiveConsole();
+        rig.Console.OnPress((byte)ClearedKey.Faders25To48, () => rig.Console.ReportAfterPolls(
+            3, ((int)HspObjectId.ConsoleStatus, Body(E9d, 18715)), ((int)HspObjectId.LedStatus, Body(E9d, 18719))));
+        await rig.Device.ConnectAsync(CancellationToken.None);
+        await rig.KeysReported.WaitAsync(Timeout);
+
+        await rig.Console.PauseAtNextPoll().WaitAsync(Timeout);
+        await rig.Device.SetChannelLevelAsync(5, 0x20, CancellationToken.None);
+        await rig.Device.SetChannelLevelAsync(30, 0x40, CancellationToken.None);
+        rig.Console.Resume();
+        await WaitUntil(() => rig.Device.LastSession!.WritesSent == 5);
+        await rig.Device.DisconnectAsync(CancellationToken.None);
+
+        Assert.Equal(new[]
+        {
+            WithCounter(E9d, 11362, 0x00, value: 0x00, previous: 0x00), WithCounter(E9d, 18706, 0x01), WithCounter(E9d, 18711, 0x02),
+            WithCounter(E9d, 21637, 0x03, value: 0x00, previous: 0x00), WithCounter(E9d, 21637, 0x04, value: 0x40, previous: 0x00),
+        }, Payloads(rig.Pipe));
+        Assert.Contains("write held back: the console has not reported channel mode, bank 25-48 since FADERS 25-48 went (SC-5 condition 1 c)", rig.Log.Notes);
+        Assert.Equal(1, rig.Device.LastSession!.WritesDropped);
+        Assert.Contains("queued write dropped unsent: the console shows channel mode, bank 25-48: channel fader 5 needs channel mode, bank 1-24", rig.Log.Notes);
+    }
+
+    [Fact]
+    public async Task An_automatic_switch_the_console_does_not_report_within_two_seconds_ends_the_session_as_a_deviation()
+    {
+        // SC-5 condition 1 (c): the stand-in console does not answer FADERS 25-48 (no ConsoleStatus, no LEDs). Two seconds
+        // after the key's press, on the loop's clock, the session ends with that reason; nothing but the tap went out.
+        var rig = LiveConsole();
+        var ended = WaitForStatus(rig.Device, ConnectionStatus.Error);
+        await rig.Device.ConnectAsync(CancellationToken.None);
+        await rig.KeysReported.WaitAsync(Timeout);
+
+        await rig.Device.SetChannelLevelAsync(30, 0x40, CancellationToken.None);
+        var state = await ended;
+
+        Assert.Contains("did not report channel mode, bank 25-48 with its LEDs within 2 s of FADERS 25-48", state.Error, StringComparison.Ordinal);
+        Assert.Equal(2, rig.Device.LastSession!.WritesSent);
+        Assert.Equal(new[] { WithCounter(E9d, 18706, 0x00), WithCounter(E9d, 18711, 0x01) }, Payloads(rig.Pipe));
+        var transfers = Recorded(rig.Pipe);
+        Assert.True(transfers[^1].At - transfers.First(IsDataHeader).At >= UsbSmartFadeDevice.BankSwitchReportBound);
+    }
+
+    [Fact]
+    public async Task A_memory_fader_switches_to_memory_mode_first_and_is_matched_at_its_FaderInfo_level()
+    {
+        // FADERS MEMS from bank 1-24 (E9d seq 29032 / 29041) and the console's answer there (ConsoleStatus seq 29039: memory
+        // mode, page 1; LedStatus seq 29045). Memory fader 3 of page 1: FaderInfo record 3 bytes 0 and 1 read 0x00 (E9b seq
+        // 11628, not listed again: the console lists what changed, F57), so its matching event carries 0x00, then the UI's
+        // 0x50 (E9d seq 30522's layout: SmartSoft's first event of index 0x02 in memory mode).
+        var rig = LiveConsole();
+        rig.Console.OnPress((byte)ClearedKey.FadersMems, () =>
+        {
+            rig.Console.Report((int)HspObjectId.ConsoleStatus, Body(E9d, 29039));
+            rig.Console.Report((int)HspObjectId.LedStatus, Body(E9d, 29045));
+        });
+        await rig.Device.ConnectAsync(CancellationToken.None);
+        await rig.KeysReported.WaitAsync(Timeout);
+
+        await rig.Device.SetMemoryLevelAsync(1, 3, 0x50, CancellationToken.None);
+        await WaitUntil(() => rig.Device.LastSession!.WritesSent == 4);
+        await rig.Device.DisconnectAsync(CancellationToken.None);
+
+        Assert.Equal(new[]
+        {
+            WithCounter(E9d, 29032, 0x00), WithCounter(E9d, 29041, 0x01),
+            WithCounter(E9d, 30522, 0x02, value: 0x00, previous: 0x00), WithCounter(E9d, 30522, 0x03, value: 0x50, previous: 0x00),
+        }, Payloads(rig.Pipe));
+        Assert.Contains("matched memory fader 3 of page 1 at its reported level 0x00 (SC-5 condition 1 d, F172)", rig.Log.Notes);
+    }
+
+    [Fact]
+    public async Task A_memory_fader_goes_only_on_the_page_shown_and_only_while_its_physical_fader_holds_that_pages_memory()
+    {
+        // F113 and H69, with E9c S4c's state: memory mode, page 2 shown (ConsoleStatus seq 80286), and physical fader 3 still
+        // holding memory 3 of page 1 at 0x7F (FaderInfo seq 80290: record 3 byte 3 = 0, the other records 1). Memory fader 3
+        // of page 2 and its bump are refused, so is page 1; memory fader 4 of page 2 is matched at 0x00 and goes (E9d seq
+        // 30916's layout, index 0x03 in memory mode).
+        var rig = LiveConsole();
+        var memories = BankReported(rig.Device, FaderBank.Memories);
+        await rig.Device.ConnectAsync(CancellationToken.None);
+        await rig.KeysReported.WaitAsync(Timeout);
+        await rig.Console.PauseAtNextPoll().WaitAsync(Timeout);
+        rig.Console.Report((int)HspObjectId.ConsoleStatus, Body(E9c, 80286));
+        rig.Console.Report((int)HspObjectId.FaderInfo, Body(E9c, 80290));
+        rig.Console.Report((int)HspObjectId.LedStatus, Body(E9c, 80298));
+        rig.Console.Resume();
+        await memories;
+        await WaitUntil(() => rig.Console.Served((int)HspObjectId.LedStatus) == 2);
+
+        var held = await Assert.ThrowsAsync<InvalidOperationException>(() => rig.Device.SetMemoryLevelAsync(2, 3, 0x10, CancellationToken.None));
+        Assert.Contains("physical fader 3 still holds memory 3 of page 1 (FaderInfo record 3 byte 3, H69)", held.Message, StringComparison.Ordinal);
+        await Assert.ThrowsAsync<InvalidOperationException>(() => rig.Device.BumpMemoryAsync(2, 3, true, CancellationToken.None));
+        var page = await Assert.ThrowsAsync<InvalidOperationException>(() => rig.Device.SetMemoryLevelAsync(1, 4, 0x10, CancellationToken.None));
+        Assert.Contains("the console shows memory page 2, not 1", page.Message, StringComparison.Ordinal);
+        await rig.Device.SetMemoryLevelAsync(2, 4, 0x10, CancellationToken.None);
+        await WaitUntil(() => rig.Device.LastSession!.WritesSent == 2);
+        await rig.Device.DisconnectAsync(CancellationToken.None);
+
+        Assert.Equal(new[] { WithCounter(E9d, 30916, 0x00, value: 0x00, previous: 0x00), WithCounter(E9d, 30916, 0x01, value: 0x10, previous: 0x00) }, Payloads(rig.Pipe));
+    }
+
+    [Fact]
+    public async Task A_held_bump_goes_until_the_UI_lets_go_one_at_a_time_and_blocks_a_bank_switch()
+    {
+        // SC-5 class B3 and condition 2. Bump 7 pressed in the UI is held (SmartSoft held it 4.67 s, E9d seq 46589); while it
+        // is held a second bump and a bank switch are refused; the release goes when the UI lets go (E9d seq 47004), once.
+        var rig = LiveConsole();
+        rig.Console.OnPress((byte)ClearedKey.Bump7, () => rig.Console.PauseAtNextPoll());
+        await rig.Device.ConnectAsync(CancellationToken.None);
+        await rig.KeysReported.WaitAsync(Timeout);
+
+        await rig.Device.BumpChannelAsync(7, true, CancellationToken.None);
+        await WaitUntil(() => rig.Console.Paused.Task.IsCompleted);   // the press is out; the loop waits inside the next poll
+        Assert.Equal(ClearedKey.Bump7, rig.Device.LastSession!.HeldKey);
+        var second = await Assert.ThrowsAsync<InvalidOperationException>(() => rig.Device.BumpChannelAsync(10, true, CancellationToken.None));
+        Assert.Contains("another bump is held", second.Message, StringComparison.Ordinal);
+        var switching = await Assert.ThrowsAsync<InvalidOperationException>(() => rig.Device.SetChannelLevelAsync(30, 0x10, CancellationToken.None));
+        Assert.Contains("a bump is held", switching.Message, StringComparison.Ordinal);
+        await Assert.ThrowsAsync<InvalidOperationException>(() => rig.Device.PressFadersMemsAsync(CancellationToken.None));
+        await rig.Device.BumpChannelAsync(7, false, CancellationToken.None);
+        await rig.Device.BumpChannelAsync(7, false, CancellationToken.None);   // once: a second release asks for nothing
+        rig.Console.Resume();
+        await WaitUntil(() => rig.Device.LastSession!.WritesSent == 2);
+        await rig.Device.DisconnectAsync(CancellationToken.None);
+
+        Assert.Equal(2, rig.Device.LastSession!.WritesSent);
+        Assert.Equal(new[] { WithCounter(E9d, 46589, 0x00), WithCounter(E9d, 47004, 0x01) }, Payloads(rig.Pipe));
+        Assert.True(FirstTwoHeadersApart(rig.Pipe) < HspReadLoop.MaxHold - HspReadLoop.HoldReleaseLead);
+        Assert.DoesNotContain(rig.Log.Notes, n => n.StartsWith("hold bound", StringComparison.Ordinal));
+    }
+
+    [Fact]
+    public async Task A_held_bump_is_released_by_the_device_within_three_seconds_whatever_the_UI_does()
+    {
+        // SC-5 condition 2: the UI never lets go. On the loop's clock the release is asked for 2.75 s after the press header
+        // and goes at the next write slot, so the press-to-release time stays within the 3 s bound; the UI's late release then
+        // finds nothing to release.
+        var rig = LiveConsole();
+        await rig.Device.ConnectAsync(CancellationToken.None);
+        await rig.KeysReported.WaitAsync(Timeout);
+
+        await rig.Device.BumpChannelAsync(7, true, CancellationToken.None);
+        await WaitUntil(() => rig.Device.LastSession!.WritesSent == 2);
+        await rig.Device.BumpChannelAsync(7, false, CancellationToken.None);
+        await rig.Device.DisconnectAsync(CancellationToken.None);
+
+        Assert.Equal(2, rig.Device.LastSession!.WritesSent);
+        Assert.Equal(new[] { WithCounter(E9d, 46589, 0x00), WithCounter(E9d, 47004, 0x01) }, Payloads(rig.Pipe));
+        var held = FirstTwoHeadersApart(rig.Pipe);
+        Assert.InRange(held, HspReadLoop.MaxHold - HspReadLoop.HoldReleaseLead, HspReadLoop.MaxHold);
+        Assert.Contains(rig.Log.Notes, n => n.StartsWith("hold bound: the release of Bump7 is due", StringComparison.Ordinal));
+        Assert.DoesNotContain(rig.Log.Notes, n => n.StartsWith("deviation:", StringComparison.Ordinal));
+    }
+
+    [Fact]
+    public async Task A_held_bump_is_released_before_the_session_stops()
+    {
+        // SC-5 condition 2 ("and before any Disconnect", SC-2 condition 4's stop path): a Disconnect while bump 7 is held sends
+        // its release first, then the session ends at an idle point.
+        var rig = LiveConsole();
+        rig.Console.OnPress((byte)ClearedKey.Bump7, () => rig.Console.PauseAtNextPoll());
+        await rig.Device.ConnectAsync(CancellationToken.None);
+        await rig.KeysReported.WaitAsync(Timeout);
+
+        await rig.Device.BumpChannelAsync(7, true, CancellationToken.None);
+        await WaitUntil(() => rig.Console.Paused.Task.IsCompleted);
+        var disconnect = rig.Device.DisconnectAsync(CancellationToken.None);   // the stop token is cancelled before it first awaits
+        rig.Console.Resume();
+        await disconnect.WaitAsync(Timeout);
+
+        Assert.Equal(ConnectionStatus.Disconnected, rig.Device.Status);
+        Assert.Equal(2, rig.Device.LastSession!.WritesSent);
+        Assert.Null(rig.Device.LastSession.HeldKey);
+        Assert.Equal(new[] { WithCounter(E9d, 46589, 0x00), WithCounter(E9d, 47004, 0x01) }, Payloads(rig.Pipe));
+        Assert.True(FirstTwoHeadersApart(rig.Pipe) < HspReadLoop.MaxHold - HspReadLoop.HoldReleaseLead);
+    }
+
+    [Fact]
+    public async Task A_held_bump_is_released_at_once_when_the_console_reports_another_bank()
+    {
+        // SC-5 condition 2 ("a hold cannot span a bank switch"): bump 7 is held in bank 1-24 when FADERS 25-48 is pressed on the
+        // panel (the stand-in reports E9d's ConsoleStatus seq 18715 and LedStatus seq 18719): the release goes at once.
+        var rig = LiveConsole();
+        rig.Console.OnPress((byte)ClearedKey.Bump7, () => rig.Console.PauseAtNextPoll());
+        var bank = BankReported(rig.Device, FaderBank.Channels25To48);
+        await rig.Device.ConnectAsync(CancellationToken.None);
+        await rig.KeysReported.WaitAsync(Timeout);
+
+        await rig.Device.BumpChannelAsync(7, true, CancellationToken.None);
+        await WaitUntil(() => rig.Console.Paused.Task.IsCompleted);
+        rig.Console.Report((int)HspObjectId.ConsoleStatus, Body(E9d, 18715));
+        rig.Console.Report((int)HspObjectId.LedStatus, Body(E9d, 18719));
+        rig.Console.Resume();
+        await bank;
+        await WaitUntil(() => rig.Device.LastSession!.WritesSent == 2);
+        await rig.Device.DisconnectAsync(CancellationToken.None);
+
+        Assert.Equal(new[] { WithCounter(E9d, 46589, 0x00), WithCounter(E9d, 47004, 0x01) }, Payloads(rig.Pipe));
+        Assert.True(FirstTwoHeadersApart(rig.Pipe) < HspReadLoop.MaxHold - HspReadLoop.HoldReleaseLead);
+        Assert.Contains(rig.Log.Notes, n => n.StartsWith("bump 7 released at once: the console shows channel mode, bank 25-48", StringComparison.Ordinal));
+    }
+
+    [Fact]
+    public async Task A_bump_of_bank_25_48_switches_first_and_is_held_once_the_console_has_reported_the_bank()
+    {
+        // Channel 48's bump from bank 1-24: FADERS 25-48 (E9e seq 19934 / 19939), the console's answer (E9d seq 18715 / 18719),
+        // then physical bump 24 held (E9e seq 20709, the bump under the fader labelled 48) until the UI lets go (E9e seq 20835).
+        var rig = LiveConsole();
+        AnswersFaders25To48(rig.Console);
+        rig.Console.OnPress((byte)ClearedKey.Bump24, () => rig.Console.PauseAtNextPoll());
+        await rig.Device.ConnectAsync(CancellationToken.None);
+        await rig.KeysReported.WaitAsync(Timeout);
+
+        await rig.Device.BumpChannelAsync(48, true, CancellationToken.None);
+        await WaitUntil(() => rig.Console.Paused.Task.IsCompleted);   // the tap and the hold's press are out
+        Assert.Equal(3, rig.Device.LastSession!.WritesSent);
+        await rig.Device.BumpChannelAsync(48, false, CancellationToken.None);
+        rig.Console.Resume();
+        await WaitUntil(() => rig.Device.LastSession!.WritesSent == 4);
+        await rig.Device.DisconnectAsync(CancellationToken.None);
+
+        Assert.Equal(new[] { WithCounter(E9e, 19934, 0x00), WithCounter(E9e, 19939, 0x01), WithCounter(E9e, 20709, 0x02), WithCounter(E9e, 20835, 0x03) }, Payloads(rig.Pipe));
+    }
+
+    [Fact]
+    public async Task FADERS_25_48_is_a_tap_from_bank_1_24_only_and_nothing_goes_in_NEXT_mode()
+    {
+        // SC-5 class B4: from bank 1-24 a tap (E9d seq 18706 / 18711); from bank 25-48 or memory mode refused (SmartSoft sent it
+        // only from bank 1-24, E9b to E9e), so is a channel of bank 25-48 from memory mode; in NEXT mode (E9c seq 94604:
+        // ConsoleStatus body[6] = 1, F173) every control is refused.
+        var rig = LiveConsole();
+        AnswersFaders25To48(rig.Console);
+        var upper = BankReported(rig.Device, FaderBank.Channels25To48);
+        await rig.Device.ConnectAsync(CancellationToken.None);
+        await rig.KeysReported.WaitAsync(Timeout);
+
+        await rig.Device.PressFaders25To48Async(CancellationToken.None);
+        await upper;
+        await WaitUntil(() => rig.Device.LastSession!.WritesSent == 2 && rig.Console.Served((int)HspObjectId.LedStatus) == 2);
+        var again = await Assert.ThrowsAsync<InvalidOperationException>(() => rig.Device.PressFaders25To48Async(CancellationToken.None));
+        Assert.Contains("FADERS 25-48 was sent from a PC only from channel mode, bank 1-24", again.Message, StringComparison.Ordinal);
+        await Assert.ThrowsAsync<InvalidOperationException>(() => rig.Device.PressFadersMemsAsync(CancellationToken.None));
+
+        var memories = BankReported(rig.Device, FaderBank.Memories);
+        rig.Console.Report((int)HspObjectId.ConsoleStatus, Body(E9d, 29039));
+        rig.Console.Report((int)HspObjectId.LedStatus, Body(E9d, 29045));
+        await memories;
+        await WaitUntil(() => rig.Console.Served((int)HspObjectId.LedStatus) == 3);
+        var fromMemories = await Assert.ThrowsAsync<InvalidOperationException>(() => rig.Device.SetChannelLevelAsync(30, 0x10, CancellationToken.None));
+        Assert.Contains("the console shows memory mode: FADERS 25-48 was sent from a PC only from channel mode, bank 1-24", fromMemories.Message, StringComparison.Ordinal);
+
+        var next = BankReported(rig.Device, FaderBank.Channels1To24);
+        rig.Console.Report((int)HspObjectId.ConsoleStatus, Body(E9c, 94604));
+        rig.Console.Report((int)HspObjectId.LedStatus, Body(E9c, 94610));
+        await next;
+        await WaitUntil(() => rig.Console.Served((int)HspObjectId.LedStatus) == 4);
+        foreach (var refusal in new Func<Task>[]
+        {
+            () => rig.Device.SetMasterAsync(0x80, CancellationToken.None),
+            () => rig.Device.SetChannelLevelAsync(1, 0x10, CancellationToken.None),
+            () => rig.Device.BumpChannelAsync(7, true, CancellationToken.None),
+            () => rig.Device.PressGoAsync(CancellationToken.None),
+            () => rig.Device.SetSoloAsync(true, CancellationToken.None),
+            () => rig.Device.PressFadersMemsAsync(CancellationToken.None),
+        })
+        {
+            var refused = await Assert.ThrowsAsync<InvalidOperationException>(refusal);
+            Assert.Contains("NEXT mode is on (ConsoleStatus body[6], F173)", refused.Message, StringComparison.Ordinal);
+        }
+
+        await rig.Device.DisconnectAsync(CancellationToken.None);
+        Assert.Equal(new[] { WithCounter(E9d, 18706, 0x00), WithCounter(E9d, 18711, 0x01) }, Payloads(rig.Pipe));
+    }
+
+    [Fact]
+    public async Task IND_1_is_a_tap_from_a_steady_LED_and_the_next_waits_until_the_console_has_reported_it()
+    {
+        // SC-5 class B5 (F115, F175): IND 1's LED reads off (E9b seq 11636, block 72), so a wish for on is one tap, SmartSoft's
+        // press and release of E9c seq 90315 / 90324 with this session's counter; the second wish waits until the console has
+        // reported the Independents object and the LEDs after IND 1's press (E9c seq 90322, 90328).
+        var rig = LiveConsole();
+        var indOn = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        rig.Device.StateChanged += (_, change) =>
+        {
+            if (change.Masters is { Independent1: true } || change.Independents is { Independent1: true })
+            {
+                indOn.TrySetResult();
+            }
+        };
+        await rig.Device.ConnectAsync(CancellationToken.None);
+        await rig.KeysReported.WaitAsync(Timeout);
+
+        await rig.Device.SetIndependentAsync(1, true, CancellationToken.None);
+        await WaitUntil(() => rig.Device.LastSession!.WritesSent == 2);
+        var waiting = await Assert.ThrowsAsync<InvalidOperationException>(() => rig.Device.SetIndependentAsync(1, false, CancellationToken.None));
+        Assert.Contains("the previous IND 1 press has not been reported by the console yet", waiting.Message, StringComparison.Ordinal);
+
+        rig.Console.Report((int)HspObjectId.Independents, Body(E9c, 90322));
+        rig.Console.Report((int)HspObjectId.LedStatus, Body(E9c, 90328));
+        await indOn.Task.WaitAsync(Timeout);
+        await WaitUntil(() => rig.Console.Served((int)HspObjectId.LedStatus) == 2);
+        await rig.Device.SetIndependentAsync(1, false, CancellationToken.None);
+        await WaitUntil(() => rig.Device.LastSession!.WritesSent == 4);
+        await rig.Device.DisconnectAsync(CancellationToken.None);
+
+        Assert.Equal(new[] { WithCounter(E9c, 90315, 0x00), WithCounter(E9c, 90324, 0x01), WithCounter(E9c, 90315, 0x02), WithCounter(E9c, 90324, 0x03) }, Payloads(rig.Pipe));
+    }
+
+    [Fact]
+    public async Task An_IND_whose_LED_and_Independents_object_disagree_is_refused()
+    {
+        // SC-5 class B5, the known state: the Independents object says IND 1 on (E9c seq 90322) while its LED reads off (E9b
+        // seq 11636): neither wish is sent.
+        var rig = LiveConsole();
+        var reported = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        rig.Device.StateChanged += (_, change) =>
+        {
+            if (change.Independents is not null || change.Masters is { Independent1: true })
+            {
+                reported.TrySetResult();
+            }
+        };
+        await rig.Device.ConnectAsync(CancellationToken.None);
+        await rig.KeysReported.WaitAsync(Timeout);
+        rig.Console.Report((int)HspObjectId.Independents, Body(E9c, 90322));
+        await reported.Task.WaitAsync(Timeout);
+
+        var refused = await Assert.ThrowsAsync<InvalidOperationException>(() => rig.Device.SetIndependentAsync(1, true, CancellationToken.None));
+        Assert.Contains("its state is not known (SC-5 class B5)", refused.Message, StringComparison.Ordinal);
+        await Assert.ThrowsAsync<InvalidOperationException>(() => rig.Device.SetIndependentAsync(1, false, CancellationToken.None));
+        await rig.Device.DisconnectAsync(CancellationToken.None);
+        Assert.Equal(0, rig.Device.LastSession!.WritesSent);
+    }
+
+    [Fact]
+    public async Task A_channel_fader_needs_the_consoles_channel_levels_and_one_level_to_match()
+    {
+        // SC-5 condition 1 (d): without ChannelLevels in the session the level a fader's first event must carry is unknown:
+        // refused. With ChannelLevels reading channel 1 at 0x17 (E9b seq 8063) while FaderInfo record 1 reads 0x00 (E9b seq
+        // 11628), the two reports disagree (another source drives the channel): refused too. Nothing is sent.
+        var rig = LiveConsole(withChannelLevels: false);
+        var channels = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        rig.Device.StateChanged += (_, change) =>
+        {
+            if (change.ChannelLevels is { Count: > 0 })
+            {
+                channels.TrySetResult();
+            }
+        };
+        await rig.Device.ConnectAsync(CancellationToken.None);
+        await rig.KeysReported.WaitAsync(Timeout);
+
+        var unknown = await Assert.ThrowsAsync<InvalidOperationException>(() => rig.Device.SetChannelLevelAsync(1, 0x10, CancellationToken.None));
+        Assert.Contains("has not reported its channel levels in this session (ChannelLevels)", unknown.Message, StringComparison.Ordinal);
+        rig.Console.Report((int)HspObjectId.ChannelLevels, E9bBody(8063));
+        await channels.Task.WaitAsync(Timeout);
+        var ambiguous = await Assert.ThrowsAsync<InvalidOperationException>(() => rig.Device.SetChannelLevelAsync(1, 0x10, CancellationToken.None));
+        Assert.Contains("channel 1 reads 0x17 (ChannelLevels) and physical fader 1 0x00 (FaderInfo record 1): another source drives the channel", ambiguous.Message, StringComparison.Ordinal);
+        await rig.Device.DisconnectAsync(CancellationToken.None);
+
+        Assert.Equal(0, rig.Device.LastSession!.WritesSent);
+    }
+
     /// <summary>A sink that keeps nothing: the tests above check the bytes through the pipes, not the log.</summary>
     private sealed class DiscardingSink : ITransferSink
     {
@@ -1487,6 +1984,9 @@ public class UsbSmartFadeDeviceTests
         private readonly Dictionary<int, byte[]> _bodies = new();
         private readonly List<int> _dirty = new();
         private readonly Dictionary<int, int> _served = new();
+        private readonly Dictionary<byte, Action> _onPress = new();
+        private readonly List<(int AtPoll, int Id, byte[] Body)> _scheduled = new();
+        private int _polls;
         private readonly Queue<byte[]> _replies = new();
         private readonly ManualResetEventSlim _resume = new(true);
         private bool _pauseRequested;
@@ -1549,6 +2049,34 @@ public class UsbSmartFadeDeviceTests
             }
         }
 
+        /// <summary>
+        /// When a key press with <paramref name="code"/> is written, the console reacts, on the loop's thread, before its next
+        /// poll is answered: <paramref name="reaction"/> reports what changed (bodies from a committed capture, as the 1248
+        /// answered SmartSoft's press there) or pauses at the next poll.
+        /// </summary>
+        public void OnPress(byte code, Action reaction)
+        {
+            lock (_lock)
+            {
+                _onPress[code] = reaction;
+            }
+        }
+
+        /// <summary>
+        /// The console's state changes <paramref name="polls"/> polls from now: that poll lists the objects (a late answer, as a
+        /// console slower than any capture would give).
+        /// </summary>
+        public void ReportAfterPolls(int polls, params (int Id, byte[] Body)[] objects)
+        {
+            lock (_lock)
+            {
+                foreach (var (id, body) in objects)
+                {
+                    _scheduled.Add((_polls + polls, id, body));
+                }
+            }
+        }
+
         /// <summary>How often the object was delivered.</summary>
         public int Served(int id)
         {
@@ -1589,6 +2117,17 @@ public class UsbSmartFadeDeviceTests
                 _dataSeen = true;
                 _relist = RelistFaderInfoAfterWrites;
                 _faultArmed |= FaultAfterWrite != ConsoleFault.None;
+                Action? reaction = null;
+                lock (_lock)
+                {
+                    // a key press (kind 1, state 1; F133)
+                    if (data.Length == 7 && data[4] == 0x01 && data[6] == 0x01)
+                    {
+                        _onPress.TryGetValue(data[5], out reaction);
+                    }
+                }
+
+                reaction?.Invoke();
                 DataWritten.TrySetResult();   // a Data payload: nothing answers it
                 return;
             }
@@ -1613,6 +2152,13 @@ public class UsbSmartFadeDeviceTests
             bool pause;
             lock (_lock)
             {
+                _polls++;
+                foreach (var due in _scheduled.Where(s => s.AtPoll <= _polls).ToArray())
+                {
+                    _scheduled.Remove(due);
+                    Report(due.Id, due.Body);
+                }
+
                 pause = _pauseRequested;
                 _pauseRequested = false;
                 if (pause)

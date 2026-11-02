@@ -43,6 +43,7 @@ export type ConsoleHubMethod =
   | 'pressGo'
   | 'pressFadersMems'
   | 'pressFaders1To24'
+  | 'pressFaders25To48'
   | 'setMemoryLevel'
   | 'bumpMemory'
   | 'recordMemory'

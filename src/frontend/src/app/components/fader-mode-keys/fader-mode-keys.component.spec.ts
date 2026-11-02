@@ -11,6 +11,7 @@ describe('FaderModeKeysComponent', () => {
   let enabled: ReturnType<typeof signal<boolean>>;
   let pressFadersMems: ReturnType<typeof vi.fn>;
   let pressFaders1To24: ReturnType<typeof vi.fn>;
+  let pressFaders25To48: ReturnType<typeof vi.fn>;
 
   const element = () => fixture.nativeElement as HTMLElement;
   const keys = () => Array.from(element().querySelectorAll<HTMLButtonElement>('.faders__key'));
@@ -22,9 +23,13 @@ describe('FaderModeKeysComponent', () => {
     enabled = signal(true);
     pressFadersMems = vi.fn();
     pressFaders1To24 = vi.fn();
+    pressFaders25To48 = vi.fn();
     TestBed.configureTestingModule({
       providers: [
-        { provide: ChannelService, useValue: { enabled: enabled.asReadonly(), pressFadersMems, pressFaders1To24 } },
+        {
+          provide: ChannelService,
+          useValue: { enabled: enabled.asReadonly(), pressFadersMems, pressFaders1To24, pressFaders25To48 },
+        },
       ],
     });
     state = TestBed.inject(ConsoleStateService);
@@ -107,5 +112,39 @@ describe('FaderModeKeysComponent', () => {
     fixture.detectChanges();
     expect(key('.faders__mems').disabled).toBe(true);
     expect(key('.faders__lower').disabled).toBe(true);
+  });
+
+  it('sends 25-48 as a tap for a device that accepts it and names it writable (SC-5 class B4); NEXT stays inactive', () => {
+    state.applyConsoleStateChanged(
+      createSampleState({
+        connection: hardware,
+        supportedCommands: ['pressFadersMems', 'pressFaders1To24', 'pressFaders25To48'],
+        writableControls: ['fadersMems', 'faders1To24', 'faders25To48'],
+        faderBank: 'channels1To24',
+      }),
+    );
+    fixture.detectChanges();
+
+    expect(key('.faders__upper').disabled).toBe(false);
+    expect(key('.faders__upper').getAttribute('title')).toContain('a key tap');
+    expect(key('.faders__next').disabled).toBe(true);
+    key('.faders__upper').click();
+    expect(pressFaders25To48).toHaveBeenCalledTimes(1);
+
+    // supported but not named writable: inactive, as for every other key
+    state.applyConsoleStateChanged(
+      createSampleState({
+        connection: hardware,
+        supportedCommands: ['pressFaders25To48'],
+        writableControls: ['fadersMems'],
+        faderBank: 'channels1To24',
+      }),
+    );
+    fixture.detectChanges();
+    expect(key('.faders__upper').disabled).toBe(true);
+
+    enabled.set(false);
+    fixture.detectChanges();
+    expect(key('.faders__upper').disabled).toBe(true);
   });
 });

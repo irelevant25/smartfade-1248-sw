@@ -20,11 +20,21 @@ namespace SmartFade.Communication;
 /// time (a range of JSONL seq numbers, with a new session under test each, as a reconnect would have). A deviation
 /// the knowledge base documents is declared with <see cref="ExpectInstead"/>.
 /// </para>
+/// <para>
+/// A range may also start inside a SmartSoft session, after the show download that SmartSoft's System pair starts (E9c to
+/// E9e: a 158-record list of 802 bytes, longer than any a session of ours accepts, F177): SmartSoft's data payloads of that
+/// session before the range (its System pair) are then counted as skipped from the start (<c>smartSoftSessionStart</c>), and
+/// the SmartSoft writes before <c>expectWritesFrom</c> are skipped like those the predicate refuses, for a first step that
+/// a session started there could not have sent (SC-2 condition 8 holds every write until the console's first list and LED
+/// state are in).
+/// </para>
 /// </summary>
 public sealed class ReplayHspPipe : IHspPipe
 {
     private readonly CaptureFrame[] _frames;
     private readonly Func<ReadOnlyMemory<byte>, bool>? _expectWrite;
+    private readonly int _expectWritesFrom;
+    private readonly int _payloadsBeforeRange;
     private readonly Dictionary<int, byte[]> _instead = new();
     private readonly List<int> _deviationsMet = new();
     private int _position;
@@ -40,8 +50,17 @@ public sealed class ReplayHspPipe : IHspPipe
     /// A replay of the capture's bulk transfers with JSONL seq in [<paramref name="firstSeq"/>, <paramref name="endSeq"/>).
     /// With <paramref name="expectWrite"/> (write mode), the SmartSoft Data writes whose payload it accepts are expected
     /// from the session under test; without it every SmartSoft Data write is skipped, as for a read-only session.
+    /// <paramref name="smartSoftSessionStart"/>: the JSONL seq at which the SmartSoft session that the range lies in began
+    /// (its counter's 0x00); its data payloads before <paramref name="firstSeq"/> count as skipped. <paramref name="expectWritesFrom"/>:
+    /// SmartSoft's writes whose Data header has a lower seq are skipped (write mode only).
     /// </summary>
-    public ReplayHspPipe(CaptureFile capture, Func<ReadOnlyMemory<byte>, bool>? expectWrite, int firstSeq = int.MinValue, int endSeq = int.MaxValue)
+    public ReplayHspPipe(
+        CaptureFile capture,
+        Func<ReadOnlyMemory<byte>, bool>? expectWrite,
+        int firstSeq = int.MinValue,
+        int endSeq = int.MaxValue,
+        int? smartSoftSessionStart = null,
+        int expectWritesFrom = int.MinValue)
     {
         ArgumentNullException.ThrowIfNull(capture);
         Capture = capture;
@@ -55,9 +74,26 @@ public sealed class ReplayHspPipe : IHspPipe
 
         _frames = bulk;
         _expectWrite = expectWrite;
+        _expectWritesFrom = expectWritesFrom;
+        if (smartSoftSessionStart is { } start)
+        {
+            if (start > firstSeq)
+            {
+                throw new ArgumentOutOfRangeException(nameof(smartSoftSessionStart), start, "The SmartSoft session must begin at or before the range.");
+            }
+
+            // its Data headers between its start and the range, each followed by its payload (F131: one payload per header)
+            var before = capture.BulkFrames.Where(f => f.Seq >= start && f.Seq < firstSeq).ToArray();
+            _payloadsBeforeRange = before.Count(f => IsDataHeader(f));
+            PayloadsBeforeRange = _payloadsBeforeRange;
+        }
+
         FirstSeq = firstSeq;
         EndSeq = endSeq;
     }
+
+    /// <summary>SmartSoft data payloads of the session the range lies in that precede the range (counted as skipped from <see cref="Open"/> on).</summary>
+    public int PayloadsBeforeRange { get; }
 
     public CaptureFile Capture { get; }
 
@@ -122,7 +158,7 @@ public sealed class ReplayHspPipe : IHspPipe
     {
         IsOpen = true;
         _position = 0;
-        _skippedDataPayloads = 0;
+        _skippedDataPayloads = _payloadsBeforeRange;
         _awaitingPayload = false;
         _deviationsMet.Clear();
     }
@@ -273,7 +309,7 @@ public sealed class ReplayHspPipe : IHspPipe
             var header = _frames[_position];
             var length = header.Data[2] | (header.Data[3] << 8);
             var hasPayload = _position + 1 < _frames.Length && _frames[_position + 1].Direction == CaptureDirection.Out && _frames[_position + 1].Data.Length == length;
-            if (_expectWrite is not null && hasPayload && _expectWrite(_frames[_position + 1].Data))
+            if (_expectWrite is not null && hasPayload && header.Seq >= _expectWritesFrom && _expectWrite(_frames[_position + 1].Data))
             {
                 return;   // write mode: the session under test must send this one
             }

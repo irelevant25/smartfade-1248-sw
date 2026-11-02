@@ -109,9 +109,11 @@ public class ConsoleServiceTests
         Assert.False(DeviceCommands.All.HasFlag(DeviceCommands.PressGo));
         Assert.False(DeviceCommands.All.HasFlag(DeviceCommands.PressFadersMems));
         Assert.False(DeviceCommands.All.HasFlag(DeviceCommands.PressFaders1To24));
+        Assert.False(DeviceCommands.All.HasFlag(DeviceCommands.PressFaders25To48));
         await Assert.ThrowsAsync<NotSupportedException>(() => service.PressGoAsync(CancellationToken.None));
         await Assert.ThrowsAsync<NotSupportedException>(() => service.PressFadersMemsAsync(CancellationToken.None));
         await Assert.ThrowsAsync<NotSupportedException>(() => service.PressFaders1To24Async(CancellationToken.None));
+        await Assert.ThrowsAsync<NotSupportedException>(() => service.PressFaders25To48Async(CancellationToken.None));
     }
 
     [Fact]
@@ -565,6 +567,8 @@ public class ConsoleServiceTests
         public Task PressFadersMemsAsync(CancellationToken cancellationToken) => Task.CompletedTask;
 
         public Task PressFaders1To24Async(CancellationToken cancellationToken) => Task.CompletedTask;
+
+        public Task PressFaders25To48Async(CancellationToken cancellationToken) => Task.CompletedTask;
 
         public Task SetMemoryLevelAsync(int page, int fader, byte level, CancellationToken cancellationToken) => Task.CompletedTask;
 

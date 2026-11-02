@@ -127,6 +127,14 @@ export class ChannelService {
     void this._connection.sendPressFaders1To24();
   }
 
+  /** FADERS 25-48 as a tap: the physical faders to channel mode, bank 25-48. Sent right away. */
+  pressFaders25To48(): void {
+    if (!this.enabled()) {
+      return;
+    }
+    void this._connection.sendPressFaders25To48();
+  }
+
   /** IND 1 (1) or IND 2 (2) on or off. Sent right away. */
   setIndependent(number: number, on: boolean): void {
     if (

@@ -7,8 +7,9 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <!-- HspReadSession's press-without-tap path (QueueKeyPress / QueueKeyRelease) exists for the SC-2 golden tests only:
-         they release a key where SmartSoft released it. The device sends taps only (SC-2 condition 4). -->
+    <!-- HspReadSession's press-of-any-key path (QueueKeyPress, released with ReleaseKey) exists for the golden tests only:
+         they release a key where SmartSoft released it. The device holds bumps only (QueueKeyHold, SC-5 class B3) and
+         taps every other key (SC-2 condition 4). -->
     <InternalsVisibleTo Include="SmartFade.Protocol.Tests" />
   </ItemGroup>
 

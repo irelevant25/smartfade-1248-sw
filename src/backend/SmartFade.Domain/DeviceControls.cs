@@ -4,8 +4,8 @@ namespace SmartFade.Domain;
 /// Names of the individual controls a device may accept commands for, as the contract carries them
 /// (docs/api.md `writableControls`). A device that accepts a command for every control of its kind
 /// reports no list (null); a device whose clearance covers only some controls (the real console under
-/// safety check SC-2: channel fader 1, MASTER, BUMPS, a few bumps and keys) names exactly those, and the
-/// UI enables nothing else. The names are data for the UI; no byte depends on them.
+/// safety checks SC-2 and SC-5: the faders and bumps of every bank, MASTER, BUMPS and some keys) names exactly those,
+/// and the UI enables nothing else. The names are data for the UI; no byte depends on them.
 /// </summary>
 public static class DeviceControls
 {
@@ -16,6 +16,7 @@ public static class DeviceControls
     public const string Go = "go";
     public const string FadersMems = "fadersMems";
     public const string Faders1To24 = "faders1To24";
+    public const string Faders25To48 = "faders25To48";
     public const string RecMem = "recMem";
     public const string EditMem = "editMem";
     public const string Copy = "copy";

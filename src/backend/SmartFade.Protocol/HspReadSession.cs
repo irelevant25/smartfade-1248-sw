@@ -64,22 +64,26 @@ public enum HspReadSessionState
 /// <para>
 /// A session created without a write gate is read-only, exactly as SC-1 reviewed it: it never sends a Data header or
 /// a payload, and nothing can be queued on it. A session created with a write gate may also send the ConsoleEvents of
-/// SC-2's whitelist
-/// (2026-10-31, classes A and B1; conditional GO, nothing sent before E11 on the owner's go):
+/// the SC-2 / SC-5 whitelist
+/// (2026-10-31, classes A and B1; 2026-11-02, classes A2–A4, B3–B5; conditional GOs, nothing sent before the review and
+/// the owner's go for the session):
 /// </para>
 /// <list type="bullet">
 /// <item>a write goes only at the first transfer after a completed poll exchange (the reply header and its payload
 /// in), before a pending fetch, never between a fetch and its poll, at most one per poll: where SmartSoft placed all
 /// 828 of its writes in E9 and E9b (`tools/protocol-analyzer/write_rules.py`; INFERRED as its rule, SC-2 item 1;
-/// condition 7);</item>
+/// condition 7) and every one of E9c, E9d and E9e that a session of ours can replay (the golden replays);</item>
 /// <item>the header carries the stale words a poll would carry there (F52), the payload the per-session counter,
 /// 0x00 at this session's first write and +1 per write (F131), and a fader event the last value this session sent
-/// for that index, 0x00 before its first (condition 3, F132);</item>
-/// <item>a key is a tap: its press, then its release at the next write slot, and no other write between them
-/// (condition 4; OBSERVED, `write_rules.py` 2026-10-31: E9 and E9b sent no write between any press and its release, 0 of 58 pairs); the release is owed until sent, so
+/// for that index, 0x00 before its first, whatever bank the console shows (condition 3, F132; SC-5 condition 4);</item>
+/// <item>a key is a tap, its press then its release at the next write slot, or, for a bump only, a hold
+/// (<see cref="QueueKeyHold"/>; SC-5 class B3), its press then its release when the owner of the hold asks for it
+/// (<see cref="ReleaseKey"/>: the UI let go, or the caller's 3 s bound, SC-5 condition 2); no other write goes between a
+/// press and its release (condition 4; OBSERVED, `write_rules.py`: E9 and E9b sent no write between any press and its
+/// release, 0 of 58 pairs, nor did E9c, E9d or E9e); the release is owed until sent, so
 /// the session is not idle while a key is held, nor before one poll exchange has followed its last write (OBSERVED: SmartSoft
-/// polled 14.5–16.5 ms after every write), and <see cref="TakeReleaseAtEnd"/> gives the release to the caller when the
-/// session ends with no exchange open;</item>
+/// polled 14.5–16.5 ms after every write), a stop makes it due at once, and <see cref="TakeReleaseAtEnd"/> gives the
+/// release to the caller when the session ends with no exchange open;</item>
 /// <item>nothing is sent before this session has received the console's first list and its LED state (condition 8),
 /// and at the moment a new write would go the session asks the gate (the device's interlock of condition 5) and then
 /// the write's own condition (the console state its control was seen in), each of which may send it, hold it or drop
@@ -92,6 +96,7 @@ public enum HspReadSessionState
 /// </summary>
 [Evidence(EvidenceStatus.Verified, "F51, F52, F53, F54, F55, F57", "cleared by SC-1 (2026-10-30): poll and listed fetch only")]
 [Evidence(EvidenceStatus.Verified, "F131, F132, F133", "write mode, SC-2 (2026-10-31): whitelisted ConsoleEvents; the placement INFERRED from E9 and E9b (828 of 828 writes)")]
+[Evidence(EvidenceStatus.Verified, "F171, F174, F175", "write mode, SC-5 (2026-11-02): every physical fader and bump, the bank keys, IND 1 / 2; a bump held until released (F174: SmartSoft's holds of 0.8-4.67 s); the placement reproduced over E9c, E9d and E9e")]
 public sealed class HspReadSession
 {
     /// <summary>
@@ -242,6 +247,21 @@ public sealed class HspReadSession
         }
     }
 
+    /// <summary>
+    /// True while a hold (<see cref="QueueKeyHold"/>) waits for its release: its press queued, or sent with the release
+    /// not yet asked for. A tap's press does not count (its release is due at once).
+    /// </summary>
+    public bool HoldInProgress
+    {
+        get
+        {
+            lock (_writeLock)
+            {
+                return (_heldKey is not null && !_releaseDue) || _queuedWrites.Exists(w => w is KeyPress { Tap: false });
+            }
+        }
+    }
+
     /// <summary>Why the write at the head of the queue waits, as of the last write slot; null when nothing waits.</summary>
     public string? WriteHeldReason { get; private set; }
 
@@ -336,7 +356,7 @@ public sealed class HspReadSession
     }
 
     /// <summary>
-    /// Queues a fader event (SC-2 class A). A value still queued for the same fader is replaced, keeping its place;
+    /// Queues a fader event (SC-2 class A, SC-5 classes A2-A4). A value still queued for the same fader is replaced, keeping its place;
     /// the previous byte is fixed when the event is sent (the last value this session sent, condition 3).
     /// <paramref name="condition"/>, asked without the session's lock at the moment the event would go, sends, holds or
     /// drops it (the console state its control needs); it must not change anything, since it may be asked at slots
@@ -347,7 +367,7 @@ public sealed class HspReadSession
     {
         if (!Enum.IsDefined(fader))
         {
-            throw new ArgumentOutOfRangeException(nameof(fader), fader, "Not a fader index of the SC-2 whitelist.");
+            throw new ArgumentOutOfRangeException(nameof(fader), fader, "Not a fader index of the SC-2 / SC-5 whitelist.");
         }
 
         lock (_writeLock)
@@ -366,7 +386,7 @@ public sealed class HspReadSession
     }
 
     /// <summary>
-    /// Queues a key tap (SC-2 class B1): its press, then its release at the next write slot, as one operation
+    /// Queues a key tap (SC-2 class B1, SC-5 classes B3-B5): its press, then its release at the next write slot, as one operation
     /// (condition 4). <paramref name="condition"/> is asked before the press as for <see cref="QueueFader"/>; once the
     /// press is out, the release is owed and nothing holds it back. <paramref name="sent"/> runs once the press is taken
     /// for sending, as for <see cref="QueueFader"/>.
@@ -374,30 +394,57 @@ public sealed class HspReadSession
     public void QueueKeyTap(ClearedKey key, Func<HspWriteDecision>? condition = null, Action? sent = null) => QueuePress(key, tap: true, condition, sent);
 
     /// <summary>
-    /// The golden tests' path (condition 2): a press whose release waits for <see cref="QueueKeyRelease"/>, so that a
-    /// replay can release where SmartSoft released (E9: 46 ms to 5.80 s after the press). Not reachable from the
-    /// device, which sends taps only (no held bump, condition 4). A stop or a discard makes the release due at once.
+    /// Queues a held bump (SC-5 class B3): its press, then its release only once <see cref="ReleaseKey"/> asks for it (the
+    /// UI let go, or the caller's bound; SC-5 condition 2: the device releases at 3 s), or at once when the session stops
+    /// or discards its queue (condition 4). Only a bump code is held (<see cref="PhysicalControls.IsBump"/>): every other
+    /// key is a tap. Nothing but the release goes while the key is held. <paramref name="condition"/> and
+    /// <paramref name="sent"/> as for <see cref="QueueKeyTap"/>.
+    /// </summary>
+    public void QueueKeyHold(ClearedKey key, Func<HspWriteDecision>? condition = null, Action? sent = null)
+    {
+        if (!PhysicalControls.IsBump(key))
+        {
+            throw new ArgumentOutOfRangeException(nameof(key), key, "Only a bump is held (SC-5 class B3); every other key is a tap.");
+        }
+
+        QueuePress(key, tap: false, condition, sent);
+    }
+
+    /// <summary>
+    /// The golden tests' path (condition 2): a press of any whitelisted key whose release waits for
+    /// <see cref="ReleaseKey"/>, so that a replay can release where SmartSoft released (E9: 46 ms to 5.80 s after the
+    /// press). Not reachable from the device, which holds bumps only (<see cref="QueueKeyHold"/>) and taps every other key.
     /// </summary>
     internal void QueueKeyPress(ClearedKey key) => QueuePress(key, tap: false, condition: null, sent: null);
 
-    /// <summary>Makes the release of a press queued with <see cref="QueueKeyPress"/> due (golden tests only).</summary>
-    internal void QueueKeyRelease(ClearedKey key)
+    /// <summary>
+    /// Asks for the release of a held key: due at the next write slot when its press was sent, or, when its press is still
+    /// queued, the press becomes a tap (its release follows it at the next slot). Returns false when the key is neither held
+    /// nor queued as a hold, or its release is already due: a release is sent once (SC-5 condition 2).
+    /// </summary>
+    public bool ReleaseKey(ClearedKey key)
     {
         lock (_writeLock)
         {
             if (_heldKey == key)
             {
+                if (_releaseDue)
+                {
+                    return false;
+                }
+
                 _releaseDue = true;
-                return;
+                return true;
             }
 
-            var queued = _queuedWrites.FindIndex(w => w is KeyPress p && p.Key == key);
+            var queued = _queuedWrites.FindIndex(w => w is KeyPress { Tap: false } p && p.Key == key);
             if (queued < 0)
             {
-                throw new InvalidOperationException($"No press of {key} is queued or held.");
+                return false;
             }
 
             _queuedWrites[queued] = ((KeyPress)_queuedWrites[queued]) with { Tap = true };
+            return true;
         }
     }
 
@@ -407,6 +454,15 @@ public sealed class HspReadSession
         lock (_writeLock)
         {
             return _queuedWrites.Exists(w => w is KeyPress p && p.Key == key);
+        }
+    }
+
+    /// <summary>True when an event for <paramref name="fader"/> is queued and not sent yet.</summary>
+    public bool IsFaderQueued(ClearedFader fader)
+    {
+        lock (_writeLock)
+        {
+            return _queuedWrites.Exists(w => w is FaderWrite f && f.Fader == fader);
         }
     }
 
@@ -475,7 +531,7 @@ public sealed class HspReadSession
     {
         if (!Enum.IsDefined(key))
         {
-            throw new ArgumentOutOfRangeException(nameof(key), key, "Not a key code of the SC-2 whitelist.");
+            throw new ArgumentOutOfRangeException(nameof(key), key, "Not a key code of the SC-2 / SC-5 whitelist.");
         }
 
         lock (_writeLock)
@@ -844,6 +900,6 @@ public sealed class HspReadSession
     /// <summary>A fader event; the previous byte is fixed when it is sent.</summary>
     private sealed record FaderWrite(ClearedFader Fader, byte Value, Func<HspWriteDecision>? Condition, Action? Sent) : QueuedWrite(Condition, Sent);
 
-    /// <summary>A key press; with <paramref name="Tap"/> its release is due at the next write slot, else when the golden test releases it.</summary>
+    /// <summary>A key press; with <paramref name="Tap"/> its release is due at the next write slot, else when <see cref="ReleaseKey"/> asks for it (a held bump, or the golden tests' press).</summary>
     private sealed record KeyPress(ClearedKey Key, bool Tap, Func<HspWriteDecision>? Condition, Action? Sent) : QueuedWrite(Condition, Sent);
 }

@@ -4,6 +4,7 @@ using SmartFade.Application.Ports;
 using SmartFade.Communication;
 using SmartFade.Domain;
 using SmartFade.Protocol;
+using SmartFade.Protocol.Objects;
 
 namespace SmartFade.Devices.Usb;
 
@@ -11,15 +12,21 @@ namespace SmartFade.Devices.Usb;
 /// The real SmartFade 1248 over USB. It runs the poll / listed-fetch session that safety check SC-1 cleared
 /// (docs/protocol/safety-checks.md) and reports what the console delivers. By default it is read-only and accepts no
 /// command (<see cref="SupportedCommands"/> is None). With live control switched on for the day
-/// (<see cref="UsbDeviceOptions.LiveControlDate"/>, SC-2 item 6) it also sends SC-2's whitelist, and of it only what
-/// SmartSoft was seen to send from the PC with the record keys off, in the console state it was sent in (E9, E9b;
-/// `tools/protocol-analyzer/write_rules.py`): channel fader 1 (channel mode, bank 1-24, MASTER at full), the MASTER and
-/// BUMPS (channel mode, bank 1-24) as fader events; bump 7 (channel mode), memory bump 1 (memory mode, the page shown),
-/// SOLO and BLACKOUT from a steady LED, GO with STACK dim, MEMS (channel mode, bank 1-24) and FADERS 1-24 (from memory
-/// mode or bank 25-48) as taps (press, then release; condition 4). Bump 9, channel bump 1 and memory bump 7 are
-/// whitelisted codes never seen in such a state and are not sent. Every command is refused, with its reason, while
-/// REC MEM, EDIT MEM, COPY or REC SEQ is lit, blinking or unreported (condition 5) and before the console has reported
-/// what the control needs (conditions 6, 8); a queued write is asked again at the moment it would go, after its slot
+/// (<see cref="UsbDeviceOptions.LiveControlDate"/>, SC-2 item 6) it also sends the SC-2 / SC-5 whitelist, and of it only
+/// what SmartSoft was seen to send from the PC with the record keys off, in the console state it was sent in (E9 to E9e;
+/// `tools/protocol-analyzer/write_rules.py`): the 24 physical faders as channel faders 1–24 (bank 1-24), 25–48 (bank
+/// 25-48) and the memory faders of the page the console shows (memory mode), each with the MASTER at full; the MASTER and
+/// BUMPS (channel mode, bank 1-24) as fader events; the 24 physical bumps in the same three banks as holds bounded to 3 s
+/// (SC-5 class B3; <see cref="HspReadLoop.MaxHold"/>); SOLO, BLACKOUT, IND 1 and IND 2 as toggles from a steady LED; GO with
+/// STACK dim; FADERS MEMS and FADERS 25-48 (from bank 1-24) and FADERS 1-24 (from memory mode or bank 25-48) as taps
+/// (press, then release; condition 4). A control of another bank than the console shows starts the <b>automatic bank
+/// switch</b> (SC-5 condition 1): the bank key as a tap, then nothing until ConsoleStatus reports the new bank and the LEDs
+/// arrived (within <see cref="BankSwitchReportBound"/>, else the session ends as a deviation), then the control. A physical
+/// fader whose content the console re-assigned (a bank, mode or page reported, and the session's start) is matched first:
+/// its first event carries the target's reported level, and only then the UI's level follows (F172, SC-5 condition 1 d).
+/// Every command is refused, with its reason, while REC MEM, EDIT MEM, COPY or REC SEQ is lit, blinking or unreported
+/// (condition 5), while NEXT mode is on or unknown (F173), and before the console has reported what the control needs
+/// (conditions 6, 8); a queued write is asked again at the moment it would go, after its slot
 /// wait and right before its header (the gate, then its own state), and dropped unsent if the console's state no longer
 /// allows it. In a live session a key-LED, fader-mode or FaderInfo report that does not decode ends the session. Every
 /// transfer is logged to a capture file in our normalized format. Any error ends the session in the Error state with its
@@ -31,21 +38,40 @@ namespace SmartFade.Devices.Usb;
 /// </summary>
 [Evidence(EvidenceStatus.Verified, "F51, F52, F53, F54, F55, F57", "the read-only session as SC-1 cleared it (2026-10-30)")]
 [Evidence(EvidenceStatus.Verified, "F131, F132, F133, F134", "live control, SC-2 classes A and B1 (2026-10-31): the whitelisted ConsoleEvents as SmartSoft's and the console's behaviour; a conditional GO, nothing sent before E11 on the owner's go")]
+[Evidence(EvidenceStatus.Verified, "F171, F172 (in part), F174, F175", "live control, SC-5 classes A2-A4, B3-B5 (2026-11-02, with the addenda): every physical fader and bump in three banks, the bank keys, IND 1 / 2, the automatic bank switch and the matching event; a conditional GO, nothing sent before the review and E11b on the owner's go")]
 [Evidence(EvidenceStatus.Inferred, "F57, F116", "the interlock's freshness reading: a poll reply within two poll periods that listed no LedStatus means the key LEDs are current (F57: a list names what changed; F116: a record screen opens and closes with exactly one LedStatus payload, 28 of 28 and 4 of 4); not observed as a rule of the console")]
-[Evidence(EvidenceStatus.Observed, "write_rules.py 2026-10-31 (E9, E9b)", "the console states SmartSoft sent each whitelisted control in, counted over 828 writes of one PC and one console; the device sends each control only in those states")]
+[Evidence(EvidenceStatus.Observed, "write_rules.py 2026-10-31 (E9, E9b); E9c, E9d, E9e", "the console states SmartSoft sent each whitelisted control in; the device sends each control only in those states")]
 public sealed class UsbSmartFadeDevice : ISmartFadeDevice, IAsyncDisposable
 {
     private static readonly TimeSpan StopTimeout = TimeSpan.FromSeconds(20);
 
-    /// <summary>The port commands live control accepts (SC-2 item 6); each one refuses every control outside the whitelist.</summary>
-    private const DeviceCommands LiveCommands = DeviceCommands.SetChannelLevel | DeviceCommands.SetMaster | DeviceCommands.SetBumps
-        | DeviceCommands.SetBlackout | DeviceCommands.SetSolo | DeviceCommands.BumpChannel | DeviceCommands.BumpMemory
-        | DeviceCommands.PressGo | DeviceCommands.PressFadersMems | DeviceCommands.PressFaders1To24;
+    /// <summary>
+    /// SC-5 condition 1 (c): after the automatic switch's bank key went out, ConsoleStatus must report the new bank and a
+    /// LedStatus must arrive within this bound; otherwise the session ends as a deviation (the console answered the panel's
+    /// and SmartSoft's bank keys at the next poll in every capture: E9b, E9c S2, E9d B, E9e, OBSERVED).
+    /// </summary>
+    public static readonly TimeSpan BankSwitchReportBound = TimeSpan.FromSeconds(2);
 
-    /// <summary>The controls the command methods send, by name (docs/api.md `writableControls`): channel fader 1, MASTER, BUMPS, bump 7, memory bump 1 of every page, SOLO, BLACKOUT, GO, FADERS MEMS, FADERS 1-24.</summary>
+    /// <summary>The port commands live control accepts (SC-2 item 6, SC-5); each one refuses every control outside the whitelist.</summary>
+    private const DeviceCommands LiveCommands = DeviceCommands.SetChannelLevel | DeviceCommands.SetMaster | DeviceCommands.SetBumps
+        | DeviceCommands.SetBlackout | DeviceCommands.SetSolo | DeviceCommands.BumpChannel | DeviceCommands.SetMemoryLevel
+        | DeviceCommands.BumpMemory | DeviceCommands.SetIndependent | DeviceCommands.PressGo | DeviceCommands.PressFadersMems
+        | DeviceCommands.PressFaders1To24 | DeviceCommands.PressFaders25To48;
+
+    /// <summary>
+    /// The controls the command methods send, by name (docs/api.md `writableControls`): every channel fader and bump 1–48,
+    /// every memory fader and bump of every page (each sent only on the page the console shows, F113), MASTER, BUMPS,
+    /// SOLO, BLACKOUT, IND 1, IND 2, GO, FADERS MEMS, FADERS 1-24, FADERS 25-48. Not CLEAR, STACK, PAUSE, NEXT or a record key.
+    /// </summary>
     private static readonly IReadOnlySet<string> LiveControls = new HashSet<string>(
-        new[] { DeviceControls.ChannelFader(1), DeviceControls.Master, DeviceControls.Bumps, DeviceControls.ChannelBump(7), DeviceControls.Solo, DeviceControls.Blackout, DeviceControls.Go, DeviceControls.FadersMems, DeviceControls.Faders1To24 }
-            .Concat(Enumerable.Range(0, 12).Select(page => DeviceControls.MemoryBump(1 + 24 * page))));
+        new[]
+        {
+            DeviceControls.Master, DeviceControls.Bumps, DeviceControls.Solo, DeviceControls.Blackout, DeviceControls.Go,
+            DeviceControls.FadersMems, DeviceControls.Faders1To24, DeviceControls.Faders25To48,
+            DeviceControls.Independent(1), DeviceControls.Independent(2),
+        }
+            .Concat(Enumerable.Range(1, ConsoleCapabilities.SmartFade1248.Channels).SelectMany(channel => new[] { DeviceControls.ChannelFader(channel), DeviceControls.ChannelBump(channel) }))
+            .Concat(Enumerable.Range(1, ConsoleCapabilities.SmartFade1248.Memories).SelectMany(memory => new[] { DeviceControls.MemoryFader(memory), DeviceControls.MemoryBump(memory) })));
 
     private static readonly IReadOnlySet<string> NoControls = new HashSet<string>();
 
@@ -63,8 +89,18 @@ public sealed class UsbSmartFadeDevice : ISmartFadeDevice, IAsyncDisposable
     private readonly TimeProvider _clock;
     private readonly Func<TimeSpan, CancellationToken, Task>? _delay;
     private readonly IncompleteWriteMarker? _marker;
-    private readonly Dictionary<ClearedKey, KeyLed> _togglesAwaitingLed = new();
+    private readonly Dictionary<ClearedKey, (KeyLed Before, Func<KeyLed?> Led)> _togglesAwaitingLed = new();
     private readonly HashSet<ClearedKey> _togglesSent = new();
+
+    // SC-5 condition 1 (all under _gate): the physical faders this session has matched since the console last re-assigned
+    // them, the UI's latest level for a fader whose matching event waits (or whose switch does), the automatic switch in
+    // progress, what the console's faders controlled at its last ConsoleStatus, and the hold the UI is pressing.
+    private readonly HashSet<ClearedFader> _matched = new();
+    private readonly Dictionary<ClearedFader, PendingLevel> _pendingLevels = new();
+    private BankSwitch? _switch;
+    private (FaderBank? Bank, int? Page)? _assignment;
+    private HeldBump? _hold;
+    private ITransferSink? _liveLog;
     private ConnectionStatus _status = ConnectionStatus.Disconnected;
     private ConsoleStateAssembler _assembler;
     private CancellationTokenSource? _sessionStop;
@@ -256,9 +292,11 @@ public sealed class UsbSmartFadeDevice : ISmartFadeDevice, IAsyncDisposable
 
             _sessionStop = stop;
             _liveSession = liveControl ? session : null;
+            _liveLog = liveControl ? log : null;
             _lastReportStamp = null;
             _togglesAwaitingLed.Clear();
             _togglesSent.Clear();
+            ResetLiveState();   // every physical fader starts unmatched: the console's state at our start is not ours (F172)
             _status = ConnectionStatus.Connected;
         }
 
@@ -279,6 +317,7 @@ public sealed class UsbSmartFadeDevice : ISmartFadeDevice, IAsyncDisposable
             if (_generation != generation)
             {
                 _liveSession = null;
+                _liveLog = null;
                 log.Dispose();
                 pipe.Dispose();
                 stop.Dispose();
@@ -381,19 +420,23 @@ public sealed class UsbSmartFadeDevice : ISmartFadeDevice, IAsyncDisposable
     }
 
     /// <summary>
-    /// Channel fader 1 only (index 0x00, SC-2 class A): in channel mode, bank 1-24, with the MASTER at full, as all 215
-    /// of SmartSoft's events whose MASTER was known (OBSERVED, E9 + E9b, `write_rules.py` 2026-10-31). With the MASTER at full the reported channel level is the
-    /// fader's own (F96, OBSERVED: the levels are post-MASTER), so the UI's start from the reported level (condition 6) holds.
+    /// A channel fader, 1–48 (SC-2 class A, SC-5 classes A2 and A3): channels 1–24 are physical faders 1–24 in bank 1-24,
+    /// channels 25–48 the same physical faders in bank 25-48 (F171 VERIFIED: index N − 1 moved ChannelLevels[N] in bank 1-24
+    /// and ChannelLevels[24 + N] in bank 25-48, E9c and both E9d passes). Sent only with the MASTER at full, as every PC
+    /// channel-fader event of E9 to E9e whose MASTER was known but E9c S7's (the reported level is post-MASTER, F96, F176:
+    /// only at full is it the fader's own, SC-2 condition 6). In the other bank the automatic switch goes first; a fader
+    /// not matched since the console last re-assigned it first gets its reported level (SC-5 condition 1).
     /// </summary>
     public Task SetChannelLevelAsync(int channel, byte level, CancellationToken cancellationToken)
     {
         var session = LiveSession();
-        if (channel != 1)
+        if (!Capabilities.IsValidChannel(channel))
         {
-            throw NotCleared($"Channel fader {channel} is not cleared: only channel fader 1 (index 0x00) is (SC-2 class A)");
+            throw NotCleared($"Channel {channel} does not exist on the 1248");
         }
 
-        return QueueLiveFader(session, ClearedFader.ChannelFader1, level, () => NotInChannelBank1To24("channel fader 1") ?? MasterNotAtFull(), holdWhileFaderInfoListed: true);
+        var (bank, physical) = ChannelPosition(channel);
+        return SetFaderLevel(session, new Target(bank, null, physical, $"channel fader {channel}", channel), level);
     }
 
     /// <summary>The MASTER (index 0x30, SC-2 class A), in channel mode, bank 1-24 as every PC event; it changes the whole live output, as the panel's MASTER does.</summary>
@@ -405,56 +448,95 @@ public sealed class UsbSmartFadeDevice : ISmartFadeDevice, IAsyncDisposable
         QueueLiveFader(LiveSession(), ClearedFader.Bumps, level, () => NotInChannelBank1To24("BUMPS"));
 
     /// <summary>BLACKOUT as a toggle: one tap, only from a steady LED (block 53) that differs from the wish, in channel mode, bank 1-24 (SC-2 class B1).</summary>
-    public Task SetBlackoutAsync(bool on, CancellationToken cancellationToken) => Toggle(ClearedKey.Blackout, on, keys => keys.Blackout, "BLACKOUT");
+    public Task SetBlackoutAsync(bool on, CancellationToken cancellationToken) =>
+        Toggle(ClearedKey.Blackout, on, () => _assembler.Keys?.Blackout, "BLACKOUT");
 
     /// <summary>SOLO as a toggle: one tap, only from a steady LED (block 52) that differs from the wish, in channel mode, bank 1-24 (SC-2 class B1).</summary>
-    public Task SetSoloAsync(bool on, CancellationToken cancellationToken) => Toggle(ClearedKey.Solo, on, keys => keys.Solo, "SOLO");
+    public Task SetSoloAsync(bool on, CancellationToken cancellationToken) =>
+        Toggle(ClearedKey.Solo, on, () => _assembler.Keys?.Solo, "SOLO");
 
     /// <summary>
-    /// Bump 7 in channel mode, bank 1-24, as a tap (SC-2 condition 4: press and release are one operation, no held
-    /// bump): a press sends the tap, a release adds nothing. Bumps 1 and 9 are whitelisted codes that SmartSoft never
-    /// sent in channel mode with the record keys off (E9, E9b), so they are not sent.
+    /// The bump under a channel fader, 1–48, held while the UI holds it and at most 3 s (SC-5 class B3 and condition 2):
+    /// physical bump N in bank 1-24 for channel N, in bank 25-48 for channel 24 + N (F174; the channel bumps other than 1,
+    /// 2, 7, 10, 12, 24, 25 and 48 on SC-5 addendum 2's physical-control rule). A press queues the hold (after the automatic
+    /// switch when the console shows another bank); a release asks for its release, once.
     /// </summary>
     public Task BumpChannelAsync(int channel, bool pressed, CancellationToken cancellationToken)
     {
-        var session = LiveSession();
-        var key = channel switch
+        var control = DeviceControls.ChannelBump(channel);
+        if (!pressed)
         {
-            7 => ClearedKey.Bump7,
-            1 => throw NotCleared("Channel bump 1 is not sent: code 0x00 was seen from a PC with the record keys off only in memory mode, as memory bump 1 (E9, E9b)"),
-            9 => throw NotCleared(Bump9NotSeen),
-            _ => throw NotCleared($"The bump of channel {channel} is not cleared: of the channel bumps, only bump 7 is sent (SC-2 class B1, as seen from SmartSoft)"),
-        };
+            return ReleaseBump(control);
+        }
 
-        return pressed ? QueueLiveTap(session, key, () => NotInChannelBank1To24($"bump {channel}")) : Task.CompletedTask;
+        var session = LiveSession();
+        if (!Capabilities.IsValidChannel(channel))
+        {
+            throw NotCleared($"Channel {channel} does not exist on the 1248");
+        }
+
+        var (bank, physical) = ChannelPosition(channel);
+        return PressBump(session, new Target(bank, null, physical, $"bump {channel}", channel), control);
     }
 
-    public Task SetMemoryLevelAsync(int page, int fader, byte level, CancellationToken cancellationToken) => throw NotCleared();
+    /// <summary>
+    /// A memory fader of the page the console shows (SC-5 class A4: physical fader k in memory mode is memory fader k of
+    /// that page, F171, F112; no page change is ever sent, F113), with the MASTER at full as every PC memory-fader event
+    /// of E9c and E9d; from channel mode, bank 1-24, the automatic switch (FADERS MEMS) goes first; the fader is matched
+    /// at its reported level first (FaderInfo record k bytes 0 and 1, SC-5 condition 1 d).
+    /// </summary>
+    public Task SetMemoryLevelAsync(int page, int fader, byte level, CancellationToken cancellationToken)
+    {
+        var session = LiveSession();
+        if (!Capabilities.IsValidMemoryPage(page) || !Capabilities.IsValidMemoryFader(fader))
+        {
+            throw NotCleared($"Memory fader {fader} of page {page} does not exist on the 1248");
+        }
+
+        return SetFaderLevel(session, new Target(FaderBank.Memories, page, fader, $"memory fader {fader} of page {page}", null), level);
+    }
 
     /// <summary>
-    /// Memory bump 1 of the page the console shows in memory mode, as a tap (code 0x00, as SmartSoft's memory bump 1,
-    /// F134); a release adds nothing. Memory bumps 7 and 9 were never sent from a PC in memory mode with the record keys
-    /// off (E9, E9b), so they are not sent.
+    /// The bump under a memory fader of the page the console shows, held as <see cref="BumpChannelAsync"/> (SC-5 class B3:
+    /// every memory bump 1–24 in both E9d passes, F174 VERIFIED).
     /// </summary>
     public Task BumpMemoryAsync(int page, int fader, bool pressed, CancellationToken cancellationToken)
     {
-        var session = LiveSession();
-        var key = fader switch
+        var control = DeviceControls.MemoryBump(Capabilities.IsValidMemoryPage(page) && Capabilities.IsValidMemoryFader(fader) ? Capabilities.MemoryNumber(page, fader) : 0);
+        if (!pressed)
         {
-            1 => ClearedKey.Bump1,
-            7 => throw NotCleared("Memory bump 7 is not sent: code 0x06 was seen from a PC with the record keys off only in channel mode (E9, E9b)"),
-            9 => throw NotCleared(Bump9NotSeen),
-            _ => throw NotCleared($"The bump of memory fader {fader} is not cleared: of the memory bumps, only memory bump 1 is sent (SC-2 class B1, as seen from SmartSoft)"),
-        };
+            return ReleaseBump(control);
+        }
 
-        return pressed ? QueueLiveTap(session, key, () => NotOnMemoryPage(page)) : Task.CompletedTask;
+        var session = LiveSession();
+        if (!Capabilities.IsValidMemoryPage(page) || !Capabilities.IsValidMemoryFader(fader))
+        {
+            throw NotCleared($"Memory bump {fader} of page {page} does not exist on the 1248");
+        }
+
+        return PressBump(session, new Target(FaderBank.Memories, page, fader, $"memory bump {fader} of page {page}", null), control);
     }
 
     public Task RecordMemoryAsync(int page, int fader, CancellationToken cancellationToken) => throw NotCleared();
 
     public Task StoreMemoryAsync(int page, int fader, IReadOnlyList<byte> levels, CancellationToken cancellationToken) => throw NotCleared();
 
-    public Task SetIndependentAsync(int number, bool on, CancellationToken cancellationToken) => throw NotCleared();
+    /// <summary>
+    /// IND 1 / IND 2 (codes 0x47 / 0x48, SC-5 class B5) as toggles, like SOLO and BLACKOUT: one tap, only from a steady LED
+    /// (blocks 72 / 73, F115) that differs from the wish and that the Independents object, when it has arrived, agrees with;
+    /// in channel mode, bank 1-24, where every PC press of E9b and E9c came. What they drive is the rig's (SC-5 item 4).
+    /// </summary>
+    public Task SetIndependentAsync(int number, bool on, CancellationToken cancellationToken)
+    {
+        var (key, name) = number switch
+        {
+            1 => (ClearedKey.Ind1, "IND 1"),
+            2 => (ClearedKey.Ind2, "IND 2"),
+            _ => throw NotCleared($"IND {number} does not exist on the 1248"),
+        };
+
+        return Toggle(key, on, () => IndependentLed(number), name, () => IndependentState(number));
+    }
 
     public Task ClearChannelLevelsAsync(CancellationToken cancellationToken) => throw NotCleared();
 
@@ -468,13 +550,20 @@ public sealed class UsbSmartFadeDevice : ISmartFadeDevice, IAsyncDisposable
     public Task PressGoAsync(CancellationToken cancellationToken) =>
         QueueLiveTap(LiveSession(), ClearedKey.Go, () => NotInChannelBank1To24("GO") ?? StackNotAsObserved());
 
-    /// <summary>FADERS MEMS (code 0x39) as a tap, from channel mode, bank 1-24, as every PC press. On the port (<see cref="DeviceCommands.PressFadersMems"/>).</summary>
+    /// <summary>FADERS MEMS (code 0x39) as a tap, from channel mode, bank 1-24, as every PC press (E9 to E9d). On the port (<see cref="DeviceCommands.PressFadersMems"/>).</summary>
     public Task PressFadersMemsAsync(CancellationToken cancellationToken) =>
-        QueueLiveTap(LiveSession(), ClearedKey.FadersMems, () => NotInChannelBank1To24("FADERS MEMS"));
+        PressBankKey(ClearedKey.FadersMems);
 
     /// <summary>FADERS 1-24 (code 0x36) as a tap, from memory mode or from bank 25-48, as every PC press. On the port (<see cref="DeviceCommands.PressFaders1To24"/>).</summary>
     public Task PressFaders1To24Async(CancellationToken cancellationToken) =>
-        QueueLiveTap(LiveSession(), ClearedKey.Faders1To24, NotFromMemoryModeOrBank25To48);
+        PressBankKey(ClearedKey.Faders1To24);
+
+    /// <summary>
+    /// FADERS 25-48 (code 0x37, SC-5 class B4) as a tap, from channel mode, bank 1-24: every PC press of E9b, E9c, E9d and
+    /// E9e came from there (never from memory mode). On the port (<see cref="DeviceCommands.PressFaders25To48"/>).
+    /// </summary>
+    public Task PressFaders25To48Async(CancellationToken cancellationToken) =>
+        PressBankKey(ClearedKey.Faders25To48);
 
     public Task<MemoryContent> GetMemoryAsync(int page, int fader, CancellationToken cancellationToken)
     {
@@ -489,8 +578,6 @@ public sealed class UsbSmartFadeDevice : ISmartFadeDevice, IAsyncDisposable
             : throw new NotSupportedException("The console has not delivered this memory in the current session.");
     }
 
-    private const string Bump9NotSeen = "Bump 9 is not sent: code 0x08 was seen from a PC only inside REC MEM, EDIT MEM or COPY (E9, E9b), which SC-2 condition 5 forbids";
-
     private static NotSupportedException ReadOnly() =>
         new("The USB device is read-only: no message that changes the console is cleared for sending.");
 
@@ -498,7 +585,7 @@ public sealed class UsbSmartFadeDevice : ISmartFadeDevice, IAsyncDisposable
     private NotSupportedException NotCleared(string? what = null) =>
         !IsLiveControlConfirmed()
             ? ReadOnly()
-            : new NotSupportedException($"{what ?? "This command is not cleared"}. Live control sends only channel fader 1, MASTER, BUMPS, bump 7, memory bump 1, GO, SOLO, BLACKOUT, FADERS 1-24 and MEMS (SC-2, as seen from SmartSoft).");
+            : new NotSupportedException($"{what ?? "This command is not cleared"}. Live control sends only the channel faders and bumps 1-48, the memory faders and bumps of the page the console shows, MASTER, BUMPS, GO, SOLO, BLACKOUT, IND 1, IND 2 and the FADERS keys (SC-2, SC-5, as seen from SmartSoft); never a record key, CLEAR, STACK, PAUSE, NEXT, a page change or a System write.");
 
     private static void Refuse(string? reason)
     {
@@ -575,13 +662,13 @@ public sealed class UsbSmartFadeDevice : ISmartFadeDevice, IAsyncDisposable
         }
     }
 
-    /// <summary>Queues a fader event behind the interlocks: refused now with the reason, else asked again at the moment it would go.</summary>
+    /// <summary>Queues a MASTER or BUMPS event behind the interlocks: refused now with the reason, else asked again at the moment it would go.</summary>
     private Task QueueLiveFader(HspReadSession session, ClearedFader fader, byte level, Func<string?> state, bool holdWhileFaderInfoListed = false)
     {
         lock (_gate)
         {
             RequireRunning(session);
-            Refuse(RecordFunctionArmed(_assembler.Keys) ?? FadersUnreported() ?? state());
+            Refuse(RecordFunctionArmed(_assembler.Keys) ?? FadersUnreported() ?? SwitchInProgress() ?? state());
             session.QueueFader(fader, level, () => Recheck(session, state, holdWhileFaderInfoListed));
         }
 
@@ -594,7 +681,7 @@ public sealed class UsbSmartFadeDevice : ISmartFadeDevice, IAsyncDisposable
         lock (_gate)
         {
             RequireRunning(session);
-            Refuse(RecordFunctionArmed(_assembler.Keys) ?? state());
+            Refuse(RecordFunctionArmed(_assembler.Keys) ?? SwitchInProgress() ?? state());
             session.QueueKeyTap(key, () => Recheck(session, state, holdWhileFaderInfoListed: false));
         }
 
@@ -614,7 +701,7 @@ public sealed class UsbSmartFadeDevice : ISmartFadeDevice, IAsyncDisposable
     /// A queued write's own condition, asked on the session's thread at the moment it would go (after the gate, right
     /// before the header): the console state its control needs, as it was required when the write was accepted. A
     /// change since (a mode, page or LED changed on the panel) drops it unsent; FaderInfo listed and not fetched holds
-    /// channel fader 1 (the MASTER). It changes nothing: what follows a send or a drop is the session's to report.
+    /// a fader that needs the MASTER at full. It changes nothing: what follows a send or a drop is the session's to report.
     /// </summary>
     private HspWriteDecision Recheck(HspReadSession session, Func<string?> state, bool holdWhileFaderInfoListed)
     {
@@ -631,32 +718,588 @@ public sealed class UsbSmartFadeDevice : ISmartFadeDevice, IAsyncDisposable
     }
 
     /// <summary>
-    /// SOLO and BLACKOUT are toggles on the panel: one tap changes the state (VERIFIED, F133 / F134: a PC press toggled
-    /// the LED in E9 and in E9b). The state is read from the key's LED, and
-    /// only from the two readings SmartSoft's presses started from (E9, E9b: steady off `0A 0A 0A …`, steady full
-    /// `FF FF FF …` for SOLO, `00 00 FF …` for BLACKOUT); blinking (BLACKOUT blinks while the MASTER is below full, F85),
-    /// dim or unreported refuses. A tap still queued when the LED changes (the panel toggled it) is dropped, since it
-    /// would undo that; a second toggle waits until the console has reported the first one's LED change, or until the
-    /// first tap was dropped or discarded without going out. A tap counts as sent only once the session has taken its
-    /// press for sending (its <c>sent</c> callback), never when its condition merely allowed it.
+    /// What a fader or bump command addresses: the bank it needs, the memory page (memory controls only), the physical fader
+    /// or bump 1–24 under it, a name for the reasons, and the channel (channel controls only).
     /// </summary>
-    private Task Toggle(ClearedKey key, bool wish, Func<PanelKeys, KeyLed> ledOf, string name)
+    private sealed record Target(FaderBank Bank, int? Page, int Physical, string Name, int? Channel);
+
+    /// <summary>The UI's latest level for a physical fader whose matching event (or whose bank switch) has not gone yet.</summary>
+    private sealed record PendingLevel(Target Target, byte Level);
+
+    /// <summary>A bump the UI holds (or waits to hold behind a switch): its control name, its key, what it was pressed for.</summary>
+    private sealed record HeldBump(string Control, ClearedKey Key, Target Target);
+
+    /// <summary>The automatic bank switch in progress (SC-5 condition 1), one at a time; read and changed under <c>_gate</c> only.</summary>
+    private sealed class BankSwitch
+    {
+        public required FaderBank Target { get; init; }
+
+        public required int? Page { get; init; }
+
+        public required ClearedKey Key { get; init; }
+
+        public required FaderBank From { get; init; }
+
+        /// <summary>The control that asked for it, for the log and the reasons.</summary>
+        public required string Reason { get; init; }
+
+        /// <summary>True for the automatic switch a control started; false for a FADERS key pressed in the UI.</summary>
+        public bool Automatic { get; init; } = true;
+
+        /// <summary>"automatic bank switch" or "bank switch", for the log and the reasons.</summary>
+        public string Kind => Automatic ? "automatic bank switch" : "bank switch";
+
+        /// <summary>The clock stamp at which the key's press was taken for sending; null before.</summary>
+        public long? KeySent { get; set; }
+
+        /// <summary>A LedStatus arrived after the key's press (condition 1 c: "and the LEDs arrived").</summary>
+        public bool LedsSinceKey { get; set; }
+
+        /// <summary>A bump press that waits for the switch.</summary>
+        public HeldBump? Press { get; set; }
+
+        /// <summary>The UI let go of <see cref="Press"/> before the switch completed: it goes as a tap.</summary>
+        public bool PressReleased { get; set; }
+    }
+
+    /// <summary>
+    /// Channel c's bank and physical fader: channels 1–24 are physical faders 1–24 in bank 1-24, channels 25–48 the same
+    /// faders in bank 25-48 (F171 VERIFIED: in bank 25-48 the fader labelled N moved ChannelLevels[N] through index N − 25,
+    /// both E9d passes). The physical number names the whitelist member through <see cref="PhysicalControls"/>' table.
+    /// </summary>
+    private static (FaderBank Bank, int Physical) ChannelPosition(int channel) =>
+        channel <= 24 ? (FaderBank.Channels1To24, channel) : (FaderBank.Channels25To48, channel - 24);
+
+    /// <summary>
+    /// What the physical faders control as the console last reported it, among the three states SmartSoft sent controls in
+    /// (E9 to E9e): channel mode with bank 1-24 or 25-48, memory mode with the bank flag off. Null when unreported, while
+    /// NEXT mode is on or unknown (F173: fader events then set blind levels, seen from a PC once; no other control was sent
+    /// then), or in memory mode entered from bank 25-48 (the flag kept, F98; no PC control was seen there).
+    /// </summary>
+    private FaderBank? ReportedBank() => _assembler.FaderMode switch
+    {
+        null or { NextMode: not false } => null,
+        { MemoryMode: false, Bank25To48: false } => FaderBank.Channels1To24,
+        { MemoryMode: false, Bank25To48: true } => FaderBank.Channels25To48,
+        { MemoryMode: true, Bank25To48: false } => FaderBank.Memories,
+        _ => null,
+    };
+
+    /// <summary>Why <see cref="ReportedBank"/> is null, for a refusal.</summary>
+    private string WhyNoBank(string name) => _assembler.FaderMode switch
+    {
+        null => $"the console has not reported its fader mode yet (ConsoleStatus; a fader-mode key pressed on the panel reports it): {name} needs it",
+        { NextMode: true } => $"NEXT mode is on (ConsoleStatus body[6], F173): fader events then set blind levels, seen from a PC once; {name} is not sent",
+        { NextMode: null } => $"ConsoleStatus body[6] carries a value never observed (NEXT mode unknown, F173): {name} is not sent",
+        _ => $"the console is in memory mode entered from bank 25-48 (the bank flag kept, F98), where no PC control was seen: {name} is not sent",
+    };
+
+    private static string Describe(FaderBank bank) => bank switch
+    {
+        FaderBank.Channels1To24 => "channel mode, bank 1-24",
+        FaderBank.Channels25To48 => "channel mode, bank 25-48",
+        _ => "memory mode",
+    };
+
+    private static string KeyName(ClearedKey key) => key switch
+    {
+        ClearedKey.Faders1To24 => "FADERS 1-24",
+        ClearedKey.Faders25To48 => "FADERS 25-48",
+        ClearedKey.FadersMems => "FADERS MEMS",
+        _ => key.ToString(),
+    };
+
+    /// <summary>The bank key that makes the physical faders control <paramref name="bank"/>.</summary>
+    private static ClearedKey BankKey(FaderBank bank) => bank switch
+    {
+        FaderBank.Channels1To24 => ClearedKey.Faders1To24,
+        FaderBank.Channels25To48 => ClearedKey.Faders25To48,
+        _ => ClearedKey.FadersMems,
+    };
+
+    /// <summary>
+    /// The bank keys only from the banks SmartSoft sent them from (E9 to E9e, OBSERVED): FADERS 1-24 from memory mode or bank
+    /// 25-48; FADERS 25-48 and FADERS MEMS from bank 1-24 (FADERS 25-48 never from memory mode). Null when the key may go.
+    /// </summary>
+    private static string? BankKeyNotFrom(ClearedKey key, FaderBank from) => (key, from) switch
+    {
+        (ClearedKey.Faders1To24, FaderBank.Memories or FaderBank.Channels25To48) => null,
+        (ClearedKey.Faders25To48 or ClearedKey.FadersMems, FaderBank.Channels1To24) => null,
+        _ => $"the console shows {Describe(from)}: {KeyName(key)} was sent from a PC only from {(key == ClearedKey.Faders1To24 ? "memory mode or bank 25-48" : "channel mode, bank 1-24")} (E9 to E9e)",
+    };
+
+    private string? SwitchInProgress() =>
+        _switch is { } sw ? $"{(sw.Automatic ? "an" : "a")} {sw.Kind} to {Describe(sw.Target)} is in progress for {sw.Reason}" : null;
+
+    /// <summary>
+    /// The state a fader or bump target needs, at its command and again right before its write goes: the console reports the
+    /// target's bank (<see cref="ReportedBank"/>); a channel's physical fader holds no memory level (FaderInfo record k byte 1
+    /// is 0 in channel mode in every logged sample, F112; a memory fader left up across FADERS 1-24 was seen once and nothing
+    /// was sent in that state); a memory target is on the page the console shows (F113: no page change is sent) with physical
+    /// fader k holding that page's memory (FaderInfo record k byte 3 = page − 1, H69 CONFIRMED: a fader raised across a page
+    /// change keeps its old page's memory until it is brought to zero). Null when it does; else why not.
+    /// </summary>
+    private string? NotIn(Target target)
+    {
+        if (ReportedBank() is not { } bank)
+        {
+            return WhyNoBank(target.Name);
+        }
+
+        if (bank != target.Bank)
+        {
+            return $"the console shows {Describe(bank)}: {target.Name} needs {Describe(target.Bank)}";
+        }
+
+        var record = (target.Physical - 1) * FaderInfoObject.RecordSize;
+        if (target.Page is not { } page)
+        {
+            return _assembler.FaderInfo is { } channelInfo && channelInfo.RawRecords[record + 1] != 0
+                ? $"physical fader {target.Physical} still holds a memory at 0x{channelInfo.RawRecords[record + 1]:X2} (FaderInfo record {target.Physical} byte 1, F112): {target.Name} is not sent until it is brought to zero"
+                : null;
+        }
+
+        if (_assembler.FaderMode!.MemoryPage != page)
+        {
+            return $"the console shows memory page {_assembler.FaderMode.MemoryPage}, not {page}: no page change is sent from the PC (F113)";
+        }
+
+        return _assembler.FaderInfo is { } info && info.RawRecords[record + 3] + 1 is var held && held != page
+            ? $"physical fader {target.Physical} still holds memory {target.Physical} of page {held} (FaderInfo record {target.Physical} byte 3, H69): bring it to zero on the console first"
+            : null;
+    }
+
+    /// <summary>
+    /// SC-5 condition 1 (d), F172: the level a re-assigned physical fader is matched at, the target's reported level. A channel:
+    /// ChannelLevels[c], and only when FaderInfo record k byte 0 (the physical fader's post-MASTER level, F82, F96; with the
+    /// MASTER at full its own) reads the same, so that both reports name one level and no other source (a memory, a bump, the
+    /// stack) drives the channel; a memory fader: FaderInfo record k bytes 0 and 1, equal (F112: equal in all 26 memory-mode
+    /// samples; H71). Null with the reason when the level is not known or not one.
+    /// </summary>
+    private (byte? Level, string? Reason) MatchingLevel(Target target)
+    {
+        if (_assembler.FaderInfo is not { } info)
+        {
+            return (null, "the console has not reported its faders yet (FaderInfo)");
+        }
+
+        var record = (target.Physical - 1) * FaderInfoObject.RecordSize;
+        var fader = info.RawRecords[record];
+        if (target.Channel is { } channel)
+        {
+            if (!_assembler.ChannelLevelsReported)
+            {
+                return (null, $"the console has not reported its channel levels in this session (ChannelLevels): {target.Name}'s first event carries channel {channel}'s reported level (SC-5 condition 1 d); a channel fader or bump moved on the panel makes the console report them");
+            }
+
+            var level = _assembler.ChannelLevels[channel - 1];
+            return level == fader
+                ? (level, null)
+                : (null, $"channel {channel} reads 0x{level:X2} (ChannelLevels) and physical fader {target.Physical} 0x{fader:X2} (FaderInfo record {target.Physical}): another source drives the channel, so the level the console matches is not known (SC-5 condition 1 d, F172)");
+        }
+
+        var second = info.RawRecords[record + 1];
+        return fader == second
+            ? (fader, null)
+            : (null, $"memory fader {target.Physical}'s record reads 0x{fader:X2} / 0x{second:X2} (bytes 0 and 1 differ, H71): the level the console matches is not known (SC-5 condition 1 d)");
+    }
+
+    /// <summary>
+    /// A channel or memory fader event (SC-5 classes A2–A4) behind the interlocks: in the bank the console shows, at once
+    /// when the fader is matched, else its matching event first (<see cref="QueueMatching"/>); in another bank, the
+    /// automatic switch first (<see cref="StartSwitch"/>). Until the matching event has gone, the UI's level waits here
+    /// (the newest wins), so it can never replace the matching event in the session's queue.
+    /// </summary>
+    private Task SetFaderLevel(HspReadSession session, Target target, byte level)
+    {
+        var fader = PhysicalControls.Fader(target.Physical);
+        lock (_gate)
+        {
+            RequireRunning(session);
+            Refuse(RecordFunctionArmed(_assembler.Keys) ?? FadersUnreported() ?? MasterNotAtFull(target.Name));
+            if (_switch is { } pending)
+            {
+                Refuse(pending.Target == target.Bank && pending.Page == target.Page ? null : SwitchInProgress());
+                _pendingLevels[fader] = new PendingLevel(target, level);   // matched once the console reports the bank (CompleteSwitch)
+                return Task.CompletedTask;
+            }
+
+            if (ReportedBank() != target.Bank)
+            {
+                StartSwitch(session, target);
+                _pendingLevels[fader] = new PendingLevel(target, level);
+                return Task.CompletedTask;
+            }
+
+            Refuse(NotIn(target));
+            if (_matched.Contains(fader))
+            {
+                session.QueueFader(fader, level, () => Recheck(session, () => NotIn(target) ?? MasterNotAtFull(target.Name), holdWhileFaderInfoListed: true));
+                return Task.CompletedTask;
+            }
+
+            // a matching event for this target still queued: the UI's newer level just waits behind it; otherwise (none yet,
+            // another target's, or one dropped and not yet forgotten) a new matching event, which replaces any event still
+            // queued for that physical fader
+            if (!_pendingLevels.TryGetValue(fader, out var waiting) || waiting.Target != target || !session.IsFaderQueued(fader))
+            {
+                var (matching, reason) = MatchingLevel(target);
+                Refuse(reason);
+                QueueMatching(session, fader, target, matching!.Value);
+            }
+
+            _pendingLevels[fader] = new PendingLevel(target, level);
+        }
+
+        return Task.CompletedTask;
+    }
+
+    /// <summary>
+    /// Queues the matching event (SC-5 condition 1 d): the target's reported level, asked again right before it goes; once it
+    /// is taken for sending, the fader counts as matched and the UI's latest level follows it (<see cref="MatchingSent"/>).
+    /// </summary>
+    private void QueueMatching(HspReadSession session, ClearedFader fader, Target target, byte level) =>
+        session.QueueFader(fader, level, () => RecheckMatching(session, target, level), sent: () => MatchingSent(session, fader, target, level));
+
+    /// <summary>The matching event's own condition: held while the console has listed the objects its level comes from; dropped when the state or the reported level changed since it was queued.</summary>
+    private HspWriteDecision RecheckMatching(HspReadSession session, Target target, byte level)
+    {
+        if (session.IsListedAndUnfetched(HspObjectId.FaderInfo) || session.IsListedAndUnfetched(HspObjectId.ChannelLevels))
+        {
+            return HspWriteDecision.Hold("the console listed FaderInfo or ChannelLevels (the level a re-assigned fader is matched at) and it is not fetched yet");
+        }
+
+        lock (_gate)
+        {
+            var reason = ReferenceEquals(_liveSession, session) ? NotIn(target) ?? MasterNotAtFull(target.Name) : "the live-control session is ending";
+            if (reason is null)
+            {
+                var (now, why) = MatchingLevel(target);
+                reason = why ?? (now == level ? null : $"{target.Name}'s reported level changed from 0x{level:X2} to 0x{now:X2} since its matching event was queued; the next drag matches it again");
+            }
+
+            return reason is null ? HspWriteDecision.Send : HspWriteDecision.Drop(reason);
+        }
+    }
+
+    /// <summary>
+    /// The matching event was taken for sending (on the session's thread): the fader counts as matched, and the UI's latest
+    /// level, when it differs, is queued behind it ("then the drag", SC-5 condition 1 d). Never throws: a write it follows
+    /// is already committed.
+    /// </summary>
+    private void MatchingSent(HspReadSession session, ClearedFader fader, Target target, byte level)
+    {
+        string note;
+        lock (_gate)
+        {
+            _matched.Add(fader);
+            note = $"matched {target.Name} at its reported level 0x{level:X2} (SC-5 condition 1 d, F172)";
+            if (_pendingLevels.TryGetValue(fader, out var wish) && wish.Target == target)
+            {
+                _pendingLevels.Remove(fader);
+                if (wish.Level != level)
+                {
+                    try
+                    {
+                        session.QueueFader(fader, wish.Level, () => Recheck(session, () => NotIn(target) ?? MasterNotAtFull(target.Name), holdWhileFaderInfoListed: true));
+                    }
+                    catch (InvalidOperationException ex)
+                    {
+                        note += $"; the UI's level 0x{wish.Level:X2} was not queued ({ex.Message})";
+                    }
+                }
+            }
+        }
+
+        SessionNote(note);
+    }
+
+    /// <summary>
+    /// SC-5 condition 1 (a, b): starts the automatic switch to the target's bank, or refuses with the reason (a record
+    /// function armed is the caller's check): a bump held (a hold does not span a bank switch, condition 2), the console's
+    /// bank unknown, a bank key SmartSoft never sent from the bank shown (<see cref="BankKeyNotFrom"/>), a memory page other
+    /// than the console's (no page change is sent, F113). The bank key goes as a tap; the switch then waits for the console's
+    /// report (<see cref="AdvanceSwitch"/>), and the controls that asked for it wait with it.
+    /// </summary>
+    private BankSwitch StartSwitch(HspReadSession session, Target target)
+    {
+        var from = ReportedBank();
+        Refuse(from is null ? WhyNoBank(target.Name) : null);
+        var key = BankKey(target.Bank);
+        Refuse(BankKeyNotFrom(key, from!.Value)
+            ?? (session.HoldInProgress ? $"a bump is held: the bank switch for {target.Name} waits for its release (a hold does not span a bank switch, SC-5 condition 2)" : null)
+            ?? (target.Page is { } page && _assembler.FaderMode!.MemoryPage != page ? $"the console's memory page is {_assembler.FaderMode.MemoryPage}, not {page}: no page change is sent from the PC (F113)" : null));
+        var sw = new BankSwitch { Target = target.Bank, Page = target.Page, Key = key, From = from.Value, Reason = target.Name };
+        session.QueueKeyTap(key, () => Recheck(session, () => SwitchKeyState(sw), holdWhileFaderInfoListed: false), sent: () => SwitchKeySent(sw));
+        _switch = sw;
+        return sw;
+    }
+
+    /// <summary>The switch key's own condition: still the switch in progress, and the console still shows the bank the key was chosen for.</summary>
+    private string? SwitchKeyState(BankSwitch sw) =>
+        !ReferenceEquals(_switch, sw) ? "the automatic bank switch was abandoned"
+        : ReportedBank() == sw.From ? null
+        : $"the console no longer shows {Describe(sw.From)}: {KeyName(sw.Key)} for {sw.Reason} is not sent";
+
+    /// <summary>The switch key's press was taken for sending (the session's thread): its report is now awaited, within <see cref="BankSwitchReportBound"/>.</summary>
+    private void SwitchKeySent(BankSwitch sw)
+    {
+        lock (_gate)
+        {
+            sw.KeySent = _clock.GetTimestamp();
+        }
+
+        SessionNote($"{sw.Kind} (SC-5 condition 1) for {sw.Reason}: {KeyName(sw.Key)} sent, from {Describe(sw.From)} to {Describe(sw.Target)}; nothing else goes until the console reports it");
+    }
+
+    /// <summary>
+    /// SC-5 condition 1 (c), asked on the session's thread after each completed exchange: once ConsoleStatus reports the
+    /// switch's bank, a LedStatus arrived after its key and nothing that reports the faders or the keys is listed and
+    /// unfetched, the switch is complete (<see cref="CompleteSwitch"/>); past <see cref="BankSwitchReportBound"/> after the key
+    /// without that, the session ends as a deviation (a fault: nothing is retried, an owed release still goes).
+    /// </summary>
+    private void AdvanceSwitch()
+    {
+        HspReadSession session;
+        BankSwitch? done = null;
+        string? deviation = null;
+        lock (_gate)
+        {
+            if (_liveSession is not { } live || _switch is not { KeySent: { } sent } sw)
+            {
+                return;
+            }
+
+            session = live;
+            var reported = ReportedBank() == sw.Target && sw.LedsSinceKey
+                && !live.IsListedAndUnfetched(HspObjectId.ConsoleStatus) && !live.IsListedAndUnfetched(HspObjectId.LedStatus)
+                && !live.IsListedAndUnfetched(HspObjectId.FaderInfo) && !live.IsListedAndUnfetched(HspObjectId.ChannelLevels);
+            if (reported)
+            {
+                done = sw;
+                _switch = null;
+            }
+            else if (_clock.GetElapsedTime(sent) > BankSwitchReportBound)
+            {
+                deviation = $"{sw.Kind} for {sw.Reason}: the console did not report {Describe(sw.Target)} with its LEDs within {BankSwitchReportBound.TotalSeconds:F0} s of {KeyName(sw.Key)} (SC-5 condition 1 c); the session ends as a deviation";
+            }
+        }
+
+        if (deviation is not null)
+        {
+            throw new HspSessionFaultException(deviation);
+        }
+
+        if (done is not null)
+        {
+            CompleteSwitch(session, done);
+        }
+    }
+
+    /// <summary>
+    /// The console reported the switch's bank: every fader dragged meanwhile gets its matching event at the target's reported
+    /// level, and a bump pressed meanwhile its hold (a tap when the UI let go already); a control whose state or level does not
+    /// allow it is not sent, with its reason in the log. One operation in the log: the key, the report, what followed.
+    /// </summary>
+    private void CompleteSwitch(HspReadSession session, BankSwitch sw)
+    {
+        var notes = new List<string>();
+        lock (_gate)
+        {
+            if (!ReferenceEquals(_liveSession, session))
+            {
+                return;
+            }
+
+            notes.Add($"{sw.Kind} done: the console reports {Describe(sw.Target)} {_clock.GetElapsedTime(sw.KeySent!.Value).TotalMilliseconds:F0} ms after {KeyName(sw.Key)} (SC-5 condition 1 c)");
+            foreach (var (fader, pending) in _pendingLevels.ToArray())
+            {
+                var (level, reason) = (NotIn(pending.Target) ?? MasterNotAtFull(pending.Target.Name)) is { } state ? (null, state) : MatchingLevel(pending.Target);
+                if (level is null)
+                {
+                    _pendingLevels.Remove(fader);
+                    notes.Add($"{pending.Target.Name} not sent after the switch: {reason}");
+                    continue;
+                }
+
+                try
+                {
+                    QueueMatching(session, fader, pending.Target, level.Value);
+                    notes.Add($"{pending.Target.Name}: its matching event at 0x{level:X2} is queued, the UI's level 0x{pending.Level:X2} follows it");
+                }
+                catch (InvalidOperationException ex)
+                {
+                    _pendingLevels.Remove(fader);
+                    notes.Add($"{pending.Target.Name} not sent after the switch: {ex.Message}");
+                }
+            }
+
+            if (sw.Press is { } press)
+            {
+                try
+                {
+                    Refuse(NotIn(press.Target));
+                    QueueBump(session, press, tap: sw.PressReleased);
+                    notes.Add($"{press.Target.Name}: {(sw.PressReleased ? "a tap (the UI let go during the switch)" : "its hold")} is queued");
+                }
+                catch (InvalidOperationException ex)
+                {
+                    notes.Add($"{press.Target.Name} not sent after the switch: {ex.Message}");
+                }
+            }
+        }
+
+        foreach (var note in notes)
+        {
+            SessionNote(note);
+        }
+    }
+
+    /// <summary>
+    /// A bump press (SC-5 class B3) behind the interlocks: one hold at a time (SmartSoft sent nothing between a press and its
+    /// release, F133, and never held two bumps); in the bank the console shows, the hold at once; in another bank, the
+    /// automatic switch first and the hold once the console has reported it (a tap when the UI let go meanwhile).
+    /// </summary>
+    private Task PressBump(HspReadSession session, Target target, string control)
+    {
+        var bump = new HeldBump(control, PhysicalControls.Bump(target.Physical), target);
+        lock (_gate)
+        {
+            RequireRunning(session);
+            Refuse(RecordFunctionArmed(_assembler.Keys)
+                ?? (session.HoldInProgress || _switch?.Press is not null ? "another bump is held: one bump at a time is held from the PC (SmartSoft sent nothing between a press and its release, F133)" : null));
+            if (_switch is { } pending)
+            {
+                Refuse(pending.Target == target.Bank && pending.Page == target.Page ? null : SwitchInProgress());
+                pending.Press = bump;
+                pending.PressReleased = false;
+                return Task.CompletedTask;
+            }
+
+            if (ReportedBank() != target.Bank)
+            {
+                StartSwitch(session, target).Press = bump;
+                return Task.CompletedTask;
+            }
+
+            Refuse(NotIn(target));
+            QueueBump(session, bump, tap: false);
+        }
+
+        return Task.CompletedTask;
+    }
+
+    /// <summary>Queues a bump as a hold (released by the UI or the loop's 3 s bound, <see cref="HspReadLoop.MaxHold"/>) or, when the UI already let go, as a tap; asked again right before it goes.</summary>
+    private void QueueBump(HspReadSession session, HeldBump bump, bool tap)
+    {
+        if (tap)
+        {
+            session.QueueKeyTap(bump.Key, () => Recheck(session, () => NotIn(bump.Target), holdWhileFaderInfoListed: false));
+            return;
+        }
+
+        session.QueueKeyHold(bump.Key, () => Recheck(session, () => NotIn(bump.Target), holdWhileFaderInfoListed: false));
+        _hold = bump;
+    }
+
+    /// <summary>
+    /// The UI let go of a bump: its release is asked for once (SC-5 condition 2). A press still waiting for its switch becomes
+    /// a tap, one still queued becomes a tap, one held is released at the next write slot. Nothing to release is no error:
+    /// the loop's bound or the session's end released it already.
+    /// </summary>
+    private Task ReleaseBump(string control)
+    {
+        lock (_gate)
+        {
+            if (_liveSession is not { } session)
+            {
+                return IsLiveControlConfirmed() ? Task.CompletedTask : throw ReadOnly();
+            }
+
+            if (_switch is { Press: { } waiting } sw && waiting.Control == control)
+            {
+                sw.PressReleased = true;
+            }
+            else if (_hold is { } hold && hold.Control == control)
+            {
+                _hold = null;
+                session.ReleaseKey(hold.Key);
+            }
+        }
+
+        return Task.CompletedTask;
+    }
+
+    /// <summary>
+    /// A FADERS key from the UI as a tap (SC-2 class B1, SC-5 class B4), only from the banks SmartSoft sent it from
+    /// (<see cref="BankKeyNotFrom"/>), never while a bump is held (a hold does not span a bank switch, SC-5 condition 2) or
+    /// another switch is in progress. It is a bank switch like the automatic one, without a control waiting for it: once its
+    /// press went, nothing else goes until the console has reported the new bank with its LEDs, within
+    /// <see cref="BankSwitchReportBound"/> (SC-5 condition 1 c), so no event meant for the old bank can reach the new one.
+    /// </summary>
+    private Task PressBankKey(ClearedKey key)
     {
         var session = LiveSession();
         lock (_gate)
         {
             RequireRunning(session);
-            Refuse(RecordFunctionArmed(_assembler.Keys) ?? NotInChannelBank1To24(name));
+            Refuse(RecordFunctionArmed(_assembler.Keys) ?? SwitchInProgress() ?? (ReportedBank() is { } bank ? BankKeyNotFrom(key, bank) : WhyNoBank(KeyName(key)))
+                ?? (session.HoldInProgress ? $"a bump is held: {KeyName(key)} waits for its release (a hold does not span a bank switch, SC-5 condition 2)" : null));
+            var sw = new BankSwitch { Target = BankOf(key), Page = null, Key = key, From = ReportedBank()!.Value, Reason = $"{KeyName(key)} from the UI", Automatic = false };
+            session.QueueKeyTap(key, () => Recheck(session, () => SwitchKeyState(sw), holdWhileFaderInfoListed: false), sent: () => SwitchKeySent(sw));
+            _switch = sw;
+        }
+
+        return Task.CompletedTask;
+    }
+
+    /// <summary>The bank a FADERS key selects (F98; F175 for FADERS 25-48).</summary>
+    private static FaderBank BankOf(ClearedKey key) => key switch
+    {
+        ClearedKey.Faders1To24 => FaderBank.Channels1To24,
+        ClearedKey.Faders25To48 => FaderBank.Channels25To48,
+        _ => FaderBank.Memories,
+    };
+
+    /// <summary>
+    /// SOLO, BLACKOUT, IND 1 and IND 2 are toggles on the panel: one tap changes the state (VERIFIED, F133 / F134: a PC
+    /// press toggled the LED in E9 and in E9b; IND 1 / 2 F115, F175). The state is read from the key's LED, and only from
+    /// the two readings SmartSoft's presses started from (E9 to E9c: steady off `0A 0A 0A …`, steady full `FF FF FF …` for
+    /// SOLO, `00 00 FF …` for BLACKOUT, `00 FF 00 …` for IND 1 / 2); blinking (BLACKOUT blinks while the MASTER is below
+    /// full, F85), dim or unreported refuses, and so does an LED that the console's other report of the key
+    /// (<paramref name="reported"/>: the Independents object for IND 1 / 2) contradicts. A tap still queued when the LED
+    /// changes (the panel toggled it) is dropped, since it would undo that; a second toggle waits until the console has
+    /// reported the first one's LED change, or until the first tap was dropped or discarded without going out. A tap counts
+    /// as sent only once the session has taken its press for sending (its <c>sent</c> callback), never when its condition
+    /// merely allowed it.
+    /// </summary>
+    private Task Toggle(ClearedKey key, bool wish, Func<KeyLed?> ledNow, string name, Func<bool?>? reported = null)
+    {
+        var session = LiveSession();
+        lock (_gate)
+        {
+            RequireRunning(session);
+            Refuse(RecordFunctionArmed(_assembler.Keys) ?? SwitchInProgress() ?? NotInChannelBank1To24(name));
             if (_togglesAwaitingLed.ContainsKey(key) || session.IsKeyQueued(key) || session.HeldKey == key)
             {
                 Refuse($"the previous {name} press has not been reported by the console yet");
             }
 
-            var before = ledOf(_assembler.Keys!);
+            if (ledNow() is not { } before)
+            {
+                Refuse($"the console has not reported {name}'s LED yet");
+                return Task.CompletedTask;
+            }
+
             if (SteadyState(before) is not { } state)
             {
-                Refuse($"{name}'s LED reads {Describe(before)}; a PC press was seen only from a steady off or full LED (E9, E9b)");
+                Refuse($"{name}'s LED reads {Describe(before)}; a PC press was seen only from a steady off or full LED (E9 to E9c)");
                 return Task.CompletedTask;
+            }
+
+            if (reported?.Invoke() is { } other && other != state)
+            {
+                Refuse($"{name}'s LED reads {(state ? "on" : "off")} and the console's other report of it {(other ? "on" : "off")}: its state is not known (SC-5 class B5)");
             }
 
             if (state == wish)
@@ -666,18 +1309,18 @@ public sealed class UsbSmartFadeDevice : ISmartFadeDevice, IAsyncDisposable
 
             string? StateNow() =>
                 NotInChannelBank1To24(name)
-                ?? (_assembler.Keys is { } keys && ledOf(keys) == before ? null : $"{name} changed on the console since the request; the tap would undo it");
+                ?? (ledNow() == before ? null : $"{name} changed on the console since the request; the tap would undo it");
 
-            // A drop or a discard is forgotten through ForgetUnsentToggles (the loop's WriteDropped, AfterLedReport).
+            // A drop or a discard is forgotten through ForgetUnsent (the loop's WriteDropped, AfterLedReport).
             session.QueueKeyTap(key, () => Recheck(session, StateNow, holdWhileFaderInfoListed: false), sent: () => ToggleSent(key));
-            _togglesAwaitingLed[key] = before;
+            _togglesAwaitingLed[key] = (before, ledNow);
             _togglesSent.Remove(key);
         }
 
         return Task.CompletedTask;
     }
 
-    /// <summary>The press of a SOLO / BLACKOUT tap was taken for sending: its LED change is now what the next toggle waits for.</summary>
+    /// <summary>The press of a toggle's tap was taken for sending: its LED change is now what the next toggle waits for.</summary>
     private void ToggleSent(ClearedKey key)
     {
         lock (_gate)
@@ -685,6 +1328,14 @@ public sealed class UsbSmartFadeDevice : ISmartFadeDevice, IAsyncDisposable
             _togglesSent.Add(key);
         }
     }
+
+    /// <summary>IND 1's or IND 2's LED (blocks 72 / 73), null until LedStatus has arrived.</summary>
+    private KeyLed? IndependentLed(int number) =>
+        _assembler.IndependentLeds is { } leds ? (number == 1 ? leds.Ind1 : leds.Ind2) : null;
+
+    /// <summary>IND 1's or IND 2's state in the Independents object (F115), null until it has arrived.</summary>
+    private bool? IndependentState(int number) =>
+        _assembler.Independents is { } states ? (number == 1 ? states.Independent1 : states.Independent2) : null;
 
     /// <summary>False for a steady off LED, true for a steady full one, null for anything else.</summary>
     private static bool? SteadyState(KeyLed led) => led switch
@@ -732,38 +1383,23 @@ public sealed class UsbSmartFadeDevice : ISmartFadeDevice, IAsyncDisposable
     private string? FadersUnreported() =>
         _assembler.Masters is null ? "the console has not reported its faders yet (FaderInfo; SC-2 condition 6)" : null;
 
-    private string? MasterNotAtFull() => _assembler.Masters switch
+    /// <summary>
+    /// Every channel and memory fader event only with the MASTER at full: the reported level is post-MASTER (F96, F176), its
+    /// own only at full (SC-2 condition 6), and every PC fader event of E9c and E9d in memory mode or bank 25-48 came at full.
+    /// </summary>
+    private string? MasterNotAtFull(string name) => _assembler.Masters switch
     {
         null => "the console has not reported the MASTER yet (FaderInfo)",
         { Master: 0xFF } => null,
-        { Master: var master } => $"the MASTER reads 0x{master:X2}: channel fader 1 was sent from a PC only with the MASTER at full (E9, E9b), where its reported level is its own (SC-2 condition 6)",
+        { Master: var master } => $"the MASTER reads 0x{master:X2}: {name} is sent only with the MASTER at full, where its reported level is its own (F96, F176; SC-2 condition 6)",
     };
 
-    /// <summary>The state SmartSoft sent the MASTER, BUMPS, channel fader 1, bump 7, GO, SOLO, BLACKOUT and MEMS in (E9, E9b): channel mode, bank 1-24 (F98; the readings H53).</summary>
-    private string? NotInChannelBank1To24(string control) => _assembler.FaderMode switch
+    /// <summary>The state SmartSoft sent the MASTER, BUMPS, GO, SOLO, BLACKOUT and IND 1 / 2 in (E9 to E9c): channel mode, bank 1-24, NEXT mode off (F98, F173; the readings H53).</summary>
+    private string? NotInChannelBank1To24(string control) => ReportedBank() switch
     {
-        null => $"the console has not reported its fader mode yet (ConsoleStatus; a fader-mode key pressed on the panel reports it): {control} is sent only in channel mode, bank 1-24",
-        { MemoryMode: true } => $"the console is in memory mode: {control} was sent from a PC only in channel mode, bank 1-24 (E9, E9b)",
-        { Bank25To48: true } => $"the console shows bank 25-48: {control} was sent from a PC only in channel mode, bank 1-24 (E9, E9b)",
-        _ => null,
-    };
-
-    /// <summary>Memory bump 1 as SmartSoft sent it: memory mode, bank 1-24 (E9, E9b), on the page the UI means (F113).</summary>
-    private string? NotOnMemoryPage(int page) => _assembler.FaderMode switch
-    {
-        null => "the console has not reported its fader mode yet (ConsoleStatus)",
-        { MemoryMode: false } => "the console is in channel mode: memory bump 1 is sent only in memory mode",
-        { Bank25To48: true } => "the console shows bank 25-48: memory bump 1 was sent from a PC only in bank 1-24 (E9, E9b)",
-        { MemoryPage: var shown } when shown != page => $"the console shows memory page {shown}, not {page}",
-        _ => null,
-    };
-
-    /// <summary>FADERS 1-24 as SmartSoft sent it: from memory mode or from bank 25-48 (E9, E9b), never as a repeat in channel mode, bank 1-24.</summary>
-    private string? NotFromMemoryModeOrBank25To48() => _assembler.FaderMode switch
-    {
-        null => "the console has not reported its fader mode yet (ConsoleStatus)",
-        { MemoryMode: false, Bank25To48: false } => "the console already shows channel mode, bank 1-24: FADERS 1-24 was sent from a PC only from memory mode or bank 25-48 (E9, E9b)",
-        _ => null,
+        FaderBank.Channels1To24 => null,
+        null => WhyNoBank(control),
+        { } bank => $"the console shows {Describe(bank)}: {control} was sent from a PC only in channel mode, bank 1-24 (E9 to E9c)",
     };
 
     private string? StackNotAsObserved()
@@ -796,6 +1432,14 @@ public sealed class UsbSmartFadeDevice : ISmartFadeDevice, IAsyncDisposable
             if (!IsLiveControlConfirmed())
             {
                 return HspWriteDecision.Drop("live control is not confirmed for today (SC-2 item 6)");
+            }
+
+            // SC-5 condition 1 (c): after a bank key of ours went, nothing goes until the console has reported the new bank
+            // with its LEDs (a release is never asked: it completes a press). An event queued behind the key and meant for the
+            // old bank is then dropped by its own condition, never sent to the fader the new bank put under that index.
+            if (_switch is { KeySent: not null } sw)
+            {
+                return HspWriteDecision.Hold($"the console has not reported {Describe(sw.Target)} since {KeyName(sw.Key)} went (SC-5 condition 1 c)");
             }
 
             // "Younger than two poll periods" (condition 5) read as: a poll reply, the console's report of what changed,
@@ -854,7 +1498,7 @@ public sealed class UsbSmartFadeDevice : ISmartFadeDevice, IAsyncDisposable
             loop.WriteDropped += reason =>
             {
                 _logger.LogWarning("A queued write was dropped unsent: {Reason}", reason);
-                ForgetUnsentToggles(session);
+                ForgetUnsent(session);
             };
             try
             {
@@ -908,6 +1552,12 @@ public sealed class UsbSmartFadeDevice : ISmartFadeDevice, IAsyncDisposable
                 if (ReferenceEquals(_liveSession, session))
                 {
                     _liveSession = null;
+                }
+
+                if (ReferenceEquals(_liveLog, log))
+                {
+                    _liveLog = null;
+                    ResetLiveState();
                 }
             }
 
@@ -1009,17 +1659,24 @@ public sealed class UsbSmartFadeDevice : ISmartFadeDevice, IAsyncDisposable
     /// One decoded event of the session, on the loop's thread. In a live session (<paramref name="live"/>) a LedStatus,
     /// ConsoleStatus or FaderInfo that does not decode ends the session (SC-2 item 7; the first review of SC-2 item 10,
     /// major 2): the interlocks read those objects, and an older reading must never stand for the console's state. A
-    /// read-only session logs it and goes on, as SC-1 reviewed it.
+    /// read-only session logs it and goes on, as SC-1 reviewed it. In a live session every completed exchange (an idle
+    /// reply, a list, an object) also advances the automatic bank switch (<see cref="AdvanceSwitch"/>), which ends the
+    /// session as a deviation when the console does not report the new bank in time.
     /// </summary>
     private void OnEvent(HspEvent evt, bool live)
     {
         switch (evt)
         {
-            case ReplyHeaderReceived { Header.MessageType: HspMessageType.PollReply }:
+            case ReplyHeaderReceived { Header.MessageType: HspMessageType.PollReply } reply:
                 // the console's report of what changed (an idle reply or a list; F57, VERIFIED): the age live control's gate checks
                 lock (_gate)
                 {
                     _lastReportStamp = _clock.GetTimestamp();
+                }
+
+                if (live && reply.Header.Length == 0)
+                {
+                    AdvanceSwitch();   // an idle reply completes its exchange
                 }
 
                 break;
@@ -1060,14 +1717,29 @@ public sealed class UsbSmartFadeDevice : ISmartFadeDevice, IAsyncDisposable
                     AfterLedReport();
                 }
 
+                if (live && received.Payload.ObjectId == (int)HspObjectId.ConsoleStatus)
+                {
+                    AfterStatusReport();
+                }
+
                 if (change is not null)
                 {
                     StateChanged?.Invoke(this, change);
                 }
 
+                if (live)
+                {
+                    AdvanceSwitch();
+                }
+
                 break;
             case DirtyListReceived list:
                 _logger.LogDebug("Console lists {Count} object(s): {Names}", list.List.Records.Count, string.Join(", ", list.List.Records.Select(r => r.Name)));
+                if (live)
+                {
+                    AdvanceSwitch();
+                }
+
                 break;
             case UnexpectedTransfer unexpected:
                 _logger.LogError("Unobserved behaviour: {Reason}", unexpected.Reason);
@@ -1078,10 +1750,10 @@ public sealed class UsbSmartFadeDevice : ISmartFadeDevice, IAsyncDisposable
     }
 
     /// <summary>
-    /// After each LedStatus in a live session: a SOLO / BLACKOUT tap counts as reported once its press has gone out and
-    /// its LED reads differently (a tap still queued is dropped by its own condition instead), and when a record function
-    /// now reads armed, every queued write that has not started is dropped (SC-2 condition 5; a press already sent keeps
-    /// its release).
+    /// After each LedStatus in a live session: a SOLO / BLACKOUT / IND tap counts as reported once its press has gone out and
+    /// its LED reads differently (a tap still queued is dropped by its own condition instead); an automatic switch whose key
+    /// went has its LEDs (SC-5 condition 1 c); and when a record function now reads armed, every queued write that has not
+    /// started is dropped (SC-2 condition 5; a press already sent keeps its release, which becomes due at once).
     /// </summary>
     private void AfterLedReport()
     {
@@ -1095,14 +1767,18 @@ public sealed class UsbSmartFadeDevice : ISmartFadeDevice, IAsyncDisposable
                 return;
             }
 
-            foreach (var (key, before) in _togglesAwaitingLed.ToArray())
+            foreach (var (key, entry) in _togglesAwaitingLed.ToArray())
             {
-                var now = key == ClearedKey.Solo ? keys.Solo : keys.Blackout;
-                if (now != before && _togglesSent.Contains(key))
+                if (entry.Led() is { } now && now != entry.Before && _togglesSent.Contains(key))
                 {
                     _togglesAwaitingLed.Remove(key);
                     _togglesSent.Remove(key);
                 }
+            }
+
+            if (_switch is { KeySent: not null } sw)
+            {
+                sw.LedsSinceKey = true;
             }
 
             armed = RecordFunctionArmed(keys);
@@ -1116,13 +1792,54 @@ public sealed class UsbSmartFadeDevice : ISmartFadeDevice, IAsyncDisposable
                 _logger.LogWarning("{Count} queued write(s) dropped before they started: {Reason}", dropped, armed);
             }
 
-            ForgetUnsentToggles(live);
+            ForgetUnsent(live);
         }
     }
 
-    /// <summary>A SOLO / BLACKOUT tap dropped or discarded before its press went out leaves nothing to wait for.</summary>
-    private void ForgetUnsentToggles(HspReadSession live)
+    /// <summary>
+    /// After each ConsoleStatus in a live session: when what the physical faders control changed (bank, mode or page), the
+    /// console treats the re-assigned faders as unmatched (F172), so every fader is matched again before its next event;
+    /// and a hold whose bank or page the console no longer shows is released now (a hold does not span a bank switch, SC-5
+    /// condition 2).
+    /// </summary>
+    private void AfterStatusReport()
     {
+        string? note = null;
+        lock (_gate)
+        {
+            if (_liveSession is not { } live)
+            {
+                return;
+            }
+
+            var now = (ReportedBank(), _assembler.FaderMode?.MemoryPage);
+            if (!Equals(_assignment, now))
+            {
+                _assignment = now;
+                _matched.Clear();
+            }
+
+            if (_hold is { } hold && live.HeldKey == hold.Key && NotIn(hold.Target) is { } moved && live.ReleaseKey(hold.Key))
+            {
+                _hold = null;
+                note = $"{hold.Target.Name} released at once: {moved} (a hold does not span a bank switch, SC-5 condition 2)";
+            }
+        }
+
+        if (note is not null)
+        {
+            SessionNote(note);
+        }
+    }
+
+    /// <summary>
+    /// After a queued write was dropped or discarded unsent: a toggle's tap that never went leaves nothing to wait for; a
+    /// matching event that never went leaves its fader's pending level behind (forgotten: the next drag matches again); a bank
+    /// key that never went abandons its switch with everything that waited for it; a hold whose press never went is no hold.
+    /// </summary>
+    private void ForgetUnsent(HspReadSession live)
+    {
+        string? note = null;
         lock (_gate)
         {
             foreach (var key in _togglesAwaitingLed.Keys.ToArray())
@@ -1132,6 +1849,67 @@ public sealed class UsbSmartFadeDevice : ISmartFadeDevice, IAsyncDisposable
                     _togglesAwaitingLed.Remove(key);
                 }
             }
+
+            if (_switch is { KeySent: null } sw && !live.IsKeyQueued(sw.Key) && live.HeldKey != sw.Key)
+            {
+                note = $"{sw.Kind} for {sw.Reason} abandoned: {KeyName(sw.Key)} was not sent";
+                _switch = null;
+                _pendingLevels.Clear();
+            }
+            else if (_switch is null)
+            {
+                foreach (var fader in _pendingLevels.Keys.ToArray())
+                {
+                    if (!live.IsFaderQueued(fader))
+                    {
+                        _pendingLevels.Remove(fader);
+                    }
+                }
+            }
+
+            if (_hold is { } hold && !live.IsKeyQueued(hold.Key) && live.HeldKey != hold.Key)
+            {
+                _hold = null;
+            }
+        }
+
+        if (note is not null)
+        {
+            SessionNote(note);
+        }
+    }
+
+    /// <summary>A new session, or the end of one: nothing matched, nothing pending, no switch, no hold (all under <c>_gate</c>).</summary>
+    private void ResetLiveState()
+    {
+        _matched.Clear();
+        _pendingLevels.Clear();
+        _switch = null;
+        _assignment = null;
+        _hold = null;
+    }
+
+    /// <summary>
+    /// A note in the live session's transfer log, written on the session's thread (SC-5 condition 1: the switch is logged as
+    /// one operation). It never throws: it may run inside a write's <c>sent</c> callback, after the write was committed; a log
+    /// that fails here fails the loop's own next write of it, which ends the session.
+    /// </summary>
+    private void SessionNote(string text)
+    {
+        ITransferSink? log;
+        lock (_gate)
+        {
+            log = _liveLog;
+        }
+
+        _logger.LogInformation("Live control: {Note}", text);
+        try
+        {
+            log?.Note(text);
+        }
+        catch (Exception ex) when (ex is IOException or ObjectDisposedException)
+        {
+            _logger.LogWarning(ex, "The transfer log could not take a note");
         }
     }
 

@@ -31,6 +31,7 @@ public static class DtoMapper
         (DeviceCommands.PressGo, "pressGo"),
         (DeviceCommands.PressFadersMems, "pressFadersMems"),
         (DeviceCommands.PressFaders1To24, "pressFaders1To24"),
+        (DeviceCommands.PressFaders25To48, "pressFaders25To48"),
     ];
 
     /// <summary>Wire names of docs/api.md, pinned independently of the enum member names.</summary>
