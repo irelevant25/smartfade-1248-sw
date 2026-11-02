@@ -285,7 +285,8 @@ things in it are unobserved (items 2 and 11 below) and the session ends on the f
    is the bump's level (F174 VERIFIED: FaderInfo record k byte 0 and ChannelLevels[c] read 0xFF from the press to the release), so a
    drag started then would carry the bump's level, not the content's; SC-5's device holds a fader's events across its own bump hold
    until both objects were reported after the release, and a bump held on the panel meanwhile is the owner's accepted residual risk
-   at the E11b gate; see SC-5 condition 1 (d) and its review table.)*
+   at the E11b gate; see SC-5 condition 1 (d) and its review table. The same holds during a BLACKOUT, when every fader reports 0x00
+   with the MASTER at full (F125): SC-5's device refuses fader events while LED block 53 is not steady off, re-check 2026-11-02.)*
 7. **Cadence as observed.** Writes are placed where SmartSoft placed them and the SC-1 floors hold for every
    transfer; the read loop keeps fetching what the console lists after an event (FaderInfo, LedStatus,
    ConsoleStatus, PlaybackInfo: F134), so the UI shows the effect from the console, not from the command.
@@ -587,7 +588,12 @@ its side effects are understood, and the conditions hold. Everything else is NO-
    PANEL while the UI moves the same fader cannot be told from a fader at full (F178, VERIFIED the same day: no object marks a press)
    and is a residual risk accepted by the coordinating assistant at the owner's delegation (the review table, MAJOR 1 (ii)) and
    acknowledged at the E11b gate, like F141. What the console does with a matching event at a bump's level is UNKNOWN: unobserved in
-   every capture.)*
+   every capture.)* *(Annotated 2026-11-02 after the re-check, new MAJOR: during a BLACKOUT the reported level is 0x00 for every fader
+   while the MASTER byte stays 0xFF, F125 VERIFIED (E8b seq 26987 / 26991 / 26999, the content restored at 27754 / 27762), so a
+   matching event would carry 0x00 whatever the content; LED block 53 shows the blackout, and the device refuses channel and memory
+   fader events while it is not steady off. With SOLO on, a held bump replaces the output (F6, DOCUMENTED): whether FaderInfo of the
+   other faders drops too is unobserved (INFERRED from F125 / F176), so a hold of ours under SOLO shadows every physical fader, and
+   the panel case is part of Acceptance 6.)*
 2. **A held bump is one operation with a bound:** press, the hold renewed by the UI, the release sent by the device when the UI
    releases or when the bound (3 s) expires, and before any Disconnect; a hold cannot span a bank switch (refused); the lost-release
    case (a process killed mid-hold leaves the bump down until the panel is pressed, INFERRED) **was accepted by the owner on 2026-11-02**
@@ -855,6 +861,25 @@ the simulator and the mode gating unchanged; every replay count and skip reprodu
 steps, the STACK / PAUSE / NEXT writes); the E11b guide's W0 (a panel move of a channel fader listed ChannelLevels with FaderInfo in
 E8 18 of 18, E8b 18 of 18, E3 42 of 42) and its W-steps; the layering (no bytes in the UI).
 
+**Second pass (re-check, 2026-11-02, afternoon, `protocol-safety-reviewer`, over 1eceabb and 88b9fcd): every first-pass finding
+RESOLVED or accepted as recorded, with file-and-line evidence (the BLOCKER's three tags; MAJOR 1 (i)'s `BumpShadow` created in
+`QueueBump`, checked at the command and before every write, ended only by a list after a poll reply after the release, E9e bodies in
+its tests; MAJOR 1 (ii) accepted at the owner's delegation, the reviewer's own spot check agreeing with F178; MAJOR 2's window clean,
+the `sent` callbacks state-only; MAJOR 3's `BlinkingFaders` display only, every reading with its status; the minors and nits as
+listed; the stand-in console's pause fix removed no assertion); the invariants re-confirmed (the whitelist exactly SC-2 plus SC-5,
+`DataHeader` the only producer, `HspReadSession.cs` and `HspReadLoop.cs` untouched, no NO-GO key reachable, holds bump codes only, no
+retries, nothing between the gate and a header for any write class, the read-only session, the simulator, Communication and Domain
+unchanged, the UI domain-level only). NEEDS CHANGES for one new major, two new minors and three nits (428 tests green):**
+
+| # | Finding | Status |
+|---|---|---|
+| MAJOR (new) | **The matching level reads 0x00 during a blackout:** BLACKOUT zeroes FaderInfo record k byte 0 and ChannelLevels[c] and leaves the MASTER byte at 0xFF (F125; E8b seq 26987, 26991, 26999, the content restored at 27754 / 27762), so `MasterNotAtFull`, the agreement check and the shadow pass and `MatchingLevel` returns 0x00 whatever the content; touching a fader in the UI during a blackout sends a matching event at 0x00 (the drag starts at the displayed 0); if the console takes the fader as matched, the content drops and at blackout off the channel stays dark or at the user's level. Reachable from our own BLACKOUT tap or the panel; detectable, LED block 53 is decoded as `Keys.Blackout`. E11b's steps never toggle BLACKOUT. | **Assigned to the subagent 2026-11-02, waits for the third pass:** `FaderState` refuses channel and memory fader events while block 53 is not steady off, as `MasterNotAtFull` does for the MASTER, checked at the command and before the write; a device test with E8b's in-blackout bodies; condition 1 (d) and SC-2 condition 6 annotated with F125 (done). |
+| MINOR B (new) | The deferred notes are written inside the next exchange: `WriteLeftNotes` runs at the top of `OnEvent` for every event, a payload-announcing reply header included, so after a bank key the "FADERS … sent" note is written between the next list's header and its payload (SC-1 item 8; the loop's own doc); the test at `:1993` does not check that spot. | **Assigned to the subagent 2026-11-02:** the notes written only on events that end an exchange (an idle poll reply, DirtyListReceived, ObjectReceived) or in the loop's Flush; the test extended. |
+| MINOR C (new) | SOLO with a held bump: F6 (DOCUMENTED) says a bump with SOLO on replaces the output, so the other channels read 0; whether FaderInfo of the other faders drops too is unobserved (E9c's only SOLO-mode hold had nothing else up); if it does, as for BLACKOUT (F125) and the MASTER (F176), the agreement check passes at 0 for every other fader, our own SOLO hold leaves them unshadowed, and Acceptance 6 names only the same fader. | **Assigned to the subagent 2026-11-02:** while SOLO's LED reads on, a held bump of ours shadows every physical fader (INFERRED reading, marked); **Acceptance 6 widened** to the other faders under SOLO for the panel case (done, the guide and this section). |
+| NIT D | "after a bank or mode switch" in `docs/api.md` and `channel-fader.component.ts`: F172 has no 1-24 / 25-48 case. | **Assigned to the subagent:** "after a mode switch (a 1-24 / 25-48 switch INFERRED alike)". |
+| NIT E | F178 rests on the capture-analyst's uncommitted scripts; the seqs it lists make it reproducible and the reviewer's spot check agrees. | Noted; no change (the record of the scripts' location is in F178). |
+| NIT F | Acceptance 3 and "Conditions for E11b" said "released by the device at 3 s at the latest", which Acceptance 7 and MINOR 2 qualify. | **Done 2026-11-02:** "asked for 2.75 s after the press (Acceptance 7 for the overrun)". |
+
 ### Conditions for E11b (the second write session, the first with SC-5's classes) and what to record
 
 - Backup to the SD card first, the name in the log; USBPcap from before the Zadig bind; the guided script logs every owner action
@@ -866,7 +891,8 @@ E8 18 of 18, E8b 18 of 18, E3 42 of 42) and its W-steps; the layering (no bytes 
   asks each): the automatic switch presses the console's FADERS key, so the console's 24 physical faders control the new bank for anyone
   at the console until the next switch (visible on the FADERS LEDs, shown by the UI); the matching rule (F172: after a switch the console
   ignores a PC fader until an event equals the new content's level; the device sends the reported level first; a wrong first event moves
-  nothing and the bump LED blinks); the bounded hold (released by the device at 3 s at the latest or before any Disconnect) with the
+  nothing and the bump LED blinks); the bounded hold (the release asked for 2.75 s after the press on the device's clock, or before any
+  Disconnect; MINOR 2 for the overrun) with the
   lost-release residual risk accepted on 2026-11-02; the last mover (F141) and MASTER's whole-output effect; the rig (memory 3 of page 1
   and channels 1, 2, 5 and 30 may light on whatever is patched to them; IND 1 is unpatched and IND 2 drives DMX 47 in this show, E8b);
   and, since the first review pass: addendum 3 (channel bump 1 of bank 1-24), the residual risk of a bump held on the panel while the
