@@ -373,8 +373,16 @@ mirror of the LED blocks whose phases differ, reaches the UI; an explicit 48-row
 308 frontend tests), the owner accepted the hold overrun with a slow console (MINOR 2, chat) and left the panel-bump case (MAJOR 1 (ii))
 to Claude, which had the `capture-analyst` (Opus 5.5) compare a held bump against a fader at full in every object of ten captures: **no
 object marks a press (F178, VERIFIED)**, so the case is accepted as a residual risk at the owner's delegation, recorded in the SC-5
-review table and acknowledged at the E11b gate. **The re-check pass is the next gate; nothing is sent before it passes and the owner
-gives the go for E11b.**
+review table and acknowledged at the E11b gate. **The re-check (second pass) resolved every first-pass item and found one new major:
+during a BLACKOUT every fader reports 0x00 with the MASTER at full (F125, OBSERVED once; Claude had written VERIFIED, the subagent
+corrected it), so a matching event would carry 0x00; the subagent made the device refuse channel and memory fader events while the
+BLACKOUT LED (block 53) is not steady off and from a BLACKOUT tap of ours until the LED is reported (1eceabb → 0f2f1da; also the
+transfer-log notes only at exchange ends, and a held bump of ours under SOLO shadows every fader, INFERRED from F6). The third pass
+(2026-11-02, afternoon) is a PASS: nothing on the review side is open before E11b, one optional nit (the blackout residual, a
+never-seen two-list split, worded for both directions; the hardening a follow-up), 433 backend and 308 frontend tests. The review
+clears nothing for sending.** **What remains is the owner's:** the SD backup, USBPcap before the Zadig bind, the versions, the seven
+acceptances and the rig answer at the E11b gate, no SD save or load while connected, and the go on the day; then E11b with
+`tools/usb-probe/e11b-guided-session.ps1`, its record, and the SC-5 review table annotated with the outcome.
 
 ## Commands
 
@@ -443,8 +451,9 @@ taps GO, FADERS MEMS and FADERS 1-24 through the port, the API and the UI: `pres
 interlock, shows LIVE CONTROL beside HARDWARE and names the writable controls to the UI; everything else stays as
 in the read-only mode. Run only as the SC-2 E11 script says (backup first, USBPcap in parallel; the guided script
 `tools/usb-probe/e11-guided-session.ps1` refuses to start it before the re-check's items are closed and the acceptances given).
-**SC-5's classes (implemented 2026-11-02 by an Opus 5.5 agent at the owner's request, commit 98cb499, the `protocol-safety-reviewer` pass
-and E11b's go pending; `safety-checks.md` SC-5 "Implementation"):** the same switch also sends every channel fader and bump 1-48, the memory
+**SC-5's classes (implemented 2026-11-02 by an Opus 5.5 agent at the owner's request, commit 98cb499 with the review fixes 1eceabb and
+0f2f1da; the `protocol-safety-reviewer` passed on its third pass the same afternoon, E11b's go pending; `safety-checks.md` SC-5
+"Implementation" and "Review"):** the same switch also sends every channel fader and bump 1-48, the memory
 faders and bumps of the page the console shows, IND 1 / IND 2 and the key tap FADERS 25-48 (`pressFaders25To48`), a bump held until the UI releases it or 2.75 s after the press on the
 device's clock (later only with a slow console, logged); a
 control of another bank first sends that bank's FADERS key and waits for the console's report (2 s, else the session ends), and a fader's first
