@@ -76,7 +76,6 @@ describe('CrossfaderComponent', () => {
 
   it('enables GO as a tap only for a device that models the stack and names the control writable', () => {
     expect(key('.xfade__go').disabled).toBe(true);
-    expect(key('.xfade__go').classList.contains('sf-key--inactive')).toBe(true);
 
     TestBed.inject(ConsoleStateService).applyConsoleStateChanged(
       createSampleState({ supportedCommands: ['pressGo'], writableControls: ['go'] }),
@@ -84,7 +83,6 @@ describe('CrossfaderComponent', () => {
     fixture.detectChanges();
 
     expect(key('.xfade__go').disabled).toBe(false);
-    expect(key('.xfade__go').classList.contains('sf-key--inactive')).toBe(false);
     key('.xfade__go').click();
     expect(pressGo).toHaveBeenCalledTimes(1);
 
@@ -143,7 +141,7 @@ describe('CrossfaderComponent', () => {
 
     expect(stack.classList.contains('xfade__key--lit')).toBe(true);
     expect(stack.classList.contains('sf-key--blink')).toBe(true);
-    expect(stack.classList.contains('sf-key--inactive')).toBe(false);
+    expect(stack.classList.contains('xfade__key--led')).toBe(true);
     expect(stack.getAttribute('title')).toContain('LED reading');
     expect(clear.classList.contains('xfade__key--lit')).toBe(true);
     expect(clear.disabled).toBe(true);

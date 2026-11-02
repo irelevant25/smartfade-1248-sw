@@ -142,7 +142,7 @@ describe('RecordKeysComponent', () => {
     expect(key('.record__rec').classList.contains('sf-key--blink')).toBe(false);
     expect(key('.record__edit').classList.contains('record__key--dim')).toBe(true);
     expect(keysInOrder[2].classList.contains('sf-key--blink')).toBe(true); // MAGIC
-    expect(keysInOrder[2].classList.contains('record__key--inactive')).toBe(false);
+    expect(keysInOrder[2].classList.contains('record__key--led')).toBe(true);
     expect(key('.record__copy').classList.contains('record__key--lit')).toBe(false);
     expect(key('.record__copy').hasAttribute('aria-pressed')).toBe(false);
     expect(key('.record__copy').getAttribute('title')).toContain('LED reading');

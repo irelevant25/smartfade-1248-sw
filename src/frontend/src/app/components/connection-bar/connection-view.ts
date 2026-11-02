@@ -79,7 +79,14 @@ export function describeStatus(
     case 'error':
       return { label: 'Error', tone: 'error', detail: connection.deviceDescription };
     default:
-      return { label: 'Disconnected', tone: 'idle', detail: 'Console not connected' };
+      return {
+        label: 'Disconnected',
+        tone: 'idle',
+        detail:
+          connection?.mode === 'hardware'
+            ? 'Console not connected: press Connect with the console on, or start the backend in simulated mode to work without it'
+            : 'Console not connected',
+      };
   }
 }
 

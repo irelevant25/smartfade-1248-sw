@@ -10,7 +10,6 @@
       class="faders__key faders__key--red faders__mems"
       [class.faders__key--lit]="bank() === 'memories'"
       [class.faders__key--led]="reported()"
-      [class.sf-key--inactive]="!canMems() && !reported()"
       [attr.aria-pressed]="reported() ? bank() === 'memories' : null"
       [disabled]="!enabled() || !canMems()"
       [attr.title]="memsTitle()"
@@ -23,7 +22,6 @@
       class="faders__key faders__key--green faders__upper"
       [class.faders__key--lit]="bank() === 'channels25To48'"
       [class.faders__key--led]="reported()"
-      [class.sf-key--inactive]="!reported()"
       [attr.aria-pressed]="reported() ? bank() === 'channels25To48' : null"
       disabled
       [attr.title]="upperTitle()"
@@ -35,7 +33,6 @@
       class="faders__key faders__key--green faders__lower"
       [class.faders__key--lit]="bank() === 'channels1To24'"
       [class.faders__key--led]="reported()"
-      [class.sf-key--inactive]="!can1To24() && !reported()"
       [attr.aria-pressed]="reported() ? bank() === 'channels1To24' : null"
       [disabled]="!enabled() || !can1To24()"
       [attr.title]="lowerTitle()"
@@ -45,7 +42,7 @@
     </button>
     <button
       type="button"
-      class="faders__key faders__key--blue faders__next sf-key--inactive"
+      class="faders__key faders__key--blue faders__next"
       disabled
       [attr.title]="nextTitle"
     >

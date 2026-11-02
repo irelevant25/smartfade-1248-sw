@@ -51,11 +51,7 @@
   letter-spacing: 0.16em;
   text-transform: uppercase;
   cursor: pointer;
-
-  &:disabled {
-    opacity: 0.4;
-    cursor: not-allowed;
-  }
+  // the inactive look is the shared rule in styles.scss (one look for every console key)
 }
 
 // SOLO: the console lights its LED white while solo mode is on (E3b, F100).

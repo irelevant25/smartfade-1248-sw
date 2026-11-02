@@ -41,14 +41,23 @@
   grid-row: 1 / span 2;
 }
 
-.shell__masters {
+// MASTERS takes the column's height, INDEPENDENTS only what its two keys need (the owner, 2026-11-02).
+.shell__right {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
   grid-column: 5;
-  grid-row: 1;
+  grid-row: 1 / span 2;
+  min-height: 0;
+}
+
+.shell__masters {
+  flex: 1 1 auto;
+  min-height: 0;
 }
 
 .shell__independents {
-  grid-column: 5;
-  grid-row: 2;
+  flex: 0 0 auto;
 }
 
 .shell__show {

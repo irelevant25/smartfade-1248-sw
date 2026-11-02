@@ -7,7 +7,6 @@
   display: flex;
   flex-direction: column;
   gap: 10px;
-  height: 100%;
   padding: 10px 12px 12px;
 }
 
@@ -40,10 +39,7 @@
     border-color: var(--sf-ok);
   }
 
-  &:disabled {
-    opacity: 0.4;
-    cursor: not-allowed;
-  }
+  // the inactive look is the shared rule in styles.scss (one look for every console key)
 }
 
 .independents__key--on {

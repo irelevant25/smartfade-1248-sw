@@ -43,10 +43,7 @@
     transform: translateY(1px);
   }
 
-  &:disabled {
-    opacity: 0.4;
-    cursor: not-allowed;
-  }
+  // the inactive look is the shared rule in styles.scss (one look for every console key)
 }
 
 .record__key--white {
@@ -66,11 +63,6 @@
   border-color: rgb(var(--key-rgb));
   color: #0a0c0f;
   box-shadow: 0 0 14px rgba(var(--key-rgb), 0.6);
-}
-
-// Shown, named, inactive: the simulator does not model the function yet.
-.record__key--inactive:disabled {
-  opacity: 0.55;
 }
 
 // The console's LED at its dimmed level ("has content" / "selectable", manual p.11).

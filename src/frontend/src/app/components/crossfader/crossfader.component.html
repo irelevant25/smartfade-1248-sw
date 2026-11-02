@@ -13,7 +13,6 @@
       <button
         type="button"
         class="xfade__key xfade__go"
-        [class.sf-key--inactive]="!canGo()"
         [disabled]="!enabled() || !canGo()"
         aria-label="Go"
         [attr.title]="canGo() ? 'Go: the next step of the stack on the console (a key tap)' : 'Go: not available on this device'"
@@ -26,7 +25,6 @@
       <button
         type="button"
         class="xfade__key xfade__stack"
-        [class.sf-key--inactive]="!keys()"
         [class.xfade__key--lit]="stackLed()?.light === 'full'"
         [class.xfade__key--dim]="stackLed()?.light === 'dim'"
         [class.sf-key--blink]="stackLed()?.blinking === true"
@@ -42,7 +40,7 @@
       <sf-channel-fader label="B" [desired]="faderB()" [disabled]="!crossfader()" [readOnly]="true" />
       <button
         type="button"
-        class="xfade__key xfade__pause sf-key--inactive"
+        class="xfade__key xfade__pause"
         disabled
         aria-label="Pause"
         title="Pause: not available yet"
@@ -53,7 +51,7 @@
       </button>
       <button
         type="button"
-        class="xfade__key xfade__rate sf-key--inactive"
+        class="xfade__key xfade__rate"
         disabled
         title="Rate: the fade / wait balance of the whole stack, set with the wheel while STACK is active (manual); not available yet"
       >

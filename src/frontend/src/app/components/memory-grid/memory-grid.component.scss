@@ -48,13 +48,8 @@
   font: 700 0.8125rem var(--sf-font-mono);
   cursor: pointer;
 
-  // like the faders and keys: nothing to do while the backend is not connected
-  &:disabled {
-    cursor: default;
-    opacity: 0.45;
-  }
-
-  &:hover {
+  // the inactive look (nothing to do while the backend is not connected) is the shared rule in styles.scss
+  &:hover:not(:disabled) {
     border-color: var(--sf-accent);
   }
 }

@@ -19,7 +19,6 @@
     <button
       type="button"
       class="record__key record__key--yellow"
-      [class.record__key--inactive]="!keys()"
       [class.record__key--lit]="recSeqLed()?.light === 'full'"
       [class.record__key--dim]="recSeqLed()?.light === 'dim'"
       [class.sf-key--blink]="recSeqLed()?.blinking === true"
@@ -32,7 +31,6 @@
     <button
       type="button"
       class="record__key record__key--white"
-      [class.record__key--inactive]="!keys()"
       [class.record__key--lit]="magicLed()?.light === 'full'"
       [class.record__key--dim]="magicLed()?.light === 'dim'"
       [class.sf-key--blink]="magicLed()?.blinking === true"
@@ -72,7 +70,7 @@
     </button>
     <button
       type="button"
-      class="record__key record__key--red record__key--inactive"
+      class="record__key record__key--red record__snapshot"
       disabled
       title="Snapshots are not in the simulator yet"
     >

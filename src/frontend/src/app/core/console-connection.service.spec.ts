@@ -45,6 +45,33 @@ describe('ConsoleConnectionService', () => {
       expect(state.channels()[0].desired).toBe(255);
     });
 
+    it('connects a simulated console by itself when the link comes up, never a real one', async () => {
+      hub.results.set(
+        'getState',
+        createSampleState({
+          connection: { status: 'disconnected', mode: 'simulated', deviceDescription: 'Simulated SmartFade 1248' },
+        }),
+      );
+      service.start();
+      await settle();
+      await settle();
+
+      expect(hub.callsTo('connect')).toHaveLength(1);
+
+      await service.stop();
+      hub.results.set(
+        'getState',
+        createSampleState({
+          connection: { status: 'disconnected', mode: 'hardware', deviceDescription: 'SmartFade 1248' },
+        }),
+      );
+      service.start();
+      await settle();
+      await settle();
+
+      expect(hub.callsTo('connect')).toHaveLength(1);
+    });
+
     it('starts only once however often start() is called', async () => {
       service.start();
       service.start();

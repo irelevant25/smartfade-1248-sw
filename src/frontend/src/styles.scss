@@ -89,11 +89,6 @@ body {
   &:active:not(:disabled) {
     transform: translateY(1px);
   }
-
-  &:disabled {
-    opacity: 0.4;
-    cursor: not-allowed;
-  }
 }
 
 // A key whose function is armed (the console blinks it).
@@ -110,8 +105,18 @@ body {
   color: var(--sf-accent);
 }
 
-// A key of the console that the simulator does not model yet: present, named, inactive.
-.sf-key--inactive:disabled {
+// Every console key that cannot be pressed looks the same (the owner, 2026-11-02: one look for inactive keys
+// everywhere): dimmed, cursor not-allowed, whether the device does not model the function, the control is not
+// cleared on the real console, or nothing is connected. The components carry no :disabled look of their own; a
+// key that only mirrors a console LED keeps its light through its --led rule in the component.
+.sf-key:disabled,
+.sf-key--inactive:disabled,
+.record__key:disabled,
+.xfade__key:disabled,
+.faders__key:disabled,
+.masters__toggle:disabled,
+.independents__key:disabled,
+.memories__page:disabled {
   opacity: 0.55;
   cursor: not-allowed;
 }

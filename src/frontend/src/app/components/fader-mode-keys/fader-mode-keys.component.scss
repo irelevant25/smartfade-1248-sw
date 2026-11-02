@@ -49,10 +49,7 @@
     transform: translateY(1px);
   }
 
-  &:disabled {
-    opacity: 0.4;
-    cursor: not-allowed;
-  }
+  // the inactive look is the shared rule in styles.scss (one look for every console key)
 }
 
 .faders__key--red {

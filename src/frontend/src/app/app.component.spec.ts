@@ -48,9 +48,12 @@ describe('AppComponent', () => {
       'sf-fader-mode-keys',
       'sf-crossfader',
       'sf-record-keys',
-      'sf-masters-panel',
-      'sf-independents-panel',
+      'div',
     ]);
+    // the right-hand column: MASTERS over INDEPENDENTS, the latter only as tall as its keys
+    expect(
+      Array.from(root.querySelector('.shell__right')!.children).map((child) => child.tagName.toLowerCase()),
+    ).toEqual(['sf-masters-panel', 'sf-independents-panel']);
     expect(root.querySelectorAll('sf-channel-fader')).toHaveLength(FADER_COUNT);
     expect(root.querySelectorAll('.fader__bump')).toHaveLength(48 + 24);
     expect(root.querySelectorAll('.independents__key')).toHaveLength(2);

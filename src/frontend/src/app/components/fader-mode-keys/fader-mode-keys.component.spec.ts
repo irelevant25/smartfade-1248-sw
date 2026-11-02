@@ -59,7 +59,6 @@ describe('FaderModeKeysComponent', () => {
     expect(key('.faders__lower').getAttribute('aria-pressed')).toBe('false');
     expect(keys().every((k) => k.disabled)).toBe(true);
     expect(key('.faders__mems').classList.contains('faders__key--led')).toBe(true);
-    expect(key('.faders__mems').classList.contains('sf-key--inactive')).toBe(false);
 
     state.applyConsoleStateChanged(
       createSampleState({ connection: hardware, supportedCommands: [], faderBank: 'channels25To48' }),

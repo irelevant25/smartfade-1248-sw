@@ -45,10 +45,7 @@
   letter-spacing: 0.14em;
   text-transform: uppercase;
   cursor: pointer;
-
-  &:disabled {
-    cursor: not-allowed;
-  }
+  // the inactive look is the shared rule in styles.scss (one look for every console key)
 }
 
 .xfade__icon {

@@ -194,7 +194,7 @@ export class ConsoleConnectionService {
     hub.onreconnecting(() => this._status.set('reconnecting'));
     hub.onreconnected(() => {
       this._status.set('connected');
-      void this.getState();
+      void this.getState().then((state) => this._connectSimulatorIfIdle(state));
     });
     hub.onclose(() => {
       if (this._running) {
@@ -234,8 +234,20 @@ export class ConsoleConnectionService {
         return;
       }
       this._status.set('connected');
-      await this.getState();
+      this._connectSimulatorIfIdle(await this.getState());
       return;
+    }
+  }
+
+  /**
+   * The simulated console connects by itself when the link comes up: there is no hardware behind it and nothing to
+   * protect, and the owner wants the software usable without the console (2026-11-02). The real console is never
+   * connected without a press of Connect: that is an explicit, visible act (SC-1, SC-2). A simulator the user has
+   * disconnected on purpose stays so until the link is made again.
+   */
+  private _connectSimulatorIfIdle(state: ConsoleStateDto | undefined): void {
+    if (state?.connection.mode === 'simulated' && state.connection.status === 'disconnected') {
+      void this.connect();
     }
   }
 
