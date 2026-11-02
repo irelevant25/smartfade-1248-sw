@@ -1,0 +1,119 @@
+:host {
+  display: block;
+  min-height: 0;
+}
+
+// Fixed, narrow numeric columns; the content column takes what is left. Nothing here grows with the window.
+.steps {
+  display: flex;
+  flex-direction: column;
+  font: 0.8125rem var(--sf-font-ui);
+}
+
+.steps__row {
+  display: grid;
+  grid-template-columns: 64px minmax(160px, 1fr) repeat(5, 72px);
+  gap: 6px;
+  align-items: center;
+  min-height: 32px;
+  padding: 2px 8px;
+  border-bottom: 1px solid var(--sf-border);
+  border-left: 3px solid transparent;
+  cursor: pointer;
+
+  &:hover:not(.steps__row--head) {
+    background: rgba(255, 255, 255, 0.03);
+  }
+
+  &:focus-visible {
+    outline: 2px solid var(--sf-focus);
+    outline-offset: -2px;
+  }
+}
+
+.steps__row--head {
+  min-height: 24px;
+  color: var(--sf-text-faint);
+  font: 600 0.625rem var(--sf-font-ui);
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  cursor: default;
+}
+
+.steps__row--selected {
+  border-left-color: var(--sf-accent);
+  background: rgba(63, 208, 224, 0.1);
+}
+
+.steps__num {
+  font: 700 0.875rem var(--sf-font-mono);
+  color: var(--sf-text);
+}
+
+.steps__content {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+}
+
+.steps__kind {
+  flex: 0 0 auto;
+  min-width: 56px;
+  padding: 1px 6px;
+  border: 1px solid var(--sf-border-strong);
+  border-radius: 3px;
+  font: 600 0.625rem var(--sf-font-mono);
+  letter-spacing: 0.06em;
+  text-align: center;
+  color: var(--sf-text-dim);
+
+  &[data-kind='memory'] {
+    border-color: rgba(255, 92, 92, 0.5);
+    color: #ff8a8a;
+  }
+
+  &[data-kind='channel'] {
+    border-color: rgba(61, 220, 132, 0.5);
+    color: var(--sf-ok);
+  }
+
+  &[data-kind='state'] {
+    border-color: rgba(78, 161, 255, 0.5);
+    color: var(--sf-info);
+  }
+}
+
+.steps__text {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-family: var(--sf-font-mono);
+  color: var(--sf-text);
+}
+
+.steps__time {
+  font-family: var(--sf-font-mono);
+}
+
+.steps__edit {
+  width: 100%;
+  padding: 2px 4px;
+  border: 1px solid var(--sf-border);
+  border-radius: 3px;
+  background: #1a2026;
+  color: var(--sf-text);
+  font: 0.8125rem var(--sf-font-mono);
+  text-align: right;
+
+  &:focus {
+    outline: 1px solid var(--sf-accent);
+  }
+}
+
+.steps__none {
+  margin: 0;
+  padding: 10px 8px;
+  font: 0.75rem var(--sf-font-ui);
+  color: var(--sf-text-dim);
+}

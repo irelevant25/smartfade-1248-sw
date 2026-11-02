@@ -1,0 +1,120 @@
+<section class="stack sf-panel" aria-labelledby="stack-title">
+  @if (show()) {
+    <div class="stack__head">
+      <h2 id="stack-title" class="sf-panel-title">Stack / Sequences</h2>
+      <div class="stack__tabs" role="tablist" aria-label="Stack and sequences">
+        @for (tab of tabs(); track tab.home) {
+          <button
+            type="button"
+            role="tab"
+            class="stack__tab"
+            [class.stack__tab--current]="tab.home === home()"
+            [attr.aria-selected]="tab.home === home()"
+            (click)="showTab(tab.home)"
+          >
+            {{ tab.label }}
+            <span class="stack__tab-count">{{ tab.count }}</span>
+          </button>
+        }
+      </div>
+      @if (sequence(); as seq) {
+        <span class="stack__seq-label" role="group" [attr.aria-label]="'Label of sequence ' + seq.index">
+          <span class="stack__field-name">Sequence {{ seq.index }} label</span>
+          <input type="text" class="stack__input stack__input--label" maxlength="6" [value]="seq.label?.line1 ?? ''" [attr.aria-label]="'Label line 1 of sequence ' + seq.index" (change)="setSequenceLabel(1, $event)" />
+          <input type="text" class="stack__input stack__input--label" maxlength="6" [value]="seq.label?.line2 ?? ''" [attr.aria-label]="'Label line 2 of sequence ' + seq.index" (change)="setSequenceLabel(2, $event)" />
+          <input type="text" class="stack__input stack__input--label" maxlength="6" [value]="seq.label?.line3 ?? ''" [attr.aria-label]="'Label line 3 of sequence ' + seq.index" (change)="setSequenceLabel(3, $event)" />
+        </span>
+      }
+    </div>
+
+    @if (home() !== undefined) {
+      <div class="stack__body">
+        <sf-step-list class="stack__list" [home]="home()!" [steps]="steps()" [selected]="selected()" (select)="selectStep($event)" />
+
+        <aside class="stack__detail" aria-label="Step detail">
+          @if (step(); as current) {
+            <h3 class="stack__detail-title">
+              Step {{ current.number }}
+              <span class="stack__detail-kind">{{ kindLabel(current) }}</span>
+            </h3>
+
+            @switch (kind(current)) {
+              @case ('memory') {
+                <label class="stack__field">
+                  <span class="stack__field-name">Memory</span>
+                  <input type="number" class="stack__input stack__input--memory" min="1" max="288" [value]="current.memoryNumber" aria-label="Memory of the selected step" (change)="setMemory($event)" />
+                  <span class="stack__dim">page {{ current.memoryPage! + 1 }}, fader {{ current.memoryFader! + 1 }}</span>
+                </label>
+                @if (memory(); as mem) {
+                  <div class="stack__field" role="group" [attr.aria-label]="'Label of memory ' + mem.number">
+                    <span class="stack__field-name">Memory label</span>
+                    <input type="text" class="stack__input stack__input--label" maxlength="6" [value]="mem.label.line1" [attr.aria-label]="'Label line 1 of memory ' + mem.number" (change)="setMemoryLabel(1, $event)" />
+                    <input type="text" class="stack__input stack__input--label" maxlength="6" [value]="mem.label.line2" [attr.aria-label]="'Label line 2 of memory ' + mem.number" (change)="setMemoryLabel(2, $event)" />
+                    <input type="text" class="stack__input stack__input--label" maxlength="6" [value]="mem.label.line3" [attr.aria-label]="'Label line 3 of memory ' + mem.number" (change)="setMemoryLabel(3, $event)" />
+                  </div>
+                  <label class="stack__field stack__field--column">
+                    <span class="stack__field-name">Memory channels</span>
+                    <input type="text" class="stack__input stack__input--channels" [value]="channelsText(mem.channels)" [attr.aria-label]="'Channels of memory ' + mem.number" (change)="setMemoryChannels($event)" />
+                  </label>
+                  <p class="stack__dim">In the files' form, 7/100 15/8 (channels 1-48 at 1-100 %; a channel left out is at 0). Every step that uses memory {{ mem.number }} follows it.</p>
+                } @else {
+                  <p class="stack__dim">Memory {{ current.memoryNumber }} is not recorded in this show, so the step has no channels.</p>
+                }
+              }
+              @case ('state') {
+                <p class="stack__field">
+                  <span class="stack__field-name">Label</span>
+                  <span class="stack__mono">{{ labelDisplay(current.label) || '(none)' }}</span>
+                </p>
+                @if (current.channels.length) {
+                  <p class="stack__field">
+                    <span class="stack__field-name">Channels</span>
+                    <span class="stack__mono">{{ channelsText(current.channels) }}</span>
+                  </p>
+                }
+              }
+              @default {
+                <p class="stack__field">
+                  <span class="stack__field-name">Channels</span>
+                  <span class="stack__mono">{{ channelsText(current.channels) || 'none' }}</span>
+                </p>
+                @if (current.label) {
+                  <p class="stack__field">
+                    <span class="stack__field-name">Label</span>
+                    <span class="stack__mono">{{ labelDisplay(current.label) }}</span>
+                  </p>
+                }
+              }
+            }
+
+            <div class="stack__times" role="group" aria-label="Times of the selected step">
+              @for (field of timeFields; track field.key) {
+                <label class="stack__field stack__field--column">
+                  <span class="stack__field-name">{{ field.label }}</span>
+                  <input type="text" class="stack__input stack__input--time" autocomplete="off" [value]="current[field.key]" [attr.aria-label]="field.label + ' of the selected step'" (change)="setTime(field.key, $event)" />
+                </label>
+              }
+            </div>
+            <p class="stack__dim">Seconds with one decimal (5.0) or m:ss (1:30), as the console's files write them.</p>
+
+            <div class="stack__actions">
+              <button type="button" class="sf-key stack__insert" title="A copy of this step's memory and times after it; a stack cue takes the next free number" (click)="insertAfter()">Insert step after</button>
+              <button type="button" class="sf-key stack__remove" title="The other steps keep their numbers" (click)="remove()">Remove step</button>
+            </div>
+          } @else if (steps().length === 0) {
+            <p class="stack__dim">No steps here yet.</p>
+            <button type="button" class="sf-key stack__add-first" (click)="addFirst()">Add the first step</button>
+          } @else {
+            <p class="stack__dim">Select a step to see and edit its details.</p>
+          }
+
+          @if (notice(); as text) {
+            <p class="stack__notice" role="status">{{ text }}</p>
+          }
+        </aside>
+      </div>
+    }
+  } @else {
+    <p class="stack__empty">No show loaded. Load one from the card (Show menu); the console's own show will appear here at Connect once that is cleared.</p>
+  }
+</section>

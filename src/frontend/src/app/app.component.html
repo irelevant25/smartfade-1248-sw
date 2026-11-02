@@ -1,18 +1,24 @@
 <sf-connection-bar class="shell__bar" />
 
 <main class="shell__main">
-  @if (view() === 'console') {
-    <sf-channel-grid class="shell__channels" />
-    <sf-memory-grid class="shell__memories" />
-    <sf-fader-mode-keys class="shell__faders" />
-    <sf-crossfader class="shell__crossfader" />
-    <sf-record-keys class="shell__record" />
-    <div class="shell__right">
-      <sf-masters-panel class="shell__masters" />
-      <sf-independents-panel class="shell__independents" />
-    </div>
-  } @else {
-    <sf-show-file-page class="shell__show" />
+  @switch (view()) {
+    @case ('patch') {
+      <sf-patch-page class="shell__page" />
+    }
+    @case ('stack') {
+      <sf-stack-page class="shell__page" />
+    }
+    @default {
+      <sf-channel-grid class="shell__channels" />
+      <sf-memory-grid class="shell__memories" />
+      <sf-fader-mode-keys class="shell__faders" />
+      <sf-crossfader class="shell__crossfader" />
+      <sf-record-keys class="shell__record" />
+      <div class="shell__right">
+        <sf-masters-panel class="shell__masters" />
+        <sf-independents-panel class="shell__independents" />
+      </div>
+    }
   }
 </main>
 

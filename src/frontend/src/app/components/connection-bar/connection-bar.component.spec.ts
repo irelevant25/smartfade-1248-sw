@@ -4,6 +4,7 @@ import { ConsoleConnectionService, type LinkStatus } from '../../core/console-co
 import { ConsoleStateService } from '../../core/console-state.service';
 import type { ConnectionDto } from '../../core/console.models';
 import { createSampleState } from '../../core/testing/sample-state';
+import { ViewService } from '../../core/view.service';
 import { ConnectionBarComponent } from './connection-bar.component';
 
 describe('ConnectionBarComponent', () => {
@@ -67,6 +68,37 @@ describe('ConnectionBarComponent', () => {
     it('shows no show file, firmware or error', () => {
       expect(element().querySelector('.bar__fact')).toBeNull();
       expect(element().querySelector('.bar__error')).toBeNull();
+    });
+  });
+
+  describe('views and the Show menu', () => {
+    const views = () => Array.from(element().querySelectorAll<HTMLButtonElement>('.bar__view'));
+
+    it('switches between LIVE, PATCH and STACK / SEQ, LIVE being the default', () => {
+      expect(views().map((view) => view.textContent?.trim())).toEqual(['Live', 'Patch', 'Stack / Seq']);
+      expect(views().map((view) => view.getAttribute('aria-pressed'))).toEqual(['true', 'false', 'false']);
+      expect(views()[0].classList.contains('bar__view--current')).toBe(true);
+
+      views()[1].click();
+      fixture.detectChanges();
+      expect(TestBed.inject(ViewService).view()).toBe('patch');
+      expect(views().map((view) => view.getAttribute('aria-pressed'))).toEqual(['false', 'true', 'false']);
+
+      views()[2].click();
+      fixture.detectChanges();
+      expect(TestBed.inject(ViewService).view()).toBe('stack');
+      expect(views()[2].classList.contains('bar__view--current')).toBe(true);
+
+      views()[0].click();
+      fixture.detectChanges();
+      expect(TestBed.inject(ViewService).view()).toBe('live');
+    });
+
+    it('carries the Show menu, closed, after the connect keys', () => {
+      const menu = element().querySelector<HTMLElement>('sf-show-menu');
+      expect(menu?.querySelector('.menu__trigger')?.textContent).toContain('Show');
+      expect(menu?.querySelector('.menu__panel')).toBeNull();
+      expect(menu?.previousElementSibling?.classList.contains('bar__actions')).toBe(true);
     });
   });
 

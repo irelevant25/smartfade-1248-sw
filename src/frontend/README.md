@@ -1,10 +1,11 @@
 # SmartFade 1248 control UI
 
-Angular front end of the SmartFade 1248 control software: one page, a real-time control surface
-for the 48 channels, the masters and the 512 outputs. It talks to the backend only through the
-domain contract in [docs/api.md](../../../docs/api.md) (SignalR hub `/hubs/console`): channels,
-levels, masters, connection state, and nothing about how the console is reached. Levels travel
-as 0-255 and are shown as percent.
+Angular front end of the SmartFade 1248 control software: three views switched in the top bar,
+LIVE (a real-time control surface for the 48 channels, the masters and the 512 outputs), PATCH (the
+show's patch as a matrix) and STACK / SEQ (the show's stack and sequences as a step list). It talks
+to the backend only through the domain contract in [docs/api.md](../../../docs/api.md) (SignalR hub
+`/hubs/console`, REST `/api/showfile/*`): channels, levels, masters, connection state, a parsed show
+file, and nothing about how the console is reached. Levels travel as 0-255 and are shown as percent.
 
 Phase 1 scope: the backend runs a **simulated** console. The mode is always shown in the top bar
 (SIMULATED in amber); a mode this page does not know is shown as a red alert instead.
@@ -60,7 +61,8 @@ Output goes to `dist/smartfade-ui`.
 
 | Area | What it does |
 |---|---|
-| Top bar | Mode badge (SIMULATED / REPLAY), connection status, Connect / Disconnect, show file name and firmware version when known, last error (dismissible) |
+| Top bar | Mode badge (SIMULATED / REPLAY), connection status, the view switch LIVE / PATCH / STACK / SEQ, Connect / Disconnect, the Show menu (below), show file name and firmware version when known, last error (dismissible) |
+| Show menu | A button in the bar: the loaded show's name and an "edited" marker, "Load from card" (a `.asc` file chosen in the browser, parsed by the backend), "Save to card" (the edited show rendered by the backend and saved as a new `<name>-edited.asc` through the browser, for the SD card; only when a show is loaded and edited), "Revert edits". The only place in the UI that deals with files; nothing reaches the console over USB |
 | Channels | 48 faders in two banks of 24 (1-24, 25-48). The thumb is the desired level, the lit bar the level the console reports; an amber stretch and lamp show a level the console has not reached yet |
 | Memories | The 24 memory faders of one page with the page keys 1-12; REC MEM / EDIT MEM / COPY from the Record column pick a memory here |
 | Faders | The console's FADERS keys in its order and colours: MEMORIES (red), 25-48, 1-24 (green), NEXT (blue). A real console reports which bank its 24 physical faders control (`faderBank`) and that key is lit; MEMORIES and 1-24 are taps where the device accepts them, 25-48 and NEXT are shown inactive |
@@ -69,8 +71,12 @@ Output goes to `dist/smartfade-ui`.
 | Masters | BUMPS under SOLO, MASTER under BLACKOUT (blue; blinks while the MASTER is below full, lit while blackout is on) |
 | Independents | IND 1 / IND 2 in their own section under the masters (DMX 97 / 98 by default) |
 | Outputs | The 512 outputs as thin bars on one canvas; hover for the level of one output; collapsible |
+| PATCH view | The 512 DMX addresses as a matrix of 32 x 16 boxes, the address on top and the channel below (IND 1 / IND 2 for channels 49 and 50), coloured by channel; a summary line (patched, unpatched, channels without an address). Click a box and type a channel (1-48, i1 / i2 for the independents, 0 to unpatch; Enter applies, Esc cancels, Delete unpatches); drag over boxes for a range and use "Patch range" / "Unpatch range"; arrows move, Shift extends, Home / End go to the row ends. The focused box's detail line holds its proportional level and the channel's label |
+| STACK / SEQ view | A tab for the stack and one per sequence (its label or number); a step list with the number, the content (memory number and label, a channel step's channels, a State step's label) and the five times editable in the row (Enter / Tab apply, Esc restores); a detail panel beside the list for the selected step (the referenced memory with its label and channels, the times, "Insert step after" / "Remove step" with the numbering rules of docs/formats/asc-format.md); a sequence's label above its list |
 
-Faders are disabled while the link to the backend is down or the console is not connected.
+Without a loaded show the PATCH and STACK / SEQ views show one message (load one from the Show menu;
+the console's own show at Connect is a later safety check, SC-4). Faders are disabled while the link
+to the backend is down or the console is not connected.
 
 ### Keyboard
 
@@ -107,6 +113,11 @@ components  ->  ChannelService  ->  ConsoleConnectionService  ->  hub /hubs/cons
   It updates `desired` and `pending` at once (optimistically) and sends level changes at most
   once per animation frame per fader, with the latest value, so a fast drag cannot flood the
   backend. The backend confirms or corrects through its events.
+- **ShowStore** (`core/show.store.ts`) is the one place a show lives: the show as loaded, the edited
+  copy, the dirty state and every edit operation with the rules of docs/formats/asc-format.md (the
+  pure rules in `core/show-rules.ts`). Today it is fed by the Show menu from a `.asc` file through
+  **ShowFileService** (`core/show-file.service.ts`, the HTTP layer: `POST /api/showfile/parse` and
+  `/render`); `setShow(dto, name, 'console')` is the seam for the console's own show later.
 - Components only render state, capture input and call these services. They are standalone,
   OnPush and signal based.
 
@@ -124,7 +135,10 @@ src/app/
     record-keys/        COPY, REC SEQ, MAGIC, REC MEM, EDIT MEM, SNAPSHOT
     masters-panel/      SOLO / BUMPS, BLACKOUT / MASTER
     independents-panel/ IND 1, IND 2
-    show-file-page/     the .asc show-file viewer and editor
+    show-menu/          the Show menu in the bar: load from / save to the card
+    patch-page/         the PATCH view: the 512-address matrix
+    stack-page/         the STACK / SEQ view: tabs, the step list and the detail panel
+    step-list/          the step rows with their inline time inputs
     output-meters/      512 output bars on a canvas
   app.component.*       the page layout
 ```

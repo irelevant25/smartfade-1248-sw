@@ -60,7 +60,8 @@
   flex: 0 0 auto;
 }
 
-.shell__show {
+// The PATCH and STACK / SEQ views take the whole main area.
+.shell__page {
   grid-column: 1 / -1;
   grid-row: 1 / span 2;
   min-height: 0;

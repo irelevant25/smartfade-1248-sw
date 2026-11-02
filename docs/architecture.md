@@ -269,7 +269,10 @@ change of the fader bank or of the blinking faders now raises the full state, wh
 two minors, a nit) was answered likewise: channel and memory fader events wait while BLACKOUT's LED is not steady off and
 after a BLACKOUT tap of ours until the console has reported that LED (F125: a blackout reports every fader at zero with the
 MASTER at full); the notes the `sent` callbacks leave are written only at an event that ends an exchange; a bump of ours
-held with SOLO on keeps every physical fader waiting by the same rule (F6, INFERRED).
+held with SOLO on keeps every physical fader waiting by the same rule (F6, INFERRED). After E11b the owner met the first
+rule's fail-closed edge (a bump on a fader already at full changes nothing, lists nothing, and kept the fader refused) and
+rejected it: a shadow now ends once the console's latest reports of the fader after the release read a level other than the
+bump's or the level before the press, reported after the release or unchanged for two poll replies (INFERRED).
 
 ## ASC show files as built (2026-10-31)
 
@@ -319,6 +322,25 @@ it; the labels of memories, channels and sequences are three inputs of up to 6 p
 the label's `Text` line is derived as the console derives it (line 1, then line 2 only when line 1 is full, then line
 3 only when line 2 is full: 4 282 of 4 282 blocks in 34 files). The backend repeats the checks and refuses the rest.
 Next (owner's order): the E6 round trip on the console to validate an edited file.
+
+**Rebuilt as separate views (2026-11-02, the owner rejected the one-page show-file viewer):** the bar switches three
+views, LIVE (the console, unchanged), PATCH and STACK / SEQ; the "Show file" page is gone. A `ShowStore`
+(`src/frontend/src/app/core/show.store.ts`) is the one place the show lives in the UI: the show as loaded, the edited
+copy, the dirty state and every edit operation above (patch entries and ranges, step times and memory, insert and
+remove with the numbering rules, memory channel lists, labels of memories, channels and sequences), with the pure
+rules in `core/show-rules.ts`; `setShow(dto, name, source: 'file' | 'console')` is the seam for the console's own
+show once its download at Connect is cleared (SC-4). `ShowFileService` is only the HTTP layer (`parse`, `download`).
+A **Show menu** in the bar (`components/show-menu`) is the only place that deals with files: "Load from card" (the file
+picker and `POST /api/showfile/parse`), "Save to card" (`POST /api/showfile/render` and the browser's download, enabled
+only for a loaded and edited show), "Revert edits", the loaded name and an "edited" marker. The **PATCH page**
+(`components/patch-page`) is a matrix of the 512 addresses, 32 × 16, each box the address and its channel (IND 1 /
+IND 2 for channels 49 and 50), coloured by channel: a click opens an inline input (1-48, i1 / i2, 0 or Delete to
+unpatch, Enter / Esc), a drag selects a run for the toolbar's "Patch range" / "Unpatch range", the arrows move with
+Shift extending, the level and the channel's label sit in the focused box's detail line. The **STACK / SEQ page**
+(`components/stack-page`, `components/step-list`) has a tab for the stack and one per sequence, a capped-width step
+list (number, content by kind, the five times editable in the row) and a detail panel beside it (the referenced memory
+with its label and channels, a channel step's channels, a State step's label, the times, insert-after / remove). The
+UI ↔ backend contract (docs/api.md) is unchanged; nothing reaches a console.
 
 ## Phase 2 proposal: live control after E9b and SC-2 (2026-10-31, not implemented)
 

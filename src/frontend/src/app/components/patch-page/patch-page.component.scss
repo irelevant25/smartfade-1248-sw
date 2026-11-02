@@ -1,0 +1,221 @@
+:host {
+  display: block;
+  min-height: 0;
+  overflow: auto;
+}
+
+.patch {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 10px 12px 12px;
+}
+
+.patch__head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px 18px;
+}
+
+.patch__summary {
+  margin: 0;
+  font: 0.75rem var(--sf-font-ui);
+  color: var(--sf-text-dim);
+}
+
+.patch__count {
+  font-family: var(--sf-font-mono);
+  color: var(--sf-text);
+}
+
+.patch__tools {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-left: auto;
+}
+
+.patch__selection {
+  min-width: 170px;
+  font: 0.75rem var(--sf-font-mono);
+  color: var(--sf-text-dim);
+}
+
+.patch__target-label,
+.patch__detail-field {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font: 600 0.6875rem var(--sf-font-ui);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--sf-text-faint);
+}
+
+.patch__target,
+.patch__level,
+.patch__label {
+  width: 86px;
+  padding: 3px 6px;
+  border: 1px solid var(--sf-border-strong);
+  border-radius: 3px;
+  background: #1a2026;
+  color: var(--sf-text);
+  font: 0.8125rem var(--sf-font-mono);
+  letter-spacing: 0;
+  text-transform: none;
+
+  &:focus {
+    outline: 1px solid var(--sf-accent);
+  }
+}
+
+.patch__level {
+  width: 58px;
+}
+
+.patch__label {
+  width: 64px;
+}
+
+// The matrix: 32 boxes per row, the row as wide as the page, so 1920 px holds it without a scrollbar and a
+// wider window gets bigger boxes. --hue is the box's channel colour.
+.patch__matrix {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  user-select: none;
+}
+
+.patch__row {
+  display: grid;
+  grid-template-columns: repeat(32, minmax(0, 1fr));
+  gap: 3px;
+}
+
+.patch__box {
+  --hue: 210;
+
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 1px;
+  min-height: 34px;
+  aspect-ratio: 1.45;
+  border: 1px solid hsl(var(--hue) 45% 30%);
+  border-radius: 3px;
+  background: hsl(var(--hue) 38% 17%);
+  cursor: pointer;
+
+  &:focus {
+    outline: none;
+  }
+}
+
+.patch__box--empty {
+  border-color: var(--sf-border);
+  background: #0e1216;
+
+  .patch__dmx {
+    color: var(--sf-text-faint);
+  }
+}
+
+.patch__box--ind {
+  border-style: dashed;
+  border-width: 2px;
+  background: hsl(var(--hue) 55% 22%);
+}
+
+.patch__box--selected {
+  box-shadow: inset 0 0 0 2px var(--sf-accent-dim);
+}
+
+.patch__box--focus {
+  box-shadow: inset 0 0 0 2px var(--sf-accent);
+}
+
+.patch__box:focus-visible {
+  outline: 2px solid var(--sf-focus);
+  outline-offset: 1px;
+}
+
+.patch__dmx {
+  font: 500 clamp(0.5rem, 0.5vw, 0.7rem) var(--sf-font-mono);
+  line-height: 1;
+  color: var(--sf-text-dim);
+}
+
+.patch__channel {
+  min-height: 1em;
+  font: 700 clamp(0.8rem, 1vw, 1.3rem) var(--sf-font-mono);
+  line-height: 1.1;
+  color: hsl(var(--hue) 85% 74%);
+  white-space: nowrap;
+}
+
+.patch__box--ind .patch__channel {
+  font-size: clamp(0.6rem, 0.75vw, 1rem);
+  letter-spacing: 0.04em;
+}
+
+.patch__editor {
+  width: 90%;
+  padding: 0;
+  border: 0;
+  border-bottom: 1px solid var(--sf-accent);
+  background: transparent;
+  color: var(--sf-accent);
+  font: 700 clamp(0.8rem, 1vw, 1.3rem) var(--sf-font-mono);
+  line-height: 1.1;
+  text-align: center;
+
+  &:focus {
+    outline: none;
+  }
+}
+
+.patch__foot {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.patch__detail {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px 16px;
+  min-height: 30px;
+  font: 0.8125rem var(--sf-font-mono);
+}
+
+.patch__detail-title {
+  font-weight: 700;
+  color: var(--sf-text);
+}
+
+.patch__detail-target {
+  color: var(--sf-accent);
+}
+
+.patch__notice {
+  margin: 0;
+  font: 0.75rem var(--sf-font-ui);
+  color: var(--sf-warn);
+}
+
+.patch__hint,
+.patch__empty {
+  margin: 0;
+  font: 0.6875rem var(--sf-font-ui);
+  color: var(--sf-text-faint);
+}
+
+.patch__empty {
+  padding: 24px 14px;
+  font-size: 0.875rem;
+  color: var(--sf-text-dim);
+}

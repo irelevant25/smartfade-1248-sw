@@ -1,0 +1,45 @@
+<div class="steps" role="grid" aria-label="Steps" (keydown)="onKeyDown($event)">
+  <div class="steps__row steps__row--head" role="row">
+    <span class="steps__num" role="columnheader">#</span>
+    <span class="steps__content" role="columnheader">Content</span>
+    @for (field of timeFields; track field.key) {
+      <span class="steps__time" role="columnheader">{{ field.label }}</span>
+    }
+  </div>
+
+  @for (step of steps(); track $index; let i = $index) {
+    <div
+      class="steps__row"
+      role="row"
+      [attr.data-index]="i"
+      [tabindex]="tabIndex(i)"
+      [class.steps__row--selected]="i === selected()"
+      [attr.aria-selected]="i === selected()"
+      [attr.aria-label]="'Step ' + step.number"
+      (click)="onRowClick(i)"
+    >
+      <span class="steps__num" role="gridcell">{{ step.number }}</span>
+      <span class="steps__content" role="gridcell">
+        <span class="steps__kind" [attr.data-kind]="kindOf(step)">{{ kindLabel(step) }}</span>
+        <span class="steps__text">{{ content(step) }}</span>
+      </span>
+      @for (field of timeFields; track field.key) {
+        <span class="steps__time" role="gridcell">
+          <input
+            type="text"
+            class="steps__edit"
+            autocomplete="off"
+            [value]="step[field.key]"
+            [attr.aria-label]="field.label + ' of step ' + step.number"
+            (change)="setTime(i, field.key, $event)"
+            (keydown)="onTimeKey(i, field.key, $event)"
+          />
+        </span>
+      }
+    </div>
+  }
+
+  @if (steps().length === 0) {
+    <p class="steps__none">No steps.</p>
+  }
+</div>

@@ -5,6 +5,7 @@ import { CONSOLE_HUB_FACTORY } from './core/console-hub';
 import { ConsoleStateService } from './core/console-state.service';
 import { FakeConsoleHub } from './core/testing/fake-console-hub';
 import { createSampleState } from './core/testing/sample-state';
+import { ViewService } from './core/view.service';
 
 const settle = () => new Promise<void>((resolve) => setTimeout(resolve));
 
@@ -58,6 +59,31 @@ describe('AppComponent', () => {
     expect(root.querySelectorAll('.fader__bump')).toHaveLength(48 + 24);
     expect(root.querySelectorAll('.independents__key')).toHaveLength(2);
     expect(root.querySelectorAll('.faders__key')).toHaveLength(4);
+  });
+
+  it("puts the PATCH or the STACK / SEQ page in the main area when the bar's switch says so, and the console back for LIVE", () => {
+    const fixture = TestBed.createComponent(AppComponent);
+    fixture.detectChanges();
+    const root = element(fixture);
+    const views = TestBed.inject(ViewService);
+    const mainChildren = () => Array.from(root.querySelector('main')!.children).map((child) => child.tagName.toLowerCase());
+
+    views.show('patch');
+    fixture.detectChanges();
+    expect(mainChildren()).toEqual(['sf-patch-page']);
+    expect(text(root, 'sf-patch-page')).toContain('No show loaded');
+    expect(root.querySelector('sf-output-meters')).not.toBeNull();
+    expect(root.querySelectorAll('.bar__view--current')[0].textContent?.trim()).toBe('Patch');
+
+    views.show('stack');
+    fixture.detectChanges();
+    expect(mainChildren()).toEqual(['sf-stack-page']);
+    expect(text(root, 'sf-stack-page')).toContain('No show loaded');
+
+    views.show('live');
+    fixture.detectChanges();
+    expect(mainChildren()).toEqual(['sf-channel-grid', 'sf-memory-grid', 'sf-fader-mode-keys', 'sf-crossfader', 'sf-record-keys', 'div']);
+    expect(root.querySelectorAll('sf-channel-fader')).toHaveLength(FADER_COUNT);
   });
 
   describe('when the backend is not running', () => {

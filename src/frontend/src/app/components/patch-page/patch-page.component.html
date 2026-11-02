@@ -1,0 +1,117 @@
+<section class="patch sf-panel" aria-labelledby="patch-title">
+  @if (show(); as loadedShow) {
+    <div class="patch__head">
+      <h2 id="patch-title" class="sf-panel-title">Patch</h2>
+      <p class="patch__summary" role="status">
+        <span class="patch__count">{{ summary().patched }}</span> patched,
+        <span class="patch__count">{{ summary().unpatched }}</span> unpatched;
+        @if (summary().missing.length === 0) {
+          every channel 1-48 has an address
+        } @else {
+          without an address: channel {{ summary().missing.join(', ') }}
+        }
+        @for (independent of summary().independents; track independent.name) {
+          ; {{ independent.name }}: {{ independent.addresses.length ? 'DMX ' + independent.addresses.join(', ') : 'no address' }}
+        }
+      </p>
+
+      <div class="patch__tools" role="group" aria-label="Patch a range">
+        <span class="patch__selection">
+          @if (range(); as selected) {
+            @if (rangeSize() === 1) {
+              DMX {{ selected.low }}
+            } @else {
+              DMX {{ selected.low }}-{{ selected.high }} ({{ rangeSize() }} addresses)
+            }
+          } @else {
+            No box selected
+          }
+        </span>
+        <label class="patch__target-label">
+          Channel
+          <input type="text" class="patch__target" [value]="target()" placeholder="1-48, i1, i2" aria-label="Target channel for the selected range" (input)="onTargetInput($event)" (keydown.enter)="patchRange()" />
+        </label>
+        <button type="button" class="sf-key patch__patch-range" [disabled]="!range()" (click)="patchRange()">Patch range</button>
+        <button type="button" class="sf-key patch__unpatch-range" [disabled]="!range()" (click)="unpatchRange()">Unpatch range</button>
+      </div>
+    </div>
+
+    <div
+      class="patch__matrix"
+      role="grid"
+      aria-label="Patch: DMX address to channel, 32 addresses per row"
+      aria-multiselectable="true"
+      (pointerdown)="onPointerDown($event)"
+      (pointerover)="onPointerOver($event)"
+      (pointerup)="onPointerUp($event)"
+      (keydown)="onKeyDown($event)"
+    >
+      @for (row of rows(); track $index) {
+        <div class="patch__row" role="row">
+          @for (entry of row; track entry.dmx) {
+            <div
+              class="patch__box"
+              role="gridcell"
+              [attr.data-dmx]="entry.dmx"
+              [tabindex]="tabIndex(entry.dmx)"
+              [attr.aria-selected]="inRange(entry.dmx)"
+              [attr.aria-label]="'DMX ' + entry.dmx + (entry.channel ? ', ' + boxLabel(entry.channel) : ', unpatched')"
+              [attr.title]="boxTitle(entry)"
+              [class.patch__box--empty]="entry.channel === 0"
+              [class.patch__box--ind]="isIndependent(entry.channel)"
+              [class.patch__box--selected]="inRange(entry.dmx)"
+              [class.patch__box--focus]="entry.dmx === focus()"
+              [style.--hue]="entry.channel ? hue(entry.channel) : null"
+            >
+              <span class="patch__dmx" aria-hidden="true">{{ entry.dmx }}</span>
+              @if (editing() === entry.dmx) {
+                <input
+                  type="text"
+                  class="patch__editor"
+                  autocomplete="off"
+                  [value]="editText()"
+                  [attr.aria-label]="'Channel for DMX ' + entry.dmx"
+                  (input)="onEditorInput($event)"
+                  (keydown)="onEditorKey($event)"
+                  (blur)="onEditorBlur()"
+                />
+              } @else {
+                <span class="patch__channel">{{ boxLabel(entry.channel) }}</span>
+              }
+            </div>
+          }
+        </div>
+      }
+    </div>
+
+    <div class="patch__foot">
+      @if (focusedEntry(); as entry) {
+        <div class="patch__detail" role="group" aria-label="Selected address">
+          <span class="patch__detail-title">DMX {{ entry.dmx }}</span>
+          <span class="patch__detail-target">{{ entry.channel ? '→ ' + boxLabel(entry.channel) : 'unpatched' }}</span>
+          @if (entry.channel) {
+            <label class="patch__detail-field">
+              Level
+              <input type="number" class="patch__level" min="0" max="100" [value]="entry.level" [attr.aria-label]="'Proportional level of DMX ' + entry.dmx" (change)="setLevel($event)" />
+              %
+            </label>
+          }
+          @if (focusedChannelLabel(); as channelLabel) {
+            <span class="patch__detail-field">
+              Channel {{ entry.channel }} label
+              <input type="text" class="patch__label" maxlength="6" [value]="channelLabel.line1" [attr.aria-label]="'Label line 1 of channel ' + entry.channel" (change)="setChannelLabel(1, $event)" />
+              <input type="text" class="patch__label" maxlength="6" [value]="channelLabel.line2" [attr.aria-label]="'Label line 2 of channel ' + entry.channel" (change)="setChannelLabel(2, $event)" />
+              <input type="text" class="patch__label" maxlength="6" [value]="channelLabel.line3" [attr.aria-label]="'Label line 3 of channel ' + entry.channel" (change)="setChannelLabel(3, $event)" />
+            </span>
+          }
+        </div>
+      }
+      @if (notice(); as text) {
+        <p class="patch__notice" role="status">{{ text }}</p>
+      }
+      <p class="patch__hint">Click a box and {{ hint }} (Enter applies, Esc cancels, Delete unpatches); drag over boxes for a range; arrows move, Shift extends. The file: {{ loadedShow.name }}.</p>
+    </div>
+  } @else {
+    <p class="patch__empty">No show loaded. Load one from the card (Show menu); the console's own show will appear here at Connect once that is cleared.</p>
+  }
+</section>

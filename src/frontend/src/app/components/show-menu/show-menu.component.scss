@@ -1,0 +1,116 @@
+:host {
+  display: block;
+}
+
+.menu {
+  position: relative;
+}
+
+// The trigger sits in the bar like the page switch: a quiet key with the loaded name beside the word.
+.menu__trigger {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 32px;
+  padding: 0 10px 0 12px;
+  border: 1px solid var(--sf-border-strong);
+  border-radius: 4px;
+  background: linear-gradient(#242b33, #1a2026);
+  color: var(--sf-text);
+  font: 600 0.75rem var(--sf-font-ui);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  cursor: pointer;
+
+  &:hover {
+    border-color: var(--sf-accent);
+  }
+}
+
+.menu__trigger--open {
+  border-color: var(--sf-accent);
+  color: var(--sf-accent);
+}
+
+.menu__name {
+  font: 500 0.75rem var(--sf-font-mono);
+  letter-spacing: 0;
+  text-transform: none;
+  color: var(--sf-text-dim);
+}
+
+.menu__dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--sf-warn);
+  box-shadow: 0 0 6px var(--sf-warn);
+}
+
+.menu__caret {
+  color: var(--sf-text-faint);
+}
+
+.menu__panel {
+  position: absolute;
+  z-index: 20;
+  top: calc(100% + 6px);
+  left: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  width: 300px;
+  padding: 12px;
+  border: 1px solid var(--sf-border-strong);
+  border-radius: 6px;
+  background: var(--sf-surface);
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.55);
+}
+
+.menu__file {
+  display: flex;
+  align-items: baseline;
+  gap: 10px;
+  margin: 0 0 2px;
+  font: 500 0.8125rem var(--sf-font-mono);
+}
+
+.menu__edited {
+  font: 600 0.6875rem var(--sf-font-ui);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--sf-warn);
+}
+
+.menu__unedited,
+.menu__none {
+  font: 0.75rem var(--sf-font-ui);
+  color: var(--sf-text-dim);
+}
+
+.menu__load {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+}
+
+.menu__input {
+  position: absolute;
+  inset: 0;
+  opacity: 0;
+  cursor: pointer;
+}
+
+.menu__error {
+  margin: 0;
+  font: 0.75rem var(--sf-font-ui);
+  color: var(--sf-danger);
+}
+
+.menu__hint {
+  margin: 0;
+  font: 0.6875rem var(--sf-font-ui);
+  color: var(--sf-text-faint);
+}

@@ -18,12 +18,15 @@
     }
   </div>
 
-  <nav class="bar__views" aria-label="Pages">
-    <button type="button" class="bar__view" [class.bar__view--current]="view() === 'console'" [attr.aria-pressed]="view() === 'console'" (click)="show('console')">
-      Console
+  <nav class="bar__views" aria-label="Views">
+    <button type="button" class="bar__view" [class.bar__view--current]="view() === 'live'" [attr.aria-pressed]="view() === 'live'" (click)="show('live')">
+      Live
     </button>
-    <button type="button" class="bar__view" [class.bar__view--current]="view() === 'show-file'" [attr.aria-pressed]="view() === 'show-file'" (click)="show('show-file')">
-      Show file
+    <button type="button" class="bar__view" [class.bar__view--current]="view() === 'patch'" [attr.aria-pressed]="view() === 'patch'" (click)="show('patch')">
+      Patch
+    </button>
+    <button type="button" class="bar__view" [class.bar__view--current]="view() === 'stack'" [attr.aria-pressed]="view() === 'stack'" (click)="show('stack')">
+      Stack / Seq
     </button>
   </nav>
 
@@ -35,6 +38,8 @@
       Disconnect
     </button>
   </div>
+
+  <sf-show-menu class="bar__show" />
 
   @if (error(); as problem) {
     <div class="bar__error" role="alert">

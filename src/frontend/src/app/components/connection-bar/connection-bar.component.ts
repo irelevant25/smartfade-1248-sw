@@ -2,15 +2,18 @@ import { ChangeDetectionStrategy, Component, computed, inject } from '@angular/c
 import { ConsoleConnectionService } from '../../core/console-connection.service';
 import { ConsoleStateService } from '../../core/console-state.service';
 import { ViewService, type AppView } from '../../core/view.service';
+import { ShowMenuComponent } from '../show-menu/show-menu.component';
 import { canConnect, canDisconnect, describeMode, describeStatus } from './connection-view';
 
 /**
  * Top bar: which mode the app is in (always visible, never ambiguous), whether the console is
- * connected, the connect / disconnect keys, what is known about the show and firmware, and the
- * last error.
+ * connected, the view switch (LIVE, PATCH, STACK / SEQ), the connect / disconnect keys, the Show
+ * menu (the show's file: load from the card, save for the card), what is known about the show and
+ * firmware, and the last error.
  */
 @Component({
   selector: 'sf-connection-bar',
+  imports: [ShowMenuComponent],
   changeDetection: ChangeDetectionStrategy.OnPush,
   templateUrl: './connection-bar.component.html',
   styleUrl: './connection-bar.component.scss',
@@ -20,7 +23,7 @@ export class ConnectionBarComponent {
   private readonly _connection = inject(ConsoleConnectionService);
   private readonly _views = inject(ViewService);
 
-  /** Which page is shown: the console or the show-file viewer (E10). */
+  /** Which view is shown: LIVE (the console), PATCH or STACK / SEQ. */
   protected readonly view = this._views.view;
 
   protected readonly mode = computed(() => describeMode(this._state.mode()));

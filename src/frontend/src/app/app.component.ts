@@ -7,16 +7,18 @@ import { IndependentsPanelComponent } from './components/independents-panel/inde
 import { MastersPanelComponent } from './components/masters-panel/masters-panel.component';
 import { MemoryGridComponent } from './components/memory-grid/memory-grid.component';
 import { OutputMetersComponent } from './components/output-meters/output-meters.component';
+import { PatchPageComponent } from './components/patch-page/patch-page.component';
 import { RecordKeysComponent } from './components/record-keys/record-keys.component';
-import { ShowFilePageComponent } from './components/show-file-page/show-file-page.component';
+import { StackPageComponent } from './components/stack-page/stack-page.component';
 import { ViewService } from './core/view.service';
 
 /**
  * The single page, laid out like the console: connection bar on top; channels (two banks) with
  * the memories below them on the left; then, in the owner's order (2026-11-02), the FADERS keys,
  * the crossfader, the record keys, and BUMPS / SOLO, MASTER / BLACKOUT with the independents in
- * their own section underneath on the right; the DMX outputs along the bottom. The show-file
- * viewer takes the main area instead when the bar's page switch says so.
+ * their own section underneath on the right; the DMX outputs along the bottom. That is the LIVE
+ * view; the bar's view switch puts the PATCH page or the STACK / SEQ page in the main area instead
+ * (both read the show held by the `ShowStore`, loaded through the bar's Show menu).
  */
 @Component({
   selector: 'sf-root',
@@ -30,13 +32,14 @@ import { ViewService } from './core/view.service';
     MastersPanelComponent,
     IndependentsPanelComponent,
     OutputMetersComponent,
-    ShowFilePageComponent,
+    PatchPageComponent,
+    StackPageComponent,
   ],
   changeDetection: ChangeDetectionStrategy.OnPush,
   templateUrl: './app.component.html',
   styleUrl: './app.component.scss',
 })
 export class AppComponent {
-  /** The console page is the default; the show-file viewer (E10) replaces the main area when chosen in the bar. */
+  /** LIVE (the console) is the default; PATCH and STACK / SEQ replace the main area when chosen in the bar. */
   protected readonly view = inject(ViewService).view;
 }

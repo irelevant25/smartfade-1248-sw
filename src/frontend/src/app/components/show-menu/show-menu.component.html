@@ -1,0 +1,54 @@
+<div class="menu">
+  <button
+    type="button"
+    class="menu__trigger"
+    [class.menu__trigger--open]="open()"
+    aria-haspopup="true"
+    aria-controls="show-menu-panel"
+    [attr.aria-expanded]="open()"
+    title="The show: load one from the card, save the edited one for the card"
+    (click)="toggle()"
+  >
+    <span class="menu__word">Show</span>
+    @if (name(); as loadedName) {
+      <span class="menu__name">{{ loadedName }}</span>
+    }
+    @if (dirty()) {
+      <span class="menu__dot" role="status" aria-label="Edited, not saved" title="Edited, not saved"></span>
+    }
+    <span class="menu__caret" aria-hidden="true">&#9662;</span>
+  </button>
+
+  @if (open()) {
+    <div class="menu__panel" id="show-menu-panel" role="group" aria-label="Show">
+      <p class="menu__file">
+        @if (name(); as loadedName) {
+          <span class="menu__file-name">{{ loadedName }}</span>
+          @if (dirty()) {
+            <span class="menu__edited" role="status">edited, not saved</span>
+          } @else {
+            <span class="menu__unedited">unchanged</span>
+          }
+        } @else {
+          <span class="menu__none">No show loaded</span>
+        }
+      </p>
+
+      <label class="sf-key menu__load">
+        {{ loaded() ? 'Load another from card' : 'Load from card' }}
+        <input type="file" accept=".asc,.ASC" class="menu__input" aria-label="Load a show file from the card" [disabled]="busy()" (change)="pick($event)" />
+      </label>
+      <button type="button" class="sf-key sf-key--accent menu__save" [disabled]="!canSave()" title="Renders the edited show and saves it as a new .asc file through the browser, for the SD card; the loaded file is never changed" (click)="save()">
+        Save to card
+      </button>
+      <button type="button" class="sf-key menu__revert" [disabled]="!dirty() || busy()" (click)="revert()">
+        Revert edits
+      </button>
+
+      @if (error(); as problem) {
+        <p class="menu__error" role="alert">{{ problem }}</p>
+      }
+      <p class="menu__hint">A show from the card (SHOWnn.ASC or a SmartSoft save). Edits are saved as a new file for the card; nothing reaches the console over USB.</p>
+    </div>
+  }
+</div>
