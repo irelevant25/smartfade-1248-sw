@@ -44,9 +44,17 @@
       <button type="button" class="sf-key menu__revert" [disabled]="!dirty() || busy()" (click)="revert()">
         Revert edits
       </button>
+      @if (pendingConsoleShow(); as consoleShow) {
+        <button type="button" class="sf-key menu__console" title="The console delivered its show at Connect while this file had unsaved edits; taking it replaces the file and its edits" (click)="takeConsoleShow()">
+          Show the console's show ({{ consoleShow.name }})
+        </button>
+      }
 
       @if (error(); as problem) {
         <p class="menu__error" role="alert">{{ problem }}</p>
+      }
+      @if (fromConsole()) {
+        <p class="menu__hint menu__hint--console" role="status">The console's own show, downloaded at Connect. Its download carries no file header, step delays or patch levels, so it is not saved as a file; open a file to save edits.</p>
       }
       <p class="menu__hint">A show file from the console's SD card (SHOWnn.ASC) or a SmartSoft save. Edits are saved as a new file on this PC: copy it to the SD card and load it on the console. Nothing reaches the console over USB.</p>
     </div>

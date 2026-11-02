@@ -39,6 +39,12 @@ SmartFade.Devices.Usb.ServiceCollectionExtensions.ValidateLiveControlDate(
     string.IsNullOrWhiteSpace(liveControlDate) ? null : builder.Configuration.GetSection(UsbDeviceOptions.SectionName).Get<UsbDeviceOptions>() ?? new UsbDeviceOptions());
 var liveControl = usbMode && !string.IsNullOrWhiteSpace(liveControlDate);
 
+// The start-up pair (SC-4 item 6): its own switch with its own date, only on top of the USB mode confirmed for today, with or
+// without live control; set for another day or without that mode, the backend refuses to start. Absent, no pair is sent.
+var startupPairDate = builder.Configuration["Device:Usb:StartupPairDate"];
+SmartFade.Devices.Usb.ServiceCollectionExtensions.ValidateStartupPairDate(startupPairDate, usbMode, DateOnly.FromDateTime(DateTime.Now));
+var startupPair = usbMode && !string.IsNullOrWhiteSpace(startupPairDate);
+
 var allowedOrigins = builder.Configuration.GetSection("Security:AllowedOrigins").Get<string[]>()
     ?? new[] { "http://localhost:4200", "http://localhost:5160", "http://127.0.0.1:5160" };
 
@@ -87,6 +93,12 @@ app.MapGet("/api/status", (ConsoleService console) =>
 });
 
 app.MapGet("/api/console/state", (ConsoleService console) => DtoMapper.ToDto(console.GetState()));
+
+// The show the real console delivered in this connection's download (SC-4 clause 4), as the editor's ShowFileDto; read-only.
+app.MapGet("/api/console/show", (ConsoleService console) =>
+    console.GetConsoleShow() is { } show
+        ? Results.Ok(ConsoleShowMapper.ToDto(show))
+        : Results.NotFound(new ErrorDto("The console's show has not been downloaded in this connection (the start-up pair, SC-4, is off, was not sent or has not completed).", "not_available")));
 
 app.MapPost("/api/console/connect", async (ConsoleService console, CancellationToken cancellationToken) =>
 {
@@ -154,7 +166,12 @@ else if (usbMode)
     app.Logger.LogWarning("HARDWARE MODE (read-only): the backend will talk to the real console when Connect is pressed; only the poll and the listed fetch are sent (SC-1). Back up the show first.");
 }
 
-app.Logger.LogInformation("SmartFade backend {Version} starting in {Mode} mode", backendVersion, liveControl ? "Usb (hardware, live control)" : usbMode ? "Usb (hardware, read-only)" : "Simulated");
+if (startupPair)
+{
+    app.Logger.LogWarning("STATE AT CONNECT (SC-4): every Connect sends SmartSoft's start-up pair (System 09 00 00, then 07 00 00) once and downloads the console's state and show; every control is refused until the download's last record. Back up the show first.");
+}
+
+app.Logger.LogInformation("SmartFade backend {Version} starting in {Mode} mode", backendVersion, (liveControl ? "Usb (hardware, live control)" : usbMode ? "Usb (hardware, read-only)" : "Simulated") + (startupPair ? ", state at Connect" : string.Empty));
 app.Run();
 
 /// <summary>Makes the entry point visible to WebApplicationFactory in the API tests.</summary>

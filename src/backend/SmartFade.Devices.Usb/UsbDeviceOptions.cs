@@ -102,6 +102,17 @@ public sealed class UsbDeviceOptions
     /// </summary>
     public string? LiveControlDate { get; set; }
 
+    /// <summary>
+    /// The switch of the start-up pair (safety check SC-4 item 6): the local date (yyyy-MM-dd) for which every Connect sends
+    /// SmartSoft's System pair `09 00 00` / `07 00 00` once, as its first two data writes and where SmartSoft placed them, so that
+    /// the console lists its version and then its whole state and show (the download, F181, F182). It works only on top of the
+    /// read-only mode (`Device:Mode=Usb` and <see cref="ConfirmDate"/> for today), with or without <see cref="LiveControlDate"/>;
+    /// the backend refuses to start when it names another day or comes without that mode, and the device checks it again at
+    /// Connect and at the pair's gate. Absent, or stale at Connect, no pair is sent and SC-1's session stays as SC-1 cleared it.
+    /// Never a default.
+    /// </summary>
+    public string? StartupPairDate { get; set; }
+
     public TimeSpan PollInterval => TimeSpan.FromMilliseconds(Math.Max(PollIntervalMilliseconds, Floors.PollInterval));
 
     public TimeSpan PollAfterFetch => TimeSpan.FromMilliseconds(Math.Max(PollAfterFetchMilliseconds, Floors.PollAfterFetch));

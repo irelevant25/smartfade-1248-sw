@@ -1179,6 +1179,95 @@ acceptances once more).
 - **E13 clears nothing by itself:** a second session of ours makes the pair's behaviour towards our host VERIFIED; the decision above
   stands or is annotated.
 
+### Implementation (an Opus 5.5 agent at the owner's request, 2026-11-02, evening)
+
+Class E was implemented on 2026-11-02, evening, by an Opus 5.5 subagent at the owner's request ("1. yes to SC-4"), under the
+coordinating assistant, which writes none of the sending code (CLAUDE.md); in the working tree, uncommitted, for the
+`protocol-safety-reviewer` pass of item 10. **It clears nothing: nothing is sent before that pass and the owner's go for E13.**
+What was built, where:
+
+- **One encoder, two bodies (clauses 1, 5, 6; items 2, 5).** `HspOutbound.cs`: `ClearedSystemMessage` = `ListVersion` (0x09) and
+  `ListShow` (0x07), each member's doc comment citing F181, F182 and S11.17; `SystemMessage(sequence, message)` builds exactly
+  `00 03 00 27 09 00 00` and `01 03 00 27 07 00 00` and refuses another pseq (the pair is the session's first two data writes or it
+  is not sent) or any other byte cast into the enum; `IsClearedSystemMessage` accepts those two payloads only; `DataHeader` is built
+  for a whitelisted ConsoleEvent or one of the two, with the stale words as for every write (F52; F181's four headers with w2 = 0x11
+  are reproduced). Every other System value (0, 1, 6, 10–16 and the rest) is unrepresentable: the NO-GO test sweeps all 256 values
+  through the enum and the encoder and every variant of the captured payloads at the pseq and the three body bytes.
+- **The placement and the version gate (clause 1, item 9).** `HspReadSession.cs`, a new constructor with the pair's gate
+  (`HspStartupPairPhase`, `HspStartupPairStatus`): `09` at the first write slot after reply header #40 with nothing listed and
+  unfetched; ConsoleVersion must be listed within two free poll replies (type 4) and delivered as the 13 bytes of F59, else the pair
+  ends (`Ended`, its reason in the transfer log and the state) and the session goes on as before; `07` at the first write slot after
+  reply header #79, once the version passed and one more poll exchange completed (a pending fetch may wait behind it, as at E9e's
+  two `07`s); the gate is asked at each, after the slot wait and right before the header, and may hold or refuse; no other write
+  goes from the session's start until the download's last record or the pair's end. A stop ends a pair not yet sent and takes a
+  download already requested whole (`IsIdle` is false meanwhile, bounded by the loop's drain limit). The session leaves its steps
+  as notes (`TakeNotes`), which the loop writes between exchanges.
+- **The download, taken whole (clause 2).** Its list is the first after `07` whose first record is SystemSizes (20 of 20; SystemSizes
+  was listed in no other list of the ten captures); a download not listed within two free replies after `07` ends the session with a
+  fault (never observed: the next free reply in 20 of 20). From `07` until every record of that list is delivered every control is
+  refused, "the console's state is being downloaded (SC-4 clause 2)". **Bounds raised, for a session with the pair only**
+  (`MaxDownloadPayloadLength` = 812, `DownloadBodyLengths`), from a census of every object of the ten SmartSoft captures (a read-only
+  script over the committed JSONL, 2026-11-02, evening): the lists of 792, 797, 802, 807 and 812 bytes (E12 session 2's 161-record
+  list, seq 139012, the longest list of any kind); Sequence 132, 144 (E12 download 2) and 156 bytes (E12b, seq 73712 and 87433);
+  StepContent 13 and 148 bytes (E12 seq 139240, E12b seq 87517). Every other id came with one length only; a 100-byte StepContent
+  never came from the console (it is SmartSoft's own write, E12), so it is not accepted; list records with c ≠ 0 stay refused (none
+  in the 20 downloads; E12 / E12b's come only after SmartSoft's step commands). A session without the switch keeps SC-1's 792 bytes
+  and one length per id, unchanged.
+- **The console's state before the pair (clause 3).** `UsbSmartFadeDevice.StartupPairGate`: held while the console's last report is
+  older than two poll periods or LedStatus / ConsoleStatus is listed and unfetched; refused when what the console already reported
+  in the session shows NEXT mode on or unknown (ConsoleStatus body[6]), bank 25-48 (body[4], in either mode), a ConsoleStatus value
+  never observed, a record function armed (REC MEM, EDIT MEM, COPY, REC SEQ not steady off) or BLACKOUT on (block 53 lit and steady,
+  F114; its blink with the MASTER below full, seen at E2's pair, is not refused); otherwise sent blind. Refused, no System write goes
+  and the transfer log, the state and the UI say why. The UI's Connect hint says what the console must not be doing (no menu, no
+  SD save or load, no record function armed, no bump held).
+- **What the download gives (clause 4, F186).** The assembler takes the state objects (ConsoleStatus, LedStatus, OutputLevels,
+  ChannelLevels, Independents, FileName; ConsoleVersion before); `ConsoleShowAssembler` the show objects through new decoders in
+  `Objects/ShowObjects.cs` (`StepRecord`, `StepContentObject` 13 / 148 bytes, `SequenceMainObject`, `SequenceObject`, `LabelObject`
+  for Page and ChannelText; golden-tested against E2's and E12b's objects) into the domain `ConsoleShow` (wire units); every memory
+  the download did not list is reported empty (INFERRED: the download lists every memory of the show, E2's 16 = SHOW04's 16
+  `GROUP`s), so the memory grid's "not delivered" hint goes. `ConsoleShowMapper` (API) gives the editor's `ShowFileDto` in the
+  console's file forms; checked field by field against SHOW04.ASC (memories, patch channels, stack and sequence steps with their
+  numbers, memories, types, times and channels, independents, channel and page labels: equal) when the owner's SD backup is present.
+  Not mapped (no source in the download): the header lines, the step delays (empty), the patch levels (null), the `SET` lines; so
+  `POST /api/showfile/render` refuses a console show and the UI does not offer to save it.
+- **The MASTER probe (clause 4).** At the download's last record, once per session, when FaderInfo has not been reported: only in a
+  live-control session, with the record functions, SOLO and BLACKOUT off and NEXT off; the bank from ConsoleStatus (memory mode:
+  the automatic switch of SC-5 to bank 1-24 first, its press waiting as a tap); the first channel of that bank no DMX address names
+  in the downloaded Patch; its bump as a tap through SC-5's bump path (`QueueBump`, the shadow and the gate as for any bump);
+  the transfer log notes "MASTER probe (SC-4 clause 4): bump N of channel c, unpatched …" with the readings' statuses, or "MASTER
+  probe not sent: …" with the reason, which the UI shows as "Move the MASTER once on the console".
+- **The switch and the UI (items 6, 7).** `Device:Usb:StartupPairDate` (`UsbDeviceOptions`, `ValidateStartupPairDate`: set without
+  `Device:Mode=Usb` or for another day, the backend refuses to start; checked again at Connect and at the gate); one pair per
+  Connect, none after a refusal or an end in the same session. The state carries `stateAtConnect` (docs/api.md), with the events
+  `stateAtConnectChanged` and `consoleShowChanged` and `GET /api/console/show`; the bar shows STATE AT CONNECT beside HARDWARE,
+  "Requesting / Downloading the console's state…" with the progress, or why it was not requested.
+- **Tests.** Golden (`HspStartupPairTests`): the 40 payloads and their headers; the 20 sessions replayed from their first poll
+  through their downloads' last record with the pair expected where SmartSoft sent it (records 157 × 12 sessions, 158 × 4, 159 × 2,
+  160 and 161 once; list bytes 792 to 812); the order 09 → version → 07 → download over E2, E9c and E9e; the decoders; hand-made
+  session cases (placement, the version gate and its two failures, the download's fault, nothing else during it, the gate's hold and
+  refusal, a stop, the bounds with and without the pair). Device (`UsbSmartFadeDeviceTests.StartupPair.cs`, a stand-in console
+  serving E2's or E3's own download): the placement and the payloads, every control refused with the download's reason and taken
+  after its last record, the show and the memories, the probe's choice (bank 25-48: channel 47, bump 23, SmartSoft's E9d bytes) and
+  its refusals (every channel patched, SOLO, read-only), the version mismatch, no version listed, the four clause-3 refusals with
+  the console's bodies, one pair per Connect, the switch. API: the mapper against SHOW04, the times, the hosting refusals; the
+  application's store. 525 backend tests (were 442), 356 frontend tests (were 340).
+
+**Readings where the text was narrowed or extended, for the reviewer.** (1) The placement is SmartSoft's own count (#40, #79), not
+"at least one exchange": stricter, and it reproduces all 20 placements byte for byte; the pair goes about 1.3 s and 2.5 s after
+Connect. (2) "Within two poll exchanges" is read as two free poll replies (an object reply cannot list), and "read as 3.0.2.9.0.43"
+as the body's 13 bytes equal to F59's. (3) Clause 3's refusal is asked before `07` too: a state change between the two writes ends
+the pair after `09`, the path SmartSoft's own version mismatch takes (S11.17 row 3; never on the bus). (4) Controls are refused from
+Connect, not only from `07`, so that the pair stays first (clause 6). (5) The download is identified by its first record and must be
+listed within two free replies, else a fault (the text says nothing of a missing download). (6) Undelivered memories reported empty
+is an INFERRED display reading. (7) The probe is the one bump of ours sent before FaderInfo, so the checks of a fader's record that
+need it (a channel's physical fader still holding a memory, F112; SC-5's first review, minor 4) cannot run for it; in memory mode it
+leaves the console in channel mode, bank 1-24 (nothing switches back). (8) **Finding for the owner:** in his current show (the Patch
+of every download from E2 to E9e but E12b's edited one; SHOW29.ASC = SHOW04.ASC by SHA-256, F184) channels 1–24 are all patched and
+only 47 and 49 are not, and the pair is refused in bank 25-48 when the
+console reported that bank first, so with the usual start in channel mode, bank 1-24, the probe finds no channel and the UI asks for
+one MASTER movement; the probe runs only when the console is in bank 25-48 unreported, or with a show that leaves a channel of the
+shown bank unpatched.
+
 ### What SC-4 does not clear
 
 Every other System value (the erase commands 11–16, the page select 10, the show-upload framing 0 / 1 / 6: never, F121); the pair more than

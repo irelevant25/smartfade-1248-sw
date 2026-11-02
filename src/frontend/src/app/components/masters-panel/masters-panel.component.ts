@@ -29,6 +29,17 @@ export class MastersPanelComponent {
   /** Until the device reported the masters, what they show is a placeholder, not console state. */
   protected readonly mastersReported = this._state.mastersReported;
   /**
+   * The real console's download at Connect (SC-4) carries no FaderInfo, so the MASTER stays unreported until a fader moves; the
+   * device then taps the bump of an unpatched channel once (the MASTER probe, clause 4). Only when that could not run does the
+   * panel ask for one movement of the MASTER, with the reason as its title.
+   */
+  protected readonly moveMasterHint = computed(() => {
+    const stateAtConnect = this._state.stateAtConnect();
+    return !this.mastersReported() && stateAtConnect?.masterProbe === 'notPossible'
+      ? stateAtConnect.masterProbeReason ?? 'The console has not reported the MASTER'
+      : undefined;
+  });
+  /**
    * The real console is only observed: SOLO and BLACKOUT are LED readings (F100, F114) that arrive
    * with the masters, and the independents come from their own object (F115), so each key says
    * what it rests on, and says "not reported" until that part arrived.

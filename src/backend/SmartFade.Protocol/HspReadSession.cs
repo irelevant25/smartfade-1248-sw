@@ -36,6 +36,49 @@ public readonly record struct HspWriteDecision(HspWriteVerdict Verdict, string? 
     public static HspWriteDecision Drop(string reason) => new(HspWriteVerdict.Drop, reason);
 }
 
+/// <summary>Where SmartSoft's start-up pair (safety check SC-4, class E) stands in a session.</summary>
+public enum HspStartupPairPhase
+{
+    /// <summary>The session sends no pair: SC-1's read-only session, or live control without `Device:Usb:StartupPairDate`.</summary>
+    None,
+
+    /// <summary>`09 00 00` waits for its slot: SmartSoft's 40th reply header, nothing listed and unfetched (F181).</summary>
+    Waiting,
+
+    /// <summary>`09 00 00` went; the console's ConsoleVersion is awaited (listed within two poll replies, then fetched; F182 a).</summary>
+    VersionRequested,
+
+    /// <summary>ConsoleVersion read "3.0.2.9.0.43" (F59): `07 00 00` waits for its slot (the 79th reply header and one more completed exchange).</summary>
+    VersionAccepted,
+
+    /// <summary>`07 00 00` went; the download's list is awaited (the next free reply in 20 of 20, F182 b).</summary>
+    DownloadRequested,
+
+    /// <summary>The download's list arrived; its records are being fetched, one per poll, and nothing else is sent (F182 e).</summary>
+    Downloading,
+
+    /// <summary>Every record of the download's list was delivered.</summary>
+    Done,
+
+    /// <summary>The pair ended without the download (refused by the gate, the version gate, the session stopping); <see cref="HspStartupPairStatus.EndReason"/> says why.</summary>
+    Ended,
+}
+
+/// <summary>The start-up pair's progress (SC-4): its phase, the download's size and progress, and why it ended without the download.</summary>
+/// <param name="Phase">Where the pair stands.</param>
+/// <param name="DownloadRecords">The download list's record count once it arrived, else null.</param>
+/// <param name="DownloadDelivered">The download's records delivered so far.</param>
+/// <param name="DownloadListLength">The download list's payload length in bytes once it arrived (792–812 observed, F182 c), else null.</param>
+/// <param name="EndReason">Why the pair ended without the download (<see cref="HspStartupPairPhase.Ended"/>), else null.</param>
+public sealed record HspStartupPairStatus(HspStartupPairPhase Phase, int? DownloadRecords, int DownloadDelivered, int? DownloadListLength, string? EndReason)
+{
+    public static HspStartupPairStatus None { get; } = new(HspStartupPairPhase.None, null, 0, null, null);
+
+    /// <summary>True from the session's start until the download's last record was delivered or the pair ended: no other write goes meanwhile (SC-4 clauses 1, 2 and 6).</summary>
+    public bool BlocksWrites => Phase is HspStartupPairPhase.Waiting or HspStartupPairPhase.VersionRequested or HspStartupPairPhase.VersionAccepted
+        or HspStartupPairPhase.DownloadRequested or HspStartupPairPhase.Downloading;
+}
+
 public enum HspReadSessionState
 {
     /// <summary>The next transfer may be sent (<see cref="HspReadSession.Next"/>).</summary>
@@ -84,7 +127,8 @@ public enum HspReadSessionState
 /// the session is not idle while a key is held, nor before one poll exchange has followed its last write (OBSERVED: SmartSoft
 /// polled 14.5–16.5 ms after every write), a stop makes it due at once, and <see cref="TakeReleaseAtEnd"/> gives the
 /// release to the caller when the session ends with no exchange open;</item>
-/// <item>nothing is sent before this session has received the console's first list and its LED state (condition 8),
+/// <item>no queued write is sent before this session has received the console's first list and its LED state (condition 8;
+/// SC-4's start-up pair, below, goes blind, as SmartSoft sends it, and the device's gate refuses it in the states clause 3 names),
 /// and at the moment a new write would go the session asks the gate (the device's interlock of condition 5) and then
 /// the write's own condition (the console state its control was seen in), each of which may send it, hold it or drop
 /// it; a release completes a press they let through and is not held back;</item>
@@ -93,19 +137,66 @@ public enum HspReadSessionState
 /// write's condition are then asked after the wait, right before the write goes, so the console's report they judge
 /// cannot age during the wait (SC-2 condition 5; the first review of SC-2 item 10, major 1).</item>
 /// </list>
+/// <para>
+/// A session created with the start-up pair's gate (SC-4, 2026-11-02, evening, class E; a conditional GO, nothing sent before
+/// the review and the owner's go for E13) also sends SmartSoft's System pair, once, as its first two data writes and where
+/// SmartSoft placed them in all 20 of its sessions (F181; S11.17 rows 1–3): `09 00 00` at the first write slot after reply
+/// header #40 with nothing listed and unfetched; `07 00 00` at the first write slot after reply header #79, only after the
+/// console listed ConsoleVersion within two poll replies of `09`, delivered it as "3.0.2.9.0.43" (F59, F182 a) and one more
+/// poll exchange completed; the gate (the device: the report's freshness, the console's state before the pair, clause 3) may
+/// hold or refuse each. Until the download's last record is delivered, or the pair ended, no other write goes (clauses 1, 2,
+/// 6); a stop ends a pair not yet sent; the download must be listed within two free poll replies of `07` (F182 b: the next
+/// free reply in 20 of 20) or the session faults. Such a session accepts what the 20 downloads and E12 / E12b showed and no
+/// more: a list of up to 812 bytes (<see cref="MaxDownloadPayloadLength"/>) and the Sequence and StepContent lengths of edited
+/// shows (<see cref="DownloadBodyLengths"/>); a session without the pair keeps SC-1's bounds unchanged.
+/// </para>
 /// </summary>
 [Evidence(EvidenceStatus.Verified, "F51, F52, F53, F54, F55, F57", "cleared by SC-1 (2026-10-30): poll and listed fetch only")]
 [Evidence(EvidenceStatus.Verified, "F131, F132, F133", "write mode, SC-2 (2026-10-31): whitelisted ConsoleEvents; the placement INFERRED from E9 and E9b (828 of 828 writes)")]
 [Evidence(EvidenceStatus.Verified, "F171, F174, F175", "write mode, SC-5 (2026-11-02): every physical fader and bump, the bank keys, IND 1 / 2; a bump held until released (F174: SmartSoft's holds of 0.8-4.67 s); the placement reproduced over E9c, E9d and E9e")]
+[Evidence(EvidenceStatus.Verified, "F181, F182", "the start-up pair, SC-4 (2026-11-02, evening) class E: SmartSoft's two System writes at its reply headers #40 and #79 (20 of 20; the count-driven reading INFERRED, S11.17), the version gate (S11.17 row 3, INFERRED high), the download accepted record by record (the golden replay of all 20 downloads)")]
 public sealed class HspReadSession
 {
     /// <summary>
     /// The longest reply payload of the read-only captures E2 to E9b: 792 bytes, the 157-record list (F57, E2 f384 / E3 f352 / E3b).
     /// E12 and E12b (2026-10-31, OBSERVED) hold longer lists, 812 and 807 bytes, only in the console's download after SmartSoft's
     /// step commands added stack steps (F157): a read-only session of ours faults on such a payload, a safe stop; whether to
-    /// accept it is an SC-1 review question, not decided here (as for <see cref="ObservedBodyLengths"/>).
+    /// accept it is an SC-1 review question, not decided here (as for <see cref="ObservedBodyLengths"/>). A session that sends
+    /// the start-up pair accepts up to <see cref="MaxDownloadPayloadLength"/> instead (SC-4 clause 2).
     /// </summary>
     public const int MaxObservedPayloadLength = 792;
+
+    /// <summary>
+    /// SC-4 clause 2: the longest download list of the 20 SmartSoft sessions, 812 bytes (161 records, E12 session 2, seq 139012;
+    /// the others 792, 797, 802 and 807 bytes for 157 to 160 records, F182 c, recounted 2026-11-02 over the ten captures, the
+    /// longest list of any kind in them). Only a session that sends the start-up pair accepts more than
+    /// <see cref="MaxObservedPayloadLength"/>; a longer reply still faults it.
+    /// </summary>
+    public const int MaxDownloadPayloadLength = 812;
+
+    /// <summary>SmartSoft sends `09 00 00` after reply header #40 of its session (F181, 20 of 20; S11.17 row 2: countdown 1 of 40 in the DLL image, INFERRED high).</summary>
+    public const int StartupPairFirstAfterReplies = 40;
+
+    /// <summary>SmartSoft sends `07 00 00` after reply header #79 (F181, 20 of 20; S11.17 row 2: countdown 2 of 40, counted from the call in which the first ended).</summary>
+    public const int StartupPairSecondAfterReplies = 79;
+
+    /// <summary>
+    /// SC-4 item 9 (the version gate): ConsoleVersion must be listed within this many free poll replies (type 4, the ones that
+    /// can carry a list) after `09 00 00`, else the pair ends there. Observed: at the next free reply in 20 of 20 (F182 a).
+    /// </summary>
+    public const int StartupVersionListedWithin = 2;
+
+    /// <summary>
+    /// The download must be listed within this many free poll replies after `07 00 00`, else the session faults (a deviation:
+    /// at the next free reply in 20 of 20, F182 b; E9e's two fetched a pending PlaybackInfo first, an object reply, not free).
+    /// </summary>
+    public const int StartupDownloadListedWithin = 2;
+
+    /// <summary>
+    /// The ConsoleVersion body SmartSoft's pair was observed with: `0C` + ASCII "3.0.2.9.0.43" (F59, F182 a: 20 of 20; the
+    /// engine's own version, S11.17 row 3). `07 00 00` goes only after this exact body.
+    /// </summary>
+    public static ReadOnlySpan<byte> StartupPairConsoleVersion => new byte[] { 0x0C, 0x33, 0x2E, 0x30, 0x2E, 0x32, 0x2E, 0x39, 0x2E, 0x30, 0x2E, 0x34, 0x33 };
 
     /// <summary>
     /// The most writes that may wait in the queue. A newer value for a fader replaces its queued one (the console sets
@@ -127,6 +218,23 @@ public sealed class HspReadSession
         [14] = 195, [15] = 51, [17] = 81, [19] = 515, [21] = 41, [22] = 451, [23] = 7, [36] = 61, [37] = 13,
         [38] = 8, [39] = 3, [41] = 18,
     };
+
+    /// <summary>
+    /// SC-4 clause 2: the body lengths a session that sends the start-up pair accepts, per id: <see cref="ObservedBodyLengths"/>
+    /// plus every other length the console delivered in the 20 downloads and in E12 / E12b, recounted on 2026-11-02 over every
+    /// object of the ten SmartSoft captures (OBSERVED; F156, F182): Sequence (2) 144 bytes (8 steps; E12 seq 87591, download 2
+    /// of E12) and 156 bytes (9 steps; E12b seq 73712, its download 2), StepContent (4) 148 bytes (a type-2 "State" step; E12
+    /// seq 139240, E12b seq 87517). No other id ever came with a second length (SmartSoft's own 100-byte StepContent write of
+    /// E12 is PC → console and never came back at that length). Any other length still faults the session, SC-1's safe stop.
+    /// </summary>
+    public static readonly IReadOnlyDictionary<int, IReadOnlySet<int>> DownloadBodyLengths = ObservedBodyLengths.ToDictionary(
+        entry => entry.Key,
+        entry => (IReadOnlySet<int>)(entry.Key switch
+        {
+            (int)HspObjectId.Sequence => new HashSet<int> { 132, 144, 156 },
+            (int)HspObjectId.StepContent => new HashSet<int> { 13, 148 },
+            _ => new HashSet<int> { entry.Value },
+        }));
 
     /// <summary>
     /// Object ids that SmartSoft was seen to fetch, i.e. that the console listed (F67 for the ids
@@ -165,6 +273,19 @@ public sealed class HspReadSession
     private bool _exchangeOpen;
     private bool _ledStatusReceived;
 
+    // The start-up pair (SC-4). The phase and its reason are written on the session's thread and read from others under
+    // _writeLock; the counters belong to the session's thread.
+    private readonly Func<HspReadSession, ClearedSystemMessage, HspWriteDecision>? _pairGate;
+    private readonly Queue<string> _notes = new();
+    private HspStartupPairPhase _pairPhase;
+    private string? _pairEndReason;
+    private int _pairFreeReplies;
+    private bool _versionListed;
+    private int _exchangesSinceVersion;
+    private int? _downloadRecords;
+    private int _downloadDelivered;
+    private int? _downloadListLength;
+
     /// <summary>A read-only session, as SC-1 cleared it: polls and listed fetches, never a write.</summary>
     public HspReadSession()
     {
@@ -179,6 +300,20 @@ public sealed class HspReadSession
     {
         ArgumentNullException.ThrowIfNull(writeGate);
         _writeGate = writeGate;
+    }
+
+    /// <summary>
+    /// A session with or without live control (<paramref name="writeGate"/>, as above; null: no ConsoleEvent can be queued)
+    /// and with or without SmartSoft's start-up pair (<paramref name="startupPairGate"/>, SC-4; null: no pair, and SC-1's
+    /// bounds). The pair's gate is asked, on the session's thread and without the session's lock, at the slot where each of
+    /// the two writes would go (after the session's own placement and version conditions), and sends, holds or refuses it; a
+    /// refusal ends the pair (<see cref="HspStartupPairPhase.Ended"/>) and the session goes on as before.
+    /// </summary>
+    public HspReadSession(Func<HspReadSession, HspWriteDecision>? writeGate, Func<HspReadSession, ClearedSystemMessage, HspWriteDecision>? startupPairGate)
+    {
+        _writeGate = writeGate;
+        _pairGate = startupPairGate;
+        _pairPhase = startupPairGate is null ? HspStartupPairPhase.None : HspStartupPairPhase.Waiting;
     }
 
     public HspReadSessionState State { get; private set; } = HspReadSessionState.ReadyToSend;
@@ -207,9 +342,49 @@ public sealed class HspReadSession
     /// (<see cref="DiscardQueuedWrites"/>).
     /// </summary>
     public bool IsIdle => State == HspReadSessionState.ReadyToSend && _outstandingFetch is null && _pending.Count == 0 && !_pollDueAfterFetch
-        && HeldKey is null && !_exchangeOwedAfterWrite;
+        && HeldKey is null && !_exchangeOwedAfterWrite && _pairPhase is not (HspStartupPairPhase.DownloadRequested or HspStartupPairPhase.Downloading);
 
     public int PollsSent { get; private set; }
+
+    /// <summary>Reply headers received in this session, of both types (SmartSoft's pair counts them, S11.17 row 1).</summary>
+    public int RepliesReceived { get; private set; }
+
+    /// <summary>True for a session created with the start-up pair's gate (SC-4).</summary>
+    public bool SendsStartupPair => _pairGate is not null;
+
+    /// <summary>The longest reply payload this session accepts: SC-1's 792 bytes, or 812 with the start-up pair (SC-4 clause 2).</summary>
+    public int MaxPayloadLength => SendsStartupPair ? MaxDownloadPayloadLength : MaxObservedPayloadLength;
+
+    /// <summary>The start-up pair's progress; <see cref="HspStartupPairStatus.None"/> for a session without it. Thread-safe.</summary>
+    public HspStartupPairStatus StartupPair
+    {
+        get
+        {
+            lock (_writeLock)
+            {
+                return _pairPhase == HspStartupPairPhase.None
+                    ? HspStartupPairStatus.None
+                    : new HspStartupPairStatus(_pairPhase, _downloadRecords, _downloadDelivered, _downloadListLength, _pairEndReason);
+            }
+        }
+    }
+
+    /// <summary>
+    /// The notes the session left for the transfer log since the last call (the start-up pair's steps and decisions), in
+    /// order; the caller writes them between exchanges, never between a reply header and its payload or a write's gate and
+    /// its header. Called on the session's thread.
+    /// </summary>
+    public IReadOnlyList<string> TakeNotes()
+    {
+        if (_notes.Count == 0)
+        {
+            return Array.Empty<string>();
+        }
+
+        var notes = _notes.ToArray();
+        _notes.Clear();
+        return notes;
+    }
 
     public int FetchesSent { get; private set; }
 
@@ -473,9 +648,10 @@ public sealed class HspReadSession
     /// </summary>
     public int DiscardQueuedWrites(bool acceptNoMore = false)
     {
+        int dropped;
         lock (_writeLock)
         {
-            var dropped = _queuedWrites.Count;
+            dropped = _queuedWrites.Count;
             _queuedWrites.Clear();
             if (_heldKey is not null)
             {
@@ -486,9 +662,18 @@ public sealed class HspReadSession
             {
                 _acceptingWrites = false;
             }
-
-            return dropped;
         }
+
+        // a stop sends nothing new: a start-up pair not sent yet, or its second write not sent yet, is not sent (SC-4 clause 7);
+        // a download already requested is taken whole before the session can stop (IsIdle)
+        if (acceptNoMore && _pairPhase is HspStartupPairPhase.Waiting or HspStartupPairPhase.VersionRequested or HspStartupPairPhase.VersionAccepted)
+        {
+            EndPair(_pairPhase == HspStartupPairPhase.Waiting
+                ? "the session stopped before the start-up pair was sent"
+                : "the session stopped between the start-up pair's two writes: 07 00 00 is not sent");
+        }
+
+        return dropped;
     }
 
     /// <summary>True when the console listed a record of <paramref name="id"/> in this session and it has not been delivered yet.</summary>
@@ -566,9 +751,17 @@ public sealed class HspReadSession
     /// <summary>A write may go in this transfer: the first after a completed poll exchange, with no fetch waiting for its poll or its object.</summary>
     private bool IsWriteSlot => _writeSlotOpen && !_pollDueAfterFetch && _outstandingFetch is null;
 
-    /// <summary>What <see cref="TakeWrite"/> would consider: a release that is due, else (no key held) a queued write.</summary>
+    /// <summary>
+    /// What <see cref="TakeWrite"/> would consider: while the start-up pair is under way only its write whose place has come
+    /// (<see cref="PairWriteDue"/>); else a release that is due, else (no key held) a queued write.
+    /// </summary>
     private bool HasWriteCandidate()
     {
+        if (PairBlocksWrites)
+        {
+            return PairWriteDue() is not null;
+        }
+
         if (_writeGate is null)
         {
             return false;
@@ -588,6 +781,13 @@ public sealed class HspReadSession
     /// </summary>
     private HspOutboundTransfer? TakeWrite()
     {
+        // SC-4 clauses 1, 2 and 6: the start-up pair is first or not at all, and nothing else goes until the download's last
+        // record is in or the pair ended (no key can be held meanwhile: no press went before the pair)
+        if (PairBlocksWrites)
+        {
+            return TakePairWrite();
+        }
+
         if (_writeGate is null)
         {
             return null;
@@ -682,6 +882,193 @@ public sealed class HspReadSession
         return transfer;
     }
 
+    /// <summary>The start-up pair is under way (<see cref="HspStartupPairStatus.BlocksWrites"/>); read on the session's thread.</summary>
+    private bool PairBlocksWrites => _pairPhase is HspStartupPairPhase.Waiting or HspStartupPairPhase.VersionRequested or HspStartupPairPhase.VersionAccepted
+        or HspStartupPairPhase.DownloadRequested or HspStartupPairPhase.Downloading;
+
+    /// <summary>
+    /// The pair's write whose place has come at this write slot, else null (SC-4 clause 1; F181: where SmartSoft placed all 40):
+    /// `09 00 00` once reply header #40 is in and nothing is listed and unfetched; `07 00 00` once reply header #79 is in, the
+    /// version gate passed and one more poll exchange completed after the ConsoleVersion object (a fetch may still be
+    /// pending then: E9e's two `07`s went with a PlaybackInfo listed, before its fetch, as every write of ours goes).
+    /// </summary>
+    private ClearedSystemMessage? PairWriteDue() => _pairPhase switch
+    {
+        HspStartupPairPhase.Waiting when RepliesReceived >= StartupPairFirstAfterReplies && _pending.Count == 0 && _outstandingFetch is null
+            => ClearedSystemMessage.ListVersion,
+        HspStartupPairPhase.VersionAccepted when RepliesReceived >= StartupPairSecondAfterReplies && _exchangesSinceVersion >= 1
+            => ClearedSystemMessage.ListShow,
+        _ => null,
+    };
+
+    /// <summary>
+    /// The pair's write for this slot, or null: its place must have come (<see cref="PairWriteDue"/>), the session must not be
+    /// stopping, and the gate (asked without the lock) must send it; a hold keeps it for a later slot, a refusal ends the pair.
+    /// The counter must stand at the pseq SmartSoft's pair always had (0, then 1): the pair is the session's first two data
+    /// writes. A write taken here is committed; the caller writes it at once.
+    /// </summary>
+    private HspOutboundTransfer? TakePairWrite()
+    {
+        if (PairWriteDue() is not { } message)
+        {
+            return null;
+        }
+
+        var name = message == ClearedSystemMessage.ListVersion ? "09 00 00" : "07 00 00";
+        if (!_acceptingWrites)
+        {
+            EndPair($"the session is stopping: {name} is not sent (a stop sends nothing new)");
+            return null;
+        }
+
+        var decision = _pairGate!(this, message);
+        switch (decision.Verdict)
+        {
+            case HspWriteVerdict.Hold:
+                WriteHeldReason = $"start-up pair, {name}: {decision.Reason ?? "held back"}";
+                return null;
+            case HspWriteVerdict.Drop:
+                WriteHeldReason = null;
+                EndPair($"{name} refused: {decision.Reason ?? "refused"}");
+                return null;
+        }
+
+        var expected = message == ClearedSystemMessage.ListVersion ? 0x00 : 0x01;
+        if (_outboundSequence != expected)
+        {
+            WriteHeldReason = null;
+            EndPair($"{name} is not sent: {WritesSent} other data write(s) went first, and the pair goes first or not at all (SC-4 clause 6)");
+            return null;
+        }
+
+        WriteHeldReason = null;
+        var payload = HspOutbound.SystemMessage(TakeSequence(), message);
+        var replies = RepliesReceived;
+        lock (_writeLock)
+        {
+            _pairPhase = message == ClearedSystemMessage.ListVersion ? HspStartupPairPhase.VersionRequested : HspStartupPairPhase.DownloadRequested;
+        }
+
+        _pairFreeReplies = 0;
+        _notes.Enqueue(message == ClearedSystemMessage.ListVersion
+            ? $"start-up pair (SC-4): System 09 00 00 sent after reply header #{replies}, nothing listed and unfetched (SmartSoft's #40, F181); ConsoleVersion awaited within {StartupVersionListedWithin} poll replies"
+            : $"start-up pair (SC-4): System 07 00 00 sent after reply header #{replies} (SmartSoft's #79, F181), the version gate passed; the download awaited, nothing else is sent until its last record");
+        return BuildWrite(payload);
+    }
+
+    /// <summary>The pair ends without the download, with its reason (refused, the version gate, a stop); the session goes on as before.</summary>
+    private void EndPair(string reason)
+    {
+        lock (_writeLock)
+        {
+            if (_pairPhase is HspStartupPairPhase.None or HspStartupPairPhase.Done or HspStartupPairPhase.Ended)
+            {
+                return;
+            }
+
+            _pairPhase = HspStartupPairPhase.Ended;
+            _pairEndReason = reason;
+        }
+
+        _notes.Enqueue($"start-up pair ended without the download: {reason}");
+    }
+
+    /// <summary>
+    /// A free poll reply (type 4, idle or a list; one that answers a fetch is an object reply and cannot list) arrived while the
+    /// pair waits for the console's answer: the ConsoleVersion listing after `09` (within <see cref="StartupVersionListedWithin"/>,
+    /// else the pair ends), the download after `07` (its list names SystemSizes first, as all 20 do, F182 d; within
+    /// <see cref="StartupDownloadListedWithin"/>, else a fault). Returns the fault's reason, else null.
+    /// </summary>
+    private string? PairFreeReply(DirtyObjectsList? list, int payloadLength)
+    {
+        switch (_pairPhase)
+        {
+            case HspStartupPairPhase.VersionRequested when !_versionListed:
+                if (list is not null && list.Records.Contains(new DirtyObjectRecord((int)HspObjectId.ConsoleVersion, 0, 0, 0)))
+                {
+                    _versionListed = true;
+                    _notes.Enqueue($"start-up pair: ConsoleVersion listed {_pairFreeReplies + 1} poll reply/replies after 09 00 00 (F182 a: the next free reply in 20 of 20)");
+                    return null;
+                }
+
+                if (++_pairFreeReplies >= StartupVersionListedWithin)
+                {
+                    EndPair($"the console did not list ConsoleVersion within {StartupVersionListedWithin} poll replies after 09 00 00 (F182 a: at the next free reply in 20 of 20), so 07 00 00 is never sent in this session");
+                }
+
+                return null;
+            case HspStartupPairPhase.DownloadRequested:
+                if (list is not null && list.Records.Count > 0 && list.Records[0] == new DirtyObjectRecord((int)HspObjectId.SystemSizes, 0, 0, 0))
+                {
+                    lock (_writeLock)
+                    {
+                        _pairPhase = HspStartupPairPhase.Downloading;
+                        _downloadRecords = list.Records.Count;
+                        _downloadDelivered = 0;
+                        _downloadListLength = payloadLength;
+                    }
+
+                    _notes.Enqueue($"start-up pair: the download listed {list.Records.Count} records in {payloadLength} bytes, {_pairFreeReplies + 1} poll reply/replies after 07 00 00 (F182: 157-161 records, 792-812 bytes)");
+                    return null;
+                }
+
+                return ++_pairFreeReplies >= StartupDownloadListedWithin
+                    ? $"the console did not list its download within {StartupDownloadListedWithin} poll replies after 07 00 00 (F182 b: at the next free reply in 20 of 20); the session ends rather than go on in a state no capture shows"
+                    : null;
+            default:
+                return null;
+        }
+    }
+
+    /// <summary>
+    /// An object was delivered: the ConsoleVersion of the version gate (SC-4 item 9: `07` only after "3.0.2.9.0.43", F59;
+    /// anything else ends the pair), or one of the download's records (the last one ends the download, SC-4 clause 2).
+    /// </summary>
+    private void PairObjectDelivered(HspInboundPayload payload)
+    {
+        if (_pairPhase == HspStartupPairPhase.VersionRequested && _versionListed && payload.ObjectId == (int)HspObjectId.ConsoleVersion)
+        {
+            if (payload.Body.Span.SequenceEqual(StartupPairConsoleVersion))
+            {
+                lock (_writeLock)
+                {
+                    _pairPhase = HspStartupPairPhase.VersionAccepted;
+                }
+
+                _exchangesSinceVersion = -1;   // the exchange that delivered it does not count as the one after it
+                _notes.Enqueue("start-up pair: ConsoleVersion reads 3.0.2.9.0.43 (F59), the version gate passed (S11.17 row 3)");
+            }
+            else
+            {
+                var text = new string(payload.Body.Span.ToArray().Skip(1).Select(b => b is >= 0x20 and < 0x7F ? (char)b : '?').ToArray());
+                EndPair($"the console's version is not the one SmartSoft's pair was observed with (\"{text}\", body {Convert.ToHexString(payload.Body.Span)}; observed \"3.0.2.9.0.43\", F59), so 07 00 00 is never sent in this session");
+            }
+
+            return;
+        }
+
+        if (_pairPhase != HspStartupPairPhase.Downloading)
+        {
+            return;
+        }
+
+        bool done;
+        lock (_writeLock)
+        {
+            _downloadDelivered++;
+            done = _downloadDelivered >= _downloadRecords;
+            if (done)
+            {
+                _pairPhase = HspStartupPairPhase.Done;
+            }
+        }
+
+        if (done)
+        {
+            _notes.Enqueue($"start-up pair: the download's last record delivered ({_downloadRecords} records); writes are possible again");
+        }
+    }
+
     /// <summary>F131: 0x00 at the session's first data payload, +1 per data payload, wrapping 0xFF → 0x00 (E9b wrapped at seq 39860).</summary>
     private byte TakeSequence()
     {
@@ -719,9 +1106,9 @@ public sealed class HspReadSession
             return FaultWith($"reply header {parsed} of an unobserved type", data);
         }
 
-        if (parsed.Length > MaxObservedPayloadLength)
+        if (parsed.Length > MaxPayloadLength)
         {
-            return FaultWith($"reply header {parsed} announces {parsed.Length} bytes; nothing above {MaxObservedPayloadLength} was ever observed", data);
+            return FaultWith($"reply header {parsed} announces {parsed.Length} bytes; nothing above {MaxPayloadLength} was ever observed{(SendsStartupPair ? " (the longest download list, F182)" : string.Empty)}", data);
         }
 
         var evt = _decoder.Feed(HspDirection.FromConsole, data);
@@ -769,12 +1156,19 @@ public sealed class HspReadSession
 
         (_w2, _w3, _w4, _w5) = (header.W2, header.W3, header.W4, header.W5);
         _lastReplyHeader = header;
+        RepliesReceived++;
         if (header.Length > 0)
         {
             State = HspReadSessionState.AwaitingPayload;
         }
         else
         {
+            // an idle reply: a free reply that listed nothing (the start-up pair counts it while it waits for an answer)
+            if (PairFreeReply(list: null, payloadLength: 0) is { } deviation)
+            {
+                return FaultWith(deviation, data);
+            }
+
             State = HspReadSessionState.ReadyToSend;
             CompleteExchange();
         }
@@ -807,10 +1201,12 @@ public sealed class HspReadSession
         }
 
         HspInboundPayload payload;
+        DirtyObjectsList? listed = null;
         switch (evt)
         {
             case DirtyListReceived list:
                 payload = list.Payload;
+                listed = list.List;
                 if (list.List.Records.Count == 0)
                 {
                     return FaultWith("empty DirtyObjects list (never observed)", data);
@@ -848,9 +1244,9 @@ public sealed class HspReadSession
                     return FaultWith($"payload object {payload.ObjectId} differs from the reply header's {_lastReplyHeader.ObjectId}", data);
                 }
 
-                if (!ObservedBodyLengths.TryGetValue(payload.ObjectId, out var observedLength) || payload.Body.Length != observedLength)
+                if (!AcceptsBodyLength(payload.ObjectId, payload.Body.Length))
                 {
-                    return FaultWith($"object {payload.ObjectId} ({HspObjectIds.Name(payload.ObjectId)}) with a {payload.Body.Length}-byte body; every observed body of that id had {(ObservedBodyLengths.TryGetValue(payload.ObjectId, out var known) ? known.ToString() : "an unknown number of")} bytes (F67)", data);
+                    return FaultWith($"object {payload.ObjectId} ({HspObjectIds.Name(payload.ObjectId)}) with a {payload.Body.Length}-byte body; every observed body of that id had {DescribeLengths(payload.ObjectId)} bytes (F67{(SendsStartupPair ? "; the downloads and E12 / E12b, F156, F182" : string.Empty)})", data);
                 }
 
                 ObjectsReceived++;
@@ -875,6 +1271,20 @@ public sealed class HspReadSession
             _ledStatusReceived = true;   // SC-2 condition 8: the console's LED state is in
         }
 
+        // the start-up pair (SC-4): a list is a free reply it may be waiting for; an object may be its ConsoleVersion or a
+        // record of its download
+        if (listed is not null)
+        {
+            if (PairFreeReply(listed, data.Length) is { } deviation)
+            {
+                return FaultWith(deviation, data);
+            }
+        }
+        else
+        {
+            PairObjectDelivered(payload);
+        }
+
         State = HspReadSessionState.ReadyToSend;
         CompleteExchange();
         return new[] { evt };
@@ -885,7 +1295,20 @@ public sealed class HspReadSession
     {
         _writeSlotOpen = true;
         _exchangeOwedAfterWrite = false;
+        if (_pairPhase == HspStartupPairPhase.VersionAccepted)
+        {
+            _exchangesSinceVersion++;
+        }
     }
+
+    /// <summary>SC-1's one length per id (<see cref="ObservedBodyLengths"/>), or with the start-up pair the lengths of <see cref="DownloadBodyLengths"/>.</summary>
+    private bool AcceptsBodyLength(int objectId, int length) => SendsStartupPair
+        ? DownloadBodyLengths.TryGetValue(objectId, out var lengths) && lengths.Contains(length)
+        : ObservedBodyLengths.TryGetValue(objectId, out var observed) && observed == length;
+
+    private string DescribeLengths(int objectId) => SendsStartupPair
+        ? DownloadBodyLengths.TryGetValue(objectId, out var lengths) ? string.Join(" or ", lengths.Order()) : "an unknown number of"
+        : ObservedBodyLengths.TryGetValue(objectId, out var known) ? known.ToString(System.Globalization.CultureInfo.InvariantCulture) : "an unknown number of";
 
     private IReadOnlyList<HspEvent> FaultWith(string reason, ReadOnlyMemory<byte> data)
     {

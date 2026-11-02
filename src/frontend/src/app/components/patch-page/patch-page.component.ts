@@ -105,7 +105,9 @@ export class PatchPageComponent {
   }
 
   protected boxTitle(entry: PatchEntryDto): string {
-    return `DMX ${entry.dmx}` + (entry.channel ? ` → ${patchTargetLabel(entry.channel)} at ${entry.level} %` : ': unpatched');
+    // the console's own show (SC-4) carries no proportional level (F70): none is shown for it
+    const level = entry.level === null ? ' (no level in the download)' : ` at ${entry.level} %`;
+    return `DMX ${entry.dmx}` + (entry.channel ? ` → ${patchTargetLabel(entry.channel)}${level}` : ': unpatched');
   }
 
   // --- pointer: a press selects, a drag extends, a release without a move opens the inline input ---

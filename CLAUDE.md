@@ -497,6 +497,12 @@ control of another bank first sends that bank's FADERS key and waits for the con
 event carries its reported level. After a Data write
 that did not complete, the device refuses to connect until the backend restarts and `INCOMPLETE-WRITE.txt` in
 `Device:Usb:CaptureLogDirectory` is removed by the owner, after reading the transfer log.
+**State at Connect (SC-4 class E, implemented 2026-11-02, evening, by an Opus 5.5 agent at the owner's request; not before the
+`protocol-safety-reviewer` pass and E13's go):** add `--Device:Usb:StartupPairDate=yyyy-MM-dd` to either run line above (today, or
+the backend refuses to start; without `Device:Mode=Usb` too): every Connect then sends SmartSoft's start-up pair (System `09 00 00`,
+then `07 00 00`) once, where SmartSoft sends it, unless the console already reported NEXT, BLACKOUT, a record function armed or bank
+25-48, and downloads the console's state and show (STATE AT CONNECT in the UI); every control is refused until the download's last
+record (`safety-checks.md` SC-4 "Implementation").
 
 ## Working style
 

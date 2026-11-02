@@ -9,6 +9,11 @@
       Live control
     </span>
   }
+  @if (stateAtConnect()) {
+    <span class="bar__mode bar__mode--state" data-tone="alert" title="State at Connect (safety check SC-4): every Connect sends SmartSoft's start-up pair to the real console once, and the console's state and show are downloaded; every control is refused until the download is complete.">
+      State at connect
+    </span>
+  }
 
   <div class="bar__status" [attr.data-tone]="status().tone" role="status">
     <span class="bar__lamp" aria-hidden="true"></span>
@@ -17,6 +22,10 @@
       <span class="bar__status-detail">{{ status().detail }}</span>
     }
   </div>
+
+  @if (stateAtConnectNote(); as note) {
+    <p class="bar__state" [attr.data-tone]="note.tone" role="status">{{ note.text }}</p>
+  }
 
   <nav class="bar__views" aria-label="Views">
     <button type="button" class="bar__view" [class.bar__view--current]="view() === 'live'" [attr.aria-pressed]="view() === 'live'" (click)="show('live')">

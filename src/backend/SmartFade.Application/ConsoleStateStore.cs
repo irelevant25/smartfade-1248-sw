@@ -39,6 +39,9 @@ public sealed class ConsoleStateStore
     private PanelKeys? _keys;
     private IReadOnlyList<string>? _lcd;
     private CrossfaderState? _crossfader;
+    private bool _stateAtConnectEnabled;
+    private StateAtConnect? _stateAtConnect;
+    private ConsoleShow? _consoleShow;
 
     public ConsoleStateStore(ConsoleCapabilities capabilities, ConnectionState initialConnection, DeviceCommands supportedCommands, IReadOnlySet<string>? writableControls = null)
     {
@@ -65,6 +68,24 @@ public sealed class ConsoleStateStore
         {
             _supportedCommands = supportedCommands;
             _writableControls = writableControls;
+        }
+    }
+
+    /// <summary>Whether the device requests the console's state at Connect (SC-4), as of now (its switch expires at midnight like the others).</summary>
+    public void SetStateAtConnectEnabled(bool enabled)
+    {
+        lock (_gate)
+        {
+            _stateAtConnectEnabled = enabled;
+        }
+    }
+
+    /// <summary>The show the console delivered in this connection's download (SC-4), or null.</summary>
+    public ConsoleShow? GetConsoleShow()
+    {
+        lock (_gate)
+        {
+            return _consoleShow;
         }
     }
 
@@ -105,7 +126,8 @@ public sealed class ConsoleStateStore
                 _firmwareVersion,
                 _writableControls,
                 _faderBank,
-                _blinkingFaders);
+                _blinkingFaders,
+                _stateAtConnectEnabled ? _stateAtConnect ?? StateAtConnect.Idle : null);
         }
     }
 
@@ -150,6 +172,8 @@ public sealed class ConsoleStateStore
 
                 _showFileName = null;
                 _firmwareVersion = null;
+                _stateAtConnect = null;   // Idle until the next Connect's session reports
+                _consoleShow = null;      // the console's word only for the connection that downloaded it
             }
         }
 
@@ -280,6 +304,16 @@ public sealed class ConsoleStateStore
             if (change.FirmwareVersion is { } firmware)
             {
                 _firmwareVersion = firmware;
+            }
+
+            if (change.StateAtConnect is { } stateAtConnect)
+            {
+                _stateAtConnect = stateAtConnect;
+            }
+
+            if (change.ConsoleShow is { } show)
+            {
+                _consoleShow = show;
             }
 
             if (change.Outputs is { } reportedOutputs)

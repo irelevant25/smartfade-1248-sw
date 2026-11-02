@@ -81,6 +81,31 @@ public static class ServiceCollectionExtensions
         }
     }
 
+    /// <summary>
+    /// The start-up check of the start-up pair's switch (SC-4 item 6), as <see cref="ValidateLiveControlDate"/>: absent, no pair
+    /// is sent; set, it must name today and come with `Device:Mode=Usb` (whose own `Device:Usb:ConfirmDate` check stays as it
+    /// is), or the backend refuses to start. The device checks the date again at Connect and at the pair's gate.
+    /// </summary>
+    public static void ValidateStartupPairDate(string? startupPairDate, bool usbMode, DateOnly today)
+    {
+        if (string.IsNullOrWhiteSpace(startupPairDate))
+        {
+            return;
+        }
+
+        if (!usbMode)
+        {
+            throw new InvalidOperationException(
+                "Device:Usb:StartupPairDate is set but Device:Mode is not Usb: the start-up pair exists only on top of the read-only USB mode (SC-4 item 6).");
+        }
+
+        if (!IsConfirmedForToday(startupPairDate, today))
+        {
+            throw new InvalidOperationException(
+                $"Device:Usb:StartupPairDate={startupPairDate} is not today ({today:yyyy-MM-dd}): the start-up pair is confirmed per day, never left switched on (SC-4 item 6). Leave it out to connect without it.");
+        }
+    }
+
     private static IHspPipe OpenConsolePipe(UsbDeviceOptions options)
     {
         if (!OperatingSystem.IsWindows())

@@ -57,11 +57,19 @@ public sealed record ConsoleStateDto(
     string? FirmwareVersion,
     IReadOnlyList<string>? WritableControls,
     string? FaderBank = null,
-    int[]? BlinkingFaders = null);
+    int[]? BlinkingFaders = null,
+    StateAtConnectDto? StateAtConnect = null);
+
+/// <summary>
+/// The real console's state at Connect (safety check SC-4; null when the device does not request it): phase "idle" | "waiting" |
+/// "requesting" | "downloading" | "done" | "notSent", the download's record count and progress, why it was not sent, and the
+/// MASTER probe: "pending" | "notNeeded" | "sent" | "notPossible" with its reason (the UI asks for one fader movement then).
+/// </summary>
+public sealed record StateAtConnectDto(string Phase, int? Records, int Delivered, string? Reason, string MasterProbe, string? MasterProbeReason);
 
 public sealed record OutputsDto(IReadOnlyList<int> Outputs);
 
-/// <summary>Stable codes: not_connected, invalid_channel, invalid_level, invalid_memory, invalid_argument, not_supported, device_error.</summary>
+/// <summary>Stable codes: not_connected, invalid_channel, invalid_level, invalid_memory, invalid_argument, not_supported, device_error, not_available.</summary>
 public sealed record ErrorDto(string Message, string? Code);
 
 /// <summary>Counts come from docs/protocol/known-facts.md; only the rule-backed zero is hard-coded here.</summary>

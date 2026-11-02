@@ -19,7 +19,9 @@ namespace SmartFade.Application;
 /// <see cref="FaderBank"/> what the console's physical faders control when the device reports it (a real console,
 /// ConsoleStatus), else null (the simulator plays every bank at once);
 /// <see cref="BlinkingFaders"/> the physical faders 1–24 whose LED the console blinks (a real console's LedStatus, outside its
-/// page view and record screens; F172's unmatched fader among other readings), empty when none, null when not reported.
+/// page view and record screens; F172's unmatched fader among other readings), empty when none, null when not reported;
+/// <see cref="StateAtConnect"/> the progress of the real console's start-up pair and download (SC-4) while the device requests
+/// the state at Connect (<see cref="StateAtConnectPhase.Idle"/> between sessions), null for a device that does not.
 /// </summary>
 public sealed record ConsoleState(
     ConnectionState Connection,
@@ -43,4 +45,5 @@ public sealed record ConsoleState(
     string? FirmwareVersion,
     IReadOnlySet<string>? WritableControls = null,
     FaderBank? FaderBank = null,
-    IReadOnlyList<int>? BlinkingFaders = null);
+    IReadOnlyList<int>? BlinkingFaders = null,
+    StateAtConnect? StateAtConnect = null);

@@ -41,9 +41,14 @@ public static partial class ShowFileRules
                 return $"DMX {entry.Dmx}: channel {entry.Channel} is outside 0..{MaxChannel} (0 = unpatched).";
             }
 
-            if (entry.Level < 0 || entry.Level > 100)
+            if (entry.Level is not { } level)
             {
-                return $"DMX {entry.Dmx}: level {entry.Level} % is outside 0..100.";
+                return $"DMX {entry.Dmx}: no proportional level (a show downloaded from the console carries none, F70); open a file to save edits.";
+            }
+
+            if (level < 0 || level > 100)
+            {
+                return $"DMX {entry.Dmx}: level {level} % is outside 0..100.";
             }
         }
 

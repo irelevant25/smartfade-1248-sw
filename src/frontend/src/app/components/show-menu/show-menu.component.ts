@@ -30,8 +30,15 @@ export class ShowMenuComponent {
   protected readonly name = this._store.name;
   protected readonly loaded = this._store.loaded;
   protected readonly dirty = this._store.dirty;
-  /** Saving makes sense only for a loaded show with edits (the opened file is on the PC or the card already). */
-  protected readonly canSave = computed(() => this.loaded() && this.dirty() && !this.busy());
+  /** The console's show from its download at Connect (SC-4) rather than a file. */
+  protected readonly fromConsole = computed(() => this._store.source() === 'console');
+  /** The console's show that arrived while a file with unsaved edits was loaded: offered, never forced. */
+  protected readonly pendingConsoleShow = this._store.pendingConsoleShow;
+  /**
+   * Saving makes sense only for a loaded file with edits (the opened file is on the PC or the card already); the console's
+   * show carries no file header, step delays or patch levels, so it is not saved as a file.
+   */
+  protected readonly canSave = computed(() => this.loaded() && this.dirty() && !this.busy() && !this.fromConsole());
 
   protected toggle(): void {
     this._open.update((open) => !open);
@@ -94,6 +101,12 @@ export class ShowMenuComponent {
 
   protected revert(): void {
     this._store.revert();
+    this._error.set(undefined);
+  }
+
+  /** Replaces the loaded file and its edits with the console's show that waited. */
+  protected takeConsoleShow(): void {
+    this._store.takePendingConsoleShow();
     this._error.set(undefined);
   }
 }

@@ -307,11 +307,16 @@ public class HspLiveSessionTests
             Assert.Throws<ArgumentOutOfRangeException>(() => HspOutbound.KeyEvent(0, (ClearedKey)payload[5], pressed: true));
         }
 
-        // No Data header for anything SmartSoft wrote outside the whitelist: the System write (E9 seq 138), a ChannelText
-        // label (seq 57881), REC MEM, E9b's Memory write (seq 92053), STACK, PAUSE, NEXT and CLEAR.
-        foreach (var payload in new[] { Out(E9, 138), Out(E9, 57881), Out(E9, 73006), Out(E9b, 92053), Out(E9b, 47230), Out(E9c, 93437), Out(E9c, 94597), Out(E9c, 102688) })
+        // No Data header for anything SmartSoft wrote outside the whitelist: a ChannelText label (seq 57881), REC MEM, E9b's
+        // Memory write (seq 92053), STACK, PAUSE, NEXT and CLEAR. SmartSoft's System write `09 00 00` (E9 seq 138) is no
+        // ConsoleEvent; since SC-4 (2026-11-02, evening, class E) it is one of the two System payloads a Data header is built
+        // for, with the pair's own placement and gate (HspStartupPairTests).
+        Assert.False(HspOutbound.IsClearedConsoleEvent(Out(E9, 138)));
+        Assert.True(HspOutbound.IsClearedSystemMessage(Out(E9, 138)));
+        foreach (var payload in new[] { Out(E9, 57881), Out(E9, 73006), Out(E9b, 92053), Out(E9b, 47230), Out(E9c, 93437), Out(E9c, 94597), Out(E9c, 102688) })
         {
             Assert.False(HspOutbound.IsClearedConsoleEvent(payload), Convert.ToHexString(payload));
+            Assert.False(HspOutbound.IsClearedSystemMessage(payload), Convert.ToHexString(payload));
             Assert.Throws<ArgumentException>(() => HspOutbound.DataHeader(payload, 0, 0, 0, 0));
         }
 

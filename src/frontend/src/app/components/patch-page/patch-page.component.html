@@ -92,7 +92,7 @@
           @if (entry.channel) {
             <label class="patch__detail-field">
               Level
-              <input type="number" class="patch__level" min="0" max="100" [value]="entry.level" [attr.aria-label]="'Proportional level of DMX ' + entry.dmx" (change)="setLevel($event)" />
+              <input type="number" class="patch__level" min="0" max="100" [value]="entry.level ?? ''" [attr.aria-label]="'Proportional level of DMX ' + entry.dmx" (change)="setLevel($event)" />
               %
             </label>
           }

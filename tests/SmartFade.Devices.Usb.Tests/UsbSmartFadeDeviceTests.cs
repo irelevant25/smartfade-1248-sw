@@ -14,7 +14,7 @@ namespace SmartFade.Devices.Usb.Tests;
 /// hardware: every transfer it sends is checked against SmartSoft's, the cadence against the
 /// observed floors on a virtual clock, and the state it assembles against the experiment records.
 /// </summary>
-public class UsbSmartFadeDeviceTests
+public partial class UsbSmartFadeDeviceTests
 {
     private static readonly TimeSpan Timeout = TimeSpan.FromSeconds(60);
 

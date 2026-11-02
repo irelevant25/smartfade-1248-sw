@@ -30,7 +30,11 @@ public sealed record SequenceDto(int Index, int B, int C, int D, int E, bool IsM
 /// <summary>A memory (<c>GROUP n</c>) with the page and fader derived from its number (24 per page, INFERRED numbering confirmed against the console in E2).</summary>
 public sealed record MemoryFileDto(int Number, int Page, int Fader, IReadOnlyList<ChannelPercentDto> Channels, LabelDto Label);
 
-public sealed record PatchEntryDto(int Dmx, int Channel, int Level);
+/// <summary>
+/// One patch entry: DMX address, channel (0 = unpatched) and the proportional level in percent as the file writes it; null for a
+/// show downloaded from the console, whose Patch object carries no level (F70), so such a show is not rendered as a file.
+/// </summary>
+public sealed record PatchEntryDto(int Dmx, int Channel, int? Level);
 
 public sealed record IndependentDto(int Number, int A, int B, int C, int D, LabelDto Label);
 
@@ -140,7 +144,7 @@ public static class ShowFileMapper
             dto.MainStack is { } main ? ToModel(main) : null,
             dto.Sequences.Select(ToModel).ToArray(),
             dto.Memories.Select(m => new Memory(m.Number, ToModel(m.Channels), ToModel(m.Label))).ToArray(),
-            dto.Patch.Select(p => new PatchEntry(p.Dmx, p.Channel, p.Level)).ToArray(),
+            dto.Patch.Select(p => new PatchEntry(p.Dmx, p.Channel, p.Level ?? throw new ArgumentException($"DMX {p.Dmx} has no proportional level (a show downloaded from the console carries none, F70).", nameof(dto)))).ToArray(),
             dto.Independents.Select(i => new Independent(i.Number, i.A, i.B, i.C, i.D, ToModel(i.Label))).ToArray(),
             dto.Channels.Select(c => new LabelledItem(c.Number, ToModel(c.Label))).ToArray(),
             dto.Pages.Select(p => new LabelledItem(p.Number, ToModel(p.Label))).ToArray(),

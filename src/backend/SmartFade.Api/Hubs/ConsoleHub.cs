@@ -24,6 +24,12 @@ public sealed class ConsoleHub : Hub
     public override async Task OnConnectedAsync()
     {
         await Clients.Caller.SendAsync("consoleStateChanged", DtoMapper.ToDto(_console.GetState()), Context.ConnectionAborted);
+        if (_console.GetConsoleShow() is { } show)
+        {
+            // the show the console delivered in this connection's download (SC-4), for a page opened after it
+            await Clients.Caller.SendAsync("consoleShowChanged", ConsoleShowMapper.ToDto(show), Context.ConnectionAborted);
+        }
+
         await base.OnConnectedAsync();
     }
 

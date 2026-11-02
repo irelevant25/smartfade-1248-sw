@@ -155,4 +155,32 @@ describe('ShowMenuComponent', () => {
     fixture.detectChanges();
     expect(panel()).toBeNull();
   });
+
+  describe("the console's show (SC-4)", () => {
+    it('is never saved as a file, and says why', () => {
+      store.offerConsoleShow({ ...sampleShow(), name: 'SHOW14.ASC (console)' });
+      store.setPatchChannel(1, 12);
+      openMenu();
+      fixture.detectChanges();
+
+      expect(save().disabled).toBe(true);
+      expect(element().querySelector('.menu__hint--console')?.textContent).toContain('not saved as a file');
+    });
+
+    it('offers the console show that arrived while a file had unsaved edits, and takes it on request', () => {
+      store.setShow(sampleShow(), 'SHOW07.ASC', 'file');
+      store.setPatchChannel(1, 12);
+      store.offerConsoleShow({ ...sampleShow(), name: 'SHOW14.ASC (console)' });
+      openMenu();
+      fixture.detectChanges();
+
+      const take = element().querySelector<HTMLButtonElement>('.menu__console')!;
+      expect(take.textContent?.trim()).toBe("Show the console's show (SHOW14.ASC (console))");
+      take.click();
+      fixture.detectChanges();
+
+      expect(store.source()).toBe('console');
+      expect(element().querySelector('.menu__console')).toBeNull();
+    });
+  });
 });

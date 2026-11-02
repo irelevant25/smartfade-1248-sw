@@ -34,6 +34,13 @@ public interface ISmartFadeDevice
     /// </summary>
     IReadOnlySet<string>? WritableControls => null;
 
+    /// <summary>
+    /// True when the device requests the console's state at every Connect (the real console with `Device:Usb:StartupPairDate`
+    /// for today, safety check SC-4: SmartSoft's start-up pair and the download it starts) and reports its progress as
+    /// <see cref="DeviceStateChange.StateAtConnect"/>; the UI shows STATE AT CONNECT while it is. False for every other device.
+    /// </summary>
+    bool StateAtConnectEnabled => false;
+
     /// <summary>Raised whenever the device reports a change of its actual state.</summary>
     event EventHandler<DeviceStateChange>? StateChanged;
 

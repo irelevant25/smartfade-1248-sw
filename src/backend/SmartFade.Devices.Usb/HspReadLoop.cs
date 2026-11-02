@@ -179,7 +179,8 @@ public sealed class HspReadLoop
 
     private async Task ExchangeAsync(CancellationToken stop)
     {
-        var buffer = new byte[HspReadSession.MaxObservedPayloadLength];
+        // SC-1's 792 bytes, or 812 for a session that sends the start-up pair (SC-4 clause 2)
+        var buffer = new byte[Session.MaxPayloadLength];
         var drained = 0;
         var stopping = false;
         string? notedHold = null;
@@ -188,6 +189,8 @@ public sealed class HspReadLoop
 
         while (true)
         {
+            // the session's own notes (the start-up pair's steps, SC-4), after the transfers they follow
+            NoteSessionNotes();
             if (stop.IsCancellationRequested)
             {
                 if (!stopping)
@@ -198,6 +201,8 @@ public sealed class HspReadLoop
                     {
                         Note($"stop: {WritesDroppedAtStop} queued write(s) dropped before they started");
                     }
+
+                    NoteSessionNotes();
                 }
 
                 if (Session.IsIdle)
@@ -492,6 +497,15 @@ public sealed class HspReadLoop
         catch (Exception ex) when (ex is IOException or ObjectDisposedException)
         {
             throw new TransferLogException($"the transfer log could not be written: {ex.Message}", ex);
+        }
+    }
+
+    /// <summary>The notes the session left (<see cref="HspReadSession.TakeNotes"/>), written between exchanges.</summary>
+    private void NoteSessionNotes()
+    {
+        foreach (var note in Session.TakeNotes())
+        {
+            Note(note);
         }
     }
 

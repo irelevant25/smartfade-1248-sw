@@ -274,6 +274,27 @@ rule's fail-closed edge (a bump on a fader already at full changes nothing, list
 rejected it: a shadow now ends once the console's latest reports of the fader after the release read a level other than the
 bump's or the level before the press, reported after the release or unchanged for two poll replies (INFERRED).
 
+## SC-4 implemented (2026-11-02, evening, review pending)
+
+The console's state at Connect (safety check SC-4, class E), implemented by an Opus 5.5 agent at the owner's request, behind
+its own per-day switch `Device:Usb:StartupPairDate` (with or without live control; set for another day or without
+`Device:Mode=Usb` the backend refuses to start). `HspOutbound` represents exactly SmartSoft's two start-up payloads
+(`ClearedSystemMessage`: `09 00 00` with pseq 0, `07 00 00` with pseq 1; no other System value); a session created with the
+pair's gate (`HspReadSession`) sends them once, as its first two data writes and where SmartSoft placed them in its 20
+sessions (after reply headers #40 and #79, the second only after ConsoleVersion read "3.0.2.9.0.43"), holds every other
+write until the download's last record, and accepts the download's bounds (lists up to 812 bytes, the edited shows'
+Sequence and StepContent lengths); a session without the switch is SC-1's, unchanged. `UsbSmartFadeDevice` asks the pair's
+gate (the report's freshness; refused when the console already reported NEXT, BLACKOUT, a record function armed or bank
+25-48), refuses every command until the download is complete, assembles the show (`ConsoleShowAssembler`, domain
+`ConsoleShow` in wire units) and reports undelivered memories empty, and with live control taps the bump of the first
+unpatched channel of the shown bank once when FaderInfo is still unreported (the MASTER probe). The application carries
+`StateAtConnect` and `ConsoleShow` through `DeviceStateChange`, `ConsoleState` and two new events; the API maps the show to
+the editor's `ShowFileDto` (`ConsoleShowMapper`: the console's file forms, nothing the download lacks) for
+`GET /api/console/show` and `consoleShowChanged`, and the UI shows STATE AT CONNECT, the download's progress, the Connect
+hint and, when the probe cannot run, "Move the MASTER once"; the console's show fills the PATCH and STACK / SEQ pages but is
+never saved as a file. The layers are unchanged: the UI sees no bytes, the application no protocol. Nothing is sent before
+the `protocol-safety-reviewer` pass and E13 on the owner's go (safety-checks.md SC-4 "Implementation").
+
 ## ASC show files as built (2026-10-31)
 
 `src/backend/SmartFade.ShowFile.Asc` is the planned `SmartFade.ShowFile.Asc` library: `AscReader`

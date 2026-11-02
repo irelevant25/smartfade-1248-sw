@@ -52,11 +52,20 @@ public sealed class ConsoleService : IDisposable
     /// <summary>Raised with the full state after a connection change and after a snapshot from the device.</summary>
     public event Action<ConsoleState>? StateChanged;
 
+    /// <summary>The real console's start-up pair and download (SC-4) moved on: its phase, progress or the MASTER probe changed.</summary>
+    public event Action<StateAtConnect>? StateAtConnectChanged;
+
+    /// <summary>The real console delivered its show in the download its start-up pair started (SC-4), or listed a show object since.</summary>
+    public event Action<ConsoleShow>? ConsoleShowChanged;
+
     public event Action<string>? ErrorOccurred;
 
     public ConsoleCapabilities Capabilities => _store.Capabilities;
 
     public ConsoleState GetState() => _store.GetState();
+
+    /// <summary>The show the console delivered in this connection (SC-4's download), or null.</summary>
+    public ConsoleShow? GetConsoleShow() => _store.GetConsoleShow();
 
     /// <summary>Connects the device; completes when the connect attempt has run (connected, or failed with its exception).</summary>
     public Task ConnectAsync(CancellationToken cancellationToken) =>
@@ -346,6 +355,7 @@ public sealed class ConsoleService : IDisposable
     private void OnDeviceConnectionChanged(object? sender, ConnectionState state)
     {
         _store.SetCommands(_device.SupportedCommands, _device.WritableControls);   // a device may change them between connections
+        _store.SetStateAtConnectEnabled(_device.StateAtConnectEnabled);
         var cleared = _store.SetConnection(state);
         _logger.LogInformation("Connection: {Status} ({Mode}, {Device}){Error}", state.Status, state.Mode, state.DeviceDescription, state.Error is null ? string.Empty : $": {state.Error}");
         ConnectionChanged?.Invoke(state);
@@ -405,6 +415,16 @@ public sealed class ConsoleService : IDisposable
         if (change.Crossfader is { } crossfader)
         {
             CrossfaderChanged?.Invoke(crossfader);
+        }
+
+        if (change.StateAtConnect is { } stateAtConnect)
+        {
+            StateAtConnectChanged?.Invoke(stateAtConnect);
+        }
+
+        if (change.ConsoleShow is { } show)
+        {
+            ConsoleShowChanged?.Invoke(show);
         }
     }
 

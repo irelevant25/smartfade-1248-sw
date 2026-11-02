@@ -1,5 +1,5 @@
 import type { LinkStatus } from '../../core/console-connection.service';
-import type { ConnectionDto, DeviceMode } from '../../core/console.models';
+import type { ConnectionDto, ConnectionStatus, DeviceMode, StateAtConnectDto } from '../../core/console.models';
 
 export type ModeTone = 'warn' | 'info' | 'alert' | 'unknown';
 
@@ -87,6 +87,46 @@ export function describeStatus(
             ? 'Console not connected: press Connect with the console on, or start the backend in simulated mode to work without it'
             : 'Console not connected',
       };
+  }
+}
+
+export type StateAtConnectTone = 'busy' | 'warn' | 'idle';
+
+export interface StateAtConnectView {
+  text: string;
+  tone: StateAtConnectTone;
+}
+
+/**
+ * What the bar says about the real console's state at Connect (SC-4) besides its STATE AT CONNECT badge: before Connect,
+ * what the console must not be doing when the pair is sent blind, as SmartSoft sends it (clause 3); while the pair and the
+ * download run, that the state is being requested or downloaded (every control is refused then, 7.2–7.6 s observed); why the
+ * state was not requested. Nothing once the download is complete, nor without the switch.
+ */
+export function describeStateAtConnect(state: StateAtConnectDto | undefined, status: ConnectionStatus | undefined): StateAtConnectView | undefined {
+  if (!state) {
+    return undefined;
+  }
+  switch (state.phase) {
+    case 'idle':
+      return status === 'connected' || status === 'connecting'
+        ? undefined
+        : {
+            text: 'Before Connect: no menu open on the console, no SD save or load, no record function armed, no bump held',
+            tone: 'idle',
+          };
+    case 'waiting':
+    case 'requesting':
+      return { text: "Requesting the console's state…", tone: 'busy' };
+    case 'downloading':
+      return {
+        text: typeof state.records === 'number' ? `Downloading the console's state… ${state.delivered} / ${state.records}` : "Downloading the console's state…",
+        tone: 'busy',
+      };
+    case 'notSent':
+      return { text: `The console's state was not requested: ${state.reason ?? 'no reason given'}`, tone: 'warn' };
+    default:
+      return undefined;
   }
 }
 

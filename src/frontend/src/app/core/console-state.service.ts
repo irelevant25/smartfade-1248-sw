@@ -20,6 +20,9 @@ import {
   type OutputsChangedDto,
   PanelKeysDto,
   CrossfaderDto,
+  MASTER_PROBES,
+  STATE_AT_CONNECT_PHASES,
+  type StateAtConnectDto,
 } from './console.models';
 import { clampLevel } from './level';
 import { FADER_BANKS, type FaderBank } from './console.models';
@@ -141,6 +144,21 @@ function sanitizeFaders(faders: readonly number[] | null | undefined, count: num
   return new Set(faders.filter((fader) => Number.isInteger(fader) && fader >= 1 && fader <= count));
 }
 
+/** The state at Connect, or undefined when the backend sends none (the switch is off) or something this UI does not know. */
+function sanitizeStateAtConnect(dto: StateAtConnectDto | null | undefined): StateAtConnectDto | undefined {
+  if (!dto || typeof dto !== 'object' || !STATE_AT_CONNECT_PHASES.includes(dto.phase) || !MASTER_PROBES.includes(dto.masterProbe)) {
+    return undefined;
+  }
+  return {
+    phase: dto.phase,
+    records: Number.isInteger(dto.records) ? dto.records : null,
+    delivered: Number.isInteger(dto.delivered) ? dto.delivered : 0,
+    reason: typeof dto.reason === 'string' ? dto.reason : null,
+    masterProbe: dto.masterProbe,
+    masterProbeReason: typeof dto.masterProbeReason === 'string' ? dto.masterProbeReason : null,
+  };
+}
+
 function sanitizeCrossfader(dto: CrossfaderDto | null | undefined): CrossfaderDto | undefined {
   if (!dto || typeof dto !== 'object' || !Number.isInteger(dto.step) || dto.step < 0) {
     return undefined;
@@ -232,6 +250,7 @@ export class ConsoleStateService {
   private readonly _keys = signal<PanelKeysDto | undefined>(undefined);
   private readonly _lcd = signal<readonly string[] | undefined>(undefined);
   private readonly _crossfader = signal<CrossfaderDto | undefined>(undefined);
+  private readonly _stateAtConnect = signal<StateAtConnectDto | undefined>(undefined);
 
   private readonly _channelRequests = new Map<number, Request<number>>();
   private readonly _memoryRequests = new Map<number, Request<number>>();
@@ -277,6 +296,11 @@ export class ConsoleStateService {
   readonly lcd = this._lcd.asReadonly();
   /** The main playback a real console reports (hardware mode), else undefined. */
   readonly crossfader = this._crossfader.asReadonly();
+  /**
+   * The real console's state at Connect (SC-4: the start-up pair and its download) while the backend requests it at every
+   * Connect, else undefined: the bar shows STATE AT CONNECT and the download's progress from it.
+   */
+  readonly stateAtConnect = this._stateAtConnect.asReadonly();
 
   /** Status of the console itself (not of the link to the backend). */
   readonly deviceStatus = computed<ConnectionStatus>(
@@ -343,6 +367,12 @@ export class ConsoleStateService {
     this._keys.set(sanitizeKeys(state.keys));
     this._lcd.set(sanitizeLcd(state.lcd));
     this._crossfader.set(sanitizeCrossfader(state.crossfader));
+    this._stateAtConnect.set(sanitizeStateAtConnect(state.stateAtConnect));
+  }
+
+  /** stateAtConnectChanged: the real console's start-up pair and download moved on (SC-4). */
+  applyStateAtConnectChanged(stateAtConnect: StateAtConnectDto): void {
+    this._stateAtConnect.set(sanitizeStateAtConnect(stateAtConnect));
   }
 
   /** lcdChanged */

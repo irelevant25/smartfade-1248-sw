@@ -30,6 +30,27 @@ public class ConsoleStateStoreTests
         store.ApplyDeviceChange(change, out _, out _, out _);
 
     [Fact]
+    public void The_state_at_Connect_and_the_consoles_show_are_kept_for_their_connection_only()
+    {
+        // a device without the start-up pair (SC-4) reports none: the state carries no stateAtConnect
+        var store = Connected();
+        Assert.Null(store.GetState().StateAtConnect);
+
+        store.SetStateAtConnectEnabled(true);
+        Assert.Equal(StateAtConnect.Idle, store.GetState().StateAtConnect);
+        var downloading = new StateAtConnect(StateAtConnectPhase.Downloading, 157, 12, null, MasterProbePhase.Pending, null);
+        var show = new ConsoleShow("SHOW04.ASC", null, Array.Empty<Memory>(), null, Array.Empty<Sequence>(), Array.Empty<Independent>(), Array.Empty<Label>(), Array.Empty<Label>());
+        Apply(store, new DeviceStateChange(StateAtConnect: downloading, ConsoleShow: show));
+        Assert.Equal(downloading, store.GetState().StateAtConnect);
+        Assert.Same(show, store.GetConsoleShow());
+
+        // the end of the connection forgets both: the next Connect requests the state again
+        store.SetConnection(new ConnectionState(ConnectionStatus.Disconnected, DeviceMode.Hardware, "test"));
+        Assert.Equal(StateAtConnect.Idle, store.GetState().StateAtConnect);
+        Assert.Null(store.GetConsoleShow());
+    }
+
+    [Fact]
     public void Each_part_sets_only_its_own_flag_and_the_end_of_the_connection_clears_them_all()
     {
         var store = Connected();

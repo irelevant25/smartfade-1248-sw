@@ -7,6 +7,9 @@
   @if (!mastersReported()) {
     <p class="masters__note" role="status">Not reported by the console yet</p>
   }
+  @if (moveMasterHint(); as reason) {
+    <p class="masters__note masters__note--action" role="status" [attr.title]="reason">Move the MASTER once on the console</p>
+  }
 
   <div class="masters__columns">
     <div class="masters__column">

@@ -7,6 +7,7 @@ import {
 } from './console-hub';
 import { ConsoleStateService } from './console-state.service';
 import type { ConsoleStateDto, ErrorDto, MemoryDto } from './console.models';
+import { ShowStore } from './show.store';
 
 /** State of the link between this page and the backend (not of the console itself). */
 export type LinkStatus = 'disconnected' | 'connecting' | 'connected' | 'reconnecting';
@@ -24,6 +25,7 @@ function toErrorDto(error: unknown): ErrorDto {
 @Injectable({ providedIn: 'root' })
 export class ConsoleConnectionService {
   private readonly _state = inject(ConsoleStateService);
+  private readonly _show = inject(ShowStore);
   private readonly _createHub = inject(CONSOLE_HUB_FACTORY);
 
   private readonly _status = signal<LinkStatus>('disconnected');
@@ -189,6 +191,9 @@ export class ConsoleConnectionService {
     hub.on('outputsChanged', (update) => this._state.applyOutputsChanged(update));
     hub.on('lcdChanged', (lines) => this._state.applyLcdChanged(lines));
     hub.on('crossfaderChanged', (crossfader) => this._state.applyCrossfaderChanged(crossfader));
+    hub.on('stateAtConnectChanged', (stateAtConnect) => this._state.applyStateAtConnectChanged(stateAtConnect));
+    // the real console's show from its download at Connect (SC-4) fills the PATCH and STACK / SEQ pages
+    hub.on('consoleShowChanged', (show) => this._show.offerConsoleShow(show));
     hub.on('errorOccurred', (error) => {
       this._state.applyErrorOccurred(error);
       // A rejected command leaves optimistic values behind; the backend's state is the truth.

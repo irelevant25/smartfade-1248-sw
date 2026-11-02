@@ -258,4 +258,41 @@ describe('ConnectionBarComponent', () => {
       expect(text('.bar__status-label')).toBe('Error');
     });
   });
+
+  describe('state at Connect (SC-4)', () => {
+    const hardware = () => ({ ...createSampleState().connection, mode: 'hardware' as const });
+
+    it('shows STATE AT CONNECT beside HARDWARE only while the backend requests the console state at Connect', () => {
+      link.set('connected');
+      state.applyConsoleStateChanged(createSampleState({ connection: hardware(), supportedCommands: [] }));
+      fixture.detectChanges();
+      expect(element().querySelector('.bar__mode--state')).toBeNull();
+
+      state.applyConsoleStateChanged(createSampleState({ connection: hardware(), supportedCommands: [], stateAtConnect: { phase: 'done', delivered: 157, records: 157, masterProbe: 'notNeeded' } }));
+      fixture.detectChanges();
+      expect(element().querySelector('.bar__mode--state')?.textContent?.trim()).toBe('State at connect');
+      expect(element().querySelector('.bar__state')).toBeNull(); // the download is complete: nothing more to say
+    });
+
+    it("shows the download's progress while the console's state is being downloaded", () => {
+      link.set('connected');
+      state.applyConsoleStateChanged(createSampleState({ connection: hardware(), supportedCommands: [], stateAtConnect: { phase: 'waiting', delivered: 0, masterProbe: 'pending' } }));
+      fixture.detectChanges();
+      expect(text('.bar__state')).toBe("Requesting the console's state…");
+
+      state.applyStateAtConnectChanged({ phase: 'downloading', records: 158, delivered: 21, masterProbe: 'pending' });
+      fixture.detectChanges();
+      expect(text('.bar__state')).toBe("Downloading the console's state… 21 / 158");
+      expect(element().querySelector('.bar__state')?.getAttribute('data-tone')).toBe('busy');
+    });
+
+    it('before Connect, says what the console must not be doing', () => {
+      link.set('connected');
+      state.applyConsoleStateChanged(createSampleState({ connection: { ...hardware(), status: 'disconnected' }, supportedCommands: [], stateAtConnect: { phase: 'idle', delivered: 0, masterProbe: 'pending' } }));
+      fixture.detectChanges();
+
+      expect(text('.bar__state')).toBe('Before Connect: no menu open on the console, no SD save or load, no record function armed, no bump held');
+      expect(buttons().connect.disabled).toBe(false);
+    });
+  });
 });

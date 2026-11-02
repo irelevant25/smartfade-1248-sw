@@ -14,16 +14,17 @@ import {
   type StepHome,
 } from './show-rules';
 
-/** Where the current show came from: a `.asc` file from the card, or (later, after its safety check) the console. */
+/** Where the current show came from: a `.asc` file from the card, or the console's download at Connect (SC-4). */
 export type ShowSource = 'file' | 'console';
 
 /**
  * The one place the show lives in the UI: the show as loaded, the working copy the PATCH and STACK / SEQ pages
  * edit, whether it was edited, and every edit operation with the rules of docs/formats/asc-format.md ("Step rules
- * learned from the files", "Label and memory rules learned from the files"). Today the show comes from a file parsed
- * by the backend (the Show menu); `setShow(dto, name, 'console')` is the seam for the console's own show once its
- * download is cleared (SC-4). Edits change only the copy here: they leave through the Show menu's "Save to card"
- * as a new file, never over USB.
+ * learned from the files", "Label and memory rules learned from the files"). The show comes from a file parsed by the
+ * backend (the Show menu) or from the real console's download at Connect (SC-4, `consoleShowChanged`), which
+ * `offerConsoleShow` puts here unless a file with unsaved edits is loaded. Edits change only the copy here: a file's leave
+ * through the Show menu's "Save as file…" as a new file, never over USB; the console's show carries no file header, step
+ * delays or patch levels, so it is not saved as a file.
  */
 @Injectable({ providedIn: 'root' })
 export class ShowStore {
@@ -31,6 +32,7 @@ export class ShowStore {
   private readonly _edited = signal<ShowFileDto | undefined>(undefined);
   private readonly _name = signal<string | undefined>(undefined);
   private readonly _source = signal<ShowSource | undefined>(undefined);
+  private readonly _pendingConsoleShow = signal<ShowFileDto | undefined>(undefined);
 
   /** The show as loaded, or undefined. */
   readonly original = this._original.asReadonly();
@@ -40,6 +42,8 @@ export class ShowStore {
   readonly name = this._name.asReadonly();
   readonly source = this._source.asReadonly();
   readonly loaded = computed(() => this._edited() !== undefined);
+  /** The console's show (SC-4) that arrived while a file with unsaved edits was loaded: kept aside until the user takes it. */
+  readonly pendingConsoleShow = this._pendingConsoleShow.asReadonly();
   readonly dirty = computed(() => {
     const original = this._original();
     const edited = this._edited();
@@ -52,6 +56,30 @@ export class ShowStore {
     this._edited.set(structuredClone(dto));
     this._name.set(name);
     this._source.set(source);
+  }
+
+  /**
+   * The console delivered its show (SC-4's download, or a show object it listed since): it replaces the current show, unless
+   * a file with unsaved edits is loaded, which is never thrown away: the console's show then waits in `pendingConsoleShow`.
+   */
+  offerConsoleShow(dto: ShowFileDto): void {
+    if (this._source() === 'file' && this.dirty()) {
+      this._pendingConsoleShow.set(structuredClone(dto));
+      return;
+    }
+    this._pendingConsoleShow.set(undefined);
+    this.setShow(dto, dto.name, 'console');
+  }
+
+  /** The user takes the console's show that waited: it replaces the current show and its edits. */
+  takePendingConsoleShow(): boolean {
+    const pending = this._pendingConsoleShow();
+    if (!pending) {
+      return false;
+    }
+    this._pendingConsoleShow.set(undefined);
+    this.setShow(pending, pending.name, 'console');
+    return true;
   }
 
   clear(): void {

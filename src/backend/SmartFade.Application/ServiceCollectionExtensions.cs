@@ -12,11 +12,13 @@ public static class ServiceCollectionExtensions
         services.AddSingleton(provider =>
         {
             var device = provider.GetRequiredService<ISmartFadeDevice>();
-            return new ConsoleStateStore(
+            var store = new ConsoleStateStore(
                 device.Capabilities,
                 new ConnectionState(ConnectionStatus.Disconnected, device.Mode, device.Description),
                 device.SupportedCommands,
                 device.WritableControls);
+            store.SetStateAtConnectEnabled(device.StateAtConnectEnabled);
+            return store;
         });
         services.AddSingleton<ConsoleService>();
         return services;

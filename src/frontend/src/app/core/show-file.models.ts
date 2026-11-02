@@ -52,7 +52,8 @@ export interface MemoryFileDto {
 export interface PatchEntryDto {
   dmx: number;
   channel: number;
-  level: number;
+  /** The proportional level in percent as the file writes it; null for the console's own show (SC-4), whose Patch carries no level (F70). */
+  level: number | null;
 }
 
 export interface IndependentDto {

@@ -3,7 +3,7 @@ import { ConsoleConnectionService } from '../../core/console-connection.service'
 import { ConsoleStateService } from '../../core/console-state.service';
 import { ViewService, type AppView } from '../../core/view.service';
 import { ShowMenuComponent } from '../show-menu/show-menu.component';
-import { canConnect, canDisconnect, describeMode, describeStatus } from './connection-view';
+import { canConnect, canDisconnect, describeMode, describeStateAtConnect, describeStatus } from './connection-view';
 
 /**
  * Top bar: which mode the app is in (always visible, never ambiguous), whether the console is
@@ -32,6 +32,14 @@ export class ConnectionBarComponent {
    * then, and the UI says so as loudly as the mode itself (SC-2 item 6).
    */
   protected readonly liveControl = computed(() => this._state.mode() === 'hardware' && this._state.supportedCommands().length > 0);
+  /**
+   * The backend requests the real console's state at every Connect (safety check SC-4: SmartSoft's start-up pair and the
+   * download it starts): STATE AT CONNECT beside HARDWARE, as loud, and the request's progress or why it was not sent.
+   */
+  protected readonly stateAtConnect = computed(() => this._state.mode() === 'hardware' && this._state.stateAtConnect() !== undefined);
+  protected readonly stateAtConnectNote = computed(() =>
+    this.stateAtConnect() ? describeStateAtConnect(this._state.stateAtConnect(), this._state.connection()?.status) : undefined,
+  );
   protected readonly status = computed(() =>
     describeStatus(this._connection.status(), this._state.connection()),
   );

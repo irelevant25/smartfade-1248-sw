@@ -144,6 +144,65 @@ public class HostingTests
     }
 
     [Fact]
+    public async Task The_start_up_pair_needs_the_USB_mode_and_todays_date_and_is_shown_in_the_state()
+    {
+        // SC-4 item 6: set without Device:Mode=Usb, or for another day, the backend refuses to start
+        using var withoutUsb = new WebApplicationFactory<Program>().WithWebHostBuilder(b =>
+        {
+            b.UseSetting("Device:Mode", "Simulated");
+            b.UseSetting("Device:Usb:StartupPairDate", Today);
+        });
+        Assert.Contains("StartupPairDate", Assert.ThrowsAny<Exception>(() => withoutUsb.CreateClient()).ToString(), StringComparison.Ordinal);
+
+        using var stale = new WebApplicationFactory<Program>().WithWebHostBuilder(b =>
+        {
+            b.UseSetting("Device:Mode", "Usb");
+            b.UseSetting("Device:Usb:ConfirmDate", Today);
+            b.UseSetting("Device:Usb:StartupPairDate", "2026-01-01");
+            b.ConfigureServices(services => services.AddSingleton<Func<IHspPipe>>(() => throw new HspPipeException("test: no console")));
+        });
+        Assert.Contains("StartupPairDate", Assert.ThrowsAny<Exception>(() => stale.CreateClient()).ToString(), StringComparison.Ordinal);
+
+        // for today, with or without live control: the state carries stateAtConnect (the UI's STATE AT CONNECT); without the
+        // switch it carries none. The same two guards as above keep these hosts off real hardware.
+        foreach (var pair in new[] { true, false })
+        {
+            using var host = new WebApplicationFactory<Program>().WithWebHostBuilder(b =>
+            {
+                b.UseSetting("Device:Mode", "Usb");
+                b.UseSetting("Device:Usb:ConfirmDate", Today);
+                if (pair)
+                {
+                    b.UseSetting("Device:Usb:StartupPairDate", Today);
+                }
+
+                b.UseSetting("Device:Usb:DevicePath", @"\\?\usb#vid_0000&pid_0000&mi_09#test");
+                b.UseSetting("Device:Usb:CaptureLogDirectory", Path.Combine(Path.GetTempPath(), "smartfade-tests", Guid.NewGuid().ToString("N")));
+                b.ConfigureServices(services => services.AddSingleton<Func<IHspPipe>>(() => throw new HspPipeException("test: no console")));
+            });
+            using var client = host.CreateClient();
+            var state = await client.GetFromJsonAsync<ConsoleStateDto>("/api/console/state");
+            Assert.NotNull(state);
+            Assert.Empty(state.SupportedCommands);   // the pair adds no command: read-only stays read-only
+            if (pair)
+            {
+                Assert.NotNull(state.StateAtConnect);
+                Assert.Equal(("idle", "pending"), (state.StateAtConnect.Phase, state.StateAtConnect.MasterProbe));
+                Assert.Contains("state at Connect", state.Connection.DeviceDescription, StringComparison.Ordinal);
+            }
+            else
+            {
+                Assert.Null(state.StateAtConnect);
+            }
+
+            // no download in this connection: the console's show is not available
+            using var show = await client.GetAsync("/api/console/show");
+            Assert.Equal(HttpStatusCode.NotFound, show.StatusCode);
+            Assert.Equal("not_available", (await show.Content.ReadFromJsonAsync<ErrorDto>())!.Code);
+        }
+    }
+
+    [Fact]
     public async Task Requests_from_a_foreign_origin_are_refused_before_they_execute()
     {
         using var factory = new WebApplicationFactory<Program>().WithWebHostBuilder(b => b.UseSetting("Device:Mode", "Simulated"));

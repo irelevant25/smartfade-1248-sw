@@ -104,7 +104,34 @@ public static class DtoMapper
             state.FirmwareVersion,
             state.WritableControls?.Order(StringComparer.Ordinal).ToArray(),
             FaderBankName(state.FaderBank),
-            state.BlinkingFaders?.ToArray());
+            state.BlinkingFaders?.ToArray(),
+            state.StateAtConnect is { } stateAtConnect ? ToDto(stateAtConnect) : null);
+
+    /// <summary>docs/api.md `stateAtConnect`: the wire names of the phase and the MASTER probe, pinned independently of the enum members.</summary>
+    public static StateAtConnectDto ToDto(StateAtConnect state) =>
+        new(
+            state.Phase switch
+            {
+                StateAtConnectPhase.Idle => "idle",
+                StateAtConnectPhase.Waiting => "waiting",
+                StateAtConnectPhase.Requesting => "requesting",
+                StateAtConnectPhase.Downloading => "downloading",
+                StateAtConnectPhase.Done => "done",
+                StateAtConnectPhase.NotSent => "notSent",
+                _ => throw new ArgumentOutOfRangeException(nameof(state), state.Phase, null),
+            },
+            state.Records,
+            state.Delivered,
+            state.Reason,
+            state.MasterProbe switch
+            {
+                MasterProbePhase.Pending => "pending",
+                MasterProbePhase.NotNeeded => "notNeeded",
+                MasterProbePhase.Sent => "sent",
+                MasterProbePhase.NotPossible => "notPossible",
+                _ => throw new ArgumentOutOfRangeException(nameof(state), state.MasterProbe, null),
+            },
+            state.MasterProbeReason);
 
     /// <summary>docs/api.md `faderBank`: "channels1To24", "channels25To48", "memories" or null when the device reports none.</summary>
     private static string? FaderBankName(FaderBank? bank) => bank switch

@@ -67,6 +67,29 @@
   }
 }
 
+.bar__mode--state {
+  margin-left: 8px;
+}
+
+// The console's state at Connect (SC-4): what it must not be doing before Connect, the download's progress, a refusal.
+.bar__state {
+  margin: 0;
+  padding: 4px 10px;
+  border-left: 3px solid var(--sf-text-faint);
+  color: var(--sf-text-dim);
+  font-size: 0.8125rem;
+
+  &[data-tone='busy'] {
+    border-left-color: var(--sf-warn);
+    color: var(--sf-warn);
+  }
+
+  &[data-tone='warn'] {
+    border-left-color: var(--sf-danger);
+    color: var(--sf-text);
+  }
+}
+
 .bar__status {
   display: flex;
   align-items: center;

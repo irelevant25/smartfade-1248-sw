@@ -13,7 +13,10 @@ namespace SmartFade.Application.Ports;
 /// console reports (the simulator reports none); <see cref="FaderBank"/> what the physical faders control, when a
 /// real console reports it (ConsoleStatus, F98); <see cref="BlinkingFaders"/> the physical faders 1–24 whose LED a real console
 /// blinks, outside its page view and record screens (LedStatus; an unmatched fader after a mode switch, F172, a 1-24 / 25-48
-/// switch INFERRED alike, among other readings; display only), the complete list each time it changes.
+/// switch INFERRED alike, among other readings; display only), the complete list each time it changes;
+/// <see cref="StateAtConnect"/> the progress of a real console's start-up pair and download (safety check SC-4) each time it
+/// changes; <see cref="ConsoleShow"/> the show the console delivered in that download, complete, each time it is built
+/// (at the download's end, and again when the console lists a show object afterwards).
 /// </summary>
 public sealed record DeviceStateChange(
     ConsoleSnapshot? Snapshot = null,
@@ -30,7 +33,9 @@ public sealed record DeviceStateChange(
     IReadOnlyList<string>? Lcd = null,
     CrossfaderState? Crossfader = null,
     FaderBank? FaderBank = null,
-    IReadOnlyList<int>? BlinkingFaders = null);
+    IReadOnlyList<int>? BlinkingFaders = null,
+    StateAtConnect? StateAtConnect = null,
+    ConsoleShow? ConsoleShow = null);
 
 /// <summary>The on / off state of IND 1 and IND 2, reported on its own when a device learns it apart from the masters.</summary>
 public sealed record IndependentStates(bool Independent1, bool Independent2);

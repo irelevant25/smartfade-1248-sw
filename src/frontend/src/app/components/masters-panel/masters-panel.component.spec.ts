@@ -349,4 +349,30 @@ describe('MastersPanelComponent', () => {
       expect(solo().disabled).toBe(true);
     });
   });
+
+  describe('the MASTER after the console state at Connect (SC-4)', () => {
+    const hardware = (masterProbe: 'pending' | 'notNeeded' | 'sent' | 'notPossible', mastersReported = false) =>
+      createSampleState({
+        connection: { ...createSampleState().connection, mode: 'hardware' },
+        supportedCommands: [],
+        mastersReported,
+        stateAtConnect: { phase: 'done', records: 157, delivered: 157, masterProbe, masterProbeReason: masterProbe === 'notPossible' ? 'every channel of channel mode, bank 1-24 is patched' : null },
+      });
+    const hint = () => element().querySelector('.masters__note--action');
+
+    it('asks for one MASTER movement only when the probe could not run and the MASTER is still unreported', () => {
+      state.applyConsoleStateChanged(hardware('sent'));
+      fixture.detectChanges();
+      expect(hint()).toBeNull();
+
+      state.applyConsoleStateChanged(hardware('notPossible'));
+      fixture.detectChanges();
+      expect(hint()?.textContent?.trim()).toBe('Move the MASTER once on the console');
+      expect(hint()?.getAttribute('title')).toBe('every channel of channel mode, bank 1-24 is patched');
+
+      state.applyConsoleStateChanged(hardware('notPossible', true));
+      fixture.detectChanges();
+      expect(hint()).toBeNull();
+    });
+  });
 });

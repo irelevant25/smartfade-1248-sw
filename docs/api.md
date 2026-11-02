@@ -153,12 +153,33 @@ interface ConsoleStateDto {
   crossfader: CrossfaderDto | null;                 // the main playback as reported (F130): null until reported, always null for the simulator
   showFileName?: string;                            // e.g. "SHOW04.ASC" when known
   firmwareVersion?: string;                         // e.g. "3.0.2.9.0.43" when known
+  stateAtConnect: StateAtConnectDto | null;         // the real console's state at Connect (safety check SC-4, added 2026-11-02):
+                                                    // present while the backend requests it at every Connect
+                                                    // (`Device:Usb:StartupPairDate` for today; the UI shows STATE AT CONNECT
+                                                    // beside HARDWARE), null for every other device
+}
+
+interface StateAtConnectDto {                       // SmartSoft's start-up pair and the download it starts (SC-4)
+  phase: 'idle' | 'waiting' | 'requesting' | 'downloading' | 'done' | 'notSent';
+                                                    // idle: no session; waiting: connected, the pair waits for its place
+                                                    // (about 1.3 s); requesting: the first message went, the version is checked;
+                                                    // downloading: the console's state and show arrive (7.2-7.6 s observed);
+                                                    // done; notSent: refused or ended before the download (see reason)
+  records: number | null;                           // the download's record count once listed (157..161 observed)
+  delivered: number;                                // records delivered so far
+  reason: string | null;                            // why the pair was not sent or ended (the console's state before it, the
+                                                    // version gate, a stop)
+  masterProbe: 'pending' | 'notNeeded' | 'sent' | 'notPossible';
+                                                    // the download carries no FaderInfo (the MASTER): with live control the
+                                                    // device taps the bump of an unpatched channel once after it (SC-4 clause 4);
+                                                    // notPossible: the UI asks for one MASTER movement on the panel
+  masterProbeReason: string | null;                 // why the probe could not run
 }
 
 interface ErrorDto {
   message: string;
   code?: string;      // stable: not_connected | invalid_channel | invalid_level | invalid_memory | invalid_argument |
-                      //         not_supported | device_error
+                      //         not_supported | device_error | not_available
 }
 ```
 
@@ -209,6 +230,12 @@ level asked for. The console's faders then control the new bank, as after a pres
 `faderBank` in the state says which. Nothing in the contract changes for this: the commands and their
 arguments are the ones above.
 
+With the state at Connect (safety check SC-4, `stateAtConnect` not null) the real console refuses every command from
+Connect until the download's last record, with one of three reasons in `errorOccurred`: "the console's state at Connect is
+being requested: SmartSoft's start-up pair goes first", "… nothing goes between the start-up pair's two writes", and, from the
+second message until the last record, "the console's state is being downloaded". After it the commands are refused or taken
+as before. The pair itself is no command: the device sends it, once per Connect, or says in `stateAtConnect.reason` why not.
+
 Server → client:
 
 | Event | Payload | When |
@@ -221,6 +248,8 @@ Server → client:
 | `outputsChanged` | `{ outputs: number[] }` | DMX output levels changed (coalesced, at most ~30 per second) |
 | `lcdChanged` | `string[]` (two lines) | a real console's LCD text changed (hardware mode only) |
 | `crossfaderChanged` | `CrossfaderDto` | a real console's main playback record changed: a GO fade, a manual crossfade, a stack step (hardware mode only) |
+| `stateAtConnectChanged` | `StateAtConnectDto` | the real console's start-up pair and download moved on (SC-4): a phase, a delivered record of the download, the MASTER probe's outcome |
+| `consoleShowChanged` | `ShowFileDto` | the show the real console delivered in its download at Connect (SC-4), complete, at the download's last record and again when the console lists a show object afterwards; also to a client that connects to the hub while one is known. The UI puts it in its show store (source `console`) unless a file with unsaved edits is loaded, which it then offers to replace |
 | `errorOccurred` | `ErrorDto` | to the caller when a command was rejected; to all clients when the device reported an error or a queued command failed |
 
 Browser requests must come from one of the configured local origins (`Security:AllowedOrigins`,
@@ -234,9 +263,10 @@ future hardware mode (no web page may ever drive a console without the owner's a
 |---|---|
 | `GET /api/status` | `{ mode, connection: ConnectionDto, backendVersion, protocolKnowledge: { messagesClearedForSending: 2 } }` (a rule, not a counter: SC-1 cleared the poll and the listed fetch for a read-only session; fact counts live in the knowledge base, not in the API) |
 | `GET /api/console/state` | `ConsoleStateDto` |
+| `GET /api/console/show` | `ShowFileDto`: the show the real console delivered in this connection's download (SC-4, added 2026-11-02), in the forms the console's files use (patch, memories, stack and sequence steps with their memories, channel step and State step, times as `0` / `5.0` / `58` / `1:30`, percent levels, independents, channel and page labels); the file header, the step delays, the patch levels (`level: null`) and the `SET` lines are not in the download and are left empty, with the reason in `warnings` (line 0), so `POST /api/showfile/render` refuses it as it stands. `404` with `not_available` when no download completed in this connection (the switch off, the pair not sent, a simulator) |
 | `POST /api/console/connect` | `ConnectionDto` |
 | `POST /api/console/disconnect` | `ConnectionDto` |
-| `POST /api/showfile/render` | the `.asc` bytes (`application/octet-stream`, `Content-Disposition` with `<name>-edited.asc`, never the original name) rendered from a `ShowFileDto` the UI edited: the DTO is mapped back to the model and written with the engine's layout (the committed sample survives parse, map and render byte for byte). `400` with `invalid_argument` when the patch is not 512 addresses in order with channels 0..96 and levels 0..100, when a step's time, delay or follow-on is not in a form the console's files use (seconds with at most one decimal, or m:ss; OBSERVED on 33 files, docs/formats/asc-format.md), when a step's memory is not page 0..11 with fader 0..23 (or only one of the two is given) or its CueParams is not 0..2, or when the file had unknown lines (they would be lost). Since step 4 the render also checks the shapes every console-written file has (docs/formats/asc-format.md "Step rules learned from the files"): stack cue numbers with one decimal, at most 199.9, rising through the stack; a memory step with `$$CUEPARAMS 1` and its memory's channel list repeated (none when the memory is not in the file); a sequence step numbered by its memory (`265.0`). Existing numbers are rendered as the DTO carries them; the UI numbers only the steps it inserts. Since step 5 it also checks every memory (channels in rising order, each once, 1..48, at 1..100 %) and every label block (three lines of at most 6 characters, an HTML numeric entity counting as one; printable ASCII only, '&' only in such an entity; the `Text` line derived from the lines as the console derives it: line 1, then line 2 only when line 1 is full, then line 3 only when line 2 is full too; "Label and memory rules learned from the files" in the format document). The backend stores nothing and overwrites nothing; saving is the browser's download |
+| `POST /api/showfile/render` | the `.asc` bytes (`application/octet-stream`, `Content-Disposition` with `<name>-edited.asc`, never the original name) rendered from a `ShowFileDto` the UI edited: the DTO is mapped back to the model and written with the engine's layout (the committed sample survives parse, map and render byte for byte). `400` with `invalid_argument` when the patch is not 512 addresses in order with channels 0..96 and levels 0..100 (a `null` level, the console's own show, is refused), when a step's time, delay or follow-on is not in a form the console's files use (seconds with at most one decimal, or m:ss; OBSERVED on 33 files, docs/formats/asc-format.md), when a step's memory is not page 0..11 with fader 0..23 (or only one of the two is given) or its CueParams is not 0..2, or when the file had unknown lines (they would be lost). Since step 4 the render also checks the shapes every console-written file has (docs/formats/asc-format.md "Step rules learned from the files"): stack cue numbers with one decimal, at most 199.9, rising through the stack; a memory step with `$$CUEPARAMS 1` and its memory's channel list repeated (none when the memory is not in the file); a sequence step numbered by its memory (`265.0`). Existing numbers are rendered as the DTO carries them; the UI numbers only the steps it inserts. Since step 5 it also checks every memory (channels in rising order, each once, 1..48, at 1..100 %) and every label block (three lines of at most 6 characters, an HTML numeric entity counting as one; printable ASCII only, '&' only in such an entity; the `Text` line derived from the lines as the console derives it: line 1, then line 2 only when line 1 is full, then line 3 only when line 2 is full too; "Label and memory rules learned from the files" in the format document). The backend stores nothing and overwrites nothing; saving is the browser's download |
 | `POST /api/showfile/parse?name=<file name>` | `ShowFileDto`: the `.asc` file sent as the request body, parsed by `SmartFade.ShowFile.Asc` (read-only; nothing is stored, nothing reaches a console). `400` with `invalid_argument` for an empty body or a body above 4 MB. The DTO carries the header fields, the main stack and the sequences with their steps (numbers and times as the file wrote them, the referenced memory as page / fader / number), the memories with page and fader derived from the number (24 per page), the 512 patch entries, the independents, the channel and page labels, the settings, the count of unknown lines kept verbatim and the reader's warnings; every field's meaning has the status docs/formats/asc-format.md gives it |
 
 ## Rules carried by the contract

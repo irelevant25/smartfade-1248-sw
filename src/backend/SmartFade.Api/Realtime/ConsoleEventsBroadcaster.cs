@@ -38,6 +38,8 @@ public sealed class ConsoleEventsBroadcaster : BackgroundService
         _console.LcdChanged += OnLcdChanged;
         _console.CrossfaderChanged += OnCrossfaderChanged;
         _console.StateChanged += OnStateChanged;
+        _console.StateAtConnectChanged += OnStateAtConnectChanged;
+        _console.ConsoleShowChanged += OnConsoleShowChanged;
         _console.ErrorOccurred += OnErrorOccurred;
 
         try
@@ -85,6 +87,8 @@ public sealed class ConsoleEventsBroadcaster : BackgroundService
             _console.LcdChanged -= OnLcdChanged;
             _console.CrossfaderChanged -= OnCrossfaderChanged;
             _console.StateChanged -= OnStateChanged;
+            _console.StateAtConnectChanged -= OnStateAtConnectChanged;
+            _console.ConsoleShowChanged -= OnConsoleShowChanged;
             _console.ErrorOccurred -= OnErrorOccurred;
         }
     }
@@ -112,6 +116,10 @@ public sealed class ConsoleEventsBroadcaster : BackgroundService
     private void OnStateChanged(ConsoleState state) => Send("consoleStateChanged", DtoMapper.ToDto(state));
 
     private void OnLcdChanged(IReadOnlyList<string> lines) => Send("lcdChanged", lines);
+
+    private void OnStateAtConnectChanged(StateAtConnect state) => Send("stateAtConnectChanged", DtoMapper.ToDto(state));
+
+    private void OnConsoleShowChanged(ConsoleShow show) => Send("consoleShowChanged", ConsoleShowMapper.ToDto(show));
 
     private void OnCrossfaderChanged(CrossfaderState crossfader) => Send("crossfaderChanged", DtoMapper.ToDto(crossfader));
 

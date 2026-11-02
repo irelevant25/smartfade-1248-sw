@@ -60,6 +60,7 @@ public sealed class ConsoleStateAssembler
     private (KeyLed Ind1, KeyLed Ind2)? _independentLeds;
     private int[]? _blinkingFaders;
     private bool _channelLevelsReported;
+    private bool _consoleStatusReported;
     private bool _memoryMode;
     private int _memoryPage = 1;
     private bool _pageReported;
@@ -103,6 +104,9 @@ public sealed class ConsoleStateAssembler
 
     /// <summary>The fader mode, bank and memory page as ConsoleStatus last reported them; null until it has arrived, or when it carried a value never observed.</summary>
     public ReportedFaderMode? FaderMode => _faderMode;
+
+    /// <summary>True once ConsoleStatus has been delivered in this session (then a null <see cref="FaderMode"/> means a value never observed).</summary>
+    public bool ConsoleStatusReported => _consoleStatusReported;
 
     /// <summary>
     /// The last FaderInfo delivered in this session, null before: record k belongs to physical fader k in every bank and mode
@@ -192,6 +196,35 @@ public sealed class ConsoleStateAssembler
         (MemoryState[])_memories.Clone(),
         _showFileName,
         _firmwareVersion);
+
+    /// <summary>
+    /// After the start-up pair's download (SC-4): every memory the console did not deliver in this session is reported as empty
+    /// (not recorded, no label, zero levels), and the changes are returned. INFERRED: the download lists every memory the show
+    /// holds (F182 d: every page followed by its Memory records; the E2 cross-check found the 16 listed memories equal to the
+    /// 16 `GROUP`s of SHOW04, and the console writes only non-empty memories to its files), so a memory it did not list is
+    /// empty. Display only: nothing is sent from it.
+    /// </summary>
+    public DeviceStateChange? ReportUndeliveredMemoriesEmpty()
+    {
+        List<MemoryState>? changed = null;
+        for (var index = 0; index < _memories.Length; index++)
+        {
+            if (_memoryContents[index] is not null)
+            {
+                continue;
+            }
+
+            _memoryContents[index] = new byte[_capabilities.Channels];
+            var empty = _memories[index] with { Recorded = false, Label = Label.Empty, Reported = true };
+            if (empty != _memories[index])
+            {
+                _memories[index] = empty;
+                (changed ??= new List<MemoryState>()).Add(empty);
+            }
+        }
+
+        return changed is null ? null : new DeviceStateChange(Memories: changed);
+    }
 
     /// <summary>The levels of a memory the console delivered in this session, else null.</summary>
     public MemoryContent? Memory(int page, int fader)
@@ -302,6 +335,7 @@ public sealed class ConsoleStateAssembler
     private DeviceStateChange? ApplyConsoleStatus(ConsoleStatusObject status)
     {
         var raw = status.Raw.Span;
+        _consoleStatusReported = true;
         _memoryMode = raw.Length > 0 && raw[0] == 1;
 
         // Only the values seen (0x00 / 0x01 for mode and bank, F98) make a reading; anything else leaves it unknown. NEXT

@@ -150,7 +150,34 @@ export interface ConsoleStateDto {
   crossfader?: CrossfaderDto | null;
   showFileName?: string | null;
   firmwareVersion?: string | null;
+  /**
+   * The real console's state at Connect (safety check SC-4: SmartSoft's start-up pair and the download it starts), present
+   * while the backend requests it at every Connect (the UI shows STATE AT CONNECT then); null for every other device.
+   */
+  stateAtConnect?: StateAtConnectDto | null;
 }
+
+/** Where the console's state at Connect stands (docs/api.md `stateAtConnect`). */
+export type StateAtConnectPhase = 'idle' | 'waiting' | 'requesting' | 'downloading' | 'done' | 'notSent';
+
+/** What became of the MASTER probe after the download (SC-4 clause 4). */
+export type MasterProbe = 'pending' | 'notNeeded' | 'sent' | 'notPossible';
+
+export interface StateAtConnectDto {
+  phase: StateAtConnectPhase;
+  /** The download's record count once it was listed (157..161 observed). */
+  records?: number | null;
+  /** The download's records delivered so far. */
+  delivered: number;
+  /** Why the state was not requested or the request ended before the download. */
+  reason?: string | null;
+  masterProbe: MasterProbe;
+  /** Why the MASTER probe could not run: one fader movement on the panel makes the console report the MASTER then. */
+  masterProbeReason?: string | null;
+}
+
+export const STATE_AT_CONNECT_PHASES: readonly StateAtConnectPhase[] = ['idle', 'waiting', 'requesting', 'downloading', 'done', 'notSent'];
+export const MASTER_PROBES: readonly MasterProbe[] = ['pending', 'notNeeded', 'sent', 'notPossible'];
 
 /** The bank the console's physical faders control: channels 1-24, channels 25-48 or the memories of the selected page. */
 export type FaderBank = 'channels1To24' | 'channels25To48' | 'memories';

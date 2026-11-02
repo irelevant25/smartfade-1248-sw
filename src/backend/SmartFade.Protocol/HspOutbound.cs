@@ -205,6 +205,39 @@ public enum ClearedKey : byte
 }
 
 /// <summary>
+/// The System (id 39) bodies whitelisted by safety check SC-4 (2026-11-02, evening, class E): SmartSoft's start-up pair,
+/// verbatim, and nothing else. Each member is the body's first byte a of `[a][00][00]` (b = c = 0, F181) and stands for one
+/// exact payload (<see cref="HspOutbound.SystemMessage"/>): `00 03 00 27 09 00 00` and `01 03 00 27 07 00 00`, pseq 0 and 1,
+/// the session's first two data writes, as in all 20 SmartSoft sessions of the ten captures E2 to E9e (F181, VERIFIED as
+/// SmartSoft's behaviour: 40 of 40 payloads byte-identical). Every other System value SmartSoft's code can put on the wire
+/// is unrepresentable here: the show-upload framing 0, 1, 6 and the erase commands 11, 12, 13, 14, 16 (F121: never), the
+/// page select 10 (no clearance) (S11.17 row 7; commands.md "The System message (ID 39)"): a wrong first body byte would
+/// select one of them, so the encoder knows these two bytes only. What 0x09 and 0x07 mean to the console's firmware is
+/// UNKNOWN beyond the listings that follow them (F182; the causal link INFERRED, H30); ConsoleLink (evidence class 5) calls
+/// them "version query" and "catalog request". SC-4 is a conditional GO: nothing is sent before the reviewer's pass and the
+/// owner's go for E13, and then only behind `Device:Usb:StartupPairDate`.
+/// </summary>
+[Evidence(EvidenceStatus.Verified, "F181, F182", "SC-4 class E: SmartSoft's start-up pair, 40 of 40 payloads byte-identical in 20 sessions, and the console's answers to it (the ConsoleVersion listing, the download) as SmartSoft's and the console's behaviour; the meaning of the two bodies UNKNOWN (S11.17, H30); nothing sent before SC-4's review and E13")]
+public enum ClearedSystemMessage : byte
+{
+    /// <summary>
+    /// Body `09 00 00`, payload `00 03 00 27 09 00 00` (pseq 0): SmartSoft's first data write of every session, after reply
+    /// header #40 (F181; S11.17 rows 1–2: countdown 1, `0x10018232`). The console lists ConsoleVersion at the next free reply,
+    /// 16.2–21.9 ms after it, and delivers `0C 33 2E 30 2E 32 2E 39 2E 30 2E 34 33` ("3.0.2.9.0.43") when fetched (F182 a,
+    /// VERIFIED, 20 of 20; F59). E2 seq 105 / 106 is SmartSoft's first one on the bus.
+    /// </summary>
+    ListVersion = 0x09,
+
+    /// <summary>
+    /// Body `07 00 00`, payload `01 03 00 27 07 00 00` (pseq 1): SmartSoft's second data write, after reply header #79 and only
+    /// when the received ConsoleVersion equals its own "3.0.2.9.0.43" (F181; S11.17 rows 2–3, `0x10018269`, INFERRED high). The
+    /// console lists its whole state and show at the next free reply: 157–161 records in a fixed order, payloads of 792–812
+    /// bytes, fetched in 7.2–7.6 s, no other list and no write during it (F182 b–e, VERIFIED, 20 of 20). E2 seq 188 / 189.
+    /// </summary>
+    ListShow = 0x07,
+}
+
+/// <summary>
 /// The physical faders and bumps by number, 1–24, as the whitelist names them: one explicit row per physical control,
 /// the table F171 and F174 found (index and code 0x00–0x17 = fader and bump 1–24 in every bank and mode; VERIFIED for
 /// every fader in three banks and every bump in memory mode, the channel bumps on SC-5 addendum 2's rule). Nothing here
@@ -292,14 +325,26 @@ public static class PhysicalControls
 /// and SC-5 (2026-11-02) are conditional GOs for building and reviewing this encoder: they clear no byte for sending until
 /// their conditions are met and the owner gives the go for the session (E11, E11b), and only a session created with a
 /// write gate (live control, behind `Device:Usb:LiveControlDate`) ever asks for these.</item>
+/// <item>SmartSoft's start-up pair, System `09 00 00` then `07 00 00`, as the two exact payloads of F181 (SC-4, 2026-11-02,
+/// evening, class E: a conditional GO to build and review; nothing sent before the review and the owner's go for E13), built
+/// only from <see cref="ClearedSystemMessage"/>; only a session created with the pair's gate (behind
+/// `Device:Usb:StartupPairDate`) asks for them, once, as its first two data writes.</item>
 /// </list>
-/// No System write, no object write (ChannelText, Memory), no record key, no CLEAR, STACK, PAUSE or NEXT and no index or
-/// code outside the whitelist can be encoded here (SC-2 condition 8, SC-5 condition 6; classes B2, C, D, E NO-GO, F never).
+/// No other System value (the upload framing 0 / 1 / 6, the page select 10, the erase commands 11–16), no object write
+/// (ChannelText, Memory), no record key, no CLEAR, STACK, PAUSE or NEXT and no index or code outside the whitelist can be
+/// encoded here (SC-2 condition 8, SC-5 condition 6, SC-4 clause 6; classes B2, C, D NO-GO, F never).
 /// </summary>
 [Evidence(EvidenceStatus.Verified, "F52, F53, F57", "cleared by SC-1 (2026-10-30) for a read-only session: poll and listed fetch")]
 [Evidence(EvidenceStatus.Verified, "F131, F132, F133, F171, F174, F175", "SC-2 (2026-10-31) classes A and B1, SC-5 (2026-11-02) classes A2-A4, B3-B5: conditional GO to build and review; nothing sent before the review and the owner's go")]
+[Evidence(EvidenceStatus.Verified, "F181, F182", "SC-4 (2026-11-02, evening) class E: SmartSoft's start-up pair verbatim, once per session; conditional GO to build and review; nothing sent before the review and the owner's go for E13")]
 public static class HspOutbound
 {
+    /// <summary>Object id of System (F58, F181; id → name S11.6).</summary>
+    private const byte SystemId = (byte)HspObjectId.System;
+
+    /// <summary>The System body's length: `[a][b][c]`, 3 bytes (F181; S11.17 row 9).</summary>
+    private const int SystemBodyLength = 3;
+
     /// <summary>Object id of ConsoleEvent, the live-control message (F131; id → name S11.6).</summary>
     private const byte ConsoleEventId = (byte)HspObjectId.ConsoleEvent;
 
@@ -335,21 +380,80 @@ public static class HspOutbound
     }
 
     /// <summary>
-    /// The Data header of a whitelisted ConsoleEvent: w0 = 1, w1 = the payload's length, w2..w5 = the stale words, the
-    /// same words a poll would carry at that point (F52; every Data header of E9 to E9e). Produced only for a payload that
-    /// <see cref="IsClearedConsoleEvent"/> accepts, so no Data header can announce anything else.
-    /// SmartSoft's first one, E9 seq 9664: `01 00 08 00 00 00 00 00 00 00 00 00`.
+    /// The Data header of a whitelisted write: w0 = 1, w1 = the payload's length, w2..w5 = the stale words, the same words a
+    /// poll would carry at that point (F52; every Data header of E9 to E9e, and SmartSoft's 40 start-up headers, F181: w2 = 0
+    /// in 36 and 0x11, the last reply header's PlaybackInfo id, in 4, answered alike). Produced only for a payload that
+    /// <see cref="IsClearedConsoleEvent"/> or <see cref="IsClearedSystemMessage"/> accepts, so no Data header can announce
+    /// anything else. SmartSoft's first ConsoleEvent header, E9 seq 9664: `01 00 08 00 00 00 00 00 00 00 00 00`; its first
+    /// System header, E2 seq 105: `01 00 07 00 00 00 00 00 00 00 00 00`.
     /// </summary>
-    public static byte[] DataHeader(ReadOnlySpan<byte> consoleEventPayload, ushort w2, ushort w3, ushort w4, ushort w5)
+    public static byte[] DataHeader(ReadOnlySpan<byte> payload, ushort w2, ushort w3, ushort w4, ushort w5)
     {
-        if (!IsClearedConsoleEvent(consoleEventPayload))
+        if (!IsClearedConsoleEvent(payload) && !IsClearedSystemMessage(payload))
         {
             throw new ArgumentException(
-                $"A Data header is produced only for a whitelisted ConsoleEvent payload (SC-2 condition 1, SC-5 condition 3), not for {Convert.ToHexString(consoleEventPayload)}.",
-                nameof(consoleEventPayload));
+                $"A Data header is produced only for a whitelisted ConsoleEvent payload (SC-2 condition 1, SC-5 condition 3) or one of SC-4's two System payloads, not for {Convert.ToHexString(payload)}.",
+                nameof(payload));
         }
 
-        return Header((ushort)HspMessageType.Data, (ushort)consoleEventPayload.Length, w2, w3, w4, w5);
+        return Header((ushort)HspMessageType.Data, (ushort)payload.Length, w2, w3, w4, w5);
+    }
+
+    /// <summary>
+    /// One of SmartSoft's two start-up System payloads, byte for byte (F181): `00 03 00 27 09 00 00` for
+    /// <see cref="ClearedSystemMessage.ListVersion"/>, `01 03 00 27 07 00 00` for <see cref="ClearedSystemMessage.ListShow"/>
+    /// (`[pseq][u16 LE 3][0x27][a][00][00]`, F54, S11.17 row 9). <paramref name="sequence"/> is the session's counter (F131:
+    /// 0x00 at its first data payload, +1 per payload) and must be the pseq SmartSoft's pair always had, 0 for `09` and 1 for
+    /// `07`: the pair is the session's first two data writes or it is not sent (SC-4 clauses 1 and 6). Any other value, or a
+    /// member cast from another byte, is refused: the upload, page-select and erase values (S11.17 row 7) are unrepresentable.
+    /// </summary>
+    public static byte[] SystemMessage(byte sequence, ClearedSystemMessage message)
+    {
+        var pseq = message switch
+        {
+            ClearedSystemMessage.ListVersion => (byte)0x00,
+            ClearedSystemMessage.ListShow => (byte)0x01,
+            _ => throw new ArgumentOutOfRangeException(nameof(message), message, "Not one of SC-4's two System bodies (09 00 00, 07 00 00); every other System value is unrepresentable (S11.17 row 7, F121)."),
+        };
+
+        if (sequence != pseq)
+        {
+            throw new ArgumentOutOfRangeException(
+                nameof(sequence),
+                sequence,
+                $"System {(byte)message:X2} 00 00 goes with pseq {pseq}, as the session's {(pseq == 0 ? "first" : "second")} data write (F181: 40 of 40 payloads); the pair is first or not at all (SC-4 clause 6).");
+        }
+
+        var payload = new byte[HspOutboundPayload.HeaderSize + SystemBodyLength];
+        payload[0] = pseq;
+        BinaryPrimitives.WriteUInt16LittleEndian(payload.AsSpan(1), SystemBodyLength);
+        payload[3] = SystemId;
+        payload[4] = (byte)message;
+        return payload;   // body bytes b and c stay 0x00 (F181)
+    }
+
+    /// <summary>
+    /// True for exactly the two payloads <see cref="SystemMessage"/> produces, pseq included (`00 03 00 27 09 00 00`,
+    /// `01 03 00 27 07 00 00`, F181), false for every other payload: another first body byte (the upload framing, the page
+    /// select, an erase), a b or c other than 0, another pseq, another length or id.
+    /// </summary>
+    public static bool IsClearedSystemMessage(ReadOnlySpan<byte> payload)
+    {
+        if (payload.Length != HspOutboundPayload.HeaderSize + SystemBodyLength
+            || BinaryPrimitives.ReadUInt16LittleEndian(payload[1..]) != SystemBodyLength
+            || payload[3] != SystemId
+            || payload[5] != 0x00
+            || payload[6] != 0x00)
+        {
+            return false;
+        }
+
+        return (payload[4], payload[0]) switch
+        {
+            ((byte)ClearedSystemMessage.ListVersion, 0x00) => true,
+            ((byte)ClearedSystemMessage.ListShow, 0x01) => true,
+            _ => false,
+        };
     }
 
     /// <summary>

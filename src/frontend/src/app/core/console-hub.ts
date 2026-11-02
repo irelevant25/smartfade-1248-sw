@@ -9,7 +9,9 @@ import type {
   MastersDto,
   MemoryStateDto,
   OutputsChangedDto,
+  StateAtConnectDto,
 } from './console.models';
+import type { ShowFileDto } from './show-file.models';
 
 /** The hub of the backend (docs/api.md). The dev server proxies it to the backend. */
 export const CONSOLE_HUB_URL = '/hubs/console';
@@ -24,6 +26,10 @@ export interface ConsoleHubEvents {
   outputsChanged: [update: OutputsChangedDto];
   lcdChanged: [lines: string[]];
   crossfaderChanged: [crossfader: CrossfaderDto];
+  /** The real console's start-up pair and download moved on (SC-4). */
+  stateAtConnectChanged: [state: StateAtConnectDto];
+  /** The show the real console delivered in its download at Connect (SC-4), in the editor's shape. */
+  consoleShowChanged: [show: ShowFileDto];
   errorOccurred: [error: ErrorDto];
 }
 
