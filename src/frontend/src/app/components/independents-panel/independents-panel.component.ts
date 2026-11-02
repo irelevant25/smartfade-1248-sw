@@ -25,6 +25,8 @@ export class IndependentsPanelComponent {
   protected readonly writable = (control: string) => this._state.writable(control);
   protected readonly observedOnly = computed(() => this._state.mode() === 'hardware');
   protected readonly unknown = computed(() => this.observedOnly() && !this._state.independentsReported());
+  /** On a real console the keys mirror the reported IND state (F115): read-only, but lit like the record keys. */
+  protected readonly ledMode = computed(() => this.observedOnly() && this._state.independentsReported());
 
   protected toggle(number: 1 | 2): void {
     const on = number === 1 ? this.masters().independent1 : this.masters().independent2;

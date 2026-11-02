@@ -58,8 +58,14 @@
   box-shadow: 0 0 14px rgba(var(--key-rgb), 0.6);
 }
 
-// A state the real console has not reported: the key is drawn, but its light means nothing.
+// A state the real console has not reported: the key is drawn dashed, its light means nothing (the opacity is the shared
+// inactive rule's, not doubled).
 .independents__key--unknown {
   border-style: dashed;
-  opacity: 0.55;
+}
+
+// A key mirroring the console's reported IND state (F115) is read-only but keeps its light, like the record keys.
+.independents__key--led:disabled {
+  opacity: 1;
+  cursor: default;
 }

@@ -34,7 +34,23 @@ export class MastersPanelComponent {
    * what it rests on, and says "not reported" until that part arrived.
    */
   protected readonly observedOnly = computed(() => this._state.mode() === 'hardware');
-  protected readonly blackoutUnknown = computed(() => this.observedOnly() && !this.mastersReported());
+  /**
+   * SOLO and BLACKOUT are LED readings (blocks 52 / 53, F100 / F114) that a real console delivers with LedStatus, before
+   * its first FaderInfo: once the key LEDs are known the two keys mirror them like the record keys do (lit, full opacity,
+   * read-only), and only before that are they unknown (dashed). The simulator reports them with its masters.
+   */
+  protected readonly ledMode = computed(() => this._state.keys() !== undefined);
+  protected readonly soloUnknown = computed(() => this.observedOnly() && !this.mastersReported() && !this.ledMode());
+  protected readonly blackoutUnknown = computed(() => this.observedOnly() && !this.mastersReported() && !this.ledMode());
+  protected readonly soloOn = computed(() => {
+    const keys = this._state.keys();
+    return keys ? keys.solo.light === 'full' : this.masters().solo;
+  });
+  /** BLACKOUT's LED is steady blue while blackout is on (F114); its blink means the MASTER is below full (F85), not blackout. */
+  protected readonly blackoutOn = computed(() => {
+    const keys = this._state.keys();
+    return keys ? keys.blackout.light === 'full' && !keys.blackout.blinking : this.masters().blackout;
+  });
   /**
    * "As soon as the Master is faded under 100% the Blackout button will blink" (F5). The simulator
    * follows the manual; the real console reports its BLACKOUT LED, whose blink (F85) is shown as
@@ -59,10 +75,10 @@ export class MastersPanelComponent {
   }
 
   protected toggleBlackout(): void {
-    this._channels.setBlackout(!this.masters().blackout);
+    this._channels.setBlackout(!this.blackoutOn());
   }
 
   protected toggleSolo(): void {
-    this._channels.setSolo(!this.masters().solo);
+    this._channels.setSolo(!this.soloOn());
   }
 }

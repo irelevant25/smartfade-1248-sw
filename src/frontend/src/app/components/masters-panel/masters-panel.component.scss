@@ -19,8 +19,9 @@
   min-height: 0;
 }
 
-// Until the console reported the masters, the faders and keys show placeholders: dimmed and said so.
-.masters--unreported .masters__columns {
+// Until the console reported the masters, the two faders show placeholders: dimmed and said so. The keys are not dimmed
+// twice: their look comes from the shared inactive rule, or from their LED once the console reported it.
+.masters--unreported sf-channel-fader {
   opacity: 0.45;
 }
 
@@ -30,10 +31,17 @@
   color: var(--sf-warn);
 }
 
-// A state the real console never reports (observed only): the key is drawn, but its light means nothing.
+// A state the real console has not reported yet: the key is drawn dashed, its light means nothing (the opacity is the
+// shared inactive rule's, not doubled).
 .masters__toggle--unknown {
   border-style: dashed;
-  opacity: 0.55;
+}
+
+// A key mirroring the console's LED (SOLO block 52, BLACKOUT block 53) is read-only but keeps its light, like the
+// record keys.
+.masters__toggle--led:disabled {
+  opacity: 1;
+  cursor: default;
 }
 
 .masters__column {

@@ -256,6 +256,49 @@ describe('MastersPanelComponent', () => {
       expect(blackout().classList.contains('masters__blackout--blink')).toBe(true);
     });
 
+    it('mirrors the SOLO and BLACKOUT LEDs as soon as the console reported its keys, even before its masters', () => {
+      const led = (light: 'off' | 'dim' | 'full', blinking = false) => ({ light, blinking });
+      const hardware = { status: 'connected', mode: 'hardware', deviceDescription: 'SmartFade 1248, read-only' } as const;
+      state.applyConsoleStateChanged(createSampleState({ supportedCommands: [], connection: hardware, mastersReported: false }));
+      fixture.detectChanges();
+      // nothing known yet: dashed, no pressed state
+      expect(solo().classList.contains('masters__toggle--unknown')).toBe(true);
+      expect(blackout().classList.contains('masters__toggle--unknown')).toBe(true);
+      expect(solo().getAttribute('aria-pressed')).toBeNull();
+
+      state.applyConsoleStateChanged(
+        createSampleState({
+          supportedCommands: [],
+          connection: hardware,
+          mastersReported: false,
+          keys: { stack: led('off'), clear: led('off'), copy: led('off'), recSeq: led('off'), magic: led('off'), recMem: led('off'), editMem: led('off'), blackout: led('full'), solo: led('full') },
+        }),
+      );
+      fixture.detectChanges();
+      // the LEDs are known: the keys mirror them, lit, read-only, not dashed
+      expect(solo().classList.contains('masters__toggle--unknown')).toBe(false);
+      expect(solo().classList.contains('masters__toggle--led')).toBe(true);
+      expect(solo().classList.contains('masters__solo--on')).toBe(true);
+      expect(solo().getAttribute('aria-pressed')).toBe('true');
+      expect(blackout().classList.contains('masters__toggle--led')).toBe(true);
+      expect(blackout().classList.contains('masters__blackout--on')).toBe(true);
+      expect(solo().disabled).toBe(true);
+
+      // the MASTER-below-full blink of block 53 is not blackout
+      state.applyConsoleStateChanged(
+        createSampleState({
+          supportedCommands: [],
+          connection: hardware,
+          mastersReported: false,
+          keys: { stack: led('off'), clear: led('off'), copy: led('off'), recSeq: led('off'), magic: led('off'), recMem: led('off'), editMem: led('off'), blackout: led('full', true), solo: led('off') },
+        }),
+      );
+      fixture.detectChanges();
+      expect(blackout().classList.contains('masters__blackout--on')).toBe(false);
+      expect(blackout().classList.contains('masters__blackout--blink')).toBe(true);
+      expect(solo().classList.contains('masters__solo--on')).toBe(false);
+    });
+
     it('marks the masters as placeholders until the console reported them', () => {
       state.applyConsoleStateChanged(createSampleState({ mastersReported: false }));
       fixture.detectChanges();

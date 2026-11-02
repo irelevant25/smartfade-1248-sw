@@ -13,13 +13,17 @@
       <button
         type="button"
         class="masters__toggle masters__solo"
-        [class.masters__solo--on]="masters().solo"
-        [attr.aria-pressed]="masters().solo"
+        [class.masters__solo--on]="soloOn()"
+        [class.masters__toggle--unknown]="soloUnknown()"
+        [class.masters__toggle--led]="ledMode()"
+        [attr.aria-pressed]="soloUnknown() ? null : soloOn()"
         [disabled]="!enabled() || !supports('setSolo') || !writable('solo')"
         [attr.title]="
-          observedOnly()
-            ? 'SOLO as read from its LED (an inferred reading)'
-            : 'Bump mode: off = pile-on, on = solo'
+          soloUnknown()
+            ? 'Not reported by the console yet'
+            : observedOnly()
+              ? 'SOLO as read from its LED (an inferred reading)'
+              : 'Bump mode: off = pile-on, on = solo'
         "
         (click)="toggleSolo()"
       >
@@ -38,10 +42,11 @@
       <button
         type="button"
         class="masters__toggle masters__blackout"
-        [class.masters__blackout--on]="masters().blackout"
+        [class.masters__blackout--on]="blackoutOn()"
         [class.masters__blackout--blink]="blackoutBlinks()"
         [class.masters__toggle--unknown]="blackoutUnknown()"
-        [attr.aria-pressed]="blackoutUnknown() ? null : masters().blackout"
+        [class.masters__toggle--led]="ledMode()"
+        [attr.aria-pressed]="blackoutUnknown() ? null : blackoutOn()"
         [disabled]="!enabled() || !supports('setBlackout') || !writable('blackout')"
         [attr.title]="
           blackoutUnknown()
