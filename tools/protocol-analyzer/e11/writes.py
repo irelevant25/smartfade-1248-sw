@@ -39,7 +39,10 @@ for i in writes:
     prev_out = next(frames[j] for j in range(i - 1, -1, -1) if frames[j]["dir"] == "out")
     next_out = next(frames[j] for j in range(i + 2, len(frames)) if frames[j]["dir"] == "out")
     print(f"\n=== write seq {h['seq']} header submit t={h.get('tSubmit', h['t']):.6f} ({h.get('ts')}) hdr={hdr.hex(' ')}")
-    if pb[4] == 1 and len(pb) == 7:
+    if pb[3] != 20:
+        # another Data payload (SmartSoft's System (39) pair, a whole-object write): shown, not decoded here
+        print(f"  payload {pb.hex(' ')} : pseq={pb[0]} len16={u16(pb, 1)} id={pb[3]} ({IDS.get(pb[3], '?')}) body={pb[4:].hex(' ')}")
+    elif pb[4] == 1 and len(pb) == 7:
         # kind 1, key event (E9, E9b; H82): [kind=1][code][state], 1 = press, 0 = release; 7-byte payload
         print(f"  payload {pb.hex(' ')} : pseq={pb[0]} len16={u16(pb, 1)} id={pb[3]} ({IDS.get(pb[3])}) body={pb[4:].hex(' ')}"
               f"  (kind=1 key, code=0x{pb[5]:02X} ({KEYS.get(pb[5], '?')}), {'press' if pb[6] == 1 else 'release' if pb[6] == 0 else pb[6]})")
