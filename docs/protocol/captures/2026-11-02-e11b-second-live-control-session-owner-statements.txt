@@ -1,0 +1,37 @@
+Owner statements for E11b (2026-11-02), quoted from the chat with the assistant and from the guide's log; the times are the
+guide's PC clock (local, CET) where the log has them, else "chat".
+
+Before the session (chat, 2026-11-02, early afternoon, the SC-5 review's decisions):
+- On the hold overrun with a slow console (review MINOR 2): "A hold longer than 3 s with a slow console: every reply capture
+  came within 12ms as you recommend." (accepted; recorded in the SC-5 review table.)
+- On a bump held on the panel while the UI moves the same fader (review MAJOR 1 (ii)): "if I press the bump on panel, it
+  should no be able to press it again via UI I guess. I am gonna be honest I am not 100% sure if I understand this pointy
+  correctly."; after the explanation: "Whaaaat? There is no event like pressing the bump under the fader? That shocked me. I
+  am honestly not sure about the decision. I will leave that on you and we will se in the future if its need a different
+  approach/solution." (the decision was then taken by the assistant after the capture analysis, F178; the owner acknowledged
+  it at the gate, Acceptance 6, 14:55:15.)
+
+During the session (the guide's log, docs/protocol/captures/2026-11-02-e11b-actions.txt):
+- 14:53:48-14:55:28: every gate question answered y (the review closed; Acceptances 1-7; the rig; IND 1 / 2 and MASTER opted in).
+- 14:56:51: backup SHOW30.ASC; backend commit 4aa02b2; Windows 10.0.26300.0; firmware 3.0.2.9.0.43; cable "the A-B cable
+  straight into the PC's rear port"; power cycled before the session: y.
+- 14:58:49: before Connect nothing but the bar's CONNECT button was enabled ("ui enabled controls = n").
+- 15:00:42: idle minute after Connect: nothing changed by itself ("idle observation = n").
+- 15:02:25: after W0 (the five panel actions) the UI showed the console's state ("w0 console state reported = y").
+- 15:03:02: W1, channel fader 1 followed ("h66 channel 1 followed = y"); 15:03:31 "w1 result = followed".
+- 15:04:23: W2 "followed". 15:08:05: W3 (the automatic switch to bank 25-48) "y (works as expected)"; 15:08:50 "followed".
+- 15:09:40: W4 (the switch back) "followed".
+- 15:11:54: W5 (memory fader 3, the switch to memory mode): "well, the memories still had the "Dimmed memories were not
+  delivered by the console in this session" so on console I switched to MEMORIES so I can change the MEMORIES in the UI and
+  then on console I swithced back to 1-24 and then go to the step, but other than that, it followed" (a recorded deviation:
+  two panel key presses between W4 and W5, before the step; the step itself then ran with the automatic switch).
+  15:12:32 "w5 result = followed".
+- 15:13:07: W6 (memory bump 1 held) "followed". 15:13:36: W7 (channel bump 7 held, the switch back) "followed".
+- 15:14:01 / 15:14:27: W8 IND 1 and IND 2 "followed". 15:14:52: W9 (the bank keys from the UI) "followed".
+- 15:15:35: W10 (MASTER to half and back) "followed".
+- 15:16:32: end-of-session report: no message about a held key, a release not sent or an incomplete write ("n").
+- 15:17:13: end positions: "everything as it was when I started this session".
+- 15:17:28: after-session save SHOW31.ASC.
+
+After the session (chat): "session done". SHOW30.ASC and SHOW31.ASC were copied into smartfade-sd-card-backup/ by the owner
+before the analysis started (both 15 944 bytes, byte-identical).

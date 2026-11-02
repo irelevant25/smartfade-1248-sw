@@ -383,6 +383,20 @@ never-seen two-list split, worded for both directions; the hardening a follow-up
 clears nothing for sending.** **What remains is the owner's:** the SD backup, USBPcap before the Zadig bind, the versions, the seven
 acceptances and the rig answer at the E11b gate, no SD save or load while connected, and the go on the day; then E11b with
 `tools/usb-probe/e11b-guided-session.ps1`, its record, and the SC-5 review table annotated with the outcome.
+**E11b done 2026-11-02, 14:53–15:17** (record `docs/protocol/captures/2026-11-02-e11b-second-live-control-session.md` with the
+console-only split, the normalized bus, the backend's log, the guide's log and the owner's statements): the backend at 4aa02b2 with
+live control on, every acceptance answered y, the console power-cycled before, backup `SHOW30.ASC`; W0–W10 run to the end and
+**117 ConsoleEvents sent** (93 fader events, 12 press / release pairs), each 25–51 ms after a poll's reply (SC-2's 62 ms bound 117 of
+117), and **the console followed every control**: the automatic bank switch four times for a control and twice from the UI's keys
+(the bank key as a tap, ConsoleStatus and the LEDs reported, the switch done 129–176 ms after the key, the matching event at the
+reported level, then the drag applied to the new bank's content: channel 30 in bank 25-48, memory fader 3 in memory mode; **F179
+OBSERVED once**), the five matching events at 0x00 listing nothing (**F180 OBSERVED once**), memory bump 1 and bump 7 held 2.48 and
+2.26 s and released by the UI, IND 1 / IND 2 (DMX 47 for IND 2), the MASTER to half and back; 0 framing errors, the bus = the
+backend's log byte for byte (51 357 transfers), `SHOW31.ASC` = `SHOW30.ASC`. F167, F168, F169 VERIFIED in part (two sessions of
+our host), F171 / F174 / F175 / F115 annotated for our host, H66 CONFIRMED for SC-5's classes. Deviation (owner): two panel presses
+(FADERS MEMS, FADERS 1-24) before W5 because the UI's memory hint ("Dimmed memories were not delivered") read as "not usable";
+no data changed by it; a UI follow-up. **E11b clears nothing; SC-5's decisions stand.** Next: the follow-ups (the memory hint, the
+optional blackout hardening), and any later live session with USBPcap makes F179 / F180 VERIFIED.
 
 ## Commands
 

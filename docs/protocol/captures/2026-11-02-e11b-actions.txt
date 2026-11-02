@@ -1,0 +1,101 @@
+2026-11-02 14:53:20.185 START guided E11b session (PC clock, local time)
+2026-11-02 14:53:20.190 repository: F:\Repositories\smartfade-1248-sw
+2026-11-02 14:53:48.918 owner answer: sc5 review closed = y
+2026-11-02 14:54:05.353 owner answer: accept automatic switch = y
+2026-11-02 14:54:40.077 owner answer: accept matching rule = y
+2026-11-02 14:54:47.749 owner answer: accept bounded hold = y
+2026-11-02 14:54:50.650 owner answer: accept last mover and master = y
+2026-11-02 14:55:08.920 owner answer: accept addendum 3 channel bump 1 = y
+2026-11-02 14:55:15.646 owner answer: accept panel bump residual risk = y
+2026-11-02 14:55:17.432 owner answer: accept hold overrun with a slow console = y
+2026-11-02 14:55:21.278 owner answer: rig decision = y
+2026-11-02 14:55:27.353 owner answer: opt independents = y
+2026-11-02 14:55:28.912 owner answer: opt master = y
+2026-11-02 14:56:51.807 backup taken: SHOW30.ASC (copy it into smartfade-sd-card-backup/ after the session)
+2026-11-02 14:56:51.843 backend commit: 4aa02b2
+2026-11-02 14:56:51.847 windows build: 10.0.26300.0
+2026-11-02 14:56:56.907 owner answer: firmware = 3.0.2.9.0.43
+2026-11-02 14:57:01.511 owner answer: cable = the A-B cable straight into the PC's rear port
+2026-11-02 14:57:04.371 owner answer: power cycled = y
+2026-11-02 14:57:04.374 usbpcap file name suggested to the owner: e11b-20261102-1457.pcap
+2026-11-02 14:57:16.589 usbpcap running (owner)
+2026-11-02 14:57:17.744 interface 1 driver service before the bind: ETCHSP
+2026-11-02 14:57:42.116 zadig bind start
+2026-11-02 14:57:42.895 interface 1 driver service after the bind: WinUSB
+2026-11-02 14:57:42.945 backend started by the script: dotnet run --project src/backend/SmartFade.Api -- --Device:Mode=Usb --Device:Usb:ConfirmDate=2026-11-02 --Device:Usb:LiveControlDate=2026-11-02
+2026-11-02 14:57:42.962 ui dev server started by the script: npm start in src/frontend
+2026-11-02 14:58:10.539 ui ready, hardware and live control badges (owner)
+2026-11-02 14:58:49.907 owner answer: ui enabled controls = n
+2026-11-02 14:59:07.847 starting position set (owner)
+2026-11-02 14:59:17.706 connect pressed
+2026-11-02 14:59:26.551 connected (owner)
+2026-11-02 15:00:26.569 wait 60 s done (idle after connect: the read side as in E8, nothing is sent but the poll and the listed fetch)
+2026-11-02 15:00:42.175 owner answer: idle observation = n
+2026-11-02 15:01:04.028 w0 faders mems on panel
+2026-11-02 15:01:09.037 wait 5 s done (w0 memory mode)
+2026-11-02 15:01:18.718 w0 faders 1-24 on panel
+2026-11-02 15:01:23.732 wait 5 s done (w0 channel mode)
+2026-11-02 15:01:28.015 w0 solo on off on panel
+2026-11-02 15:01:33.021 wait 5 s done (w0 solo toggled)
+2026-11-02 15:01:36.966 w0 master wiggle on panel
+2026-11-02 15:01:41.975 wait 5 s done (w0 master back at full)
+2026-11-02 15:01:59.425 w0 channel fader 1 wiggle on panel
+2026-11-02 15:02:09.435 wait 10 s done (w0 channel levels listed)
+2026-11-02 15:02:25.695 owner answer: w0 console state reported = y
+2026-11-02 15:02:42.357 w1 channel fader 1 to 20
+2026-11-02 15:02:52.367 wait 10 s done (after w1 up)
+2026-11-02 15:03:02.848 owner answer: h66 channel 1 followed = y
+2026-11-02 15:03:06.085 w1 channel fader 1 to zero
+2026-11-02 15:03:16.099 wait 10 s done (after w1 down)
+2026-11-02 15:03:31.060 owner answer: w1 result = followed
+2026-11-02 15:03:36.668 w2 channel fader 5 to 20
+2026-11-02 15:03:46.681 wait 10 s done (after w2 up)
+2026-11-02 15:03:50.532 w2 channel fader 5 to zero
+2026-11-02 15:04:00.536 wait 10 s done (after w2 down)
+2026-11-02 15:04:23.345 owner answer: w2 result = followed
+2026-11-02 15:07:24.105 w3 channel fader 30 to 20 (automatic switch to 25-48)
+2026-11-02 15:07:34.114 wait 10 s done (after w3 up)
+2026-11-02 15:08:05.632 owner answer: w3 switch observation = y (works as expected)
+2026-11-02 15:08:09.553 w3 channel fader 30 to zero
+2026-11-02 15:08:19.561 wait 10 s done (after w3 down)
+2026-11-02 15:08:50.874 owner answer: w3 result = followed
+2026-11-02 15:08:59.453 w4 channel fader 2 to 20 (automatic switch to 1-24)
+2026-11-02 15:09:09.463 wait 10 s done (after w4 up)
+2026-11-02 15:09:21.129 w4 channel fader 2 to zero
+2026-11-02 15:09:31.134 wait 10 s done (after w4 down)
+2026-11-02 15:09:40.534 owner answer: w4 result = followed
+2026-11-02 15:10:14.956 w5 memory fader 3 to 20 (automatic switch to mems)
+2026-11-02 15:10:24.972 wait 10 s done (after w5 up)
+2026-11-02 15:11:54.262 owner answer: w5 switch observation = well, the memories still had the "Dimmed memories were not delivered by the console in this session" so on console I switched to MEMORIES so I can change the MEMORIES in the UI and then on console I swithced back to 1-24 and then go to the step, but other than that, it followed
+2026-11-02 15:11:57.382 w5 memory fader 3 to zero
+2026-11-02 15:12:07.386 wait 10 s done (after w5 down)
+2026-11-02 15:12:32.852 owner answer: w5 result = followed
+2026-11-02 15:12:51.685 w6 memory bump 1 held 2 s
+2026-11-02 15:13:01.696 wait 10 s done (after w6)
+2026-11-02 15:13:07.100 owner answer: w6 result = followed
+2026-11-02 15:13:17.676 w7 channel bump 7 held 2 s (automatic switch to 1-24)
+2026-11-02 15:13:27.684 wait 10 s done (after w7)
+2026-11-02 15:13:36.321 owner answer: w7 result = followed
+2026-11-02 15:13:47.611 w8 ind 1 on off
+2026-11-02 15:13:57.626 wait 10 s done (after w8 ind 1)
+2026-11-02 15:14:01.540 owner answer: w8 ind 1 result = followed
+2026-11-02 15:14:06.378 w8 ind 2 on off
+2026-11-02 15:14:16.391 wait 10 s done (after w8 ind 2)
+2026-11-02 15:14:27.141 owner answer: w8 ind 2 result = followed
+2026-11-02 15:14:40.145 w9 faders 25-48 and 1-24 from ui
+2026-11-02 15:14:50.157 wait 10 s done (after w9)
+2026-11-02 15:14:52.990 owner answer: w9 result = followed
+2026-11-02 15:15:08.793 w10 master to half
+2026-11-02 15:15:18.809 wait 10 s done (after w10 half)
+2026-11-02 15:15:21.953 w10 master to full
+2026-11-02 15:15:31.955 wait 10 s done (after w10 full)
+2026-11-02 15:15:35.789 owner answer: w10 result = followed
+2026-11-02 15:15:35.790 E11b controls covered: channel faders 1, 5, 30 (switch to 25-48), 2 (switch back), memory fader 3 (switch to MEMS), memory bump 1 held, channel bump 7 held (switch back), IND 1 / 2 (optional), the bank keys from the UI, MASTER (optional)
+2026-11-02 15:15:45.808 wait 10 s done (end of actions, an idle point)
+2026-11-02 15:15:48.822 disconnect pressed
+2026-11-02 15:15:56.676 disconnected (owner)
+2026-11-02 15:16:32.568 owner answer: end-of-session report = n
+2026-11-02 15:16:50.615 backend and usbpcap stopped (owner)
+2026-11-02 15:17:13.969 owner answer: end positions = everything as it was when I started this session
+2026-11-02 15:17:28.415 after-session save: SHOW31.ASC (copy it into smartfade-sd-card-backup/ with the backup)
+2026-11-02 15:17:28.416 END guided E11b session

@@ -985,6 +985,18 @@ answer at the gate, no SD save or load while connected, and the go on the day.
   IND 1 / IND 2 from our host (OBSERVED once if the console follows; VERIFIED needs a second session of ours). **E11b clears nothing by
   itself:** its outcome is recorded in its capture record and here, and SC-5's decisions stand or are annotated.
 
+**Run 2026-11-02, 14:53–15:17 ([E11b record](captures/2026-11-02-e11b-second-live-control-session.md)):** the backend and the guide at 4aa02b2, every acceptance answered y,
+the console power-cycled before, backup `SHOW30.ASC`, USBPcap before the Zadig bind; W0–W10 to the end, **117 ConsoleEvents** (93 fader
+events, 12 press / release pairs) each 25–51 ms after a poll's reply (the 62 ms bound 117 of 117), and **the console followed every
+control**: the automatic switch four times for a control and twice from the UI's keys (ConsoleStatus and the LEDs reported, the switch
+done 129–176 ms after the key: condition 1 (c)'s 2 s bound with a wide margin; the matching event at the reported level, 0x00 in every
+case, listing nothing; the drag applied to the new bank's content), the two holds (2.48 and 2.26 s, released by the UI; no bound release,
+no overrun), IND 1 / IND 2, the bank keys, the MASTER; 0 framing errors, the bus = the backend's log byte for byte, `SHOW31.ASC` =
+`SHOW30.ASC`; no refusal, no fault, no `INCOMPLETE-WRITE.txt`. One deviation by the owner (two panel presses before W5, the UI's
+memory hint misread; no data changed; a UI follow-up). F179 and F180 OBSERVED once for our host, F167–F169 VERIFIED in part, F171 /
+F174 / F175 / F115 annotated, H66 CONFIRMED for SC-5's classes. **E11b clears nothing by itself; SC-5's decisions and conditions stand**
+(the unmatched case, the SOLO case, the blackout refusal and the hold bound were not exercised).
+
 ### What SC-5 does not clear
 
 A fader event in a bank the console has not reported; a page change from the PC; NEXT, STACK, PAUSE, CLEAR; any bump not named above or in
