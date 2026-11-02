@@ -44,6 +44,23 @@ the per-write answer bytes and the ConsoleStatus timeline, both derivable from t
   then FADERS 1-24 on the panel, because the UI's memory panel showed "Dimmed memories were not delivered by the console in
   this session"; see "What the UI showed" below. No deviation on the software's side: no hold reached the 2.75 s bound, no
   switch missed its 2 s bound, no write was dropped, no fault.
+- **Deviation 2 (owner, recorded; log-only evidence as E11 attempt 3's later runs):** after the guide's END and the SD save the
+  owner started the backend by hand five times with live control on, **without USBPcap and without an SD pair** (15:39:51, 10 s,
+  0 writes; 15:40:03, 161 s, 48 writes: channel faders 5, 6 and 7, the MASTER, IND 1 / IND 2; 15:42:46, 153 s, 55 writes: channel
+  fader 1, memory fader 1 through the automatic switch to memory mode and the switch back, the MASTER, FADERS MEMS from the UI;
+  15:45:19, 56 s, 20 writes: the bank keys from the UI and channel fader 5 through the switch back; 15:46:18, 368 s, 60 writes:
+  channel faders 1 and 5, bump 5 twice, FADERS MEMS), 183 writes behind the same interlocks, 0 framing errors, no deviation note,
+  every session stopped at an idle point; the logs are committed as `.backend-2` to `.backend-6.jsonl`. Two observations worth
+  keeping, log-only: (1) at 15:42:46 + 114.3 s the physical channel fader 1 sat at 0xFF, the device's matching event carried
+  **0xFF** and the console followed the UI's drag from its next event (FaderInfo record 1, ChannelLevels[1], DMX 1 and LED block 1 at
+  0xC5, 0x7F, 0x7C …): a PC drag started at the reported non-zero level was applied at once (F172 annotated for our host); (2) at
+  15:46:18 the owner's bump 5 test: with channel fader 5 at about half the bump raised channel 5 to full and the release restored
+  the fader's level; with the fader at full the bump changed nothing and, after its release, the UI refused channel fader 5 by the
+  bump shadow ("the console has not reported physical fader 5 again since"), the fail-closed edge the implementation documents (a
+  bump that changes neither report keeps its fader refused until both objects are listed again): a usability defect, listed as a
+  follow-up with a proposed rule (the shadow ends at the release when the press itself was not followed by a FaderInfo or
+  ChannelLevels listing, because then the release changes nothing either; the reviewer decides). No SD save after these sessions
+  yet (asked of the owner; the classes used change no show data).
 
 ## The session (the backend's clock, t = 0 at Connect 14:59:19 local)
 
@@ -142,5 +159,10 @@ moved during or right after a bump of the same physical fader; SOLO was off at e
 | `2026-11-02-e11b-second-live-control-session.backend.jsonl` (the backend's transfer log) | `705d72c1e55e443491ade2b3fc293561e5b47e91570ff0e952fef6740ddc087f` | 11 279 539 |
 | `2026-11-02-e11b-actions.txt` (the guide's log) | `1650653412d226d0e7b99e97579fdf8ed2d993767097ca7a913626af2bc1b577` | 6 887 |
 | `2026-11-02-e11b-second-live-control-session-owner-statements.txt` | (text) | |
+| `2026-11-02-e11b-second-live-control-session.backend-2.jsonl` (the backend's log of the later session 14:39:51  no USBPcap) | `ba702b259836ec764f3f06695b314e9207b99ae37adbb6467f42c9d85b3eb095` | 112 326 |
+| `2026-11-02-e11b-second-live-control-session.backend-3.jsonl` (the backend's log of the later session 14:40:03  no USBPcap) | `3b04ad007bb6f26426a7b336e4b610fe7aca34b505967f74540407a6f8351256` | 2 002 378 |
+| `2026-11-02-e11b-second-live-control-session.backend-4.jsonl` (the backend's log of the later session 14:42:46  no USBPcap) | `c2768eddb2e65e5f225f8f4bd96a31afdee6099def70948a550b0faaf7c7bdcd` | 2 073 869 |
+| `2026-11-02-e11b-second-live-control-session.backend-5.jsonl` (the backend's log of the later session 14:45:19  no USBPcap) | `77db51cdfa5384233a1c415628edbae6b6d389dfc4eb48ef1f92f519edb7e499` | 699 054 |
+| `2026-11-02-e11b-second-live-control-session.backend-6.jsonl` (the backend's log of the later session 14:46:18  no USBPcap) | `4fcf742e02a327a0d95c510b314c5571e98c01f962673bf120a020504dd92cde` | 4 349 510 |
 | `smartfade-sd-card-backup/SHOW30.ASC` = `SHOW31.ASC` (git-ignored folder) | `559636399c1d82e0f95e737c961bfee31f88962fe8c486bbc6eba7f7d2177a90` | 15 944 |
 | raw `e11b-20261102-1457.pcap` (not committed) | `1e63a871c6edef147439dff7a6e43617c884e6f52560b416126d3cbe06b3ae6b` | 741 135 480 |

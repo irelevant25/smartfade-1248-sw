@@ -147,6 +147,22 @@ and `smartfade-sd-card-backup/`, and the capture analyst writes the E8b record (
   The owner also wants the console's state at Connect without touching the panel, as SmartSoft has it
   (its System pair, F58, F89): a candidate for its own safety check, SC-4, not decided.
 
+**Owner feedback after playing with the live control (2026-11-02, evening; chat):** (1) he does not want to press or move anything
+on the console at Connect to get rid of "Not reported by the console yet" → the console's state at Connect through SmartSoft's
+System pair is **SC-4**, research started the same evening (zero risk; nothing sent before the check); (2) with channel fader 5 at
+about half, its bump raised the channel to full and the release restored the level (as the console does); with the fader at full
+the bump changed nothing and the UI then refused the fader by the bump shadow (the fail-closed edge of the review's MAJOR 1 fix) →
+a follow-up rule proposed (the shadow ends at the release when the press itself listed neither FaderInfo nor ChannelLevels), to be
+implemented by the subagent and reviewed before use; (3) CLEAR "not working" → NO-GO by SC-5 (its effect with levels up never
+captured; a one-minute passive capture of SmartSoft's CLEAR with levels up would be the evidence for a later check); (4) GO
+refused in memory mode → SC-2 cleared GO only from the state SmartSoft sent it in (channel mode, bank 1-24); an addendum on the
+physical-control rule (GO addresses the crossfader, not the faders) or a one-minute passive observation of SmartSoft's GO in memory
+mode would lift it; (5) COPY, REC MEM, EDIT MEM, REC SEQ "not working" → the record keys are NO-GO until **SC-3** (the owner's
+written acceptance per key, the evidence E9 / E9b for REC MEM, EDIT MEM and COPY, none for REC SEQ, a safety check, a live session);
+(6) "I do not see the PATCH page … Stack/Seq edit page" → they exist on the UI's **Show file** page (the bar's "Show file" view:
+load an `.asc` from the SD card, edit the patch and the stack / sequences, save as a new file; the console's live patch is never
+written over USB, SC-2 class F) → a naming / discoverability follow-up in the UI.
+
 ### E9 runbook (passive capture of SmartSoft writing; proposed 2026-10-30 from S11.15)
 
 **Guided script (2026-10-30 evening):** `powershell -NoProfile -ExecutionPolicy Bypass -File

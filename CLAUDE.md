@@ -396,7 +396,15 @@ backend's log byte for byte (51 357 transfers), `SHOW31.ASC` = `SHOW30.ASC`. F16
 our host), F171 / F174 / F175 / F115 annotated for our host, H66 CONFIRMED for SC-5's classes. Deviation (owner): two panel presses
 (FADERS MEMS, FADERS 1-24) before W5 because the UI's memory hint ("Dimmed memories were not delivered") read as "not usable";
 no data changed by it; a UI follow-up. **E11b clears nothing; SC-5's decisions stand.** Next: the follow-ups (the memory hint, the
-optional blackout hardening), and any later live session with USBPcap makes F179 / F180 VERIFIED.
+optional blackout hardening), and any later live session with USBPcap makes F179 / F180 VERIFIED. **Five later backend sessions by
+the owner (15:39–15:52, 183 writes, no USBPcap, no SD pair yet)** are recorded in the E11b record as log-only evidence
+(`.backend-2` … `.backend-6.jsonl`): the matching event at a non-zero reported level followed by the drag (F172 annotated), and the
+bump-shadow refusal after a bump that changed nothing (a fader at full): a usability defect with a proposed rule, to be implemented
+by the subagent and reviewed before use. **The owner's feedback after playing (2026-11-02, evening)** is answered in
+`reverse-engineering.md` "Owner decisions on scope": no panel action at Connect → **SC-4** (the System pair; research started, nothing
+sent before the check); CLEAR and the record keys stay NO-GO (SC-5; SC-3 after his written acceptance per key); GO is cleared from
+channel mode only (an addendum or a one-minute passive observation would lift it); the patch and stack editors are the UI's "Show file"
+page (a discoverability follow-up).
 
 ## Commands
 
