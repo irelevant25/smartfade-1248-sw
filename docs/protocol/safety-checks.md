@@ -571,7 +571,7 @@ its side effects are understood, and the conditions hold. Everything else is NO-
 | B7 | PAUSE (0x32) | F175: two sessions; effect only on a running fade (E12b) | **NO-GO**: no use without the stack |
 | B8 | NEXT (0x3A) | F173: a mode that silences all faders' live effect (BlindLevels) | **NO-GO**: shown in the UI from the console's state only; its use needs its own check |
 | B9 | CLEAR (0x38) | F175 / E9: as a tap with nothing up and inside an edit; its double and triple effects never from a PC | **NO-GO** until a passive capture shows the double and triple press from the PC with levels up |
-| E | the System pair at Connect (SC-4 candidate) | F58: eleven sessions; F177: the 158-record download | **Not decided here**; a separate check when the owner asks |
+| E | the System pair at Connect (SC-4 candidate) | F58: 20 sessions in 10 captures (the row said "eleven sessions", an out-of-date count; corrected 2026-11-02, evening, F181); F177: the 158-record download | **Not decided here**; a separate check when the owner asks |
 
 ### Conditions for building the automatic switch and the holds
 

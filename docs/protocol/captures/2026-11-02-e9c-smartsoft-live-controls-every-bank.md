@@ -79,6 +79,8 @@ SystemSizes, System ×3 ((0, 0, 0), (0, 6, 0), (0, 1, 0)), SystemSettings: the s
 record more (which one is not identified here; the show is byte-identical to the one E12b left). As in E2–E12b the download holds
 no FaderInfo, DisplayContent or PlaybackInfo (F89).
 
+*(Note 2026-11-02, evening, SC-4 groundwork; the text above and the other counts of this record are kept: counted in capture order, E9c's sessions are SmartSoft's fifteenth and sixteenth with the System pair, not the "tenth and eleventh" ("eleven since E2" and "eleven SmartSoft sessions" further down are out of date: 16 after E9c, 20 after E9e, F181); the pair's payloads are seq 147 / 230 and 107 327 / 107 410; the "one record more" is Memory (1, 0, 0), an empty memory, F183.)*
+
 **The list pending at S1's first poll (t = 111.208, seq 19, before any write): 24 records** naming ConsoleStatus ×19, LedStatus,
 DisplayContent, FaderInfo, PlaybackInfo, OutputLevels and ChannelLevels: what changed on the console since our backend's last
 session fetched it (2026-11-01, 23:10: the owner's mode switches and fader moves of the setup, 19 ConsoleStatus changes among

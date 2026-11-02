@@ -184,6 +184,15 @@ conditions; the channel bumps 2–6, 8, 9, 11–24 and 26–48 were cleared the 
 cut to a four-bump spot check (record `captures/2026-11-02-e9e-smartsoft-channel-bumps-spot-check.md`: the four bumps as predicted in two sessions, the control passed). Nothing is sent
 before the owner implements, the reviewer passes and E11b runs.
 
+**SC-5 implemented and reviewed, E11b run (2026-11-02, afternoon):** the implementation by an Opus 5.5 subagent at the owner's request (98cb499,
+the review fixes 1eceabb and 0f2f1da; the `protocol-safety-reviewer` in three passes, PASS on the third; `safety-checks.md` SC-5 "Review"), the
+capture analysis that found no byte marking a bump press (F178), and **E11b** (record `captures/2026-11-02-e11b-second-live-control-session.md`:
+117 ConsoleEvents, every control followed, the automatic bank switch reported within 176 ms, the holds, IND 1 / 2, the MASTER; F179, F180
+OBSERVED once; F167–F169 VERIFIED in part; the bus = the backend's log). **SC-4 groundwork (2026-11-02, evening):** SmartSoft's start-up pair
+`09 00 00` / `07 00 00` (System, id 39) in 20 of 20 sessions, the console's version listing and the 157–161-record download after it, nothing
+changed by it (F181–F186, H113–H116, `smartsoft-analysis.md` S11.17, `commands.md` "The System message"); **84 facts are VERIFIED** (never
+clearance). SC-4 itself (the console's state at Connect) is written as a conditional decision for the owner in `safety-checks.md`.
+
 ## Version landscape
 
 | Artifact | Version | Relationship |

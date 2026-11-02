@@ -35,7 +35,7 @@ Tools (read-only): `hsp_summary.py`, `write_rules.py`, `join_reads.py`, `e9d/che
 0 framing errors; **28 Data writes: 4 System (the pair, twice) and 24 ConsoleEvents** (12 key pairs: the four bumps per session and
 the two bank keys per session); the counter from 0x00 in each session (F131); the header's stale words the last reply's 28 of 28 (F52);
 no write between a press and its release; press → release 1.01–1.56 s for the bumps, 47–60 ms for the bank keys; the placement as
-SmartSoft's (F131). The System pair with the ConsoleVersion listing and the 158-record download in both sessions (F58, F177).
+SmartSoft's (F131). The System pair with the ConsoleVersion listing and the 158-record download in both sessions (F58, F177). *(Note 2026-11-02, evening, SC-4 groundwork: E9e's two downloads had 159 records, PlaybackInfo appended last (F182, F183), and the sessions are the nineteenth and twentieth with the pair (F58, F181).)*
 
 ## The spot check (`e9d/check.py`: 14 steps, 0 unexpected)
 

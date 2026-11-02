@@ -404,7 +404,11 @@ by the subagent and reviewed before use. **The owner's feedback after playing (2
 `reverse-engineering.md` "Owner decisions on scope": no panel action at Connect → **SC-4** (the System pair; research started, nothing
 sent before the check); CLEAR and the record keys stay NO-GO (SC-5; SC-3 after his written acceptance per key); GO is cleared from
 channel mode only (an addendum or a one-minute passive observation would lift it); the patch and stack editors are the UI's "Show file"
-page (a discoverability follow-up).
+page (a discoverability follow-up). **The SC-4 groundwork was applied the same evening** (the `protocol-researcher` and the
+`knowledge-base-curator`): F181–F186 (the pair byte-identical in 20 of 20 sessions, the console's version listing and the 157–161-record
+download after it, nothing changed by it, the states it was sent in, what our sessions never receive without it), H113–H116,
+`smartsoft-analysis.md` S11.17 (the countdowns, the version gate, every System value on the wire), `commands.md` "The System message";
+**84 facts VERIFIED**; the pair never delivers FaderInfo, so the MASTER still needs one panel move per session under SC-2's condition.
 
 ## Commands
 

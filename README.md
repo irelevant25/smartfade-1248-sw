@@ -13,7 +13,7 @@ scaling, the 25-48 bank, a GO crossfade) on 2026-10-30, and E8 (the first read-o
 the console through its Console Simulator, recorded passively: the first observed PC -> console writes) that night, and E9b (its repeat: three more
 SmartSoft sessions, 427 writes) on 2026-10-31, and E12 (SmartSoft editing the patch, the stack and a sequence, passive, 70 writes) the
 same afternoon, analysed that evening, and E12b (its repeat, 62 writes, with an SD save of the edited show made on the console) the same
-late evening, analysed that night. 72 facts are VERIFIED as
+late evening, analysed that night; then (2026-11-01 and 02) E11 in three attempts, the first live-control session of our own software, the passive captures E9c / E9d / E9e for the automatic bank switch and the holds, SC-5 and its implementation by an Opus 5.5 subagent (reviewed in three passes), E11b (the second live-control session, every control followed) and the SC-4 groundwork on SmartSoft's start-up pair. **84 facts are VERIFIED** (2026-11-02, evening; the sentence below was written at 72 and is kept) as
 observed console / SmartSoft behaviour (USB framing, start-up, show objects, front-panel mirroring, memory faders and pages,
 BLACKOUT, the independents, the record-function screens, the console's counter and the file name it reports, the write framing and the main
 fader and key events as SmartSoft sends them, the Memory write's layout and the console's listing of its own recordings, SmartSoft's step
