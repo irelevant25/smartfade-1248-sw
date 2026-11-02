@@ -313,13 +313,22 @@ scope"): the UI keeps the console's layout (built the same day: the right-hand c
 INDEPENDENTS, the bank a real console reports lit from the new `faderBank` state field, RATE and NEXT inactive); the PC is to drive
 memory faders and channels 25-48 through an **automatic bank switch** (the FADERS key sent before the fader event) and **held bumps**
 are wanted; the console's state at Connect without touching the panel (SmartSoft's System pair, F58 / F89) is a candidate for a safety
-check SC-4, not decided. **E9c is the next capture** (passive, SmartSoft's Simulator; runbook in `reverse-engineering.md` "E9c runbook",
-guided script `tools/usb-probe/e9c-guided-session.ps1`, written and parse-checked 2026-11-02, not run): every channel fader of bank 1-24,
-the bank 25-48, memory faders on two pages, the matching rule with a PC level in force (H79 / H81, the automatic switch's risk), held bumps
-with durations, IND 1 / 2, STACK, PAUSE, NEXT (H112), CLEAR, a fader with the MASTER at half, a SmartSoft restart; then its record, a
-safety check SC-5 extending SC-2 (E9d for anything seen once), the owner's implementation, a live session E11b. Still open: the owner's
-answers on the power cycle between E11's attempts 2 and 3 and on session 3's other actions (asked by the E9c guide), and whether a held
-bump's lost-release case is accepted.
+check SC-4, not decided. **E9c done 2026-11-02, 00:41–01:20** (passive, SmartSoft's Console Simulator driven by the owner through
+`tools/usb-probe/e9c-guided-session.ps1`; record `docs/protocol/captures/2026-11-02-e9c-smartsoft-live-controls-every-bank.md`; our software
+not involved): 1 227 SmartSoft writes (the System pair twice, 1 149 fader events, 37 key pairs), 0 framing errors, `SHOW25.ASC` = `SHOW24.ASC`.
+**The fader index names the physical fader in every bank and mode** (all 24 indices 0x00–0x17 moved faders 1–24 in bank 1-24; 0x00 / 0x01
+moved channels 25 / 26 in bank 25-48 and memory faders 1 / 2 / 3 / 9 of the shown page in memory mode; F171, H111 CONFIRMED in part); **a
+bank or page switch does not carry a level across, and a PC fader is ignored until one of its events equals the new content's level**
+(the bump LED blinks meanwhile; the level left behind is kept; F172, H79 / H81's matching clause CONFIRMED, H69 in part); **NEXT is key
+0x3A** and its blind levels go into the object BlindLevels (18), the live levels untouched (F173, H112 CONFIRMED in part, H108
+explained); held bumps up to 2.85 s show and end cleanly (F174); FADERS 25-48, IND 1 / 2, STACK, PAUSE, CLEAR seen a second time (F175;
+F165 VERIFIED in part, **74 facts VERIFIED**); a PC fader reads post-MASTER with the MASTER at 0x84 (F176); 24 records were pending at
+SmartSoft's first poll without a power cycle and the download holds 158 records (F177; H65 widened; the owner: no power cycle between
+E11's attempts 2 and 3 either). Deviations: the Simulator relabels its faders in bank 25-48, so fader 24 and the held bump were done in
+bank 1-24 (no bump in bank 25-48); S4b's physical step was first done in the Simulator. **E9c clears nothing: SC-5
+(`docs/protocol/safety-checks.md`) decides the classes for the automatic bank switch and held bumps (its rule from F172: after the switch
+the first event must equal the target's reported level), with E9d for what E9c saw once;** then the owner's implementation and a live
+session E11b. Still open: whether a held bump's lost-release case is accepted in writing.
 
 ## Commands
 

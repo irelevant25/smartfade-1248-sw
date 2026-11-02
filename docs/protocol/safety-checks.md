@@ -471,7 +471,13 @@ mode, a write outside the observed placement, a retry.
   `tools/usb-probe/e9c-guided-session.ps1`) are scoped for it: every channel fader of bank 1-24, the bank 25-48, memory faders on
   two pages, the matching rule with a PC level in force, held bumps with durations, IND 1 / 2, STACK, PAUSE, NEXT, CLEAR, a fader
   with the MASTER at half, a SmartSoft restart. The check that follows E9c (SC-5, with E9d for anything seen once) decides the
-  classes; until then nothing of it is cleared.
+  classes; until then nothing of it is cleared. **E9c run 2026-11-02, 00:41–01:20** (record `captures/2026-11-02-e9c-smartsoft-live-controls-every-bank.md`): 1 227
+  SmartSoft writes, every channel fader index of bank 1-24 once, two faders and the FADERS 25-48 key in bank 25-48, four memory faders on
+  two pages, the matching rule after a mode and a page switch with a PC level in force (F172: the console ignores PC events for a
+  re-assigned fader until one equals the new content's level), held bumps up to 2.85 s, IND 1 / 2, STACK, PAUSE, NEXT (= 0x3A, with the
+  blind levels in BlindLevels (18)), CLEAR, a fader with the MASTER at 0x84, a SmartSoft restart; 0 framing errors; `SHOW25.ASC` =
+  `SHOW24.ASC`. Deviations: the Simulator relabels its faders in bank 25-48, so fader 24 and the bump were done in bank 1-24 (no bump
+  in bank 25-48); S4b's physical step was first done in the Simulator. **E9c clears nothing; SC-5 below decides.**
 - **SC-3 (record keys from the PC):** after E9c, and only with the owner's written acceptance of each key
   (REC MEM, EDIT MEM, COPY, CLEAR), an SD backup immediately before every session that enables them, a UI
   confirmation step before a record key is armed, and the same guard against a stray bump as the panel has
@@ -504,3 +510,91 @@ mode, a write outside the observed placement, a retry.
   console can be silent on USB while it writes its SD card (F163, H109; the condition added under "Conditions for E11" above).)*
 - **E11's result** promotes nothing by itself; a second write session of ours (E11b) is needed before any
   write fact about our own host context becomes VERIFIED.
+
+## SC-5 (2026-11-02): the automatic bank switch and held bumps, per class, after E9c
+
+**Scope.** The owner's decision of 2026-11-02 ("Owner decisions on scope" in `reverse-engineering.md`): the UI drives memory faders and
+channels 25-48 by pressing the console's FADERS key for that bank before the fader event (the automatic bank switch), and bumps may be
+held from the UI. **Input:** the [E9c record](captures/2026-11-02-e9c-smartsoft-live-controls-every-bank.md) ("Input for the safety
+check that follows", F171–F177), E9 / E9b (F131–F135, F141), E11 (F167–F169: our own host), the E12b codes (F165). **Checklist:** the
+eleven items of `/hardware-safety-check`, answered per class below SC-2's own bar: a message class is cleared for sending only when its
+bytes and the console's answer to them were seen in **two independent sessions** (VERIFIED as behaviour; "necessary, not sufficient"),
+its side effects are understood, and the conditions hold. Everything else is NO-GO until E9d, the passive repeat named at the end.
+
+### What E9c changed in the evidence
+
+- **The fader index is the physical fader** (F171, H111 CONFIRMED in part): all 24 indices of bank 1-24 seen once (0x00, 0x04, 0x06 in two
+  or more sessions); in bank 25-48 and in memory mode the same indices move that bank's content (two and four indices, once each).
+- **The switch does not carry a level** (F172): after FADERS MEMS / 1-24 / 25-48 or a page change, a re-assigned fader is unmatched and
+  the console **ignores PC events for it until one equals the new content's level**; the level left behind is kept. The failure mode of a
+  wrong first event is therefore **nothing moves and the bump LED blinks**, not a jump of the output. This is the rule the automatic
+  switch must implement: switch, wait for ConsoleStatus to report the bank, then start from the target's reported level.
+- **Held bumps** behave as taps that last (F174): the output at the BUMPS level from the press to the release, ending within one poll of
+  the release; seen in three sessions for bump 7 and memory bump 1, two for bump 10, one for channel bump 1.
+- **The keys seen once before are now seen twice** (F175): FADERS 25-48 (0x37), IND 1 / IND 2 (0x47 / 0x48), STACK (0x3B), PAUSE (0x32),
+  CLEAR (0x38); **NEXT is 0x3A** (F173) and silences the live levels into BlindLevels (18).
+
+### Decision: GO (conditional) for classes A2 (three indices today), B4 (the bank keys), B5 (IND 1 / IND 2) and B3 (held bump 7, bump 10, memory bump 1); GO after E9d for the rest of A2, for A3 and A4; NO-GO for STACK, PAUSE, NEXT and CLEAR; the System pair (E / SC-4) not decided here
+
+| # | Item | Status | Evidence |
+|---|---|---|---|
+| 1 | Evidence status | **Yes for the classes cleared today, by SC-2's bar** | A2 index 0x00 VERIFIED (E9, E9b, E9c, E11); 0x04 (E9b + E9c) and 0x06 (E9 + E9c) in two sessions; the other 21 indices once (E9c), so after E9d. A3 (bank 25-48): 0x37 in two sessions (E9b + E9c); the indices there once (0x00, 0x01) or never, so after E9d. A4 (memory faders): 0x39 / 0x36 in many sessions; the indices as memory faders once (0x00, 0x01, 0x02, 0x08) or never, so after E9d. B3 (held bumps): 0x06 and memory 0x00 in three sessions, 0x09 in two; channel bump 1 once (after E9d); other bumps never. B4 (0x37) and B5 (0x47, 0x48) in two sessions with the same answer (F175, F115). F131 / F132 / F133 reproduced in a fourth capture. |
+| 2 | Side effects understood | **Yes for the cleared classes; the switch's rule is F172** | A fader event moves its physical fader's content at once once matched (F141, F171); after a switch nothing moves until matched (F172); a bank key changes what all 24 physical faders control, visible in ConsoleStatus body[0] / body[4] and the LEDs within one poll (F98, F175), and is what the owner asked for; IND 1 / 2 drive two outputs (DMX 97 / 98 by default, DMX 47 in this patch; F108, F115): live devices, the owner's rig decision; a held bump outputs at the BUMPS level until released (F174). Unobserved: a held bump longer than 2.85 s; a switch while a bump is held; a bump in bank 25-48. |
+| 3 | Backup | **Condition** | An SD save before every live session (the E11 guide's gate), compared with the after-session save. |
+| 4 | Rig | **Condition** | As SC-2; IND 1 / IND 2 added: the owner states what they drive on the rig before they are enabled in a session (a smoke machine or a cue light is the manual's example, F108). |
+| 5 | Firmware path untouched | **Yes** | Bulk transfers on interface 1 only; nothing new. |
+| 6 | Mode gating | **Condition (to build)** | The same write switch as SC-2 (`Device:Usb:LiveControlDate`); the automatic switch is a device-layer sequence (below), never a UI shortcut; the UI shows the console's bank (`faderBank`, since 2026-11-02) and an unmatched fader (the LED blink) from the console's own objects. |
+| 7 | No blind retries | **Condition (to build)** | As SC-2: one write, a failure ends the session. For a held bump the release is sent exactly once; if the session dies before it, the device must not resend on reconnect (the latch of SC-2 condition 4 holds). |
+| 8 | Logging on | **Yes, plus USBPcap in parallel** for the first session of each new class (E11b), as E11. | |
+| 9 | Versions recorded | **Condition** | As SC-2. |
+| 10 | Review done | **Condition** | `protocol-safety-reviewer` over the new indices, the switch sequence, the hold and the golden tests before E11b. |
+| 11 | Passive first | **Yes** | E9c shows SmartSoft producing every event this check names; our software has produced only SC-2's. |
+
+### Classes
+
+| Class | Message | Evidence after E9c | Decision |
+|---|---|---|---|
+| A2 | ConsoleEvent kind 0, fader events, **bank 1-24, indices 0x00–0x17** (channel faders 1–24) | F171: all 24 once; 0x00 VERIFIED, 0x04 and 0x06 in two sessions; the answer per index structural (F82–F84, F86) | **GO (conditional) now for 0x00, 0x04, 0x06; GO for the other 21 after E9d** (two sessions each). The encoder may carry all 24 with golden tests over E9c now; the whitelist enables an index only when its second session is recorded here. |
+| A3 | fader events **in bank 25-48** (indices 0x00–0x17 = channels 25–48), after the FADERS 25-48 key | F171: 0x00 and 0x01 once; 0x02–0x17 never; the key 0x37 in two sessions | **GO after E9d** (every index there in two sessions); the key 0x37 is class B4 |
+| A4 | fader events **as memory faders** (memory mode, the shown page) | F171: 0x00, 0x01, 0x02, 0x08 once; the rest never; F112 for the record's bytes 0 and 1 | **GO after E9d** (every index in memory mode in two sessions, on page 1; a page change from the PC is in no class: the UI follows the console's page, F113) |
+| B3 | ConsoleEvent kind 1, **held bumps** (press, hold, release as the UI holds) | F174: bump 7 in three sessions, memory bump 1 in three, bump 10 in two, channel bump 1 in one; the other channel bumps 2–6, 8, 11–24 and memory bumps 2–24 never from a PC | **GO (conditional) for bump 7, bump 10 and memory bump 1 as holds bounded to 3 s** (the longest observed; the device releases at the bound and the UI shows it); **the other bumps after E9d** (each pressed in two sessions); a hold across a bank switch is refused |
+| B4 | FADERS 25-48 (0x37) as a tap, with FADERS 1-24 (0x36) and FADERS MEMS (0x39) of class B1 | F175, F98: two sessions; ConsoleStatus body[4] | **GO (conditional)** as a tap, from the two states SmartSoft sent it in (from bank 1-24 or memory mode); it is the automatic switch's third key |
+| B5 | IND 1 (0x47), IND 2 (0x48) as taps that toggle | F175, F115: two sessions; the console's own IND keys do the same (E8b) | **GO (conditional)** as toggles from a steady LED (blocks 72 / 73) that differs from the wish, as SOLO and BLACKOUT in SC-2; the rig condition (item 4) |
+| B6 | STACK (0x3B) | F175: two sessions; it arms the stack for GO (F130) | **NO-GO**: no UI need; GO stays refused while STACK's LED is lit (SC-2) |
+| B7 | PAUSE (0x32) | F175: two sessions; effect only on a running fade (E12b) | **NO-GO**: no use without the stack |
+| B8 | NEXT (0x3A) | F173: a mode that silences all faders' live effect (BlindLevels) | **NO-GO**: shown in the UI from the console's state only; its use needs its own check |
+| B9 | CLEAR (0x38) | F175 / E9: as a tap with nothing up and inside an edit; its double and triple effects never from a PC | **NO-GO** until a passive capture shows the double and triple press from the PC with levels up |
+| E | the System pair at Connect (SC-4 candidate) | F58: eleven sessions; F177: the 158-record download | **Not decided here**; a separate check when the owner asks |
+
+### Conditions for building the automatic switch and the holds
+
+1. **The switch is a device-layer sequence, logged as one operation:** (a) refuse if a record function is armed, a bump is held or the
+   console's bank is unknown; (b) send the bank key as a tap (0x36 / 0x37 / 0x39, class B1 / B4) from a state SmartSoft sent it in;
+   (c) wait until ConsoleStatus reports the new bank (body[0], body[4]) and the LEDs arrived, within a bound (two seconds; else the
+   session ends as a deviation); (d) send the first fader event with **the target's reported level** (ChannelLevels[c] for a channel,
+   FaderInfo record k bytes 0 and 1 for a memory fader), then the drag; (e) show the bank and the LED blink from the console's objects.
+   The switch back is the user's, or the next automatic switch. The physical faders now control the new bank: the UI says so.
+2. **A held bump is one operation with a bound:** press, the hold renewed by the UI, the release sent by the device when the UI
+   releases or when the bound (3 s) expires, and before any Disconnect; a hold cannot span a bank switch (refused); the lost-release
+   case (a process killed mid-hold leaves the bump down until the panel is pressed, INFERRED) is accepted in writing by the owner before
+   E11b.
+3. **One encoder, one whitelist** as SC-2: the indices and codes above as enums, nothing derived; golden tests over E9c (and E9d) for
+   every new index and code, byte for byte, including the switch sequences SmartSoft used (0x39 then 0x00 …; 0x37 then 0x00 …).
+4. **The previous byte** stays this host's own last value per index (F132), across a bank switch too (SmartSoft's counter does not
+   reset at a switch: the index's last wire value is the previous byte whatever the bank).
+5. **The UI starts every drag from the reported level** (SC-2 condition 6; with the switch it is what makes the first event match).
+6. **Nothing else**: no page change from the PC, no NEXT, no STACK, no PAUSE, no CLEAR, no record key, no System write.
+
+### E9d (the passive repeat that lifts the "after E9d" rows)
+
+One capture, SmartSoft's Simulator, two SmartSoft sessions (a restart between them, as E9c's S8; counted as the second session for
+what E9c saw once, as E3b's sessions were for E2): in each session every channel fader 1–24 once in bank 1-24, FADERS 25-48 then every
+fader 1–24 once (channels 25–48) and one held bump there, FADERS MEMS then every fader 1–24 once as memory faders of page 1 (empty
+memories move the record only) and every memory bump once, FADERS 1-24; a held bump of 5 s; the S4a case once more. Guided script to
+be written from the E9c one. Until E9d is recorded here, the "after E9d" classes are NO-GO.
+
+### What SC-5 does not clear
+
+A fader event in a bank the console has not reported; a page change from the PC; NEXT, STACK, PAUSE, CLEAR; any bump not named above as a
+hold; a hold longer than 3 s; the record keys (SC-3); ChannelText, Memory, the System pair (SC-4, not decided); anything in class F.
+Nothing is cleared for sending before the owner implements the sequences, the reviewer passes them and the owner gives the go for E11b.

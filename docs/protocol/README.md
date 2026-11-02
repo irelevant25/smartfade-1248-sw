@@ -164,6 +164,16 @@ absence from the fetched objects, MASTER and BUMPS), H66 CONFIRMED for writes, H
 fader; untested in memory mode and bank 25-48). The sentence above stands unchanged: VERIFIED is necessary, not sufficient, **E11 clears nothing beyond
 SC-2's conditional GO**, and the two backend sessions the owner ran after attempt 3's guide without USBPcap are a recorded deviation (log-only evidence).
 
+**E9c (2026-11-02, passive; record `captures/2026-11-02-e9c-smartsoft-live-controls-every-bank.md`):** after the owner's decision to drive memory faders and channels 25-48 from the PC
+through an automatic bank switch, SmartSoft's Console Simulator was driven through every channel fader of bank 1-24, two faders of bank
+25-48, memory faders on two pages, a mode and a page switch with a PC level in force, held bumps, the keys seen once and a restart (1 227
+writes, 0 framing errors, no show data changed). The fader index names the physical fader in every bank and mode (F171, H111 CONFIRMED in
+part); a switch does not carry a level across and a PC fader must match the new content's level before it moves it (F172, H79 / H81
+CONFIRMED); NEXT is key 0x3A and its blind levels go into BlindLevels (18) (F173, H112); held bumps show cleanly up to 2.85 s (F174); the
+keys seen once before were seen again (F175); a PC fader reads post-MASTER (F176); 24 records were pending without a power cycle and the
+download holds 158 records (F177). **74 facts are VERIFIED** (F165 in part); E9c clears nothing: the safety check SC-5 decides the classes
+for the automatic switch and the held bumps, with E9d for what E9c saw once.
+
 ## Version landscape
 
 | Artifact | Version | Relationship |

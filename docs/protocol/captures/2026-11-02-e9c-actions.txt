@@ -1,0 +1,184 @@
+2026-11-02 00:41:42.119 START guided E9c session (PC clock, local time)
+2026-11-02 00:41:58.897 backup taken: SHOW24.ASC (copy it into smartfade-sd-card-backup/ after the session)
+2026-11-02 00:42:03.340 owner answer: e11 power cycle between attempts 2 and 3 = n
+2026-11-02 00:42:20.761 owner answer: e11 session 3 other actions = -
+2026-11-02 00:42:29.036 owner answer: console powered off since e11 = unsure
+2026-11-02 00:42:45.682 owner answer: simulator has pause = y
+2026-11-02 00:42:49.818 owner answer: simulator has next = y
+2026-11-02 00:42:54.294 owner answer: simulator has rate = y
+2026-11-02 00:42:54.563 memory integrity: off
+2026-11-02 00:42:55.812 interface 1 driver service: ETCHSP (ETC's driver)
+2026-11-02 00:42:55.817 usbpcap file name suggested to the owner: e9c-20261102-0042.pcap
+2026-11-02 00:43:35.200 usbpcap running (owner)
+2026-11-02 00:43:55.270 starting position set (owner)
+2026-11-02 00:44:20.331 owner answer: memory 1 recorded = y
+2026-11-02 00:44:33.516 owner answer: memory 2 recorded = y
+2026-11-02 00:44:35.961 owner answer: memory 9 empty = y
+2026-11-02 00:44:53.404 owner answer: page 2 memory 1 recorded = n
+2026-11-02 00:44:58.722 smartsoft start #1 (Start-Process by the script)
+2026-11-02 00:45:39.667 smartsoft online #1 (owner)
+2026-11-02 00:46:39.681 wait 60 s done (baseline: SmartSoft online, nothing touched (the System pair and the download, for SC-4))
+2026-11-02 00:47:12.332 simulator opened
+2026-11-02 00:47:32.343 wait 20 s done (simulator open, untouched)
+2026-11-02 00:47:44.782 s1 sim fader 2 half and back
+2026-11-02 00:47:47.796 wait 3 s done (after sim fader 2)
+2026-11-02 00:48:02.487 s1 sim fader 3 half and back
+2026-11-02 00:48:05.499 wait 3 s done (after sim fader 3)
+2026-11-02 00:48:13.935 s1 sim fader 4 half and back
+2026-11-02 00:48:16.947 wait 3 s done (after sim fader 4)
+2026-11-02 00:48:21.071 s1 sim fader 5 half and back
+2026-11-02 00:48:24.089 wait 3 s done (after sim fader 5)
+2026-11-02 00:48:26.608 s1 sim fader 6 half and back
+2026-11-02 00:48:29.612 wait 3 s done (after sim fader 6)
+2026-11-02 00:48:31.630 s1 sim fader 7 half and back
+2026-11-02 00:48:34.641 wait 3 s done (after sim fader 7)
+2026-11-02 00:48:35.912 s1 sim fader 8 half and back
+2026-11-02 00:48:38.926 wait 3 s done (after sim fader 8)
+2026-11-02 00:48:41.047 s1 sim fader 9 half and back
+2026-11-02 00:48:44.062 wait 3 s done (after sim fader 9)
+2026-11-02 00:48:46.156 s1 sim fader 10 half and back
+2026-11-02 00:48:49.164 wait 3 s done (after sim fader 10)
+2026-11-02 00:48:58.579 s1 sim fader 11 half and back
+2026-11-02 00:49:01.590 wait 3 s done (after sim fader 11)
+2026-11-02 00:49:03.117 s1 sim fader 12 half and back
+2026-11-02 00:49:06.120 wait 3 s done (after sim fader 12)
+2026-11-02 00:49:09.824 s1 sim fader 13 half and back
+2026-11-02 00:49:12.833 wait 3 s done (after sim fader 13)
+2026-11-02 00:49:13.962 s1 sim fader 14 half and back
+2026-11-02 00:49:16.976 wait 3 s done (after sim fader 14)
+2026-11-02 00:49:19.042 s1 sim fader 15 half and back
+2026-11-02 00:49:22.061 wait 3 s done (after sim fader 15)
+2026-11-02 00:49:23.436 s1 sim fader 16 half and back
+2026-11-02 00:49:26.443 wait 3 s done (after sim fader 16)
+2026-11-02 00:49:27.775 s1 sim fader 17 half and back
+2026-11-02 00:49:30.790 wait 3 s done (after sim fader 17)
+2026-11-02 00:49:31.628 s1 sim fader 18 half and back
+2026-11-02 00:49:34.633 wait 3 s done (after sim fader 18)
+2026-11-02 00:49:35.308 s1 sim fader 19 half and back
+2026-11-02 00:49:38.324 wait 3 s done (after sim fader 19)
+2026-11-02 00:49:39.558 s1 sim fader 20 half and back
+2026-11-02 00:49:42.565 wait 3 s done (after sim fader 20)
+2026-11-02 00:49:43.555 s1 sim fader 21 half and back
+2026-11-02 00:49:46.565 wait 3 s done (after sim fader 21)
+2026-11-02 00:49:47.322 s1 sim fader 22 half and back
+2026-11-02 00:49:50.339 wait 3 s done (after sim fader 22)
+2026-11-02 00:49:51.403 s1 sim fader 23 half and back
+2026-11-02 00:49:54.415 wait 3 s done (after sim fader 23)
+2026-11-02 00:49:55.056 s1 sim fader 24 half and back
+2026-11-02 00:49:58.069 wait 3 s done (after sim fader 24)
+2026-11-02 00:50:08.081 wait 10 s done (after S1)
+2026-11-02 00:51:27.053 s2 sim faders 25-48
+2026-11-02 00:51:37.069 wait 10 s done (s2 bank 25-48)
+2026-11-02 00:51:41.368 s2 sim fader 1 in bank 25-48
+2026-11-02 00:51:46.376 wait 5 s done (after s2 fader 1)
+2026-11-02 00:51:48.350 s2 sim fader 2 in bank 25-48
+2026-11-02 00:51:53.367 wait 5 s done (after s2 fader 2)
+2026-11-02 00:52:23.443 s2 sim fader 24 in bank 25-48
+2026-11-02 00:52:28.446 wait 5 s done (after s2 fader 24)
+2026-11-02 00:52:38.579 s2 sim bump 1 in bank 25-48 held
+2026-11-02 00:52:43.590 wait 5 s done (after s2 bump)
+2026-11-02 00:54:08.504 owner answer: s2 lcd channel numbers = 1, because you said SIMULATOR fader 24 up tp about half and hold 2s and back to zero and the only way for me to do that was to go back to 1-24 and move the fader 24 and then the next question was about fader 1 which I did not know if for 1-24 or 25-48 so I stayed where I was 1-24 and presed bump fader 1
+2026-11-02 00:54:12.739 s2 sim faders 1-24
+2026-11-02 00:54:22.748 wait 10 s done (after S2)
+2026-11-02 00:54:34.258 s3 sim faders mems
+2026-11-02 00:54:44.268 wait 10 s done (s3 memory mode)
+2026-11-02 00:54:48.337 s3 sim memory fader 1 half and back
+2026-11-02 00:54:53.341 wait 5 s done (after s3 memory fader 1)
+2026-11-02 00:54:58.528 s3 sim memory fader 2 half and back
+2026-11-02 00:55:03.539 wait 5 s done (after s3 memory fader 2)
+2026-11-02 00:55:06.607 s3 sim memory fader 9 half and back
+2026-11-02 00:55:11.619 wait 5 s done (after s3 memory fader 9)
+2026-11-02 00:55:18.684 s3 sim memory bump 1 held 3 s
+2026-11-02 00:55:23.694 wait 5 s done (after s3 memory bump 1)
+2026-11-02 00:55:33.590 s3 sim memory bump 9 tap
+2026-11-02 00:55:38.598 wait 5 s done (after s3 memory bump 9)
+2026-11-02 00:55:51.866 owner answer: s3 lcd and leds = followed
+2026-11-02 00:56:00.299 s3 console page 2
+2026-11-02 00:56:10.305 wait 10 s done (s3 page 2)
+2026-11-02 00:57:17.228 s3 sim memory fader 1 page 2 half and back
+2026-11-02 00:57:22.237 wait 5 s done (after s3 page 2 fader 1)
+2026-11-02 00:57:26.927 s3 console page 1
+2026-11-02 00:57:36.934 wait 10 s done (s3 page 1 again)
+2026-11-02 00:57:43.028 s3 sim faders 1-24
+2026-11-02 00:57:53.043 wait 10 s done (after S3)
+2026-11-02 00:58:04.796 s4a sim fader 1 half, left
+2026-11-02 00:58:14.813 wait 10 s done (s4a channel 1 at half from the PC)
+2026-11-02 00:58:24.798 s4a sim faders mems with pc level
+2026-11-02 00:58:34.815 wait 10 s done (s4a memory mode with pc level)
+2026-11-02 00:59:27.191 owner answer: s4a memory fader 1 after switch = blinking and no channels 7 and 8 light did not come up
+2026-11-02 00:59:37.456 s4a sim memory fader 1 full and zero
+2026-11-02 00:59:47.466 wait 10 s done (after s4a memory fader 1)
+2026-11-02 00:59:50.303 s4a sim faders 1-24 back
+2026-11-02 01:00:00.310 wait 10 s done (s4a channel mode again)
+2026-11-02 01:00:18.102 owner answer: s4a channel 1 after round trip = half as before
+2026-11-02 01:00:29.224 s4a sim fader 1 full and zero cleanup
+2026-11-02 01:00:39.240 wait 10 s done (after s4a)
+2026-11-02 01:00:46.135 s4b physical fader 2 half
+2026-11-02 01:00:56.148 wait 10 s done (s4b physical 2 at half)
+2026-11-02 01:02:28.443 s4b sim faders mems with physical fader up
+2026-11-02 01:02:38.446 wait 10 s done (s4b memory mode)
+2026-11-02 01:03:48.868 owner answer: s4b led 2 after switch = blinking and yes in the simulator the memory 2's level is zero
+2026-11-02 01:03:59.915 s4b sim memory fader 2 half and back
+2026-11-02 01:04:04.922 wait 5 s done (after s4b memory fader 2)
+2026-11-02 01:04:17.377 owner answer: s4b pickup = unsure
+2026-11-02 01:04:21.186 s4b sim faders 1-24 back
+2026-11-02 01:04:31.198 wait 10 s done (s4b channel mode again)
+2026-11-02 01:04:51.787 owner answer: s4b channel 2 after round trip = about 50%
+2026-11-02 01:04:58.013 s4b physical fader 2 zero
+2026-11-02 01:05:08.023 wait 10 s done (after s4b)
+2026-11-02 01:05:29.438 s4c sim mems and memory fader 3 half
+2026-11-02 01:05:39.455 wait 10 s done (s4c memory 3 at half from the PC)
+2026-11-02 01:05:52.846 s4c console page 2 with pc level
+2026-11-02 01:06:02.864 wait 10 s done (s4c page 2)
+2026-11-02 01:06:27.003 owner answer: s4c after page change = blinking
+2026-11-02 01:06:54.798 s4c cleanup
+2026-11-02 01:07:10.333 s4c cleanup done
+2026-11-02 01:07:20.340 wait 10 s done (after S4)
+2026-11-02 01:07:26.050 s5 sim bump 7 held 3 s
+2026-11-02 01:07:31.059 wait 5 s done (after s5 bump 7)
+2026-11-02 01:07:34.871 s5 sim bump 10 held 2 s
+2026-11-02 01:07:39.877 wait 5 s done (after s5 bump 10)
+2026-11-02 01:07:52.606 s5 solo on, bump 7 held, solo off
+2026-11-02 01:07:57.619 wait 5 s done (after s5 solo bump)
+2026-11-02 01:08:15.744 s5 mems, memory bump 1 held 3 s, 1-24
+2026-11-02 01:08:25.751 wait 10 s done (after S5)
+2026-11-02 01:08:30.367 s6 sim ind 1 on off
+2026-11-02 01:08:35.370 wait 5 s done (after s6 ind 1)
+2026-11-02 01:08:45.560 s6 sim ind 2 on off
+2026-11-02 01:08:50.569 wait 5 s done (after s6 ind 2)
+2026-11-02 01:09:01.157 s6 sim stack on off
+2026-11-02 01:09:06.170 wait 5 s done (after s6 stack)
+2026-11-02 01:09:18.981 s6 sim pause twice
+2026-11-02 01:09:23.987 wait 5 s done (after s6 pause)
+2026-11-02 01:09:37.747 s6 sim next on
+2026-11-02 01:09:42.756 wait 5 s done (s6 next on)
+2026-11-02 01:10:03.671 owner answer: s6 next on console = the NEXT bump is lit and nothing else changed
+2026-11-02 01:10:17.888 s6 sim fader 4 with next on
+2026-11-02 01:10:22.898 wait 5 s done (after s6 fader 4)
+2026-11-02 01:11:22.054 owner answer: s6 light with next on = unsure, there is no light on this address, as I said before I have one light with channel 12 from address 5 where every 3 addresses control a different light on that lights (which has 3 lights)
+2026-11-02 01:11:28.014 s6 sim next off
+2026-11-02 01:11:33.017 wait 5 s done (after s6 next)
+2026-11-02 01:11:44.123 s6 sim clear 1, 2, 3
+2026-11-02 01:12:03.517 s6 clear done
+2026-11-02 01:12:13.535 wait 10 s done (after S6)
+2026-11-02 01:12:20.863 s7 sim master to half
+2026-11-02 01:12:25.867 wait 5 s done (s7 master at half)
+2026-11-02 01:12:30.604 s7 sim fader 1 full and zero with master half
+2026-11-02 01:12:35.614 wait 5 s done (after s7 fader 1)
+2026-11-02 01:12:38.628 s7 sim master to full
+2026-11-02 01:12:48.635 wait 10 s done (after S7)
+2026-11-02 01:12:52.538 smartsoft close #1 start
+2026-11-02 01:12:56.677 smartsoft closed #1
+2026-11-02 01:13:06.693 wait 10 s done (between sessions 1 and 2)
+2026-11-02 01:13:08.573 smartsoft start #2 (Start-Process by the script)
+2026-11-02 01:13:22.443 smartsoft online #2 (owner)
+2026-11-02 01:13:52.459 wait 30 s done (session 2 download)
+2026-11-02 01:18:16.295 s8 simulator again, sim fader 1 half and back
+2026-11-02 01:18:26.310 wait 10 s done (after S8)
+2026-11-02 01:18:56.327 wait 30 s done (end of actions)
+2026-11-02 01:18:59.488 smartsoft close #2 start
+2026-11-02 01:19:04.753 smartsoft closed #2
+2026-11-02 01:19:13.777 usbpcap stopped (owner)
+2026-11-02 01:19:26.199 owner answer: end positions = all 0%
+2026-11-02 01:19:39.937 after-session save: SHOW25.ASC (copy it into smartfade-sd-card-backup/ with the backup)
+2026-11-02 01:19:39.938 END guided E9c session
