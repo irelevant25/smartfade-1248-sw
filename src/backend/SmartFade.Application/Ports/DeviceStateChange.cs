@@ -12,8 +12,8 @@ namespace SmartFade.Application.Ports;
 /// console's selected memory page, 1-based) likewise; <see cref="Keys"/> is the LED state of the keys a real
 /// console reports (the simulator reports none); <see cref="FaderBank"/> what the physical faders control, when a
 /// real console reports it (ConsoleStatus, F98); <see cref="BlinkingFaders"/> the physical faders 1–24 whose LED a real console
-/// blinks, outside its page view and record screens (LedStatus; an unmatched fader after a bank or mode switch, F172, among
-/// other readings; display only), the complete list each time it changes.
+/// blinks, outside its page view and record screens (LedStatus; an unmatched fader after a mode switch, F172, a 1-24 / 25-48
+/// switch INFERRED alike, among other readings; display only), the complete list each time it changes.
 /// </summary>
 public sealed record DeviceStateChange(
     ConsoleSnapshot? Snapshot = null,

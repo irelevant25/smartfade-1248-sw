@@ -265,7 +265,11 @@ a channel bump, ChannelLevels) again after the release (F174: its reports carry 
 callback only changes state, its log note is written at the next event, after the payload; the assembler reports the
 console's blinking fader LEDs (`BlinkingFaders`, LedStatus blocks 1-24, outside the page view and the record screens) through
 `DeviceStateChange`, `ConsoleState` and the DTO, and the UI marks those bump buttons, display only (SC-5 condition 1 e); a
-change of the fader bank or of the blinking faders now raises the full state, which carries both.
+change of the fader bank or of the blinking faders now raises the full state, which carries both. The re-check (one major,
+two minors, a nit) was answered likewise: channel and memory fader events wait while BLACKOUT's LED is not steady off and
+after a BLACKOUT tap of ours until the console has reported that LED (F125: a blackout reports every fader at zero with the
+MASTER at full); the notes the `sent` callbacks leave are written only at an event that ends an exchange; a bump of ours
+held with SOLO on keeps every physical fader waiting by the same rule (F6, INFERRED).
 
 ## ASC show files as built (2026-10-31)
 

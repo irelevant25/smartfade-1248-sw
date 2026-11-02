@@ -67,8 +67,9 @@ export class ChannelFaderComponent {
   readonly bumpDisabled = input(false);
   /**
    * The console blinks this fader's LED (a real console's LedStatus, outside its page view and record screens): shown as a
-   * blinking outline on the bump, display only. After a bank or mode switch the console treats the fader as unmatched and
-   * takes a PC move only once it reaches the content's level (F172); a fader still holding another page's memory blinks too.
+   * blinking outline on the bump, display only. After a mode switch (a 1-24 / 25-48 switch INFERRED alike) the console
+   * treats the fader as unmatched and takes a PC move only once it reaches the content's level (F172); a fader still
+   * holding another page's memory blinks too.
    */
   readonly bumpBlinking = input(false);
 
@@ -117,7 +118,7 @@ export class ChannelFaderComponent {
       (this.bumpBlinking() ? ', blinking on the console' : ''),
   );
   protected readonly blinkingTitle =
-    'Blinking on the console: unmatched after a bank or mode switch, so a move from here takes effect only once it reaches the level of what the fader now controls; or the fader still holds a memory of another page';
+    'Blinking on the console: unmatched after a mode switch (a 1-24 / 25-48 switch presumably alike), so a move from here takes effect only once it reaches the level of what the fader now controls; or the fader still holds a memory of another page';
   protected readonly valueText = computed(
     () => `${this.percent()} percent${this.pending() ? ', waiting for the console' : ''}`,
   );

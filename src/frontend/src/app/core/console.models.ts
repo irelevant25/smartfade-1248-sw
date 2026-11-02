@@ -137,9 +137,9 @@ export interface ConsoleStateDto {
   faderBank?: FaderBank | null;
   /**
    * The physical faders 1..24 whose LED a real console blinks, outside its page view and record screens (LedStatus); empty
-   * when none, null for the simulator. Display only: after a bank or mode switch the console blinks a fader it treats as
-   * unmatched, whose PC moves take effect once they reach the content's level (F172); a fader still holding another page's
-   * memory blinks too (H69).
+   * when none, null for the simulator. Display only: after a mode switch (a 1-24 / 25-48 switch INFERRED alike) the
+   * console blinks a fader it treats as unmatched, whose PC moves take effect once they reach the content's level (F172);
+   * a fader still holding another page's memory blinks too (H69).
    */
   blinkingFaders?: number[] | null;
   /** The key LEDs a real console reports (hardware mode); null until reported, always null for the simulator. */

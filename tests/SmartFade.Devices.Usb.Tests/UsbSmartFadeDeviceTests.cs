@@ -1880,6 +1880,23 @@ public class UsbSmartFadeDeviceTests
         Assert.Equal(0, rig.Device.LastSession!.WritesSent);
     }
 
+    /// <summary>The second read-only session of our software (E8b): BLACKOUT on and off with channel fader 5 at full (F125).</summary>
+    private static readonly Lazy<CaptureFile> E8b = new(() => CaptureFile.Load(TestPaths.Capture("2026-10-30-e8b-second-read-only-session.jsonl")));
+
+    /// <summary>A task that completes when the device reports key LEDs that satisfy <paramref name="condition"/>.</summary>
+    private static Task KeysReportedAs(UsbSmartFadeDevice device, Func<PanelKeys, bool> condition)
+    {
+        var reported = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        device.StateChanged += (_, change) =>
+        {
+            if (change.Keys is { } keys && condition(keys))
+            {
+                reported.TrySetResult();
+            }
+        };
+        return reported.Task.WaitAsync(Timeout);
+    }
+
     /// <summary>The stand-in console answers bump 2's press as the 1248 answered SmartSoft's in E9e: FaderInfo seq 17675 (record 2 `ff 00 00 00`) and ChannelLevels seq 17679 (channel 2 at 0xFF), F174.</summary>
     private static void AnswersBump2WithItsHold(AnsweringPipe console) =>
         console.OnPress((byte)ClearedKey.Bump2, () =>
@@ -1990,13 +2007,15 @@ public class UsbSmartFadeDeviceTests
     }
 
     [Fact]
-    public async Task No_note_is_written_between_the_gate_and_a_writes_header()
+    public async Task No_note_is_written_between_the_gate_and_a_writes_header_nor_inside_an_exchange()
     {
         // The first review of SC-5 item 10, major 2 (SC-2 condition 5 and its 62 ms analysis: nothing may wait between the gate
         // and the header, no I/O and no log note). The loop waits for a write's slot, then the session asks the gate and the
         // write's own condition, runs its sent callback and the header goes. The pipe, the transfer log and the loop's waits
         // are entered in one order: no note lies between a write's slot wait and its header, and the two notes the sent
-        // callbacks leave (the bank key sent, the fader matched) come after the payload they describe. The case is the
+        // callbacks leave (the bank key sent, the fader matched) come after the payload they describe. The re-check's minor B
+        // (SC-1, the loop's own rule): nothing at all lies between a reply header that announces a payload and that payload,
+        // although the console lists ConsoleStatus and LedStatus at the very poll after the bank key. The case is the
         // automatic switch for channel 30, with the bytes of A_channel_of_bank_25_48_switches_the_bank_first_then_matches_its_fader_then_sends_the_drag.
         var order = new List<string>();
         var rig = LiveConsole(order: order);
@@ -2030,6 +2049,213 @@ public class UsbSmartFadeDeviceTests
         int NoteAt(string start) => Array.FindIndex(entries, e => e.StartsWith("note " + start, StringComparison.Ordinal));
         Assert.True(NoteAt("automatic bank switch (SC-5 condition 1) for channel fader 30: FADERS 25-48 sent") > headers[0] + 1, "the bank key's note came before its payload");
         Assert.True(NoteAt("matched channel fader 30 at its reported level 0x00") > headers[2] + 1, "the matching event's note came before its payload");
+
+        // every reply header that announces a payload (its length word, F53) is followed by that payload and nothing else
+        var payloadDue = false;
+        var payloads = 0;
+        for (var i = 0; i < entries.Length; i++)
+        {
+            if (payloadDue)
+            {
+                Assert.True(entries[i].StartsWith("in ", StringComparison.Ordinal), $"\"{entries[i]}\" came between a reply header and its payload");
+                payloadDue = false;
+                payloads++;
+                continue;
+            }
+
+            if (entries[i].StartsWith("in ", StringComparison.Ordinal))
+            {
+                var reply = Convert.FromHexString(entries[i]["in ".Length..]);
+                payloadDue = (reply[2] | (reply[3] << 8)) > 0;
+            }
+        }
+
+        Assert.True(payloads >= 8, $"only {payloads} payloads were read");
+        var keyNote = NoteAt("automatic bank switch (SC-5 condition 1) for channel fader 30: FADERS 25-48 sent");
+        Assert.StartsWith("in ", entries[keyNote - 1], StringComparison.Ordinal);   // written once the list after the key was read whole
+    }
+
+    [Fact]
+    public async Task Channel_and_memory_faders_wait_while_BLACKOUT_is_on_and_go_once_it_reads_off_and_the_faders_are_reported()
+    {
+        // The re-check of SC-5 item 10, new major (F125, OBSERVED once, E8b): with channel fader 5 at full, BLACKOUT on made the
+        // console report FaderInfo record 5 `00 00 00 00` with the MASTER at 0xFF (seq 26987), ChannelLevels[5] 0x00 (seq 26991)
+        // and LED block 53 steady blue (seq 26999), in one list: the two reports agree at 0x00 and the MASTER is at full, so only
+        // block 53 (F114) tells that the reported level is not the content's. Channel fader 5 and a memory fader are refused
+        // while it reads so, and nothing is queued (no switch starts). BLACKOUT off, as E8b reported it in one list: block 53
+        // `0A` x 6 (seq 27750), ChannelLevels[5] 0xFF (seq 27754), record 5 `FF 00 00 00` (seq 27762); then channel fader 5 goes,
+        // its matching event at the content's 0xFF, then the drag. As SmartSoft's bytes: its event of index 0x04 in bank 1-24
+        // (E9d seq 11362), with this session's counter and values.
+        var rig = LiveConsole();
+        await rig.Device.ConnectAsync(CancellationToken.None);
+        await rig.KeysReported.WaitAsync(Timeout);
+
+        var on = KeysReportedAs(rig.Device, keys => keys.Blackout is { Light: KeyLight.Full, Blinking: false });
+        rig.Console.Report((int)HspObjectId.FaderInfo, Body(E8b, 26987));
+        rig.Console.Report((int)HspObjectId.ChannelLevels, Body(E8b, 26991));
+        rig.Console.Report((int)HspObjectId.LedStatus, Body(E8b, 26999));
+        await on;
+        var channel = await Assert.ThrowsAsync<InvalidOperationException>(() => rig.Device.SetChannelLevelAsync(5, 0x40, CancellationToken.None));
+        Assert.Contains("BLACKOUT's LED (block 53) reads Full: during a blackout the console reports every fader at zero with the MASTER at full (F125), so channel fader 5's reported level is not its own", channel.Message, StringComparison.Ordinal);
+        var memory = await Assert.ThrowsAsync<InvalidOperationException>(() => rig.Device.SetMemoryLevelAsync(1, 1, 0x40, CancellationToken.None));
+        Assert.Contains("BLACKOUT's LED (block 53) reads Full", memory.Message, StringComparison.Ordinal);
+        Assert.Equal(0, rig.Device.LastSession!.QueuedWrites);
+
+        rig.Console.Report((int)HspObjectId.LedStatus, Body(E8b, 27750));
+        rig.Console.Report((int)HspObjectId.ChannelLevels, Body(E8b, 27754));
+        rig.Console.Report((int)HspObjectId.FaderInfo, Body(E8b, 27762));
+        await WaitUntil(() => rig.Console.Served((int)HspObjectId.FaderInfo) == 3);
+        await rig.Console.PauseAtNextPoll().WaitAsync(Timeout);   // all three are in
+        await rig.Device.SetChannelLevelAsync(5, 0x40, CancellationToken.None);
+        rig.Console.Resume();
+        await WaitUntil(() => rig.Device.LastSession!.WritesSent == 2);
+        await rig.Device.DisconnectAsync(CancellationToken.None);
+
+        Assert.Equal(new[] { WithCounter(E9d, 11362, 0x00, value: 0xFF, previous: 0x00), WithCounter(E9d, 11362, 0x01, value: 0x40, previous: 0xFF) }, Payloads(rig.Pipe));
+    }
+
+    [Fact]
+    public async Task A_fader_event_queued_before_a_blackout_is_dropped_unsent()
+    {
+        // The re-check of SC-5 item 10, new major, the queue: channel fader 5 is matched (at 0x00, E9b seq 11632) and dragged
+        // to 0x20; its next level, 0x30, is queued while the loop waits inside a poll, and the console then reports BLACKOUT on
+        // (E8b seq 26987, 26991, 26999, one list). The gate holds the write while LedStatus is listed and unfetched; once it is
+        // in, the event's own condition drops it, block 53 reading steady blue. The reported level reads 0x00 before and during
+        // the blackout here, so only the BLACKOUT rule stops it. As SmartSoft's bytes: E9d seq 11362 (index 0x04).
+        var rig = LiveConsole();
+        await rig.Device.ConnectAsync(CancellationToken.None);
+        await rig.KeysReported.WaitAsync(Timeout);
+
+        await rig.Device.SetChannelLevelAsync(5, 0x20, CancellationToken.None);
+        await WaitUntil(() => rig.Device.LastSession!.WritesSent == 2);
+        await rig.Console.PauseAtNextPoll().WaitAsync(Timeout);
+        await rig.Device.SetChannelLevelAsync(5, 0x30, CancellationToken.None);   // matched: queued as it is
+        Assert.Equal(1, rig.Device.LastSession!.QueuedWrites);
+        rig.Console.Report((int)HspObjectId.FaderInfo, Body(E8b, 26987));
+        rig.Console.Report((int)HspObjectId.ChannelLevels, Body(E8b, 26991));
+        rig.Console.Report((int)HspObjectId.LedStatus, Body(E8b, 26999));
+        rig.Console.Resume();
+        await WaitUntil(() => rig.Device.LastSession!.WritesDropped == 1);
+        await rig.Device.DisconnectAsync(CancellationToken.None);
+
+        Assert.Equal(2, rig.Device.LastSession!.WritesSent);
+        Assert.Equal(new[] { WithCounter(E9d, 11362, 0x00, value: 0x00, previous: 0x00), WithCounter(E9d, 11362, 0x01, value: 0x20, previous: 0x00) }, Payloads(rig.Pipe));
+        Assert.Contains(rig.Log.Notes, n => n.StartsWith("queued write dropped unsent: BLACKOUT's LED (block 53) reads Full", StringComparison.Ordinal));
+    }
+
+    [Fact]
+    public async Task After_a_BLACKOUT_tap_of_ours_the_faders_wait_for_the_consoles_report_of_its_LED()
+    {
+        // The re-check of SC-5 item 10, new major, our own trigger: from the press of a BLACKOUT tap of ours until the console has
+        // reported block 53 again, the level objects may already read zero (F125; E8b listed FaderInfo and ChannelLevels before
+        // LedStatus in one list, seq 26983), so channel fader 5 waits; once block 53 reads steady blue it waits for the blackout
+        // itself. The stand-in toggles nothing by itself: the test reports BLACKOUT on (E8b seq 26987, 26991, 26999). As
+        // SmartSoft's bytes: its BLACKOUT press and release (E9 seq 33542, 33547), with this session's counter.
+        var rig = LiveConsole();
+        await rig.Device.ConnectAsync(CancellationToken.None);
+        await rig.KeysReported.WaitAsync(Timeout);
+
+        await rig.Device.SetBlackoutAsync(true, CancellationToken.None);
+        await WaitUntil(() => rig.Device.LastSession!.WritesSent == 2);
+        var pressed = await Assert.ThrowsAsync<InvalidOperationException>(() => rig.Device.SetChannelLevelAsync(5, 0x40, CancellationToken.None));
+        Assert.Contains("BLACKOUT was pressed from the PC and the console has not reported its LED (block 53) since", pressed.Message, StringComparison.Ordinal);
+
+        var on = KeysReportedAs(rig.Device, keys => keys.Blackout is { Light: KeyLight.Full, Blinking: false });
+        rig.Console.Report((int)HspObjectId.FaderInfo, Body(E8b, 26987));
+        rig.Console.Report((int)HspObjectId.ChannelLevels, Body(E8b, 26991));
+        rig.Console.Report((int)HspObjectId.LedStatus, Body(E8b, 26999));
+        await on;
+        var blackout = await Assert.ThrowsAsync<InvalidOperationException>(() => rig.Device.SetChannelLevelAsync(5, 0x40, CancellationToken.None));
+        Assert.Contains("BLACKOUT's LED (block 53) reads Full", blackout.Message, StringComparison.Ordinal);
+        await rig.Device.DisconnectAsync(CancellationToken.None);
+
+        Assert.Equal(new[] { E9Payload(33542, 0x00), E9Payload(33547, 0x01) }, Payloads(rig.Pipe));
+    }
+
+    /// <summary>The stand-in console answers bump 7's press as the 1248 answered SmartSoft's held bump 7 with SOLO on in E9c: FaderInfo seq 88006 (record 7 `ff 00 00 00`), ChannelLevels seq 88010 (channel 7 at 0xFF).</summary>
+    private static void AnswersBump7WithItsHold(AnsweringPipe console) =>
+        console.OnPress((byte)ClearedKey.Bump7, () =>
+        {
+            console.Report((int)HspObjectId.FaderInfo, Body(E9c, 88006));
+            console.Report((int)HspObjectId.ChannelLevels, Body(E9c, 88010));
+        });
+
+    [Fact]
+    public async Task A_bump_of_ours_held_with_SOLO_on_keeps_every_fader_waiting_until_the_faders_are_reported_after_its_release()
+    {
+        // The re-check of SC-5 item 10, minor C: with SOLO on a bump replaces the output (F6, DOCUMENTED: the other channels are
+        // muted), so every fader's reports may carry it (INFERRED, unobserved: FaderInfo of the other faders may drop as it does
+        // for BLACKOUT, F125, and the MASTER, F176). The stand-in reports SOLO on as E9c did after SmartSoft's SOLO tap
+        // (LedStatus seq 87881, block 52 `FF` x 6) and answers bump 7's press as the console answered SmartSoft's held bump 7
+        // there. Channel fader 3, another fader, is refused during the hold and after the release until ChannelLevels (seq
+        // 88133) and FaderInfo (seq 88141) are in, in E9c's order; then it goes, matched at 0x00. As SmartSoft's bytes: its
+        // bump 7 press and release (E9c seq 87997, 88124) and its event of index 0x02 in bank 1-24 (E9d seq 10476).
+        var rig = LiveConsole();
+        AnswersBump7WithItsHold(rig.Console);
+        await rig.Device.ConnectAsync(CancellationToken.None);
+        await rig.KeysReported.WaitAsync(Timeout);
+        var solo = KeysReportedAs(rig.Device, keys => keys.Solo is { Light: KeyLight.Full, Blinking: false });
+        rig.Console.Report((int)HspObjectId.LedStatus, Body(E9c, 87881));
+        await solo;
+
+        var inHold = ChannelReported(rig.Device, 7, 0xFF);
+        await rig.Device.BumpChannelAsync(7, true, CancellationToken.None);
+        await inHold;
+        var held = await Assert.ThrowsAsync<InvalidOperationException>(() => rig.Device.SetChannelLevelAsync(3, 0x40, CancellationToken.None));
+        Assert.Contains("bump 7 is held with SOLO on: the bump replaces the output (F6), so every fader's reports may carry it, not channel fader 3's own level", held.Message, StringComparison.Ordinal);
+
+        await rig.Device.BumpChannelAsync(7, false, CancellationToken.None);
+        await WaitUntil(() => rig.Device.LastSession!.WritesSent == 2);
+        await rig.Console.PauseAtNextPoll().WaitAsync(Timeout);   // a poll after the release
+        rig.Console.Resume();
+        await rig.Console.PauseAtNextPoll().WaitAsync(Timeout);   // its idle reply is in
+        var released = await Assert.ThrowsAsync<InvalidOperationException>(() => rig.Device.SetChannelLevelAsync(3, 0x40, CancellationToken.None));
+        Assert.Contains("bump 7 was released with SOLO on and the console has not reported the faders again since (FaderInfo and ChannelLevels listed and delivered after the release)", released.Message, StringComparison.Ordinal);
+
+        rig.Console.Report((int)HspObjectId.ChannelLevels, Body(E9c, 88133));
+        rig.Console.Report((int)HspObjectId.FaderInfo, Body(E9c, 88141));
+        rig.Console.Resume();
+        await WaitUntil(() => rig.Console.Served((int)HspObjectId.FaderInfo) == 3);
+        await rig.Console.PauseAtNextPoll().WaitAsync(Timeout);   // both are in
+        await rig.Device.SetChannelLevelAsync(3, 0x40, CancellationToken.None);
+        rig.Console.Resume();
+        await WaitUntil(() => rig.Device.LastSession!.WritesSent == 4);
+        await rig.Device.DisconnectAsync(CancellationToken.None);
+
+        Assert.Equal(new[]
+        {
+            WithCounter(E9c, 87997, 0x00), WithCounter(E9c, 88124, 0x01),
+            WithCounter(E9d, 10476, 0x02, value: 0x00, previous: 0x00), WithCounter(E9d, 10476, 0x03, value: 0x40, previous: 0x00),
+        }, Payloads(rig.Pipe));
+    }
+
+    [Fact]
+    public async Task SOLO_coming_on_during_a_bump_of_ours_widens_its_wait_to_every_fader()
+    {
+        // The re-check of SC-5 item 10, minor C, the panel's SOLO during our hold (the PC sends nothing between a press and its
+        // release): bump 7 is pressed with SOLO off (E9b seq 11636), and the console reports SOLO on during the hold (E9c seq
+        // 87881, block 52 `FF` x 6, with the hold's FaderInfo seq 88006 and ChannelLevels seq 88010). From then on channel
+        // fader 3, another fader, waits too (F6; INFERRED, unobserved). Only the press and the release go (E9c seq 87997, 88124).
+        var rig = LiveConsole();
+        rig.Console.OnPress((byte)ClearedKey.Bump7, () =>
+        {
+            rig.Console.Report((int)HspObjectId.FaderInfo, Body(E9c, 88006));
+            rig.Console.Report((int)HspObjectId.ChannelLevels, Body(E9c, 88010));
+            rig.Console.Report((int)HspObjectId.LedStatus, Body(E9c, 87881));
+        });
+        await rig.Device.ConnectAsync(CancellationToken.None);
+        await rig.KeysReported.WaitAsync(Timeout);
+
+        var solo = KeysReportedAs(rig.Device, keys => keys.Solo is { Light: KeyLight.Full, Blinking: false });
+        await rig.Device.BumpChannelAsync(7, true, CancellationToken.None);
+        await solo;
+        var held = await Assert.ThrowsAsync<InvalidOperationException>(() => rig.Device.SetChannelLevelAsync(3, 0x40, CancellationToken.None));
+        Assert.Contains("bump 7 is held with SOLO on", held.Message, StringComparison.Ordinal);
+        await rig.Device.BumpChannelAsync(7, false, CancellationToken.None);
+        await WaitUntil(() => rig.Device.LastSession!.WritesSent == 2);
+        await rig.Device.DisconnectAsync(CancellationToken.None);
+
+        Assert.Equal(new[] { WithCounter(E9c, 87997, 0x00), WithCounter(E9c, 88124, 0x01) }, Payloads(rig.Pipe));
     }
 
     [Fact]

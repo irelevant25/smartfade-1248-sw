@@ -113,7 +113,9 @@ interface ConsoleStateDto {
                                                     // refuses, with its reason, what the console's reported state does
                                                     // not allow (another page, NEXT mode, a record function armed, a
                                                     // fader whose bump the PC pressed until the console has reported that
-                                                    // fader again after the release, F174 …)
+                                                    // fader again after the release, F174, every fader while that bump was
+                                                    // pressed with SOLO on, F6, a channel or memory fader during a
+                                                    // BLACKOUT, F125 …)
   channels: ChannelStateDto[];                      // exactly 48 entries
   masters: MastersDto;
   outputs: number[];                                // 512 DMX output levels 0..255 (simulator model; real: OBSERVED object)
@@ -137,10 +139,10 @@ interface ConsoleStateDto {
                                                     // LedStatus block k with its two phases different, F116), outside its page
                                                     // view and record screens; empty when none blinks, null for the simulator
                                                     // and until the console reported its LEDs. Display only (SC-5 condition
-                                                    // 1 e, added 2026-11-02): after a bank or mode switch the console blinks a
-                                                    // fader it treats as unmatched, whose moves from the PC take effect once
-                                                    // they reach the content's level (F172 cases a and b; "blinking =
-                                                    // unmatched" INFERRED); a fader still holding another page's memory blinks
+                                                    // 1 e, added 2026-11-02): after a mode switch (a 1-24 / 25-48 switch
+                                                    // INFERRED alike) the console blinks a fader it treats as unmatched, whose
+                                                    // moves from the PC take effect once they reach the content's level (F172
+                                                    // cases a and b; "blinking = unmatched" INFERRED); a fader still holding another page's memory blinks
                                                     // too, though a move takes effect at once (F172 case c, H69). Fader k is
                                                     // channel k or 24 + k as `faderBank` says, or memory fader k of the
                                                     // console's page in memory mode; the UI marks that bump button
@@ -188,7 +190,7 @@ returns the content.
 | `pressFadersMems()` | — | FADERS MEMS as a tap: the physical faders to memory mode; `not_supported` on the simulator |
 | `pressFaders1To24()` | — | FADERS 1-24 as a tap: the physical faders to channel mode, bank 1-24; `not_supported` on the simulator; the real console takes it only from memory mode or bank 25-48 |
 | `pressFaders25To48()` | — | FADERS 25-48 as a tap: the physical faders to channel mode, bank 25-48; `not_supported` on the simulator; the real console takes it only from channel mode, bank 1-24 (SC-5 class B4) |
-| `bumpChannel(channel, pressed)` | `number 1..48`, `boolean` | the bump button under a channel fader went down (`true`) or up (`false`); a client must send the release it owes. The real console with live control holds the bump until the release, one bump at a time (SC-5 class B3); the device releases it itself 2.75 s after the press on its own clock (later only with a slow console, logged) and before a disconnect. From the press until the console has reported that physical fader again after the release, the fader under it is refused (its reports carry the bump's level meanwhile, F174) |
+| `bumpChannel(channel, pressed)` | `number 1..48`, `boolean` | the bump button under a channel fader went down (`true`) or up (`false`); a client must send the release it owes. The real console with live control holds the bump until the release, one bump at a time (SC-5 class B3); the device releases it itself 2.75 s after the press on its own clock (later only with a slow console, logged) and before a disconnect. From the press until the console has reported that physical fader again after the release, the fader under it is refused (its reports carry the bump's level meanwhile, F174), and with SOLO on every fader (the bump replaces the output, F6; INFERRED for the reports) |
 | `setMemoryLevel(page, fader, level)` | `number 1..12`, `number 1..24`, `number 0..255` | moves a memory fader (`invalid_memory` when the address is out of range); the real console takes it only for the page it shows (no page change is sent) |
 | `bumpMemory(page, fader, pressed)` | `number 1..12`, `number 1..24`, `boolean` | the bump button under a memory fader went down or up; held as `bumpChannel` on the real console |
 | `recordMemory(page, fader)` | `number 1..12`, `number 1..24` | REC MEM: stores the current look into the memory (F107) |

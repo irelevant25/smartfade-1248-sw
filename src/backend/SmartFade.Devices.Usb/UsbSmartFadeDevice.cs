@@ -26,21 +26,25 @@ namespace SmartFade.Devices.Usb;
 /// its first event carries the target's reported level, and only then the UI's level follows (F172, SC-5 condition 1 d).
 /// Every command is refused, with its reason, while REC MEM, EDIT MEM, COPY or REC SEQ is lit, blinking or unreported
 /// (condition 5), while NEXT mode is on or unknown (F173), and before the console has reported what the control needs
-/// (conditions 6, 8); a queued write is asked again at the moment it would go, after its slot
-/// wait and right before its header (the gate, then its own state), and dropped unsent if the console's state no longer
-/// allows it. In a live session a key-LED, fader-mode or FaderInfo report that does not decode ends the session. Every
-/// transfer is logged to a capture file in our normalized format. Any error ends the session in the Error state with its
-/// reason; nothing is retried. A stop waits for the session to reach an idle point (a fetch is never left without its
-/// poll, a press never without its release, a write never without the poll after it), and Connect is refused while a
-/// session is still running, or after a Data header went out (or may have) without its payload: until the backend
-/// restarts, and while the <see cref="IncompleteWriteMarker"/> it was given exists. The pipe comes from a factory so
-/// that tests run the same device over a committed capture (<see cref="ReplayHspPipe"/>) and never over hardware.
+/// (conditions 6, 8); a channel or memory fader event also while BLACKOUT's LED is not steady off (F125) and while a
+/// bump of ours has not been reported again after its release (F174; with SOLO on, every fader: F6). A queued write is
+/// asked again at the moment it would go, after its slot wait and right before its header (the gate, then its own
+/// state), and dropped unsent if the console's state no longer allows it. In a live session a key-LED, fader-mode or
+/// FaderInfo report that does not decode ends the session. Every transfer is logged to a capture file in our normalized
+/// format. Any error ends the session in the Error state with its reason; nothing is retried. A stop waits for the
+/// session to reach an idle point (a fetch is never left without its poll, a press never without its release, a write
+/// never without the poll after it), and Connect is refused while a session is still running, or after a Data header
+/// went out (or may have) without its payload: until the backend restarts, and while the
+/// <see cref="IncompleteWriteMarker"/> it was given exists. The pipe comes from a factory so that tests run the same
+/// device over a committed capture (<see cref="ReplayHspPipe"/>) and never over hardware.
 /// </summary>
 [Evidence(EvidenceStatus.Verified, "F51, F52, F53, F54, F55, F57", "the read-only session as SC-1 cleared it (2026-10-30)")]
 [Evidence(EvidenceStatus.Verified, "F131, F132, F133, F134", "live control, SC-2 classes A and B1 (2026-10-31): the whitelisted ConsoleEvents as SmartSoft's and the console's behaviour; a conditional GO, nothing sent before E11 on the owner's go")]
 [Evidence(EvidenceStatus.Verified, "F171, F174, F175", "live control, SC-5 classes A2-A4, B3-B5 (2026-11-02, with the addenda): every physical fader and bump in three banks, the bank keys, IND 1 / 2 as SmartSoft's events and the console's answers to them; a conditional GO, nothing sent before the review and E11b on the owner's go")]
 [Evidence(EvidenceStatus.Observed, "F172 (a) VERIFIED in part, (b) and (c) OBSERVED once; the 1-24 / 25-48 bank switch in none of its cases", "the automatic bank switch's matching event: after a mode switch the console ignored SmartSoft's events for a re-assigned fader until one reached the content's level (case a, E9c and both E9d passes); after a physical level (b) and a page change (c) once each; that a 1-24 / 25-48 switch behaves alike is INFERRED; a matching event from our own host is unobserved until E11b")]
 [Evidence(EvidenceStatus.Inferred, "F82, F96, F112, F174", "the matching level: ChannelLevels[c] agreeing with FaderInfo record k byte 0 (a memory fader: record k bytes 0 and 1) is read as the fader content's own level, which rules out a memory up on another fader and the stack (INFERRED), not a held bump (F174, VERIFIED: the bump's level is in both reports during a hold), so the physical fader of a bump this host pressed is refused until both objects were listed and delivered again after its release")]
+[Evidence(EvidenceStatus.Observed, "F125 (OBSERVED once, timed, E8b); F114 VERIFIED for the LED", "BLACKOUT zeroes FaderInfo record k byte 0 and ChannelLevels[c] and leaves the MASTER byte at 0xFF (E8b seq 26987, 26991, 26999; the content back at 27754 / 27762), so during a blackout the reported level is not the content's: channel and memory fader events go only while LED block 53 reads steady off (F114: steady blue while BLACKOUT is on); how the console answers a matching event at 0x00 during a blackout is UNKNOWN (never sent, never captured)")]
+[Evidence(EvidenceStatus.Inferred, "F6 (DOCUMENTED), F125, F176", "a bump held with SOLO on replaces the output (F6), so the other faders' reports may carry it too, ChannelLevels at least and FaderInfo as BLACKOUT (F125) and the MASTER (F176) do: unobserved (E9c's only SOLO-mode hold, header 87996, had nothing else up), so a bump of ours under SOLO keeps every physical fader waiting until FaderInfo and ChannelLevels were reported after its release")]
 [Evidence(EvidenceStatus.Inferred, "F57, F116", "the interlock's freshness reading: a poll reply within two poll periods that listed no LedStatus means the key LEDs are current (F57: a list names what changed; F116: a record screen opens and closes with exactly one LedStatus payload, 28 of 28 and 4 of 4); not observed as a rule of the console")]
 [Evidence(EvidenceStatus.Observed, "write_rules.py 2026-10-31 (E9, E9b); E9c, E9d, E9e", "the console states SmartSoft sent each whitelisted control in; the device sends each control only in those states")]
 public sealed class UsbSmartFadeDevice : ISmartFadeDevice, IAsyncDisposable
@@ -746,7 +750,8 @@ public sealed class UsbSmartFadeDevice : ISmartFadeDevice, IAsyncDisposable
     /// 29262, 86165, 87996; E9d 27254; E9e 17655, 18352, 18882, 28382, 28803), after a memory bump's FaderInfo always (51 of 51),
     /// and a memory bump of an empty memory changes no channel (E9c S3), so a memory bump waits for FaderInfo only. A fader
     /// event of that physical fader, in any bank, is refused or dropped meanwhile (OBSERVED evidence, the rule INFERRED).
-    /// A bump held on the panel cannot be told apart from a fader at that level (the owner's acceptance for E11b).
+    /// A bump held on the panel cannot be told apart from a fader at that level (the owner's acceptance for E11b). With SOLO
+    /// on the shadow covers every physical fader (<see cref="AllFaders"/>, the re-check of item 10, minor C).
     /// Read and changed under <c>_gate</c> only.
     /// </summary>
     private sealed class BumpShadow
@@ -759,6 +764,15 @@ public sealed class UsbSmartFadeDevice : ISmartFadeDevice, IAsyncDisposable
 
         /// <summary>A channel bump: its level is in ChannelLevels too, so ChannelLevels must be reported again as well.</summary>
         public required bool ChannelsToo { get; init; }
+
+        /// <summary>
+        /// SOLO's LED (block 52) read on, blinking or unknown at the press or while the shadow lasted: a bump with SOLO on
+        /// replaces the output (F6, DOCUMENTED: the other channels are muted, memory bumps replace the live output), so every
+        /// physical fader's reports may carry it, ChannelLevels and perhaps FaderInfo, as BLACKOUT (F125) and the MASTER (F176)
+        /// zero FaderInfo too. INFERRED from those, unobserved: E9c's only SOLO-mode hold (header 87996) had nothing else up.
+        /// Every physical fader then waits for the same release-then-reported rule as the bump's own.
+        /// </summary>
+        public bool AllFaders { get; set; }
 
         /// <summary>The press was taken for sending (until then the fader's reports are its own).</summary>
         public bool PressSent { get; set; }
@@ -774,29 +788,38 @@ public sealed class UsbSmartFadeDevice : ISmartFadeDevice, IAsyncDisposable
 
         public bool ChannelLevelsIn { get; set; }
 
-        /// <summary>FaderInfo (and ChannelLevels for a channel bump) listed after the release and then delivered: the fader's reports are its own again.</summary>
+        /// <summary>FaderInfo (and ChannelLevels for a channel bump) listed after the release and then delivered: the reports are the faders' own again.</summary>
         public bool Done => Released && FaderInfoIn && (ChannelLevelsIn || !ChannelsToo);
     }
 
     /// <summary>
-    /// Why a fader event of physical fader k waits for the console: a bump of that physical fader that this session pressed
-    /// and whose release the console has not reported again in FaderInfo (and ChannelLevels) (<see cref="BumpShadow"/>); null otherwise.
+    /// Why a fader event of physical fader k waits for the console: a bump of that physical fader that this session pressed,
+    /// or any bump of ours held with SOLO on (<see cref="BumpShadow.AllFaders"/>), whose release the console has not reported
+    /// again in FaderInfo (and ChannelLevels) (<see cref="BumpShadow"/>); null otherwise.
     /// </summary>
     private string? Shadowed(Target target)
     {
-        if (_bumpShadows.FirstOrDefault(s => s.PressSent && s.Physical == target.Physical) is not { } shadow)
+        var own = _bumpShadows.FirstOrDefault(s => s.PressSent && s.Physical == target.Physical);
+        if ((own ?? _bumpShadows.FirstOrDefault(s => s.PressSent && s.AllFaders)) is not { } shadow)
         {
             return null;
         }
 
         var objects = shadow.ChannelsToo ? "FaderInfo and ChannelLevels" : "FaderInfo";
+        if (own is null)
+        {
+            return shadow.Released
+                ? $"{shadow.Name} was released with SOLO on and the console has not reported the faders again since ({objects} listed and delivered after the release): until then every fader's reports may carry the bump's output, not {target.Name}'s own level (F6; INFERRED, unobserved)"
+                : $"{shadow.Name} is held with SOLO on: the bump replaces the output (F6), so every fader's reports may carry it, not {target.Name}'s own level, until the console has reported them again after the release ({objects} listed and delivered; INFERRED, unobserved)";
+        }
+
         return shadow.Released
             ? $"{shadow.Name} was released and the console has not reported physical fader {shadow.Physical} again since ({objects} listed and delivered after the release): until then its reports may carry the bump's level, not {target.Name}'s (F174)"
             : $"{shadow.Name} is held: physical fader {shadow.Physical}'s reports carry the bump's level, not {target.Name}'s, until the console has reported it again after the release ({objects} listed and delivered) (F174)";
     }
 
     /// <summary>The console state a channel or memory fader event needs, at its command and again right before it goes.</summary>
-    private string? FaderState(Target target) => NotIn(target) ?? MasterNotAtFull(target.Name) ?? Shadowed(target);
+    private string? FaderState(Target target) => NotIn(target) ?? MasterNotAtFull(target.Name) ?? BlackoutNotOff(target.Name) ?? Shadowed(target);
 
     /// <summary>The automatic bank switch in progress (SC-5 condition 1), one at a time; read and changed under <c>_gate</c> only.</summary>
     private sealed class BankSwitch
@@ -1043,7 +1066,7 @@ public sealed class UsbSmartFadeDevice : ISmartFadeDevice, IAsyncDisposable
         lock (_gate)
         {
             RequireRunning(session);
-            Refuse(RecordFunctionArmed(_assembler.Keys) ?? FadersUnreported() ?? MasterNotAtFull(target.Name) ?? Shadowed(target));
+            Refuse(RecordFunctionArmed(_assembler.Keys) ?? FadersUnreported() ?? MasterNotAtFull(target.Name) ?? BlackoutNotOff(target.Name) ?? Shadowed(target));
             if (_switch is { } pending)
             {
                 Refuse(pending.Target == target.Bank && pending.Page == target.Page ? null : SwitchInProgress());
@@ -1323,8 +1346,9 @@ public sealed class UsbSmartFadeDevice : ISmartFadeDevice, IAsyncDisposable
     /// <summary>Queues a bump as a hold (released by the UI or the loop's 3 s bound, <see cref="HspReadLoop.MaxHold"/>) or, when the UI already let go, as a tap; asked again right before it goes.</summary>
     private void QueueBump(HspReadSession session, HeldBump bump, bool tap)
     {
-        // its physical fader's reports carry the bump from the press until they are reported again after the release (F174)
-        var shadow = new BumpShadow { Key = bump.Key, Physical = bump.Target.Physical, Name = bump.Target.Name, ChannelsToo = bump.Target.Channel is not null };
+        // its physical fader's reports carry the bump from the press until they are reported again after the release (F174);
+        // with SOLO on every fader's may (F6, INFERRED)
+        var shadow = new BumpShadow { Key = bump.Key, Physical = bump.Target.Physical, Name = bump.Target.Name, ChannelsToo = bump.Target.Channel is not null, AllFaders = SoloNotOff() };
         Func<HspWriteDecision> condition = () => Recheck(session, () => NotIn(bump.Target), holdWhileFaderInfoListed: false);
         void PressSent()
         {
@@ -1538,6 +1562,36 @@ public sealed class UsbSmartFadeDevice : ISmartFadeDevice, IAsyncDisposable
         { Master: 0xFF } => null,
         { Master: var master } => $"the MASTER reads 0x{master:X2}: {name} is sent only with the MASTER at full, where its reported level is its own (F96, F176; SC-2 condition 6)",
     };
+
+    /// <summary>
+    /// Every channel and memory fader event only while BLACKOUT's LED, block 53, reads steady off (the re-check of SC-5 item 10,
+    /// new major): BLACKOUT zeroes FaderInfo record k byte 0 and ChannelLevels[c] and leaves the MASTER byte at 0xFF (F125,
+    /// OBSERVED once, timed: E8b seq 26987, 26991, 26999; the content back at 27754 / 27762), so the agreement check and
+    /// <see cref="MasterNotAtFull"/> pass while the reported level is not the content's, and a matching event would carry
+    /// 0x00 whatever the content; the console's answer to one is UNKNOWN. Block 53 steady blue is BLACKOUT on (F114, VERIFIED);
+    /// blinking is the MASTER below full (F85), refused before by the MASTER's own rule. Asked at the command and again right
+    /// before the write, so a queued event is dropped; while the LEDs and the level objects are listed and unfetched the gate
+    /// and the matching event's own condition hold, and a matching level that changed with them drops it. A BLACKOUT tap of
+    /// ours counts from its press until the console has reported block 53 again: E8b listed FaderInfo and ChannelLevels
+    /// before LedStatus in the same list (seq 26983), so the level objects may read zero before the LED says why.
+    /// </summary>
+    private string? BlackoutNotOff(string name)
+    {
+        if (_togglesSent.Contains(ClearedKey.Blackout))
+        {
+            return $"BLACKOUT was pressed from the PC and the console has not reported its LED (block 53) since: the faders may already read zero (F125), so {name} waits for that report";
+        }
+
+        return _assembler.Keys?.Blackout switch
+        {
+            null => $"the console has not reported BLACKOUT's LED (block 53) yet: {name} is sent only while it reads steady off (F125)",
+            { Light: KeyLight.Off, Blinking: false } => null,
+            { } led => $"BLACKOUT's LED (block 53) reads {Describe(led)}: during a blackout the console reports every fader at zero with the MASTER at full (F125), so {name}'s reported level is not its own; it is sent only while the LED reads steady off",
+        };
+    }
+
+    /// <summary>SOLO's LED (block 52, F100) reads anything but steady off, or is unreported: a bump then may replace the output (F6, <see cref="BumpShadow.AllFaders"/>).</summary>
+    private bool SoloNotOff() => _assembler.Keys?.Solo is not { Light: KeyLight.Off, Blinking: false };
 
     /// <summary>The state SmartSoft sent the MASTER, BUMPS, GO, SOLO, BLACKOUT and IND 1 / 2 in (E9 to E9c): channel mode, bank 1-24, NEXT mode off (F98, F173; the readings H53).</summary>
     private string? NotInChannelBank1To24(string control) => ReportedBank() switch
@@ -1820,7 +1874,13 @@ public sealed class UsbSmartFadeDevice : ISmartFadeDevice, IAsyncDisposable
     {
         if (live)
         {
-            WriteLeftNotes();    // the notes of the writes before this event, now after their payloads (MAJOR 2 of the review)
+            // the notes the writes before this exchange left, now after their payloads (MAJOR 2 of the first pass), and only at an
+            // event that ends an exchange (the re-check's minor B): never between a reply header and the payload it announces
+            if (EndsExchange(evt))
+            {
+                WriteLeftNotes();
+            }
+
             TrackShadows(evt);
         }
 
@@ -1913,6 +1973,14 @@ public sealed class UsbSmartFadeDevice : ISmartFadeDevice, IAsyncDisposable
     }
 
     /// <summary>
+    /// An event after which the exchange it belongs to is complete: an idle poll reply (a header announcing no payload), a list,
+    /// an object. A reply header that announces a payload is not one: its payload is read next, and nothing may be written to
+    /// disk between them (SC-1, the loop's transfer log is written after the exchange for the same reason).
+    /// </summary>
+    private static bool EndsExchange(HspEvent evt) =>
+        evt is DirtyListReceived or ObjectReceived or ReplyHeaderReceived { Header.MessageType: HspMessageType.PollReply, Header.Length: 0 };
+
+    /// <summary>
     /// The bumps this session pressed (<see cref="BumpShadow"/>), on the session's thread: a poll reply after the release was
     /// taken marks it released; a list after that naming FaderInfo or ChannelLevels marks it listed. The delivery of those
     /// objects is tracked by <see cref="ShadowsAfterObject"/>, in the same lock as the assembler's update.
@@ -1951,6 +2019,8 @@ public sealed class UsbSmartFadeDevice : ISmartFadeDevice, IAsyncDisposable
     /// <summary>
     /// Under <c>_gate</c>, right after the assembler applied a delivered object: FaderInfo or ChannelLevels listed after a
     /// release counts as reported again, and a shadow whose release is so reported ends, never before the new report is in.
+    /// SOLO's LED read on (or not steady off) while a shadow lasts widens it to every physical fader (SOLO pressed on the panel
+    /// during our hold; the PC sends nothing between a press and its release).
     /// </summary>
     private void ShadowsAfterObject(int objectId)
     {
@@ -1959,8 +2029,10 @@ public sealed class UsbSmartFadeDevice : ISmartFadeDevice, IAsyncDisposable
             return;
         }
 
+        var solo = objectId == (int)HspObjectId.LedStatus && SoloNotOff();
         foreach (var shadow in _bumpShadows)
         {
+            shadow.AllFaders |= solo;
             shadow.FaderInfoIn |= objectId == (int)HspObjectId.FaderInfo && shadow.FaderInfoListed;
             shadow.ChannelLevelsIn |= objectId == (int)HspObjectId.ChannelLevels && shadow.ChannelLevelsListed;
         }
