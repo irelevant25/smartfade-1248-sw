@@ -178,7 +178,7 @@ know what is that for should work in both ways." (= REC MEM, EDIT MEM, COPY and 
 **SC-3** opens with this as his acceptance per key; REC MEM, EDIT MEM and COPY were pressed from SmartSoft's Simulator in E9 and E9b,
 REC SEQ never from a PC, so a passive capture E15 of the four record flows from the Simulator comes first, then the check, the interlock's
 redesign (a write while a record function is armed only for the keys that complete or cancel it), the implementation, the review, a live
-session; SNAPSHOT stays out).
+session; SNAPSHOT stays out). **Later that evening: Claude (Fable) began generating the E14 and E15 guided scripts from the E9e guide and was stopped by its safety system, as on 2026-10-31; the stopped content is not repeated by Claude, the scratch file was deleted, and the owner decides who writes the two guides (a subagent on Opus 5.5 briefed with the runbook lines above and the E9e guide, as for E12's decoding, or himself from a copy of the E9e guide). The SC-4 implementation by the Opus subagent is not affected.**
 
 ### E9 runbook (passive capture of SmartSoft writing; proposed 2026-10-30 from S11.15)
 
