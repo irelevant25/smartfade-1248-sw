@@ -1,8 +1,10 @@
-# Guided operator session "E9e" (written 2026-11-02 after E9d, not yet run): the channel bumps the E9d script left out.
-# SmartSoft's Console Simulator does the writing in TWO SmartSoft sessions (a restart between them), USBPcap records,
-# this script only logs and starts SmartSoft; our own software is not involved. In each session: every channel bump 1-24
-# of bank 1-24 held about 1 s; FADERS 25-48, every bump labelled 25-48 held about 1 s; FADERS 1-24. About 6 minutes per
-# session. The SC-5 addendum (docs/protocol/safety-checks.md) names these bumps "NO-GO until E9e".
+# Guided operator session "E9e" (written 2026-11-02 after E9d, cut to a spot check the same day, not yet run): the channel
+# bumps the E9d script left out are cleared by the SC-5 addendum on the physical-control rule (VERIFIED for every fader of
+# three banks and every memory bump); this session is only the control of that inference: FOUR bumps per SmartSoft session,
+# about one minute each. SmartSoft's Console Simulator does the writing in TWO SmartSoft sessions (a restart between them),
+# USBPcap records, this script only logs and starts SmartSoft; our own software is not involved. In each session: the bumps
+# under the channel faders 2, 12 and 24 of bank 1-24 held about 1 s; FADERS 25-48, the bump under the fader labelled 48
+# held about 1 s; FADERS 1-24.
 # Never in E9e: the faders, REC MEM, EDIT MEM, COPY, REC SEQ, MAGIC, SNAPSHOT, RATE, the wheel, GO, STACK, NEXT, PAUSE,
 # CLEAR, Patch / Independents / Settings edits, page clicks in SmartSoft, Open showfile, New show, Save As, any Erase.
 # Nothing of the show is changed on purpose: the after-session SD save must equal the backup byte for byte.
@@ -85,27 +87,25 @@ function Run-Pass([int]$s) {
     Wait-Idle 15 ($p + "simulator open, untouched")
 
     Write-Host ""
-    Write-Host ("Pass {0}, part A: each SIMULATOR bump under the channel faders 1 to 24 (bank 1-24): press, HOLD about 1 s, release." -f $s) -ForegroundColor Green
-    foreach ($n in 1..24) {
+    Write-Host ("Pass {0}, part A: three SIMULATOR bumps of bank 1-24 (under faders 2, 12 and 24): press, HOLD about 1 s, release." -f $s) -ForegroundColor Green
+    foreach ($n in 2, 12, 24) {
         Step ("A: SIMULATOR bump under fader {0}: press, HOLD about 1 s, release." -f $n) ($p + "a sim bump " + $n + " held 1 s")
-        Wait-Idle 2 ($p + "after bump " + $n)
+        Wait-Idle 3 ($p + "after bump " + $n)
     }
     Wait-Idle 5 ($p + "after part A")
 
     Write-Host ""
-    Write-Host ("Pass {0}, part B: bank 25-48. The Simulator labels its faders 25 to 48 there." -f $s) -ForegroundColor Green
+    Write-Host ("Pass {0}, part B: bank 25-48, one bump. The Simulator labels its faders 25 to 48 there." -f $s) -ForegroundColor Green
     Step "B: SIMULATOR FADERS 25-48." ($p + "b sim faders 25-48")
     Wait-Idle 5 ($p + "b bank 25-48")
-    foreach ($n in 25..48) {
-        Step ("B: SIMULATOR bump under the fader labelled {0}: press, HOLD about 1 s, release." -f $n) ($p + "b sim bump labelled " + $n + " held 1 s")
-        Wait-Idle 2 ($p + "after bump labelled " + $n)
-    }
+    Step "B: SIMULATOR bump under the fader labelled 48: press, HOLD about 1 s, release." ($p + "b sim bump labelled 48 held 1 s")
+    Wait-Idle 3 ($p + "after bump labelled 48")
     Step "B: SIMULATOR FADERS 1-24." ($p + "b sim faders 1-24")
     Wait-Idle 10 ($p + "after part B")
 }
 
 $host.UI.RawUI.WindowTitle = "E9e guided session"
-Write-Host "E9e guided session: SmartSoft's Simulator presses every channel bump of both banks, twice (two SmartSoft sessions), while USBPcap records; our software is not involved." -ForegroundColor Green
+Write-Host "E9e guided session (a spot check, about one minute per pass): SmartSoft's Simulator presses four channel bumps per session, in two SmartSoft sessions, while USBPcap records; our software is not involved." -ForegroundColor Green
 Write-Host "Follow the yellow instructions one by one. Press Enter exactly when you START each action. Leave the waits untouched." -ForegroundColor Green
 Write-Host "Never: the faders, the record keys, RATE, the wheel, GO, STACK, NEXT, PAUSE, CLEAR, any SmartSoft edit, page clicks in SmartSoft, show load or erase." -ForegroundColor Green
 Log "START guided E9e session (PC clock, local time)"

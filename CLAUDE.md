@@ -337,8 +337,11 @@ show: no DMX), `SHOW27.ASC` = `SHOW26.ASC`. **F171 (the index names the physical
 VERIFIED, F172 VERIFIED in part (the mode case), H111 CONFIRMED, H79 / H81's mode case CONFIRMED; 77 facts VERIFIED** (never clearance).
 **The SC-5 addendum lifts the "after E9d" rows:** every channel fader of both banks and every memory fader of the shown page, the memory
 bumps as holds bounded to 3 s and the bump of bank 25-48's first fader are GO (conditional) under SC-5's conditions (the switch sequence,
-the bounded hold, one encoder and whitelist with golden tests over E9c and E9d); **the channel bumps 2–6, 8, 9, 11–24 and 26–48 wait for
-E9e** (a short passive capture, guided script `tools/usb-probe/e9e-guided-session.ps1`); STACK, PAUSE, NEXT, CLEAR stay NO-GO. The UI's
+the bounded hold, one encoder and whitelist with golden tests over E9c and E9d); **the channel bumps 2–6, 8, 9, 11–24 and 26–48 are GO (conditional) on the
+physical-control rule by addendum 2** (their codes VERIFIED as memory bumps; the rule held in 100 of 100 fader and bump cases; residual
+risk a wrong channel flashing, live and visible), with **E9e cut to a four-bump spot check per session** (`tools/usb-probe/e9e-guided-session.ps1`,
+about a minute each) as the control, which the owner may decline in writing: the first E9e script asked for 96 presses and the owner
+refused a second long repetitive session, with reason (the omission was the analyst's); STACK, PAUSE, NEXT, CLEAR stay NO-GO. The UI's
 SOLO, BLACKOUT, IND 1 / 2 keys took the shared key look the same day. **Nothing is sent before the owner implements the switch sequence and
 the holds at the extension points, the reviewer passes them and E11b runs with USBPcap.**
 

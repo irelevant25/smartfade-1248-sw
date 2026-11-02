@@ -416,11 +416,13 @@ the after-session SD save (must equal the backup).
 load or erase. **Evidence and what follows:** the split, the log and the two SD files into `docs/protocol/captures/` with an E9d record;
 SC-5's "after E9d" rows are then decided by an SC-5 addendum, per index and bump, from the two sessions.
 
-**E9e (written 2026-11-02 after E9d, not run):** the E9d script left out the channel bumps of bank 1-24 (other than 1, 7, 10) and
-the bumps of bank 25-48 (other than the first), so the SC-5 addendum keeps them NO-GO until a capture shows them twice:
-`tools/usb-probe/e9e-guided-session.ps1`, two SmartSoft sessions, each every bump under the channel faders 1–24 held about 1 s in bank 1-24,
-then FADERS 25-48 and every bump under the faders labelled 25–48, then FADERS 1-24; about 6 minutes per session; the same gate and end
-as E9d; nothing else pressed.
+**E9e (written 2026-11-02 after E9d, cut to a spot check the same day, not run):** the E9d script left out the channel bumps of bank
+1-24 (other than 1, 7, 10) and the bumps of bank 25-48 (other than the first). The first E9e script asked for all of them twice (96
+presses); the owner refused a second long repetitive session, rightly, and SC-5's addendum 2 clears those bumps on the physical-control
+rule instead (VERIFIED for every fader of three banks and every memory bump, F171 / F174). E9e is now the control of that inference:
+`tools/usb-probe/e9e-guided-session.ps1`, two SmartSoft sessions, each the bumps under faders 2, 12 and 24 held about 1 s in bank 1-24, then
+FADERS 25-48, the bump under the fader labelled 48, FADERS 1-24; about one minute per session; the same gate and end as E9d; nothing
+else pressed. The owner may decline it in writing.
 
 ### Next capture (proposed by the E2 analysis, 2026-10-28)
 

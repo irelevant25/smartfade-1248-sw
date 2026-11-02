@@ -605,15 +605,26 @@ decisions it lifts.
 | A4, memory faders (indices 0x00–0x17 in memory mode, the shown page) | F171 VERIFIED: every index in both E9d sessions on page 1 (0x00 on page 2 once, E9c); an empty memory moves only its record | **GO (conditional)** for the fader events in memory mode on the page the console reports (F113), only through the switch sequence of condition 1; no page change from the PC |
 | B3, held bumps: memory bumps 1–24 | F174 VERIFIED: codes 0x00–0x17 in memory mode held about 1 s in both sessions, memory bump 1 in five | **GO (conditional)** as holds bounded to 3 s, in memory mode on the reported page, with condition 2 |
 | B3, held bumps: the bump of bank 25-48's first fader (code 0x00 in bank 25-48 = channel 25) | F174 VERIFIED (two sessions) | **GO (conditional)** as a hold bounded to 3 s, in bank 25-48 only |
-| B3, held bumps: channel bumps 2–6, 8, 9, 11–24 of bank 1-24 and 26–48 of bank 25-48 | never pressed from a PC in channel mode (E9d's script omitted them) | **NO-GO until E9e** (a short passive capture: each of them held about 1 s in two SmartSoft sessions) |
+| B3, held bumps: channel bumps 2–6, 8, 9, 11–24 of bank 1-24 and 26–48 of bank 25-48 | never pressed from a PC in channel mode (E9d's script omitted them); their codes 0x00–0x17 VERIFIED as memory bumps in two sessions (F174); the same codes as channel bumps 1, 7, 10 and 25 behaved by the physical-control rule, which E9c and E9d confirmed for every fader of three banks (F171) | **GO (conditional) on the physical-control rule** (addendum 2 below): the bytes are VERIFIED, the console's answer in channel mode is inferred from a rule that held in 100 of 100 fader and bump cases across three banks; residual risk, stated: a bump flashing a channel other than the one named, live and visible at once in the UI. **Control: E9e as a spot check** (four bumps per SmartSoft session, two sessions, about a minute each: faders 2, 12, 24 and the one labelled 48), run before E11b or declined by the owner in writing |
 | B3, the hold bound | bump 7 held 4.67 s and 3.42 s (E9d), 2.19 s (E9c), 3.35 s (E9b): shown and ended cleanly every time | the bound stays **3 s** (every longer hold is a single observation of its length); it may be raised by a later addendum |
 
 The conditions of SC-5 (the switch sequence, the bounded hold, one encoder and whitelist with golden tests over E9c and E9d, the
 previous byte, the reported level, nothing else) are unchanged, and so is the order: the owner implements, `protocol-safety-reviewer`
 passes, E11b runs with USBPcap. Nothing is sent before that.
 
+**Addendum 2 (2026-11-02, the same day): the channel bumps, and why E9e is a spot check.** The first E9e script asked for every
+channel bump of both banks twice (96 presses); the owner refused a second long repetitive session, with reason: E9d should have
+covered them and the omission was the analyst's. The decision above therefore rests on the evidence that exists: the 24 key codes are
+VERIFIED as bytes and as bumps in memory mode (F174), four of them as channel bumps in both banks (F174, F175), and the rule "a
+ConsoleEvent names the physical control; the console's bank decides what it drives" held in every one of the 48 fader positions of
+bank 1-24 and bank 25-48 and the 24 memory faders and 24 memory bumps of E9c and E9d (F171, F174: 100 of 100 cases). The remaining
+unknown, whether a channel bump other than 1, 7, 10 and 25 lights a channel other than its own, would be a live, visible, self-correcting
+surprise, below the risk already accepted for the MASTER and BLACKOUT events. E9e is kept as a four-bump spot check per session, about a
+minute each, as the control of that inference; the owner may decline it in writing, in which case the inference stands alone and is
+recorded as such.
+
 ### What SC-5 does not clear
 
 A fader event in a bank the console has not reported; a page change from the PC; NEXT, STACK, PAUSE, CLEAR; any bump not named above or in
-the addendum as a hold (the channel bumps of E9e); a hold longer than 3 s; the record keys (SC-3); ChannelText, Memory, the System pair (SC-4, not decided); anything in class F.
+the addenda as a hold; a hold longer than 3 s; the record keys (SC-3); ChannelText, Memory, the System pair (SC-4, not decided); anything in class F.
 Nothing is cleared for sending before the owner implements the sequences, the reviewer passes them and the owner gives the go for E11b.
