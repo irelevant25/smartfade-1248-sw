@@ -1373,6 +1373,72 @@ switch back (no FADERS key was sent from a PC with SOLO lit or BLACKOUT on eithe
 block 53 steady off at 58 and the MASTER's blink, F85, at 2; the same scratch read). (19) A switch already in progress when
 the download ends refuses the probe (a UI key taken between the last record and the probe; never seen, closed for safety).
 
+### Review (SC-4 item 10)
+
+**First pass (2026-11-02, late evening, `protocol-safety-reviewer`, over f282aa0 and d002705; HEAD 38cb72b, whose later commits touch
+docs and tools only): NEEDS CHANGES, no blocker, one major, three minors, eight nits. Every byte the code can send comes from the
+captures or from SC-5's whitelist; no other System value is representable (the reviewer swept all 2^32 `[pseq] 03 00 27 [a][b][c]`
+payloads through the built Protocol assembly: exactly `00 03 00 27 09 00 00` and `01 03 00 27 07 00 00` accepted, no other length,
+`DataHeader` the only Data-header producer and its only caller `HspReadSession.cs:1083`, F181's two header forms reproduced); no retry
+and no firmware path; SC-1's read-only session and the SC-2 / SC-5 sessions unchanged without the switch (the constructors, the 792-byte
+bound, one length per id, the same fault text, `TrackStartupPair` returning at once); the simulator untouched. The reviewer's own
+replay (a Python model written from SC-4's text, not from the tests) reproduces all 20 placements (#40 / #79) and downloads byte for
+byte, stale words included (157 × 12, 158 × 4, 159 × 2, 160, 161 records; lists 792 / 797 / 802 / 807 / 812 bytes; Sequence 132 × 18,
+144 × 1, 156 × 1; StepContent 13 × 384, 148 × 2; SystemSizes first and only in the 20 download lists; no c ≠ 0; no id outside the 21;
+the w2 = 0x11 headers at E9d session 2 and E9e sessions 1 and 2), its census of every object of the ten captures confirms the bounds
+(the longest list 812 bytes, E12 seq 139012; c ≠ 0 only in E9's System and E12 / E12b's Sequence records after step commands), and
+its bank-key census over the 29 committed JSONL files gives the amendment's 60 unique PC presses (SmartSoft 43, ours 17), exactly the
+four transitions, all on page 1, every cited seq matching, the stand-in's answers equal to the console's at E9d's keys; our host's 24
+short taps of E11 attempt 3 (47–78 ms) had FaderInfo and ChannelLevels listed at the first free reply after the release in 24 of 24
+(reading (9)).** Build 0 warnings; 534 backend tests (one pre-existing flaky test on the simulator path, NIT 8, failed once in the first
+full run and passed on every rerun); 356 frontend tests. **The owner paused for the night before the report arrived (his instruction
+of 2026-11-02, late evening: let the reviewer finish, then wait for "continue"); nothing was fixed and nothing goes on before his word:
+the code fixes to the Opus 5.5 subagent that wrote the implementation (CLAUDE.md), the decisions to the owner (MAJOR 1's alternative,
+MINOR 3), the docs to the coordinating assistant, then the re-check. This pass clears nothing for sending; the E13 guide refuses to
+start until a PASS is recorded here.** Findings and their state:
+
+| # | Finding | Status |
+|---|---|---|
+| MAJOR 1 | The pair is sent when the console has already reported a memory page other than 1. F185 lists "a page other than 1" among the states no pair was ever seen in and "What SC-4 does not clear" excludes "the pair from a state the device already knows to be outside F185's", yet `PairStateRefusal` (`UsbSmartFadeDevice.cs:742-773`) checks only NEXT, bank 25-48, an unknown ConsoleStatus, the record functions and BLACKOUT, while the device already decodes the page (`ConsoleStateAssembler.cs:344`, used by the probe at `:2485`); reachable from a list pending at Connect (F177 / H65; E9's pending list carried ConsoleStatus × 9). Clause 3 names only four states, so SC-4 contradicts itself and the code followed the narrower text. | **Open (2026-11-02, late evening; the fix on the owner's "continue").** Proposed: refuse the pair when the reported page is not 1, in either mode; a device test serving E9c seq 42230 (page 2) with a LedStatus at Connect, expecting no System write and the reason in the state and the log; clause 3, the Implementation bullet, CLAUDE.md "Commands" and the E13 Acceptance 1 aligned; "page 1, bank 1-24 or memory mode, NEXT and BLACKOUT off" added to the Connect hint (`connection-view.ts:115`), because the pair goes blind when nothing was reported. The alternative, the owner amending "What SC-4 does not clear" in writing, is his; the coordinator recommends the refusal. |
+| MINOR 1 | The UI does not say when the probe stops away from home once FaderInfo is known: `EndProbe` (`:2732-2743`) sets NotPossible with a reason only while FaderInfo is null, else the phase stays Sent with no reason and the bar shows nothing for "done" (the device's own test `UsbSmartFadeDeviceTests.StartupPair.cs:529-562`, REC MEM lit at the tap, ends with the console in bank 25-48 and the phase Sent); a session ending inside the probe notes it in the log only (`:2038-2042`). The E13 guide's Acceptance 4 says the UI shows "Move the MASTER once" when the probe stops, which is not true on this path. | **Open.** Proposed: a reported outcome ("stopped") for every `EndProbe` and an interrupted probe, with "the console shows X; the download reported Y", shown in the bar; `docs/api.md` `masterProbe` and the E13 acceptance text updated. |
+| MINOR 2 | A window between the download's last record and the probe's start: `StateChanged` (the store, the broadcasts, `ConsoleShowMapper.ToDto`) runs before `TryMasterProbe` (`:2337-2350`) with the phase Done and `_probeRun` null, so `StartupPairBusy` (`:782-790`) refuses nothing meanwhile; a SOLO / BLACKOUT / IND / GO tap needs no FaderInfo (`:1723`, `:873`) and can be queued ahead of the probe; `StartMasterProbe` checks only a switch in progress (reading 19) and `ProbeLedRefusal` (`:2719-2725`) reads the reported LEDs with no `_togglesSent` rule like `BlackoutNotOff` (`:1858`). With an in-bank probe and a SOLO LED report later than the observed 16–65 ms (F133) the tap would go under SOLO, which replaces the output (F6, DOCUMENTED): a short blackout of the rig. Unlikely; the window not measured. | **Open.** Proposed: `TryMasterProbe` before the `StateChanged` calls, or "Done, probe not yet tried" treated as busy; the probe refused while a write is queued or a key is held, or while a SOLO / BLACKOUT tap of ours waits for its LED report. |
+| MINOR 3 | The probe's F112 residual is not named for the owner: the probe is the one bump sent before FaderInfo, so the check for a physical fader still holding a memory in channel mode (F112; E9b seq 95014, record 9 `00 FF 00 00`) cannot run, nothing in the download shows that case (E9b seq 95018 LED block 9 `00 × 6`, like every idle channel-mode block in E3 seq 796 and E9d 18719 / 27848, 24 of 24), and what the console does with a bump press on such a fader is UNKNOWN (never captured). Clause 4's "nothing on the stage changes" and the E13 acceptance omit it; E13's starting position (every fader at zero, then a power cycle) excludes it for E13 only. | **Open, the owner's.** Proposed: the residual named in clause 4 and in his written acceptance, or evidence for a check before the tap. |
+| NIT 1 | Two seqs cited for the Sequence bounds (`HspReadSession.cs:225-226`, the Implementation text) are objects fetched after step commands (E12 seq 87591 and E12b 73712, Sequence (0,0,6) / (0,0,7)); the downloads' own objects are E12 seq 139152 (144 bytes) and E12b seq 87433 (156 bytes). The bounds themselves are right. | Open: cite 139152 and 87433. |
+| NIT 2 | A ConsoleVersion body of another length is refused by the length check (`DownloadBodyLengths[37] = {13}`, `HspReadSession.cs:1247-1250`) before the version gate, so the session faults instead of "the pair ends and the session goes on" (item 9): a safe stop, stricter than the text. | Open: say so in item 9 and the Implementation. |
+| NIT 3 | Two remarks carry no status word (`UsbSmartFadeDevice.cs:2629` "a switch whose physical faders' contents differ lists it"; `StateAtConnect.cs:28` "the console reports the MASTER only with FaderInfo"); neither is load-bearing. | Open: OBSERVED with E9 75726, E9b 80262, E9c 56950, E9d 50035 (each list names 23, 14 and 22, the reviewer's read) and F82 / F186. |
+| NIT 4 | Reading (18) argues "no PC FADERS key was ever sent with SOLO lit or BLACKOUT on" (confirmed: 60 of 60 with SOLO off; BLACKOUT off at 58, the MASTER's blink at 2), yet the second switch on the way out (from memory mode) and the switches back go without asking SOLO / BLACKOUT (`:2640-2644`, `:2679-2683`), as SC-5's own switch does (which passed review). | Open: `ProbeLedRefusal` before each switch of the probe, or reading (18) reworded. |
+| NIT 5 | Clause 4's "ChannelLevels[c] reads 0xFF for the tap" contradicts F168 (for a 47–77 ms tap from our host every fetched object equals its value before the press); the probe's aim, FaderInfo body[194], is unaffected. | Open: reword. |
+| NIT 6 | "Conditions for E13" predates the probe: it lists "then one MASTER movement on the panel", which the E13 guide asks for only when the probe was not effective. | Open: update. |
+| NIT 7 | The censuses the code now rests on (SystemSizes only in the 20 download lists; one body length per id except Sequence and StepContent; the 60 PC bank-key presses with origin, page and LEDs) live only in this document. | Open: F182 (d), F175 / F179 annotated in `known-facts.md` by the curator. |
+| NIT 8 | A pre-existing flaky test on the simulator path, `tests/SmartFade.Api.Tests/ConsoleHubTests.cs:154` (asserts an `invalid_memory` broadcast right after `getMemory` returns: a race; failed once in the reviewer's first full run, passed 5 of 5 alone and in the second run; last touched in 8a08765), not SC-4's. | Open: await the error event. |
+
+Confirmed correct by the reviewer (file and line in its report): the enum members exactly {0x07, 0x09} and the builder over 256 values ×
+256 pseqs giving the two payloads only (`HspOutbound.cs:221-238`, `:390-400`, `:410-457`); the placement, the version gate and the
+download's identification (`HspReadSession.cs:895-902`, `:910-957`, `:982-1021`, `:1027-1070`; `IsIdle` `:344-345`;
+`DiscardQueuedWrites` `:667-674`); after `07` no `EndPair` path, only Done or a fault, so the controls come back only when the pair
+ended before `07`, when no download can be listed; nothing between the gate (`:924`) and the write (`:956`) but memory notes, and the
+loop writing no note between `Next()` and the header (`HspReadLoop.cs:236-250`); a failed pair write setting the incomplete-write
+latch like any write (`HspReadLoop.cs:339-378`, `UsbSmartFadeDevice.cs:1994-2004`); one pair per Connect (a new session per Connect,
+the phase only moving forward); `StartupPairGate` (`:703-732`), the per-day switch (`:683-693`, `:289-293`), `StartupPairBusy`
+asked first on every command path (`:865`, `:878`, `:1322`, `:1576`, `:1693`, `:1729`); the probe (`StartMasterProbe` `:2440-2523`,
+`ProbeRoute` `:2563-2566` complete over the three banks, `StepProbe` `:2609-2696`, advanced only when no switch waits `:2587`, the
+switch's 2 s bound `:1486-1495`, once per session `:2391-2396`), `QueueBump` with `also` null equivalent to before (`:1604-1646`), the
+`ShadowEnds` refactor identical (`:1019`, `:1044-1045`), reading (16)'s untested routes running the same generic code with every leg
+present in the tested routes, no key, index or payload beyond SC-5's whitelist; the hosting refusals (`Program.cs:42-45`,
+`HostingTests.cs:146-164`); the UI's badge, the Connect hint equal to clause 3's list, no bytes and no send path in the UI, the render
+endpoint refusing a console show; the notes at exchange ends only (`HspReadLoop.cs:193`, `:205`; the probe's notes at idle-reply, list
+and object events `:2192-2196`, `:2257-2270`, `:2420`; the `sent` callbacks only `LeaveNote` `:1415`, `:1455`); the statuses (F181,
+F182, F174, F178 VERIFIED; F185, F186, F175, F125, F160–F162 OBSERVED; F179 OBSERVED once; H115 HYPOTHESIS; no comment claiming the
+console answers our host's pair; `ShowObjects.cs` and `ConsoleShowAssembler.cs` matching their facts; "undelivered memories empty"
+INFERRED and display-only, `ConsoleStateAssembler.cs:200-227`, read by no write condition).
+
+Not verifiable before E13 (the reviewer): the console's answer to our host's pair (H115), the probe itself and a bump of bank 25-48 from
+our host; reading (16)'s two routes with captured bytes (no captured Patch leaves a channel of bank 1-24 unpatched); a bump press on a
+fader that holds a memory in channel mode; the pair on page ≠ 1, in bank 25-48, NEXT or BLACKOUT (H114); the length of the Done →
+probe window; the UI end to end in a browser and the timings on real hardware. The E13 / E14 / E15 guides (d91bfa4) are outside this
+review. The reviewer's scratch scripts (read-only, not committed): `chk-sc4/replay_pair.py` with `common.py` and `model.py`,
+`census.py`, `lens_where.py`, `bankkeys.py`, `afterkey.py`, `taps.py`, `r17.py`, `f112.py`, `ledidle.py`, `sweep.fsx`, `sweep2.fsx`.
+
 ### What SC-4 does not clear
 
 Every other System value (the erase commands 11–16, the page select 10, the show-upload framing 0 / 1 / 6: never, F121); the pair more than

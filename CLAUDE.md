@@ -433,9 +433,17 @@ shows a PC host making, 60 presses; memory mode routed through bank 1-24; only f
 in the owner's show channel 47 = bump 23 of bank 25-48), because his show patches every channel of bank 1-24; 534 backend and 356
 frontend tests. **Claude's own attempt to write the E14 / E15 guides was stopped by its safety system (f9c2802, not repeated); the E13,
 E14 and E15 guided scripts were written by an Opus 5.5 agent on the owner's "continue" (d91bfa4; parse-checked, not run;
-`tools/usb-probe/README.md` and the experiments table).** The `protocol-safety-reviewer` pass over SC-4 (item 10) runs next; nothing
-is cleared and nothing is sent before it passes and the owner gives the go for E13 on the day; the E13 guide refuses to start unless
-the SC-4 review table in `safety-checks.md` records a PASS.
+`tools/usb-probe/README.md` and the experiments table).** **The first `protocol-safety-reviewer` pass over SC-4 (item 10, the same
+late evening, over f282aa0 + d002705) is NEEDS CHANGES:** no blocker; one major (the pair is still sent when the console already
+reported a memory page other than 1, a state F185 never saw and "What SC-4 does not clear" excludes: the proposed fix refuses it);
+three minors (the UI silent when the probe stops away from home with FaderInfo known; a window between the download's last record and
+the probe's start in which a SOLO / BLACKOUT tap could be queued ahead of it; the probe's F112 residual, a bump on a physical fader
+still holding a memory, to be named in the owner's acceptance); eight nits; every byte from the captures or SC-5's whitelist, no other
+System value representable (a 2^32 sweep), the 20 downloads replayed byte for byte by the reviewer's own model, SC-1 / SC-2 / SC-5
+sessions unchanged without the switch (`safety-checks.md` SC-4 "Review"). **The owner paused for the night before the report arrived:
+the fixes (by the Opus 5.5 subagent), the decisions on MAJOR 1's alternative and MINOR 3, and the re-check wait for his "continue";
+nothing is cleared and nothing is sent before a PASS is recorded there and he gives the go for E13 on the day; the E13 guide refuses
+to start until then.**
 
 ## Commands
 
@@ -521,7 +529,8 @@ then `07 00 00`) once, where SmartSoft sends it, unless the console already repo
 record, then, with live control on, the MASTER probe: one bump tap of an unpatched channel of either channel bank, through SC-5's
 automatic switch there and back where that channel's bank is not the shown one, every control refused while it runs (in the owner's
 show bump 23 of bank 25-48, channel 47; `safety-checks.md` SC-4 "Implementation" and clause 4's amendment of 2026-11-02, late
-evening). The reviewer's pass over SC-4 is pending: not before it and E13's go.
+evening). The reviewer's first pass over SC-4 was NEEDS CHANGES (2026-11-02, late evening; one major, the fixes pending): not
+before a PASS and E13's go.
 
 ## Working style
 
