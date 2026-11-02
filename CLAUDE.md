@@ -408,7 +408,15 @@ page (a discoverability follow-up). **The SC-4 groundwork was applied the same e
 `knowledge-base-curator`): F181–F186 (the pair byte-identical in 20 of 20 sessions, the console's version listing and the 157–161-record
 download after it, nothing changed by it, the states it was sent in, what our sessions never receive without it), H113–H116,
 `smartsoft-analysis.md` S11.17 (the countdowns, the version gate, every System value on the wire), `commands.md` "The System message";
-**84 facts VERIFIED**; the pair never delivers FaderInfo, so the MASTER still needs one panel move per session under SC-2's condition.
+**84 facts VERIFIED**; the pair never delivers FaderInfo, so the MASTER still needs one panel move per session under SC-2's condition. **The editor pages were rebuilt the same evening at the owner's request** (a general-purpose subagent, frontend only):
+three views in the bar, LIVE / PATCH / STACK-SEQ, a Show menu (load from the card, save to the card, revert) instead of the show-file
+page, one `ShowStore` with the edit rules ported (`show-rules.ts`), PATCH as a 32 × 16 matrix of the 512 DMX addresses (address on
+top, channel below, IND 1 / IND 2 = channels 49 / 50 as targets), STACK / SEQ as a step list with a detail panel; the file stays the
+only way out until a safety check clears the whole-object writes; 340 frontend tests. **SC-4 is drafted** in `safety-checks.md` as
+a conditional decision for the owner (the two payloads once per Connect, the version gate, the download taken whole with no control
+during it, a per-day switch `Device:Usb:StartupPairDate`, E13 as the first session); nothing is built or sent before his acceptances.
+**The bump shadow's end rule was replaced at his request** (the Opus subagent; a bump that changed nothing frees its fader after two
+quiet replies; the reviewer's fourth pass pending).
 
 ## Commands
 

@@ -1926,9 +1926,10 @@ public class UsbSmartFadeDeviceTests
         // 2's FaderInfo record as `ff 00 00 00` and channel 2 at 0xFF (the stand-in answers the press with E9e seq 17675 and
         // 17679, the console's answer to SmartSoft's press there), so the two agree and the matching level would be the bump's.
         // Channel fader 2 is refused while the bump is held; after the release while the console has listed and delivered
-        // only PlaybackInfo (as E9e's first poll reply after the release, seq 17785, and its PlaybackInfo seq 17789), and still
-        // after FaderInfo seq 17796 alone (record 2 at 0x00); once ChannelLevels seq 17800 (channel 2 at 0x00) is in too, the
-        // drag goes: its matching event at 0x00, then 0x40. As SmartSoft's bytes: its bump 2 press and release (E9e seq 17656,
+        // only PlaybackInfo (as E9e's first poll reply after the release, seq 17785, and its PlaybackInfo seq 17789), the
+        // reports still reading the bump's 0xFF, not the 0x00 before the press; and still after FaderInfo seq 17796 alone
+        // (record 2 at 0x00 again, ChannelLevels[2] still at 0xFF); once ChannelLevels seq 17800 (channel 2 at 0x00) is in too,
+        // the drag goes: its matching event at 0x00, then 0x40 (the end rule of 2026-11-02, case a). As SmartSoft's bytes: its bump 2 press and release (E9e seq 17656,
         // 17782) and its event of index 0x01 in bank 1-24 (E9d seq 10006), with this session's counter and values.
         var rig = LiveConsole();
         AnswersBump2WithItsHold(rig.Console);
@@ -1942,7 +1943,7 @@ public class UsbSmartFadeDeviceTests
         var held = await Assert.ThrowsAsync<InvalidOperationException>(() => rig.Device.SetChannelLevelAsync(2, 0x40, CancellationToken.None));
         Assert.Contains("bump 2 is held: physical fader 2's reports carry the bump's level, not channel fader 2's", held.Message, StringComparison.Ordinal);
 
-        const string Released = "bump 2 was released and the console has not reported physical fader 2 again since (FaderInfo and ChannelLevels listed and delivered after the release)";
+        const string Released = "bump 2 was released and the console's reports of physical fader 2 are not its content's again yet";
         await rig.Device.BumpChannelAsync(2, false, CancellationToken.None);
         await WaitUntil(() => rig.Console.Served((int)HspObjectId.PlaybackInfo) == 1);
         await rig.Console.PauseAtNextPoll().WaitAsync(Timeout);   // PlaybackInfo is in, nothing else since the release
@@ -1976,6 +1977,238 @@ public class UsbSmartFadeDeviceTests
         var headers = transfers.Select((t, i) => (t, i)).Where(x => IsDataHeader(x.t)).Select(x => x.i).ToArray();
         int LastFetch(HspObjectId id) => transfers.FindLastIndex(headers[2], t => t.ToConsole && t.Data.Length == 12 && t.Data[0] == 2 && t.Data[4] == (int)id);
         Assert.True(LastFetch(HspObjectId.FaderInfo) > headers[1] && LastFetch(HspObjectId.ChannelLevels) > headers[1], "the matching event went before the console reported the fader again");
+    }
+
+    /// <summary>The owner's later E11b session (backend log, committed): bump 5's tests with channel fader 5 at 0x82 and at 0xFF (seq 4218 to 4609).</summary>
+    private static readonly Lazy<CaptureFile> E11bLater = new(() => CaptureFile.Load(TestPaths.Capture("2026-11-02-e11b-second-live-control-session.backend-6.jsonl")));
+
+    /// <summary>The stand-in console reports channel fader 5 at <paramref name="faderInfoSeq"/> / <paramref name="channelLevelsSeq"/> of the owner's later E11b session; the test waits until channel 5 reads <paramref name="level"/>.</summary>
+    private static async Task ReportFader5(LiveRig rig, int faderInfoSeq, int channelLevelsSeq, byte level)
+    {
+        var reported = ChannelReported(rig.Device, 5, level);
+        rig.Console.Report((int)HspObjectId.FaderInfo, Body(E11bLater, faderInfoSeq));
+        rig.Console.Report((int)HspObjectId.ChannelLevels, Body(E11bLater, channelLevelsSeq));
+        await reported;
+    }
+
+    [Fact]
+    public async Task A_bump_that_changed_nothing_ends_its_shadow_after_two_quiet_poll_replies_and_the_drag_then_goes()
+    {
+        // The bump shadow's end rule of 2026-11-02, case (b), the owner's own test (E11b's later session, backend-6.jsonl): with
+        // channel fader 5 at full (FaderInfo seq 4506, record 5 `ff 00 00 00` with BUMPS at 0xFF; ChannelLevels seq 4510,
+        // channel 5 at 0xFF) bump 5 listed nothing at its press nor at its release (seq 4571 / 4609; OBSERVED once, log-only),
+        // and under the first rule channel fader 5 stayed refused. The stand-in reports nothing either. Channel fader 5 is
+        // refused until the release, and after it with one quiet poll reply; after the second it goes, its matching event at
+        // 0xFF, the level before the press, then the drag. As SmartSoft's bytes: its code 0x04 press and release (E9d seq
+        // 38764 / 38879, memory bump 5 there: the same physical bump in every bank, F171, F174) and its event of index 0x04
+        // in bank 1-24 (E9d seq 11362).
+        var rig = LiveConsole();
+        rig.Console.OnRelease((byte)ClearedKey.Bump5, () => rig.Console.PauseAtNextPoll());
+        await rig.Device.ConnectAsync(CancellationToken.None);
+        await rig.KeysReported.WaitAsync(Timeout);
+        await ReportFader5(rig, 4506, 4510, 0xFF);
+
+        await rig.Device.BumpChannelAsync(5, true, CancellationToken.None);
+        await WaitUntil(() => rig.Device.LastSession!.WritesSent == 1);
+        await rig.Device.BumpChannelAsync(5, false, CancellationToken.None);
+        await WaitUntil(() => rig.Console.Paused.Task.IsCompleted);   // the release is out; the poll after it waits
+        var released = await Assert.ThrowsAsync<InvalidOperationException>(() => rig.Device.SetChannelLevelAsync(5, 0x40, CancellationToken.None));
+        Assert.Contains("bump 5 is held", released.Message, StringComparison.Ordinal);   // no poll reply since the release
+        await rig.Console.ResumeAndPauseAtNextPoll().WaitAsync(Timeout);   // one quiet reply
+        var once = await Assert.ThrowsAsync<InvalidOperationException>(() => rig.Device.SetChannelLevelAsync(5, 0x40, CancellationToken.None));
+        Assert.Contains("bump 5 was released and the console's reports of physical fader 5 are not its content's again yet", once.Message, StringComparison.Ordinal);
+        await rig.Console.ResumeAndPauseAtNextPoll().WaitAsync(Timeout);   // two
+        await rig.Device.SetChannelLevelAsync(5, 0x40, CancellationToken.None);
+        rig.Console.Resume();
+        await WaitUntil(() => rig.Device.LastSession!.WritesSent == 4);
+        await rig.Device.DisconnectAsync(CancellationToken.None);
+
+        Assert.Equal(new[]
+        {
+            WithCounter(E9d, 38764, 0x00), WithCounter(E9d, 38879, 0x01),
+            WithCounter(E9d, 11362, 0x02, value: 0xFF, previous: 0x00), WithCounter(E9d, 11362, 0x03, value: 0x40, previous: 0xFF),
+        }, Payloads(rig.Pipe));
+    }
+
+    [Fact]
+    public async Task A_bump_on_a_fader_at_half_ends_its_shadow_when_the_level_before_the_press_is_reported_after_the_release()
+    {
+        // The end rule of 2026-11-02, case (a), the owner's other test of the same session: channel fader 5 at 0x82 (FaderInfo seq
+        // 4146, ChannelLevels seq 4150); the console answered bump 5's press with record 5 `ff 00 00 00` and channel 5 at 0xFF
+        // (seq 4227 / 4231) and its release with 0x82 again (seq 4296 / 4300). Refused during the hold; once both objects read
+        // 0x82 after the release, the level before the press, the drag goes, matched at 0x82. As SmartSoft's bytes: E9d seq
+        // 38764 / 38879 (bump 5) and 11362 (index 0x04).
+        var rig = LiveConsole();
+        rig.Console.OnPress((byte)ClearedKey.Bump5, () =>
+        {
+            rig.Console.Report((int)HspObjectId.FaderInfo, Body(E11bLater, 4227));
+            rig.Console.Report((int)HspObjectId.ChannelLevels, Body(E11bLater, 4231));
+        });
+        await rig.Device.ConnectAsync(CancellationToken.None);
+        await rig.KeysReported.WaitAsync(Timeout);
+        await ReportFader5(rig, 4146, 4150, 0x82);
+
+        var inHold = ChannelReported(rig.Device, 5, 0xFF);
+        await rig.Device.BumpChannelAsync(5, true, CancellationToken.None);
+        await inHold;
+        var held = await Assert.ThrowsAsync<InvalidOperationException>(() => rig.Device.SetChannelLevelAsync(5, 0x40, CancellationToken.None));
+        Assert.Contains("bump 5 is held", held.Message, StringComparison.Ordinal);
+        rig.Console.OnRelease((byte)ClearedKey.Bump5, () =>
+        {
+            rig.Console.Report((int)HspObjectId.FaderInfo, Body(E11bLater, 4296));
+            rig.Console.Report((int)HspObjectId.ChannelLevels, Body(E11bLater, 4300));
+            rig.Console.PauseAfterServing((int)HspObjectId.ChannelLevels);
+        });
+        await rig.Device.BumpChannelAsync(5, false, CancellationToken.None);
+        await WaitUntil(() => rig.Console.Paused.Task.IsCompleted);   // right after the release's report: no quiet reply yet
+        await rig.Device.SetChannelLevelAsync(5, 0x40, CancellationToken.None);
+        rig.Console.Resume();
+        await WaitUntil(() => rig.Device.LastSession!.WritesSent == 4);
+        await rig.Device.DisconnectAsync(CancellationToken.None);
+
+        Assert.Equal(new[]
+        {
+            WithCounter(E9d, 38764, 0x00), WithCounter(E9d, 38879, 0x01),
+            WithCounter(E9d, 11362, 0x02, value: 0x82, previous: 0x00), WithCounter(E9d, 11362, 0x03, value: 0x40, previous: 0x82),
+        }, Payloads(rig.Pipe));
+    }
+
+    [Fact]
+    public async Task A_taps_press_reported_after_its_release_keeps_the_shadow_until_the_level_before_the_press_is_reported()
+    {
+        // The end rule of 2026-11-02, a tap (F168: the press is listed even for a 47-77 ms tap, possibly after the release went
+        // out): channel fader 5 at 0x82 (seq 4146 / 4150); the stand-in reports nothing at the press and the press's own report
+        // (record 5 `ff 00 00 00`, channel 5 at 0xFF, seq 4227 / 4231) only after the release. That report reads the bump's level
+        // and differs from the level before the press: refused. The release's report at 0x82 (seq 4296 / 4300) ends it: the drag
+        // goes, matched at 0x82. As SmartSoft's bytes: E9d seq 38764 / 38879 (bump 5) and 11362 (index 0x04).
+        var rig = LiveConsole();
+        rig.Console.OnRelease((byte)ClearedKey.Bump5, () =>
+        {
+            rig.Console.Report((int)HspObjectId.FaderInfo, Body(E11bLater, 4227));
+            rig.Console.Report((int)HspObjectId.ChannelLevels, Body(E11bLater, 4231));
+            rig.Console.PauseAfterServing((int)HspObjectId.ChannelLevels);
+        });
+        await rig.Device.ConnectAsync(CancellationToken.None);
+        await rig.KeysReported.WaitAsync(Timeout);
+        await ReportFader5(rig, 4146, 4150, 0x82);
+
+        await rig.Device.BumpChannelAsync(5, true, CancellationToken.None);
+        await rig.Device.BumpChannelAsync(5, false, CancellationToken.None);   // a tap
+        await WaitUntil(() => rig.Console.Paused.Task.IsCompleted);   // the press's report is in, after the release
+        Assert.Equal(2, rig.Device.LastSession!.WritesSent);
+        var late = await Assert.ThrowsAsync<InvalidOperationException>(() => rig.Device.SetChannelLevelAsync(5, 0x40, CancellationToken.None));
+        Assert.Contains("bump 5 was released and the console's reports of physical fader 5 are not its content's again yet", late.Message, StringComparison.Ordinal);
+
+        rig.Console.Report((int)HspObjectId.FaderInfo, Body(E11bLater, 4296));
+        rig.Console.Report((int)HspObjectId.ChannelLevels, Body(E11bLater, 4300));
+        await rig.Console.ResumeAndPauseAfterServing((int)HspObjectId.ChannelLevels).WaitAsync(Timeout);
+        await rig.Device.SetChannelLevelAsync(5, 0x40, CancellationToken.None);
+        rig.Console.Resume();
+        await WaitUntil(() => rig.Device.LastSession!.WritesSent == 4);
+        await rig.Device.DisconnectAsync(CancellationToken.None);
+
+        Assert.Equal(new[]
+        {
+            WithCounter(E9d, 38764, 0x00), WithCounter(E9d, 38879, 0x01),
+            WithCounter(E9d, 11362, 0x02, value: 0x82, previous: 0x00), WithCounter(E9d, 11362, 0x03, value: 0x40, previous: 0x82),
+        }, Payloads(rig.Pipe));
+    }
+
+    [Fact]
+    public async Task A_fader_moved_during_our_bump_ends_the_shadow_at_its_new_level()
+    {
+        // The end rule of 2026-11-02, case (a) with a level other than the bump's: channel fader 5 at 0x82 (seq 4146 / 4150), the
+        // press answered at 0xFF (seq 4227 / 4231), and the fader moved on the panel during the hold, so the release's report
+        // reads 0x54 (FaderInfo seq 4446, ChannelLevels seq 4450 of the same session): neither the bump's level nor the one before
+        // the press, so the reports are the content's; the drag goes, matched at 0x54. As SmartSoft's bytes: E9d seq 38764 /
+        // 38879 (bump 5) and 11362 (index 0x04).
+        var rig = LiveConsole();
+        rig.Console.OnPress((byte)ClearedKey.Bump5, () =>
+        {
+            rig.Console.Report((int)HspObjectId.FaderInfo, Body(E11bLater, 4227));
+            rig.Console.Report((int)HspObjectId.ChannelLevels, Body(E11bLater, 4231));
+        });
+        rig.Console.OnRelease((byte)ClearedKey.Bump5, () =>
+        {
+            rig.Console.Report((int)HspObjectId.FaderInfo, Body(E11bLater, 4446));
+            rig.Console.Report((int)HspObjectId.ChannelLevels, Body(E11bLater, 4450));
+            rig.Console.PauseAfterServing((int)HspObjectId.ChannelLevels);
+        });
+        await rig.Device.ConnectAsync(CancellationToken.None);
+        await rig.KeysReported.WaitAsync(Timeout);
+        await ReportFader5(rig, 4146, 4150, 0x82);
+
+        var inHold = ChannelReported(rig.Device, 5, 0xFF);
+        await rig.Device.BumpChannelAsync(5, true, CancellationToken.None);
+        await inHold;
+        await rig.Device.BumpChannelAsync(5, false, CancellationToken.None);
+        await WaitUntil(() => rig.Console.Paused.Task.IsCompleted);   // right after the release's report
+        await rig.Device.SetChannelLevelAsync(5, 0x40, CancellationToken.None);
+        rig.Console.Resume();
+        await WaitUntil(() => rig.Device.LastSession!.WritesSent == 4);
+        await rig.Device.DisconnectAsync(CancellationToken.None);
+
+        Assert.Equal(new[]
+        {
+            WithCounter(E9d, 38764, 0x00), WithCounter(E9d, 38879, 0x01),
+            WithCounter(E9d, 11362, 0x02, value: 0x54, previous: 0x00), WithCounter(E9d, 11362, 0x03, value: 0x40, previous: 0x54),
+        }, Payloads(rig.Pipe));
+    }
+
+    [Fact]
+    public async Task Two_bumps_in_a_row_keep_the_level_before_the_first_press()
+    {
+        // The end rule of 2026-11-02 for two bumps of the same fader in a row: the second press is taken while the first bump's
+        // shadow still waits and channel 5 still reads the first press's 0xFF, so the second shadow keeps the first one's level
+        // before the press (0x82), not the 0xFF reported then. The stand-in answers the first press with 0xFF (seq 4227 / 4231)
+        // and the second with 0x82 (seq 4296 / 4300: the first release's report, late), which ends the first shadow; the second
+        // press's own 0xFF comes after its release and keeps the second shadow; 0x82 again ends it. As SmartSoft's bytes: E9d
+        // seq 38764 / 38879 twice (code 0x04) and 11362 (index 0x04).
+        var rig = LiveConsole();
+        var presses = 0;
+        rig.Console.OnPress((byte)ClearedKey.Bump5, () =>
+        {
+            var first = ++presses == 1;
+            rig.Console.Report((int)HspObjectId.FaderInfo, Body(E11bLater, first ? 4227 : 4296));
+            rig.Console.Report((int)HspObjectId.ChannelLevels, Body(E11bLater, first ? 4231 : 4300));
+        });
+        await rig.Device.ConnectAsync(CancellationToken.None);
+        await rig.KeysReported.WaitAsync(Timeout);
+        await ReportFader5(rig, 4146, 4150, 0x82);
+
+        var inHold = ChannelReported(rig.Device, 5, 0xFF);
+        await rig.Device.BumpChannelAsync(5, true, CancellationToken.None);
+        await inHold;
+        await rig.Device.BumpChannelAsync(5, false, CancellationToken.None);
+        await WaitUntil(() => rig.Device.LastSession!.WritesSent == 2);
+
+        var restored = ChannelReported(rig.Device, 5, 0x82);
+        await rig.Device.BumpChannelAsync(5, true, CancellationToken.None);   // channel 5 still reads 0xFF
+        await restored;                                                        // the first release's report, at the second press
+        rig.Console.OnRelease((byte)ClearedKey.Bump5, () =>
+        {
+            rig.Console.Report((int)HspObjectId.FaderInfo, Body(E11bLater, 4227));
+            rig.Console.Report((int)HspObjectId.ChannelLevels, Body(E11bLater, 4231));
+            rig.Console.PauseAfterServing((int)HspObjectId.ChannelLevels);
+        });
+        await rig.Device.BumpChannelAsync(5, false, CancellationToken.None);
+        await WaitUntil(() => rig.Console.Paused.Task.IsCompleted);   // the second press's report, after its release
+        var late = await Assert.ThrowsAsync<InvalidOperationException>(() => rig.Device.SetChannelLevelAsync(5, 0x40, CancellationToken.None));
+        Assert.Contains("bump 5 was released and the console's reports of physical fader 5 are not its content's again yet", late.Message, StringComparison.Ordinal);
+
+        rig.Console.Report((int)HspObjectId.FaderInfo, Body(E11bLater, 4296));
+        rig.Console.Report((int)HspObjectId.ChannelLevels, Body(E11bLater, 4300));
+        await rig.Console.ResumeAndPauseAfterServing((int)HspObjectId.ChannelLevels).WaitAsync(Timeout);
+        await rig.Device.SetChannelLevelAsync(5, 0x40, CancellationToken.None);
+        rig.Console.Resume();
+        await WaitUntil(() => rig.Device.LastSession!.WritesSent == 6);
+        await rig.Device.DisconnectAsync(CancellationToken.None);
+
+        Assert.Equal(new[]
+        {
+            WithCounter(E9d, 38764, 0x00), WithCounter(E9d, 38879, 0x01), WithCounter(E9d, 38764, 0x02), WithCounter(E9d, 38879, 0x03),
+            WithCounter(E9d, 11362, 0x04, value: 0x82, previous: 0x00), WithCounter(E9d, 11362, 0x05, value: 0x40, previous: 0x82),
+        }, Payloads(rig.Pipe));
     }
 
     [Fact]
@@ -2187,8 +2420,9 @@ public class UsbSmartFadeDeviceTests
         // muted), so every fader's reports may carry it (INFERRED, unobserved: FaderInfo of the other faders may drop as it does
         // for BLACKOUT, F125, and the MASTER, F176). The stand-in reports SOLO on as E9c did after SmartSoft's SOLO tap
         // (LedStatus seq 87881, block 52 `FF` x 6) and answers bump 7's press as the console answered SmartSoft's held bump 7
-        // there. Channel fader 3, another fader, is refused during the hold and after the release until ChannelLevels (seq
-        // 88133) and FaderInfo (seq 88141) are in, in E9c's order; then it goes, matched at 0x00. As SmartSoft's bytes: its
+        // there. Channel fader 3, another fader, is refused during the hold, after the release, and after ChannelLevels (seq
+        // 88133) and FaderInfo (seq 88141) are in, in E9c's order, until both have been quiet for two poll replies (with SOLO
+        // on the other faders' reports must have settled too); then it goes, matched at 0x00. As SmartSoft's bytes: its
         // bump 7 press and release (E9c seq 87997, 88124) and its event of index 0x02 in bank 1-24 (E9d seq 10476).
         var rig = LiveConsole();
         AnswersBump7WithItsHold(rig.Console);
@@ -2210,13 +2444,15 @@ public class UsbSmartFadeDeviceTests
         rig.Console.Resume();
         await rig.Console.PauseAtNextPoll().WaitAsync(Timeout);   // its idle reply is in
         var released = await Assert.ThrowsAsync<InvalidOperationException>(() => rig.Device.SetChannelLevelAsync(3, 0x40, CancellationToken.None));
-        Assert.Contains("bump 7 was released with SOLO on and the console has not reported the faders again since (FaderInfo and ChannelLevels listed and delivered after the release)", released.Message, StringComparison.Ordinal);
+        Assert.Contains("bump 7 was released with SOLO on and the console's reports have not settled since", released.Message, StringComparison.Ordinal);
 
         rig.Console.Report((int)HspObjectId.ChannelLevels, Body(E9c, 88133));
         rig.Console.Report((int)HspObjectId.FaderInfo, Body(E9c, 88141));
-        rig.Console.Resume();
-        await WaitUntil(() => rig.Console.Served((int)HspObjectId.FaderInfo) == 3);
-        await rig.Console.PauseAtNextPoll().WaitAsync(Timeout);   // both are in
+        await rig.Console.ResumeAndPauseAfterServing((int)HspObjectId.FaderInfo).WaitAsync(Timeout);   // both are in, no quiet reply since
+        var unsettled = await Assert.ThrowsAsync<InvalidOperationException>(() => rig.Device.SetChannelLevelAsync(3, 0x40, CancellationToken.None));
+        Assert.Contains("bump 7 was released with SOLO on and the console's reports have not settled since", unsettled.Message, StringComparison.Ordinal);
+        await rig.Console.ResumeAndPauseAtNextPoll().WaitAsync(Timeout);   // one quiet reply
+        await rig.Console.ResumeAndPauseAtNextPoll().WaitAsync(Timeout);   // two
         await rig.Device.SetChannelLevelAsync(3, 0x40, CancellationToken.None);
         rig.Console.Resume();
         await WaitUntil(() => rig.Device.LastSession!.WritesSent == 4);
@@ -2467,7 +2703,9 @@ public class UsbSmartFadeDeviceTests
         private readonly List<(int AtPoll, int Id, byte[] Body)> _scheduled = new();
         private int _polls;
         private readonly Queue<byte[]> _replies = new();
-        private ManualResetEventSlim _resume = new(true);   // one per pause: a Resume then a new pause never unsets the one a paused poll waits on
+        private ManualResetEventSlim? _waiting;   // what the paused poll waits on
+        private ManualResetEventSlim? _next;      // what the next pause will wait on, once one is asked for
+        private int? _pauseAfterServing;
         private bool _pauseRequested;
         private bool _dataSeen;
         private bool _relist;
@@ -2579,19 +2817,64 @@ public class UsbSmartFadeDeviceTests
         {
             lock (_lock)
             {
-                Paused = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
-                _resume = new ManualResetEventSlim(false);
-                _pauseRequested = true;
-                return Paused.Task;
+                return AskPause();
             }
         }
 
+        /// <summary>The paused poll goes on and the one after it waits: exactly one poll exchange between the two pauses.</summary>
+        public Task ResumeAndPauseAtNextPoll()
+        {
+            lock (_lock)
+            {
+                var paused = _waiting;
+                var next = AskPause();
+                paused?.Set();
+                return next;
+            }
+        }
+
+        /// <summary>The paused poll goes on, and the poll after the one that delivers <paramref name="objectId"/> waits: the test acts right after that delivery.</summary>
+        public Task ResumeAndPauseAfterServing(int objectId)
+        {
+            lock (_lock)
+            {
+                var paused = _waiting;
+                var next = AskPause();
+                _pauseRequested = false;
+                _pauseAfterServing = objectId;
+                paused?.Set();
+                return next;
+            }
+        }
+
+        /// <summary>The poll after the one that delivers <paramref name="objectId"/> waits (asked for from a reaction, on the loop's thread, or while nothing is paused).</summary>
+        public Task PauseAfterServing(int objectId)
+        {
+            lock (_lock)
+            {
+                var next = AskPause();
+                _pauseRequested = false;
+                _pauseAfterServing = objectId;
+                return next;
+            }
+        }
+
+        /// <summary>Everything goes on: the paused poll, and a pause asked for and not reached yet.</summary>
         public void Resume()
         {
             lock (_lock)
             {
-                _resume.Set();
+                _waiting?.Set();
+                _next?.Set();
             }
+        }
+
+        private Task AskPause()
+        {
+            Paused = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+            _next = new ManualResetEventSlim(false);
+            _pauseRequested = true;
+            return Paused.Task;
         }
 
         public void Write(ReadOnlySpan<byte> data)
@@ -2647,8 +2930,7 @@ public class UsbSmartFadeDeviceTests
                 PollAfterData.TrySetResult();
             }
 
-            bool pause;
-            ManualResetEventSlim resume;
+            ManualResetEventSlim? resume = null;
             lock (_lock)
             {
                 _polls++;
@@ -2658,18 +2940,26 @@ public class UsbSmartFadeDeviceTests
                     Report(due.Id, due.Body);
                 }
 
-                pause = _pauseRequested;
-                _pauseRequested = false;
-                resume = _resume;
-                if (pause)
+                if (_pauseRequested)
                 {
+                    _pauseRequested = false;
+                    resume = _next ?? new ManualResetEventSlim(true);
+                    _next = null;
+                    _waiting = resume;
                     Paused.TrySetResult();
                 }
             }
 
-            if (pause)
+            if (resume is not null)
             {
                 _ = resume.Wait(Timeout);
+                lock (_lock)
+                {
+                    if (ReferenceEquals(_waiting, resume))
+                    {
+                        _waiting = null;
+                    }
+                }
             }
 
             AnswerPoll();
@@ -2695,6 +2985,11 @@ public class UsbSmartFadeDeviceTests
                 {
                     body = _bodies[id];
                     _served[id] = (_served.TryGetValue(id, out var count) ? count : 0) + 1;
+                    if (_pauseAfterServing == id)
+                    {
+                        _pauseAfterServing = null;
+                        _pauseRequested = true;   // the next poll waits, its pause asked for already
+                    }
                 }
 
                 var payload = Payload(_sequence++, id, body);

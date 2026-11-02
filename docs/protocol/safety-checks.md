@@ -661,8 +661,9 @@ The SC-5 classes were implemented on 2026-11-02 by an Opus 5.5 subagent at the o
 assistant, which writes none of the sending code (CLAUDE.md); written for the `protocol-safety-reviewer`
 pass of item 10 (committed as 98cb499 the same day, before the pass). **It clears nothing: nothing is sent before that pass and the owner's go for E11b** (with USBPcap, the backup and the
 conditions above). The first pass (NEEDS CHANGES, "Review (SC-5 item 10)" below) was answered by the same agent in the working tree
-the same day; "Changes after the first pass" at the end of this section lists each finding with what changed and its test, and
-"Changes after the re-check" does the same for the second pass. What was built, where:
+the same day; "Changes after the first pass" at the end of this section lists each finding with what changed and its test,
+"Changes after the re-check" does the same for the second pass, and "Changes after E11b" for the bump shadow's end rule the owner
+asked for after his bump test. What was built, where:
 
 - **One encoder, one whitelist (condition 3).** `HspOutbound.cs`: `ClearedFader` = `Fader1` … `Fader24` (0x00–0x17), `Master`,
   `Bumps`; `ClearedKey` = `Bump1` … `Bump24` (0x00–0x17), `Go`, `Solo`, `Blackout`, `Faders1To24`, `Faders25To48` (0x37), `FadersMems`,
@@ -708,7 +709,8 @@ the same day; "Changes after the first pass" at the end of this section lists ea
   - *Holds.* Press and release from the same code path (`PressBump`, `ReleaseBump`); released by the UI, by the loop's bound, by a
     stop, and at once when the console reports another bank or page (a hold does not span a bank switch, condition 2); a switch or a
     second bump while one is held is refused. The incomplete-write latch is unchanged. Since the first pass a bump this host pressed
-    keeps its physical fader out of matching and fader events until the console has reported that fader again after the release.
+    keeps its physical fader out of matching and fader events until the console has reported that fader again after the release
+    (since E11b: until its reports read the content again, "Changes after E11b").
   - *Logged as one operation.* The transfer log gets a note when the bank key goes, when the console's report completes the switch
     (with its delay), for each control queued or not sent after it (with the reason), when a fader is matched, when the bound asks for
     a release and when a hold is released by a bank change. Since the first pass the notes of the bank key and of a matched fader,
@@ -759,7 +761,8 @@ and an ambiguous matching level.
   header seqs 29262, 86165, 87996; E9d 27254; E9e 17655, 18352, 18882, 28382, 28803) and FaderInfo at once after 51 of 51 memory
   holds, and a memory bump of an empty memory changes no channel, so a memory bump waits for FaderInfo only (the rule INFERRED from that
   OBSERVED evidence). Fail closed: a bump that changed neither report (its fader's content already at full) leaves the fader refused
-  until the console lists both objects again for another reason (a panel move of that fader does it). A bump held on the panel cannot be
+  until the console lists both objects again for another reason (a panel move of that fader does it). *(Superseded the same day: the
+  owner met this edge in his bump test after E11b and rejected it; the end rule is now the one under "Changes after E11b" below.)* A bump held on the panel cannot be
   told from a fader at that level (case a: not detected, the owner's written acceptance at the E11b gate). Tests: `A_fader_waits_after_its_own_bump_until_the_console_has_reported_it_again_after_the_release`
   (E9e seq 17675 / 17679 during the hold; after the release PlaybackInfo seq 17789 alone, as E9e's first reply after it, then
   FaderInfo seq 17796 alone, both refused; with ChannelLevels seq 17800 the matching event at 0x00 and the drag go) and
@@ -826,7 +829,7 @@ and an ambiguous matching level.
   reply header in the session is followed by its payload and nothing else, and that the bank key's note follows the list read after the
   key; it fails when the notes are written at every event, as before.
 - *Minor C, SOLO.* A bump of ours shadows every physical fader (`BumpShadow.AllFaders`, with the same release-then-reported rule as its
-  own fader) when SOLO's LED (block 52, F100) reads anything but steady off at its press or while the shadow lasts (a panel SOLO during
+  own fader; since E11b the end rule there, plus two quiet poll replies for both objects) when SOLO's LED (block 52, F100) reads anything but steady off at its press or while the shadow lasts (a panel SOLO during
   our hold; the PC sends nothing between a press and its release): a bump with SOLO on replaces the output (F6, DOCUMENTED), so the other
   faders' reports may carry it, ChannelLevels and perhaps FaderInfo as BLACKOUT (F125) and the MASTER (F176) zero FaderInfo too; INFERRED,
   unobserved (E9c's only SOLO-mode hold, header 87996, had nothing else up). Tests:
@@ -837,6 +840,39 @@ and an ambiguous matching level.
   the owner's Acceptance 6.
 - *Nit D.* docs/api.md, the fader component, the UI's state model and `DeviceStateChange` say "after a mode switch (a 1-24 / 25-48
   switch INFERRED alike)".
+
+**Changes after E11b (the same agent, 2026-11-02, at the owner's request after his bump test; in the working tree, nothing run against
+a console):**
+
+- *The bump shadow's end.* In the owner's later E11b session (`captures/2026-11-02-e11b-second-live-control-session.backend-6.jsonl`)
+  bump 5 on channel fader 5 at 0x82 was listed at its press (record 5 `ff 00 00 00`, ChannelLevels[5] 0xFF, seq 4227 / 4231) and at its
+  release (0x82 again, seq 4296 / 4300), but with the fader at 0xFF the press and the release listed nothing (seq 4571 / 4609, nothing
+  in 1.5 s; OBSERVED once, log-only), so the first rule (both objects listed after the release and delivered) never ended and channel
+  fader 5 stayed refused. The owner rejected that. `ShadowEnds` now ends a shadow once its release has been taken and a poll reply came
+  after it, and the console's latest report of record k (and, for a channel bump, ChannelLevels[c]) is the content's again: (a) reported
+  after the release (listed after it and delivered) or (b) unchanged for two poll replies after the release, and reading a level other
+  than the bump's (BUMPS, FaderInfo body[193]: a held bump reads it, F97, F174, F178, VERIFIED) or the level reported when the press was
+  taken (the release restored it). A report at the bump's level that differs from the pre-press level keeps the shadow: a tap's press
+  reported after its release (F168). Case (b) is the bump that changed nothing (the owner's log; every press that changed a level was
+  listed within 16-67 ms, F174, F178). Nothing listed and not yet fetched counts. The rule is INFERRED. Two readings go beyond the
+  owner's wording and are for the reviewer: a "quiet" poll reply is an idle reply or a list that names neither object (F57, VERIFIED: a
+  list names what changed; with a stack running PlaybackInfo is listed at every poll, E8, and idle replies alone would keep the shadow),
+  counted per object and from the release rather than from the press, the level test applying in both cases; and a second press taken
+  while the first bump's shadow of the same target still waits keeps the first one's pre-press levels (its bump may still show then).
+  With SOLO on (`AllFaders`) both objects must also have been quiet for two poll replies, so that a tap's late press report cannot end
+  the wait while the other faders may still read muted (INFERRED). The fail-closed edge now remains only while the console keeps
+  reporting the bump's level after the release: a bump held on the panel at the same time (Acceptance 6). Tests:
+  `A_bump_that_changed_nothing_ends_its_shadow_after_two_quiet_poll_replies_and_the_drag_then_goes` (the owner's full-fader case: seq
+  4506 / 4510, nothing listed; refused with one quiet reply, the drag goes after the second, matched at 0xFF),
+  `A_bump_on_a_fader_at_half_ends_its_shadow_when_the_level_before_the_press_is_reported_after_the_release` (seq 4146 / 4150, 4227 /
+  4231, 4296 / 4300: matched at 0x82 right after the release's report),
+  `A_taps_press_reported_after_its_release_keeps_the_shadow_until_the_level_before_the_press_is_reported` (the 0xFF report after the
+  release keeps it, the 0x82 one ends it), `A_fader_moved_during_our_bump_ends_the_shadow_at_its_new_level` (0x54 after the release,
+  seq 4446 / 4450, matched at 0x54) and `Two_bumps_in_a_row_keep_the_level_before_the_first_press`; the E9e test and the SOLO test
+  updated (the SOLO one now also refused right after both reports, before two quiet replies). Each fails with its part removed (the
+  end at the release, no level test, no pre-press clause, one quiet reply, a report alone, a listed and unfetched report counted, no
+  SOLO quiet, no inheritance). SmartSoft's bytes for bump 5: E9d seq 38764 / 38879 (code 0x04, memory bump 5 there: the same physical
+  bump in every bank, F171, F174).
 
 **Readings the reviewer must check (where the text of SC-5 was read, narrowed or extended):**
 
@@ -1002,3 +1038,81 @@ F174 / F175 / F115 annotated, H66 CONFIRMED for SC-5's classes. **E11b clears no
 A fader event in a bank the console has not reported; a page change from the PC; NEXT, STACK, PAUSE, CLEAR; any bump not named above or in
 the addenda as a hold; a hold longer than 3 s; the record keys (SC-3); ChannelText, Memory, the System pair (SC-4, not decided); anything in class F.
 Nothing is cleared for sending before the owner implements the sequences, the reviewer passes them and the owner gives the go for E11b.
+
+## SC-4 (2026-11-02, evening): the console's state at Connect through SmartSoft's start-up pair
+
+**Question.** May our software send, once per session at Connect, the two System messages (id 39) SmartSoft sends at the start
+of every Online session, `09 00 00` then `07 00 00`, so that the console lists its version and then its whole state and show (the
+157–161-record download) as it does for SmartSoft, and the UI shows the console's mode, bank, page, key LEDs, levels, independents,
+file name and show data without anyone touching the panel? The owner asked for exactly this on 2026-11-02 ("I do not want to press
+something / move something just to get rid of 'Not reported by the console yet'"). Input: the SC-4 groundwork of the same evening
+(F181–F186, H113–H116, `smartsoft-analysis.md` S11.17, `commands.md` "The System message (ID 39)"), SC-2 class E, SC-5 class E.
+
+| # | Item | Status | Evidence |
+|---|---|---|---|
+| 1 | Evidence status | **VERIFIED for the bytes and the console's answers; the meaning INFERRED** | F181: the two payloads `00 03 00 27 09 00 00` and `01 03 00 27 07 00 00` byte-identical in 20 of 20 SmartSoft sessions across 10 captures, the only System writes of a session, its first two data writes; F182: after `09` the console lists ConsoleVersion at the next poll (16–22 ms; body `0C 33 2E 30 2E 32 2E 39 2E 30 2E 34 33` in 20 of 20), after `07` the download at the next poll (17–24 ms), 157–161 records in a fixed order, 792–812 bytes, fully fetched in 7.2–7.6 s, no other list and no write during it, the counter +1 per payload, no acknowledgement; F57 / F94 / F157: the download's records decoded and cross-checked with the console's own SHOW files; H30 and S11.17: SmartSoft sends `09` at reply header #40 and `07` at #79 from two static countdowns, `07` only if the ConsoleVersion equals "3.0.2.9.0.43" (INFERRED, high); the names of 0x09 and 0x07 UNKNOWN (ConsoleLink: "version query", "catalog request"). |
+| 2 | Side effects understood | **Yes for what the captures can show; the rest UNKNOWN and bounded** | F184: in 9 sessions every live object delivered before the pair came back byte-identical in the download, a running sequence kept stepping across both writes, and every SD comparison is identical (10 pairs, among them SHOW04 = SHOW05 = SHOW07 across five sessions whose only data writes were the pair). The only effect ever observed is the listing. The erase and show-upload values of the same message (S11.17: 0, 1, 6, 10–16; F121) are one body byte away: **the encoder represents 0x09 and 0x07 and nothing else.** What 0x09 / 0x07 change inside the console beyond the listings, a cut-short download's remainder (H116) and the states never seen at a pair (F185) are UNKNOWN. |
+| 3 | Backup | **Condition** | An SD save before E13 (the first session with the pair), its name in the log; an SD save after, byte-identical. |
+| 4 | Rig | **Not affected** | The pair changed no level, LED or output in 20 of 20 sessions (F184); the rig rule of SC-1 / SC-2 stands for the controls that may follow. |
+| 5 | Firmware path untouched | **Yes** | Bulk transfers on interface 1 only; System values 0 / 1 / 6 (the show-upload framing) and 10–16 unrepresentable; SFDownloader, DPInst, the self-test and the HID interface untouched. |
+| 6 | Mode gating | **Condition (to build)** | A separate per-day switch `Device:Usb:StartupPairDate` (today's date, like `ConfirmDate` and `LiveControlDate`), so that SC-1's read-only session stays what SC-1 cleared (0 writes) unless the owner enables the pair deliberately; usable with and without live control; the UI shows "STATE AT CONNECT" beside HARDWARE while the switch is on and "downloading the console's state" during the download. |
+| 7 | No blind retries | **Condition (to build)** | Exactly one pair per session (per Connect; F181, H113), never resent, not after a reconnect inside the same process without a new Connect; a header or payload that did not complete sets SC-2's incomplete-write latch (`INCOMPLETE-WRITE.txt`) as for any write. |
+| 8 | Logging on | **Yes, plus USBPcap for E13** | The transfer log always; the bus for the first session. |
+| 9 | Versions recorded | **Condition (to build): the version gate** | `07 00 00` goes only after ConsoleVersion was listed, fetched and read as "3.0.2.9.0.43" (F59; SmartSoft's own gate, S11.17); any other version, or no ConsoleVersion within two poll exchanges after `09`, ends the pair (no `07`), the session continues as a read session and the transfer log says why. The firmware, Windows build and backend commit recorded for E13 as for E11. |
+| 10 | Review done | **Condition** | `protocol-safety-reviewer` over the encoder (two bodies), the placement, the version gate, the download handling (the bounds raised to what 20 downloads showed), the refusal of controls during the download, the switch and the golden tests, before E13; its findings fixed or recorded in a review table here. |
+| 11 | Passive first | **Yes** | 20 passive observations of SmartSoft producing the pair and the console answering (F181, F182); E13 is the first time our host sends it. |
+
+### Decision: GO (conditional) for class E as bounded below; NO-GO for every other System value, for ever (F121)
+
+Cleared for building, reviewing and one first session E13 on the owner's go, nothing else:
+
+1. **The pair, verbatim and once.** The session's first two data writes are `09 00 00` and `07 00 00` (id 39, pseq 0 and 1, the
+   header built as every Data header of ours, F131 / F52), in that order, sent once per Connect; `09` after at least one completed
+   poll exchange with nothing listed and unfetched (SC-2's gate), `07` only after the version gate of item 9 and one more completed
+   poll exchange, with no other write between them (as SmartSoft: only the ConsoleVersion list and object came between, F182).
+2. **The download is taken whole, and nothing is sent during it.** The read session's bounds are raised to what the 20 downloads showed
+   (a list payload up to 812 bytes, F182; every record body length seen in those downloads and in E12 / E12b, with the golden replay of
+   all 20 downloads through the session as the proof) and no further: an unseen length still ends the session with a fault, the safe
+   stop of SC-1. From `07` until the download's last record is delivered (ChannelLevels, the fixed order of F182) every control is refused
+   ("the console's state is being downloaded"); the blind window is 7.2–7.6 s (F182). A fault inside the download ends the session; the
+   remainder of a cut download is UNKNOWN (H116): the recovery is a SmartSoft Online start, whose own pair and download consume whatever
+   is pending (F181 / F182), or a session of ours that faults again until it does; never a retry of the pair by our code.
+3. **The console's state before the pair is the operator's responsibility, as it is SmartSoft's.** SmartSoft sends the pair blind at
+   header #40 (S11.17) and the captures show it in channel mode page 1 bank 1-24 (16), memory mode (4), with SOLO lit and the MASTER
+   below full, with STACK lit and with a sequence running (F185), never in bank 25-48, NEXT, BLACKOUT, with a record function armed, a
+   bump held, a GO fade running, a menu open or an SD operation under way. Our software cannot know the state before the pair (that is
+   the point of it), so: the UI's Connect says what the console must not be doing (no menu, no SD save or load, no record function armed,
+   no bump held), the device refuses the pair if anything already reported shows NEXT, BLACKOUT, a record function armed or bank 25-48
+   (a pending list at Connect, F177 / H65), and the owner accepts in writing the residual: the pair sent in a state SmartSoft was never
+   seen in, with the console's answer UNKNOWN (the only observed effect of the pair being a listing, and the erase values unrepresentable).
+4. **What the pair does not give.** The download never carries FaderInfo (the MASTER and BUMPS levels), DisplayContent or PlaybackInfo
+   (F182, F186): SC-2's condition that the MASTER be reported before a channel or memory fader moves stays, so a session still needs one
+   MASTER movement on the panel before the first fader from the UI (the UI says so instead of "Not reported by the console yet"); the
+   SC-5 matching rule and every other interlock are unchanged.
+5. **One encoder, one whitelist, golden tests.** The two bodies as enum members with their evidence (F181), the placement and the version
+   gate replayed over the 20 SmartSoft sessions (the pair's bytes, the ConsoleVersion gate, the download accepted record by record), the
+   refusal of controls during the download, the switch's refusals (no `StartupPairDate` → no pair; a date not today → the backend refuses
+   to start, as the other two dates), and SC-1's read-only session unchanged without the switch.
+6. **Nothing else:** no other System value, no second pair, no pair on a reconnect without a new Connect, no pair while live control is
+   sending (the pair is first or not at all), no change to what SC-1 / SC-2 / SC-5 cleared.
+
+### Conditions for E13 (the first session with the pair) and what to record
+
+- Backup to the SD card first, the name in the log; USBPcap from before the Zadig bind; a guided script (`tools/usb-probe/e13-guided-session.ps1`,
+  to be written from the E11b one: the gate questions, the versions, the starting position, Connect with the pair, the read-only minute
+  after the download, then one MASTER movement on the panel and the SC-2 sanity control, Disconnect at an idle point, the SD save).
+- The owner gives the go after reading this section and accepts in writing: the residual of item 3 (a state never seen), the blind window
+  of 7.2–7.6 s, the recovery path after a cut download (a SmartSoft start), and that the MASTER still needs one panel move per session.
+- Record: the two writes with their placement (ms after the reply, the next poll), the ConsoleVersion bytes, the download (its record
+  count, bytes, duration, the order against F182, every record decoded), what the UI showed at the end of the download (mode, bank, page,
+  LEDs, levels, independents, file name, memories, patch, stack), that nothing changed (the live objects delivered later against the
+  download's bodies; `SHOW` after = `SHOW` before), any refusal, any deviation and the time it ended the session.
+- **E13 clears nothing by itself:** a second session of ours makes the pair's behaviour towards our host VERIFIED; the decision above
+  stands or is annotated.
+
+### What SC-4 does not clear
+
+Every other System value (the erase commands 11–16, the page select 10, the show-upload framing 0 / 1 / 6: never, F121); the pair more than
+once per session; the pair from a state the device already knows to be outside F185's; any fetch of an object the console did not list (SC-1
+stands: the download is listed by the console); the Memory, Patch, Sequence, Step and Page writes SmartSoft makes when editing (E12 / E12b,
+SC-2 class D and F: a check of their own if the owner wants the editor pages to write to the console).
