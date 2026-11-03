@@ -296,6 +296,11 @@ the editor's `ShowFileDto` (`ConsoleShowMapper`: the console's file forms, nothi
 hint and, when the probe cannot run, "Move the MASTER once"; the console's show fills the PATCH and STACK / SEQ pages but is
 never saved as a file. The layers are unchanged: the UI sees no bytes, the application no protocol. Nothing is sent before
 the `protocol-safety-reviewer` pass and E13 on the owner's go (safety-checks.md SC-4 "Implementation").
+*(After the first review, 2026-11-03: the pair is also refused when the console already reported a memory page other than 1
+(MAJOR 1), and the Connect hint names the state the console must show; the probe is decided in the lock that takes the download
+as complete and does not start beside a write of ours (MINOR 2); it asks SOLO and BLACKOUT before each of its switches (NIT 4);
+and its stop or interruption reaches the UI as `masterProbe: "stopped"` with where the console was left, and in the session's
+error or the Disconnect's (MINOR 1). Nothing cleared by it.)*
 
 ## ASC show files as built (2026-10-31)
 

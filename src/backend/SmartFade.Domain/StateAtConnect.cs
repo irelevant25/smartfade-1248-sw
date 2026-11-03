@@ -25,7 +25,10 @@ public enum StateAtConnectPhase
     NotSent,
 }
 
-/// <summary>What became of the MASTER probe after the download (SC-4 clause 4): the console reports the MASTER only with FaderInfo.</summary>
+/// <summary>
+/// What became of the MASTER probe after the download (SC-4 clause 4): the console reports the MASTER only with FaderInfo
+/// (MASTER = body[194], F82, VERIFIED in part; the download never carries FaderInfo, F182 (d) VERIFIED, F186 OBSERVED).
+/// </summary>
 public enum MasterProbePhase
 {
     /// <summary>The download has not completed yet.</summary>
@@ -40,8 +43,16 @@ public enum MasterProbePhase
     /// </summary>
     Sent,
 
-    /// <summary>The probe could not run, or stopped without the MASTER (the reason says why): one fader movement on the panel makes the console report it.</summary>
+    /// <summary>The probe could not run, or went home without the MASTER (the reason says why): one fader movement on the panel makes the console report it.</summary>
     NotPossible,
+
+    /// <summary>
+    /// The probe stopped on the way, or the session ended inside it (the first review's MINOR 1, 2026-11-03): nothing more of
+    /// it was sent and it did not switch back, so the console may be left in another bank or mode than the download found it
+    /// in; the reason says why and where ("the console shows …; the download reported …"), and asks for one fader movement
+    /// when the MASTER is still unreported.
+    /// </summary>
+    Stopped,
 }
 
 /// <summary>

@@ -160,8 +160,11 @@ export interface ConsoleStateDto {
 /** Where the console's state at Connect stands (docs/api.md `stateAtConnect`). */
 export type StateAtConnectPhase = 'idle' | 'waiting' | 'requesting' | 'downloading' | 'done' | 'notSent';
 
-/** What became of the MASTER probe after the download (SC-4 clause 4). */
-export type MasterProbe = 'pending' | 'notNeeded' | 'sent' | 'notPossible';
+/**
+ * What became of the MASTER probe after the download (SC-4 clause 4). `stopped` (added 2026-11-03, the first review's MINOR 1):
+ * it stopped on the way or the session ended inside it, without switching back; the reason says where the console was left.
+ */
+export type MasterProbe = 'pending' | 'notNeeded' | 'sent' | 'notPossible' | 'stopped';
 
 export interface StateAtConnectDto {
   phase: StateAtConnectPhase;
@@ -172,12 +175,15 @@ export interface StateAtConnectDto {
   /** Why the state was not requested or the request ended before the download. */
   reason?: string | null;
   masterProbe: MasterProbe;
-  /** Why the MASTER probe could not run: one fader movement on the panel makes the console report the MASTER then. */
+  /**
+   * Why the MASTER probe could not run (one fader movement on the panel makes the console report the MASTER then), or where it
+   * stopped: "… the console shows …; the download reported …".
+   */
   masterProbeReason?: string | null;
 }
 
 export const STATE_AT_CONNECT_PHASES: readonly StateAtConnectPhase[] = ['idle', 'waiting', 'requesting', 'downloading', 'done', 'notSent'];
-export const MASTER_PROBES: readonly MasterProbe[] = ['pending', 'notNeeded', 'sent', 'notPossible'];
+export const MASTER_PROBES: readonly MasterProbe[] = ['pending', 'notNeeded', 'sent', 'notPossible', 'stopped'];
 
 /** The bank the console's physical faders control: channels 1-24, channels 25-48 or the memories of the selected page. */
 export type FaderBank = 'channels1To24' | 'channels25To48' | 'memories';

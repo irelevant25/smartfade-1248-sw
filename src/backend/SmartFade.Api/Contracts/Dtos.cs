@@ -63,7 +63,9 @@ public sealed record ConsoleStateDto(
 /// <summary>
 /// The real console's state at Connect (safety check SC-4; null when the device does not request it): phase "idle" | "waiting" |
 /// "requesting" | "downloading" | "done" | "notSent", the download's record count and progress, why it was not sent, and the
-/// MASTER probe: "pending" | "notNeeded" | "sent" | "notPossible" with its reason (the UI asks for one fader movement then).
+/// MASTER probe: "pending" | "notNeeded" | "sent" | "notPossible" | "stopped" with its reason (notPossible: the UI asks for one
+/// fader movement; stopped, added 2026-11-03: the probe stopped on the way or was interrupted, and the reason says where the
+/// console was left, "the console shows …; the download reported …").
 /// </summary>
 public sealed record StateAtConnectDto(string Phase, int? Records, int Delivered, string? Reason, string MasterProbe, string? MasterProbeReason);
 

@@ -30,12 +30,13 @@ export class MastersPanelComponent {
   protected readonly mastersReported = this._state.mastersReported;
   /**
    * The real console's download at Connect (SC-4) carries no FaderInfo, so the MASTER stays unreported until a fader moves; the
-   * device then taps the bump of an unpatched channel once (the MASTER probe, clause 4). Only when that could not run does the
-   * panel ask for one movement of the MASTER, with the reason as its title.
+   * device then taps the bump of an unpatched channel once (the MASTER probe, clause 4). Only when that could not run, or
+   * stopped before the console reported the MASTER, does the panel ask for one movement of the MASTER, with the reason as its
+   * title (where the probe stopped is said in the bar too).
    */
   protected readonly moveMasterHint = computed(() => {
     const stateAtConnect = this._state.stateAtConnect();
-    return !this.mastersReported() && stateAtConnect?.masterProbe === 'notPossible'
+    return !this.mastersReported() && (stateAtConnect?.masterProbe === 'notPossible' || stateAtConnect?.masterProbe === 'stopped')
       ? stateAtConnect.masterProbeReason ?? 'The console has not reported the MASTER'
       : undefined;
   });

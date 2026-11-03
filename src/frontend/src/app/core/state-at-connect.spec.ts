@@ -22,13 +22,25 @@ describe('state at Connect (SC-4)', () => {
       expect(describeStateAtConnect({ ...downloading, phase: 'done', delivered: 157 }, 'connected')).toBeUndefined();
     });
 
-    it('before Connect, says what the console must not be doing when the pair goes blind', () => {
+    it('before Connect, says what the console must be showing and must not be doing when the pair goes blind', () => {
       const idle: StateAtConnectDto = { phase: 'idle', delivered: 0, masterProbe: 'pending' };
       expect(describeStateAtConnect(idle, 'disconnected')).toEqual({
-        text: 'Before Connect: no menu open on the console, no SD save or load, no record function armed, no bump held',
+        text: 'Before Connect: page 1, bank 1-24 or memory mode, NEXT and BLACKOUT off; no menu open on the console, no SD save or load, no record function armed, no bump held',
         tone: 'idle',
       });
       expect(describeStateAtConnect(idle, 'connected')).toBeUndefined();
+    });
+
+    it('after the download, says where the console was left when the MASTER probe stopped, also with the MASTER known', () => {
+      const reason =
+        'the MASTER probe stopped (REC MEM is lit or blinking (SC-2 condition 5)) and did not switch back: the console shows channel mode, bank 25-48; the download reported channel mode, bank 1-24';
+      const stopped: StateAtConnectDto = { phase: 'done', records: 157, delivered: 157, reason: null, masterProbe: 'stopped', masterProbeReason: reason };
+      expect(describeStateAtConnect(stopped, 'connected')).toEqual({
+        text: 'The MASTER probe stopped (REC MEM is lit or blinking (SC-2 condition 5)) and did not switch back: the console shows channel mode, bank 25-48; the download reported channel mode, bank 1-24',
+        tone: 'warn',
+      });
+      expect(describeStateAtConnect({ ...stopped, masterProbe: 'sent', masterProbeReason: null }, 'connected')).toBeUndefined();
+      expect(describeStateAtConnect({ ...stopped, masterProbe: 'notPossible', masterProbeReason: 'every channel of both banks is patched' }, 'connected')).toBeUndefined();
     });
 
     it('while the pair and the download run, says that the state is requested or downloaded, with the progress', () => {

@@ -222,9 +222,11 @@ public sealed class HspReadSession
     /// <summary>
     /// SC-4 clause 2: the body lengths a session that sends the start-up pair accepts, per id: <see cref="ObservedBodyLengths"/>
     /// plus every other length the console delivered in the 20 downloads and in E12 / E12b, recounted on 2026-11-02 over every
-    /// object of the ten SmartSoft captures (OBSERVED; F156, F182): Sequence (2) 144 bytes (8 steps; E12 seq 87591, download 2
-    /// of E12) and 156 bytes (9 steps; E12b seq 73712, its download 2), StepContent (4) 148 bytes (a type-2 "State" step; E12
-    /// seq 139240, E12b seq 87517). No other id ever came with a second length (SmartSoft's own 100-byte StepContent write of
+    /// object of the ten SmartSoft captures (OBSERVED; F156, F182): Sequence (2) 144 bytes (8 steps; in E12's download 2 at seq
+    /// 139152, and after SmartSoft's step commands at seq 87591) and 156 bytes (9 steps; in E12b's download 2 at seq 87433, and
+    /// after the step commands at seq 73712; the downloads' own objects cited since the first SC-4 review's NIT 1, 2026-11-03),
+    /// StepContent (4) 148 bytes (a type-2 "State" step; E12 seq 139240, E12b seq 87517, each in its download 2). No other id
+    /// ever came with a second length (SmartSoft's own 100-byte StepContent write of
     /// E12 is PC → console and never came back at that length). Any other length still faults the session, SC-1's safe stop.
     /// </summary>
     public static readonly IReadOnlyDictionary<int, IReadOnlySet<int>> DownloadBodyLengths = ObservedBodyLengths.ToDictionary(

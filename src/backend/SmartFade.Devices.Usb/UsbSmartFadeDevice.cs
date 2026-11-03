@@ -41,8 +41,8 @@ namespace SmartFade.Devices.Usb;
 /// With the start-up pair switched on for the day (<see cref="UsbDeviceOptions.StartupPairDate"/>, safety check SC-4, a
 /// conditional GO: nothing sent before the review and the owner's go for E13), read-only or with live control, every
 /// Connect's session sends SmartSoft's System pair once, where SmartSoft placed it (<see cref="HspReadSession"/>), unless what
-/// the console already reported shows NEXT mode, BLACKOUT, a record function armed or bank 25-48 (clause 3; the transfer
-/// log and the UI say why), and the console's state and show arrive in the download it starts: the assembler takes the
+/// the console already reported shows NEXT mode, BLACKOUT, a record function armed, bank 25-48 or a memory page other than 1
+/// (clause 3; the transfer log and the UI say why), and the console's state and show arrive in the download it starts: the assembler takes the
 /// state objects, <see cref="ConsoleShowAssembler"/> the show, and every memory the download did not list is reported
 /// empty (INFERRED). Every control is refused from Connect until the download's last record (clauses 1, 2, 6). After the
 /// download, with live control and no FaderInfo reported yet, the device taps the bump of an unpatched channel once (the
@@ -64,7 +64,7 @@ namespace SmartFade.Devices.Usb;
 [Evidence(EvidenceStatus.Inferred, "F57, F116", "the interlock's freshness reading: a poll reply within two poll periods that listed no LedStatus means the key LEDs are current (F57: a list names what changed; F116: a record screen opens and closes with exactly one LedStatus payload, 28 of 28 and 4 of 4); not observed as a rule of the console")]
 [Evidence(EvidenceStatus.Observed, "write_rules.py 2026-10-31 (E9, E9b); E9c, E9d, E9e", "the console states SmartSoft sent each whitelisted control in; the device sends each control only in those states")]
 [Evidence(EvidenceStatus.Verified, "F181, F182", "the start-up pair, SC-4 class E (2026-11-02, evening): SmartSoft's two System writes and the console's answers as SmartSoft's and the console's behaviour (20 sessions); a conditional GO, nothing sent before the review and E13 on the owner's go")]
-[Evidence(EvidenceStatus.Observed, "F185", "the states the 20 pairs were sent in; the pair is refused when the console already reported NEXT, BLACKOUT, a record function armed or bank 25-48 (SC-4 clause 3), sent blind otherwise, as SmartSoft sends it (S11.17)")]
+[Evidence(EvidenceStatus.Observed, "F185", "the states the 20 pairs were sent in; the pair is refused when the console already reported NEXT, BLACKOUT, a record function armed, bank 25-48 or a memory page other than 1 (SC-4 clause 3, the page added 2026-11-03 after the first review's MAJOR 1), sent blind otherwise, as SmartSoft sends it (S11.17)")]
 [Evidence(EvidenceStatus.Inferred, "F174, F178 (VERIFIED at BUMPS 0xFF); E8b channel 49, E9d channel 47 (OBSERVED)", "the MASTER probe (SC-4 clause 4): a bump press makes the console list FaderInfo with the MASTER and BUMPS; an unpatched channel changes no DMX; the probe itself unobserved until E13")]
 [Evidence(EvidenceStatus.Observed, "F133, F134 VERIFIED for FADERS 1-24 and FADERS MEMS from SmartSoft (E9 + E9b); F175 for FADERS 25-48 from SmartSoft (OBSERVED, second sessions) with F171 VERIFIED for the faders after it; F179 OBSERVED once for our host (E11b)", "the MASTER probe's switches (SC-4 clause 4 as amended on 2026-11-02, late evening), each a bank transition a PC host was seen making: bank 1-24 to 25-48 (SmartSoft E9b seq 51617, E9c 24528, E9d 18706 / 74718, E9e 19934 / 30238; our host E11b bus seq 25322 and 47929) and back (E9b 51978, E9c 28206, E9d 27831 / 85917, E9e 21374 / 31533; E11b 30193 and 48221), bank 1-24 to memory mode (E9 to E9d, e.g. E9d 29032; E11 attempt 3 bus 23677, E11b 34154) and back (e.g. E9d 44811; E11 attempt 3 32624, E11b 43651); memory mode to bank 25-48 and back never from a PC in any capture, so the probe goes through bank 1-24; every one of those switches came on memory page 1 (body[2] = 0), so a switching probe runs only there")]
 public sealed class UsbSmartFadeDevice : ISmartFadeDevice, IAsyncDisposable
@@ -145,6 +145,7 @@ public sealed class UsbSmartFadeDevice : ISmartFadeDevice, IAsyncDisposable
     private string? _probeReason;
     private string? _probeNote;
     private MasterProbeRun? _probeRun;
+    private string? _probeInterruption;   // a session that ended inside the probe: said by its error or by the Disconnect, then cleared
     private ConnectionStatus _status = ConnectionStatus.Disconnected;
     private ConsoleStateAssembler _assembler;
     private CancellationTokenSource? _sessionStop;
@@ -318,7 +319,7 @@ public sealed class UsbSmartFadeDevice : ISmartFadeDevice, IAsyncDisposable
                     : "read-only session (SC-1): polls and listed fetches only");
             if (startupPair)
             {
-                log.Note("start-up pair on (SC-4): System 09 00 00 at the first write slot after reply header #40 with nothing listed, 07 00 00 after #79 and only after ConsoleVersion read 3.0.2.9.0.43, each once and as the session's first two data writes; refused when the console already reported NEXT, BLACKOUT, a record function armed or bank 25-48; nothing else is sent before the download's last record");
+                log.Note("start-up pair on (SC-4): System 09 00 00 at the first write slot after reply header #40 with nothing listed, 07 00 00 after #79 and only after ConsoleVersion read 3.0.2.9.0.43, each once and as the session's first two data writes; refused when the console already reported NEXT, BLACKOUT, a record function armed, bank 25-48 or a memory page other than 1; nothing else is sent before the download's last record");
             }
         }
         catch (Exception ex)
@@ -367,6 +368,7 @@ public sealed class UsbSmartFadeDevice : ISmartFadeDevice, IAsyncDisposable
             _probeTried = false;
             _probe = MasterProbePhase.Pending;
             _probeReason = null;
+            _probeInterruption = null;
             _lastReportStamp = null;
             _togglesAwaitingLed.Clear();
             _togglesSent.Clear();
@@ -474,8 +476,15 @@ public sealed class UsbSmartFadeDevice : ISmartFadeDevice, IAsyncDisposable
 
         if (ended)
         {
+            string? interruption;
+            lock (_gate)
+            {
+                interruption = _probeInterruption;   // a Disconnect inside the MASTER probe: the UI is told where the console was left (MINOR 1)
+                _probeInterruption = null;
+            }
+
             _logger.LogInformation("USB session closed");
-            RaiseConnection(ConnectionStatus.Disconnected);
+            ConnectionChanged?.Invoke(this, new ConnectionState(ConnectionStatus.Disconnected, Mode, Description, interruption));
         }
         else
         {
@@ -734,10 +743,13 @@ public sealed class UsbSmartFadeDevice : ISmartFadeDevice, IAsyncDisposable
     /// <summary>
     /// SC-4 clause 3: the pair is refused when what the console already reported in this session (a list pending at Connect,
     /// F177 / H65, or anything since) shows a state no pair was ever seen in (F185): NEXT mode on or unknown (ConsoleStatus
-    /// body[6], F173), bank 25-48 (body[4], F98, in either mode), a ConsoleStatus value never observed, a record function
-    /// armed (REC MEM, EDIT MEM, COPY, REC SEQ not steady off; the record-key LEDs, H72), or BLACKOUT on (LED block 53 lit and
-    /// steady, F114; its blink is the MASTER below full, F85, seen at E2's pair). Null when nothing reported shows one of
-    /// those, also when nothing was reported at all: the pair then goes blind, as SmartSoft sends it. Asked for `07` too.
+    /// body[6], F173), bank 25-48 (body[4], F98, in either mode), a memory page other than 1 (body[2] = page − 1, F113,
+    /// VERIFIED for the structure; in either mode: every one of the 20 pairs came on page 1, F185, OBSERVED; added 2026-11-03
+    /// after the first review's MAJOR 1), a
+    /// ConsoleStatus value never observed, a record function armed (REC MEM, EDIT MEM, COPY, REC SEQ not steady off; the
+    /// record-key LEDs, H72), or BLACKOUT on (LED block 53 lit and steady, F114; its blink is the MASTER below full, F85, seen
+    /// at E2's pair). Null when nothing reported shows one of those, also when nothing was reported at all: the pair then
+    /// goes blind, as SmartSoft sends it. Asked for `07` too.
     /// </summary>
     private string? PairStateRefusal()
     {
@@ -753,6 +765,8 @@ public sealed class UsbSmartFadeDevice : ISmartFadeDevice, IAsyncDisposable
                     return "ConsoleStatus body[6] carries a value never observed (NEXT mode unknown, F173): no pair is sent then";
                 case { Bank25To48: true }:
                     return "the console shows bank 25-48 (ConsoleStatus body[4], F98): no pair was ever seen there (F185)";
+                case { MemoryPage: not 1 } paged:
+                    return $"the console shows memory page {paged.MemoryPage} (ConsoleStatus body[2] = {paged.MemoryPage - 1}, F113): no pair was ever seen on a page other than 1 (F185)";
             }
         }
 
@@ -2024,6 +2038,7 @@ public sealed class UsbSmartFadeDevice : ISmartFadeDevice, IAsyncDisposable
         finally
         {
             string[] lastNotes = Array.Empty<string>();
+            StateAtConnect? interruptedState = null;
             lock (_gate)
             {
                 if (ReferenceEquals(_liveSession, session))
@@ -2037,8 +2052,15 @@ public sealed class UsbSmartFadeDevice : ISmartFadeDevice, IAsyncDisposable
                     lastNotes = _pendingNotes.ToArray();   // left by the last writes' sent callbacks: written below, before the log closes
                     if (_probeRun is { } probe)
                     {
-                        // a stop or a fault inside the MASTER probe: nothing more of it goes, and the log says where the console was left
-                        lastNotes = lastNotes.Append($"MASTER probe interrupted by the session's end (SC-4 clause 4): the console was last reported in {(ReportedBank() is { } shown ? Describe(shown) : "no bank a PC sent controls in")}, the download reported {Describe(probe.Home)}").ToArray();
+                        // a stop or a fault inside the MASTER probe: nothing more of it goes, and the log says where the console was left;
+                        // the UI is told as well (the first review's MINOR 1): the outcome Stopped while the session still reports, and
+                        // the same words in the session's end (the error, or the Disconnect's note), which outlive the state at Connect
+                        var shown = ReportedBank() is { } bank ? Describe(bank) : "no bank a PC sent controls in";
+                        lastNotes = lastNotes.Append($"MASTER probe interrupted by the session's end (SC-4 clause 4): the console was last reported in {shown}, the download reported {Describe(probe.Home)}").ToArray();
+                        _probe = MasterProbePhase.Stopped;
+                        _probeReason = $"the MASTER probe was interrupted by the session's end and did not switch back: the console shows {shown} (its last report); the download reported {Describe(probe.Home)}";
+                        _probeInterruption = $"The MASTER probe was interrupted by the session's end (SC-4 clause 4): the console shows {shown} (its last report); the download reported {Describe(probe.Home)}. Check the FADERS keys on the console.";
+                        interruptedState = ReportStateAtConnect(session.StartupPair);
                     }
 
                     ResetLiveState();
@@ -2079,11 +2101,26 @@ public sealed class UsbSmartFadeDevice : ISmartFadeDevice, IAsyncDisposable
             {
                 _logger.LogDebug(ex, "Closing the pipe failed");
             }
+
+            if (interruptedState is not null)
+            {
+                StateChanged?.Invoke(this, new DeviceStateChange(StateAtConnect: interruptedState));
+            }
         }
 
         if (failure is not null)
         {
-            Fail(generation, $"Session ended: {failure}");
+            string? interruption = null;
+            lock (_gate)
+            {
+                if (_generation == generation)
+                {
+                    interruption = _probeInterruption;
+                    _probeInterruption = null;   // said by the error below; after a Disconnect, the Disconnect says it
+                }
+            }
+
+            Fail(generation, $"Session ended: {failure}{(interruption is null ? string.Empty : $"; {interruption}")}");
         }
 
         ReportLateEnd();
@@ -2284,7 +2321,8 @@ public sealed class UsbSmartFadeDevice : ISmartFadeDevice, IAsyncDisposable
     /// After each event of a session with the start-up pair (SC-4), on the session's thread: reports the pair's phase and the
     /// download's progress when they changed (<see cref="DeviceStateChange.StateAtConnect"/>); at the download's last record
     /// builds the console's show (<see cref="ConsoleShowAssembler"/>), reports every memory the download did not list as empty
-    /// (INFERRED, <see cref="ConsoleStateAssembler.ReportUndeliveredMemoriesEmpty"/>) and tries the MASTER probe once; after the
+    /// (INFERRED, <see cref="ConsoleStateAssembler.ReportUndeliveredMemoriesEmpty"/>) and decides the MASTER probe once, in the
+    /// same lock and before any of it is reported (<see cref="DecideMasterProbe"/>; the first review's MINOR 2); after the
     /// download a show object the console lists again rebuilds the show. FaderInfo reported at any time makes the probe
     /// unnecessary; a pair that ended without the download leaves it impossible (the UI then asks for one fader movement).
     /// </summary>
@@ -2299,7 +2337,8 @@ public sealed class UsbSmartFadeDevice : ISmartFadeDevice, IAsyncDisposable
         StateAtConnect? state;
         ConsoleShow? show = null;
         DeviceStateChange? memories = null;
-        var downloadDone = false;
+        string? probeNote = null;
+        ITransferSink? log;
         lock (_gate)
         {
             if (!ReferenceEquals(_pairSession, session))
@@ -2307,6 +2346,7 @@ public sealed class UsbSmartFadeDevice : ISmartFadeDevice, IAsyncDisposable
                 return;
             }
 
+            log = _pairLog;
             if (_assembler.FaderInfo is not null && _probe is MasterProbePhase.Pending or MasterProbePhase.NotPossible)
             {
                 _probe = MasterProbePhase.NotNeeded;
@@ -2322,9 +2362,13 @@ public sealed class UsbSmartFadeDevice : ISmartFadeDevice, IAsyncDisposable
             if (pair.Phase == HspStartupPairPhase.Done && !_downloadComplete)
             {
                 _downloadComplete = true;
-                downloadDone = true;
                 memories = _assembler.ReportUndeliveredMemoriesEmpty();
                 show = _show.Build();
+
+                // the probe is decided in this lock, before the download's end is reported to anyone (the first review's MINOR 2,
+                // 2026-11-03): from here on a control meets the probe's own refusal (StartupPairBusy) or comes after the probe was
+                // found not to run; one accepted earlier, at the last record's own report, makes the probe refuse to start
+                probeNote = DecideMasterProbe(session);
             }
             else if (showObject && _downloadComplete)
             {
@@ -2344,9 +2388,9 @@ public sealed class UsbSmartFadeDevice : ISmartFadeDevice, IAsyncDisposable
             StateChanged?.Invoke(this, new DeviceStateChange(StateAtConnect: state, ConsoleShow: show));
         }
 
-        if (downloadDone)
+        if (probeNote is not null)
         {
-            TryMasterProbe(session);
+            WriteNote(log, probeNote);
         }
     }
 
@@ -2378,50 +2422,36 @@ public sealed class UsbSmartFadeDevice : ISmartFadeDevice, IAsyncDisposable
     }
 
     /// <summary>
-    /// SC-4 clause 4, once per session at the download's last record: when FaderInfo (the MASTER) has not been reported, the
-    /// probe (<see cref="StartMasterProbe"/>) or the reason it cannot run, in the transfer log and the reported state.
+    /// SC-4 clause 4, once per session at the download's last record, under <c>_gate</c> and in the same lock that takes the
+    /// download as complete (<see cref="TrackStartupPair"/>; the first review's MINOR 2): when FaderInfo (the MASTER) has not
+    /// been reported, the probe (<see cref="StartMasterProbe"/>) or the reason it cannot run, as the phase and reason the
+    /// caller reports; returns the transfer log's note, null when the probe was decided before or the session is ending.
     /// </summary>
-    private void TryMasterProbe(HspReadSession session)
+    private string? DecideMasterProbe(HspReadSession session)
     {
-        string note;
-        StateAtConnect? state;
-        ITransferSink? log;
-        lock (_gate)
+        if (_probeTried || !ReferenceEquals(_pairSession, session))
         {
-            if (_probeTried || !ReferenceEquals(_pairSession, session))
-            {
-                return;
-            }
-
-            _probeTried = true;
-            log = _pairLog;
-            if (_assembler.FaderInfo is not null)
-            {
-                _probe = MasterProbePhase.NotNeeded;
-                _probeReason = null;
-                note = "MASTER probe not needed: the console reported FaderInfo (the MASTER) in this session";
-            }
-            else if (StartMasterProbe(session) is { } refusal)
-            {
-                _probe = MasterProbePhase.NotPossible;
-                _probeReason = refusal;
-                note = $"MASTER probe not sent: {refusal}";
-            }
-            else
-            {
-                _probe = MasterProbePhase.Sent;
-                _probeReason = null;
-                note = _probeNote ?? "MASTER probe queued";
-            }
-
-            state = ReportStateAtConnect(session.StartupPair);
+            return null;
         }
 
-        WriteNote(log, note);
-        if (state is not null)
+        _probeTried = true;
+        if (_assembler.FaderInfo is not null)
         {
-            StateChanged?.Invoke(this, new DeviceStateChange(StateAtConnect: state));
+            _probe = MasterProbePhase.NotNeeded;
+            _probeReason = null;
+            return "MASTER probe not needed: the console reported FaderInfo (the MASTER) in this session";
         }
+
+        if (StartMasterProbe(session) is { } refusal)
+        {
+            _probe = MasterProbePhase.NotPossible;
+            _probeReason = refusal;
+            return $"MASTER probe not sent: {refusal}";
+        }
+
+        _probe = MasterProbePhase.Sent;
+        _probeReason = null;
+        return _probeNote ?? "MASTER probe queued";
     }
 
     /// <summary>
@@ -2464,6 +2494,12 @@ public sealed class UsbSmartFadeDevice : ISmartFadeDevice, IAsyncDisposable
         if (SwitchInProgress() is { } switching)
         {
             return $"{switching}: the probe does not run beside it. Move one fader on the panel, or the MASTER, and the console reports it";
+        }
+
+        // nor beside anything else of ours (the first review's MINOR 2): a control accepted at the last record's own report
+        if (ProbeInFlightRefusal(session) is { } inFlight)
+        {
+            return inFlight;
         }
 
         if (_show.PatchChannels is not { } patch)
@@ -2577,7 +2613,8 @@ public sealed class UsbSmartFadeDevice : ISmartFadeDevice, IAsyncDisposable
     /// (<see cref="ProbeTapReported"/>), the switches back to the bank or mode the download reported, then the end. One write
     /// of the probe's at a time: each step waits for the previous one's outcome. The probe stops where it is, with nothing
     /// more of it sent (<see cref="EndProbe"/>), when one of its writes was dropped unsent, when the console shows another bank
-    /// than the probe expects (a key on the panel, or NEXT mode), or when a record function reads armed before its next write.
+    /// than the probe expects (a key on the panel, or NEXT mode), or when a record function reads armed, or SOLO or BLACKOUT
+    /// on (<see cref="ProbeLedRefusal"/>, before every switch since the first review's NIT 4), before its next write.
     /// </summary>
     private void AdvanceProbe()
     {
@@ -2626,9 +2663,11 @@ public sealed class UsbSmartFadeDevice : ISmartFadeDevice, IAsyncDisposable
             return;
         }
 
-        // FaderInfo reported on the way out, before the tap (a switch whose physical faders' contents differ lists it, or a fader
-        // moved on the panel): the clause's condition, "only when FaderInfo has not been reported since Connect", no longer holds,
-        // so neither the rest of the way out nor the tap is sent, and the probe goes home from where it is
+        // FaderInfo reported on the way out, before the tap (a switch whose physical faders' contents differ lists it, OBSERVED:
+        // the first list after a mode switch named FaderInfo at E9 seq 75726, E9b 80262, E9c 56950 and E9d 50035, each with
+        // ConsoleStatus and LedStatus, E9d's with PlaybackInfo too; or a fader moved on the panel): the clause's condition, "only
+        // when FaderInfo has not been reported since Connect", no longer holds, so neither the rest of the way out nor the tap is
+        // sent, and the probe goes home from where it is
         if (!run.TapReported && run.Shadow is null && _assembler.FaderInfo is not null && _assembler.Masters is { } known)
         {
             run.TapReported = true;
@@ -2637,9 +2676,11 @@ public sealed class UsbSmartFadeDevice : ISmartFadeDevice, IAsyncDisposable
             notes.Add($"MASTER probe: the console reported FaderInfo before the tap, the MASTER reads 0x{known.Master:X2} (FaderInfo body[194]), so neither the rest of the way out nor the tap of {run.Bump.Target.Name} is sent{(run.Back.Count > 0 ? $"; the switch back to {Describe(run.Home)} follows" : string.Empty)}");
         }
 
+        // before each switch the clause's LED refusals as well (the first review's NIT 4, 2026-11-03: reading (18), no PC FADERS
+        // key was ever seen sent with SOLO lit or BLACKOUT on); a refusal stops the probe here, with no switch back
         if (run.Out.TryDequeue(out var outward))
         {
-            Refuse(RecordFunctionArmed(_assembler.Keys));
+            Refuse(RecordFunctionArmed(_assembler.Keys) ?? ProbeLedRefusal());
             run.Leg = StartSwitch(live, ProbeLeg(run, outward, back: false));
             return;
         }
@@ -2678,7 +2719,7 @@ public sealed class UsbSmartFadeDevice : ISmartFadeDevice, IAsyncDisposable
 
         if (run.Back.TryDequeue(out var homeward))
         {
-            Refuse(RecordFunctionArmed(_assembler.Keys));
+            Refuse(RecordFunctionArmed(_assembler.Keys) ?? ProbeLedRefusal());
             run.Leg = StartSwitch(live, ProbeLeg(run, homeward, back: true));
             return;
         }
@@ -2713,11 +2754,18 @@ public sealed class UsbSmartFadeDevice : ISmartFadeDevice, IAsyncDisposable
     /// <summary>
     /// The key LEDs the MASTER probe's tap never goes under (SC-4 clause 4), under <c>_gate</c>: SOLO not steady off (a bump with
     /// SOLO on replaces the output, F6, DOCUMENTED; LED block 52, F100) or BLACKOUT lit and steady (block 53, F114, VERIFIED); its
-    /// blink is the MASTER below full (F85), which the probe is there to learn. Asked when the probe starts, before its tap is
-    /// queued (after a switch, later than the download) and at the tap's slot; null when neither.
+    /// blink is the MASTER below full (F85), which the probe is there to learn; and, first, a SOLO or BLACKOUT tap of ours whose
+    /// LED change the console has not reported yet (queued or sent: the `_togglesSent` rule as <see cref="BlackoutNotOff"/>
+    /// uses it; the first review's MINOR 2), since the reported LED is then not the console's state. Asked when the probe
+    /// starts, before each of its switches (the first review's NIT 4: no PC FADERS key was seen with SOLO lit or BLACKOUT on,
+    /// reading (18)), before its tap is queued (after a switch, later than the download) and at the tap's slot; null when none.
     /// </summary>
     private string? ProbeLedRefusal() => _assembler.Keys switch
     {
+        _ when _togglesAwaitingLed.ContainsKey(ClearedKey.Solo) || _togglesSent.Contains(ClearedKey.Solo) =>
+            "SOLO was pressed from the PC and the console has not reported its LED (block 52) since: the probe's tap would go before the device knows whether SOLO is on (F6). Move one fader on the panel, or the MASTER, and the console reports it",
+        _ when _togglesAwaitingLed.ContainsKey(ClearedKey.Blackout) || _togglesSent.Contains(ClearedKey.Blackout) =>
+            "BLACKOUT was pressed from the PC and the console has not reported its LED (block 53) since: the probe's tap would go before the device knows whether BLACKOUT is on (F114, F125). Move one fader on the panel, or the MASTER, and the console reports it",
         null => "the console did not report its key LEDs",
         { Solo: not { Light: KeyLight.Off, Blinking: false } } => "SOLO is not off (LED block 52): a bump with SOLO on replaces the output (F6), so the probe is never sent under SOLO (SC-4 clause 4). Move one fader on the panel, or the MASTER, and the console reports it",
         { Blackout: { Blinking: false, Light: not KeyLight.Off } } => "BLACKOUT is on (LED block 53 steady, F114): the probe is never sent under BLACKOUT (SC-4 clause 4)",
@@ -2725,9 +2773,23 @@ public sealed class UsbSmartFadeDevice : ISmartFadeDevice, IAsyncDisposable
     };
 
     /// <summary>
+    /// Anything of ours in flight when the probe would start (under <c>_gate</c>; the first review's MINOR 2, 2026-11-03): a key
+    /// held, or a write queued and not yet sent (a control accepted at the download's last record, before the probe was decided);
+    /// the probe then does not start, with no retry, since its first write would go behind or beside it. SOLO and BLACKOUT taps
+    /// of ours awaiting their LED are <see cref="ProbeLedRefusal"/>'s. Null when nothing is in flight.
+    /// </summary>
+    private static string? ProbeInFlightRefusal(HspReadSession session) =>
+        session.HeldKey is { } held ? $"{KeyName(held)} is held by this host: the probe does not start beside it. Move one fader on the panel, or the MASTER, and the console reports it"
+        : session.HoldInProgress ? "a bump of ours is held: the probe does not start beside it. Move one fader on the panel, or the MASTER, and the console reports it"
+        : session.QueuedWrites > 0 ? $"{session.QueuedWrites} write(s) of ours wait to be sent (a control taken at the download's last record): the probe does not start behind them. Move one fader on the panel, or the MASTER, and the console reports it"
+        : null;
+
+    /// <summary>
     /// The probe stops where it is (under <c>_gate</c>): nothing more of it is sent, neither a retry nor a switch back, since the
-    /// console's state is no longer the one the probe planned for; the transfer log says why and where the console is, and
-    /// without FaderInfo the UI asks for one fader movement with the reason.
+    /// console's state is no longer the one the probe planned for; the transfer log says why and where the console is, and the
+    /// UI is told too, also when FaderInfo is already known (the first review's MINOR 1, 2026-11-03): the phase
+    /// <see cref="MasterProbePhase.Stopped"/> with "the console shows …; the download reported …", and without FaderInfo the
+    /// request for one fader movement.
     /// </summary>
     private void EndProbe(MasterProbeRun run, string reason, List<string> notes)
     {
@@ -2735,12 +2797,13 @@ public sealed class UsbSmartFadeDevice : ISmartFadeDevice, IAsyncDisposable
         var why = reason.StartsWith("Refused: ", StringComparison.Ordinal) ? reason["Refused: ".Length..].TrimEnd('.') : reason;
         var shown = ReportedBank() is { } bank ? Describe(bank) : "no bank a PC sent controls in";
         notes.Add($"MASTER probe stopped (SC-4 clause 4): {why}; nothing more of it is sent, no retry and no switch back: the console shows {shown}, the download reported {Describe(run.Home)}");
-        if (_assembler.FaderInfo is null)
-        {
-            _probe = MasterProbePhase.NotPossible;
-            _probeReason = $"the MASTER probe stopped ({why}): move one fader on the panel, or the MASTER, and the console reports it";
-        }
+        _probe = MasterProbePhase.Stopped;
+        _probeReason = $"the MASTER probe stopped ({why}) and did not switch back: the console shows {shown}; the download reported {Describe(run.Home)}{MoveOnceUnlessReported()}";
     }
+
+    /// <summary>The request for one fader movement that ends a probe outcome while the MASTER is unreported (under <c>_gate</c>).</summary>
+    private string MoveOnceUnlessReported() =>
+        _assembler.FaderInfo is null ? ". Move one fader on the panel, or the MASTER, and the console reports it" : string.Empty;
 
     /// <summary>
     /// An event after which the exchange it belongs to is complete: an idle poll reply (a header announcing no payload), a list,

@@ -129,6 +129,7 @@ public static class DtoMapper
                 MasterProbePhase.NotNeeded => "notNeeded",
                 MasterProbePhase.Sent => "sent",
                 MasterProbePhase.NotPossible => "notPossible",
+                MasterProbePhase.Stopped => "stopped",
                 _ => throw new ArgumentOutOfRangeException(nameof(state), state.MasterProbe, null),
             },
             state.MasterProbeReason);

@@ -1106,7 +1106,7 @@ something / move something just to get rid of 'Not reported by the console yet'"
 | 6 | Mode gating | **Condition (to build)** | A separate per-day switch `Device:Usb:StartupPairDate` (today's date, like `ConfirmDate` and `LiveControlDate`), so that SC-1's read-only session stays what SC-1 cleared (0 writes) unless the owner enables the pair deliberately; usable with and without live control; the UI shows "STATE AT CONNECT" beside HARDWARE while the switch is on and "downloading the console's state" during the download. |
 | 7 | No blind retries | **Condition (to build)** | Exactly one pair per session (per Connect; F181, H113), never resent, not after a reconnect inside the same process without a new Connect; a header or payload that did not complete sets SC-2's incomplete-write latch (`INCOMPLETE-WRITE.txt`) as for any write. |
 | 8 | Logging on | **Yes, plus USBPcap for E13** | The transfer log always; the bus for the first session. |
-| 9 | Versions recorded | **Condition (to build): the version gate** | `07 00 00` goes only after ConsoleVersion was listed, fetched and read as "3.0.2.9.0.43" (F59; SmartSoft's own gate, S11.17); any other version, or no ConsoleVersion within two poll exchanges after `09`, ends the pair (no `07`), the session continues as a read session and the transfer log says why. The firmware, Windows build and backend commit recorded for E13 as for E11. |
+| 9 | Versions recorded | **Condition (to build): the version gate** | `07 00 00` goes only after ConsoleVersion was listed, fetched and read as "3.0.2.9.0.43" (F59; SmartSoft's own gate, S11.17); any other version, or no ConsoleVersion within two poll exchanges after `09`, ends the pair (no `07`), the session continues as a read session and the transfer log says why. The firmware, Windows build and backend commit recorded for E13 as for E11. *(Annotated 2026-11-03 after the review's NIT 2: a ConsoleVersion body of another length than the 13 bytes every capture shows is refused by the session's length check first (`HspReadSession.DownloadBodyLengths[37] = {13}`, the same check as for every object), before the version gate reads it, so the session ends with a fault, SC-1's safe stop: stricter than "the session continues", and no `07` either way.)* |
 | 10 | Review done | **Condition** | `protocol-safety-reviewer` over the encoder (two bodies), the placement, the version gate, the download handling (the bounds raised to what 20 downloads showed), the refusal of controls during the download, the switch and the golden tests, before E13; its findings fixed or recorded in a review table here. |
 | 11 | Passive first | **Yes** | 20 passive observations of SmartSoft producing the pair and the console answering (F181, F182); E13 is the first time our host sends it. |
 
@@ -1133,6 +1133,12 @@ Cleared for building, reviewing and one first session E13 on the owner's go, not
    no bump held), the device refuses the pair if anything already reported shows NEXT, BLACKOUT, a record function armed or bank 25-48
    (a pending list at Connect, F177 / H65), and the owner accepts in writing the residual: the pair sent in a state SmartSoft was never
    seen in, with the console's answer UNKNOWN (the only observed effect of the pair being a listing, and the erase values unrepresentable).
+   *(Added 2026-11-03 after the review's MAJOR 1, on the owner's choice of the refusal over amending "What SC-4 does not clear"; the
+   text above stays as written: a memory page other than 1 is a fifth refused state. F185 lists "a page other than 1" among the states
+   no pair was seen in, all 20 pairs came on page 1, and the device already decodes the page (ConsoleStatus body[2] = page − 1, F113
+   VERIFIED for the structure), so the pair is also refused when anything already reported shows a page other than 1, in either mode
+   (E9c seq 42230, page 2, is the device test's ConsoleStatus). The UI's Connect hint now also says what the console must be showing:
+   page 1, bank 1-24 or memory mode, NEXT and BLACKOUT off, because the pair goes blind when nothing was reported.)*
 4. **What the pair does not give, and the MASTER probe.** The download never carries FaderInfo (the MASTER and BUMPS levels),
    DisplayContent or PlaybackInfo (F182, F186), and SC-2's condition that the MASTER be reported before a channel or memory fader
    moves stays. The owner refuses a panel action for it (2026-11-02, evening: "the smartsoft do it without me doing anything"), so the
@@ -1149,6 +1155,20 @@ Cleared for building, reviewing and one first session E13 on the owner's go, not
    fader movement on the panel instead. The channel's bump LED blinks once and ChannelLevels[c] reads 0xFF for the tap; nothing on
    the stage changes (OBSERVED for unpatched channels, INFERRED for a channel whose only address is on a dimmer that is not in use).
    The owner accepts the probe in writing; the SC-5 matching rule and every other interlock are unchanged.
+
+   *(Corrected 2026-11-03 after the review's NIT 5, the sentence above kept: "ChannelLevels[c] reads 0xFF for the tap" contradicts
+   F168, OBSERVED once for our host: for a 47–77 ms tap from our host the console lists the live objects at the press and at the
+   release, but every fetched object equals its value before the press, so ChannelLevels[c] need not read 0xFF in any fetched body.
+   The probe's aim is unaffected: what it needs is FaderInfo listed and delivered with the MASTER at body[194] (F82, F174, F178).)*
+
+   *(Added 2026-11-03 after the review's MINOR 3, on the owner's choice to name the residual: the probe is the one bump of ours sent
+   before FaderInfo was reported, so the check that a physical fader still holds a memory in channel mode cannot run for it (F112,
+   limited 2026-10-31: a memory fader left up across FADERS 1-24 showed record 9 `00 FF 00 00` in channel mode, E9b seq 95014), and
+   nothing in the download shows that case (E9b seq 95018: LED block 9 `00 × 6`, like every idle channel-mode block in E3 seq 796
+   and E9d seq 18719 / 27848, 24 of 24; the reviewer's read). What the console does with a bump press on a physical fader that still
+   holds a memory in channel mode is UNKNOWN (never captured), so clause 4's "nothing on the stage changes" holds only where no
+   physical fader holds a memory. The owner accepts this residual in writing with the probe. E13's starting position (every fader at
+   zero, then a console power cycle) excludes it for E13 only; for any later session it stays the operator's, like clause 3's.)*
 
    **Amendment (2026-11-02, late evening):** proposed by the coordinating assistant after the implementation's finding (reading (8)
    of the Implementation below: in the owner's show every channel of bank 1-24 is patched, so from the usual start the probe found
@@ -1197,6 +1217,10 @@ acceptances once more).
 - Backup to the SD card first, the name in the log; USBPcap from before the Zadig bind; a guided script (`tools/usb-probe/e13-guided-session.ps1`,
   to be written from the E11b one: the gate questions, the versions, the starting position, Connect with the pair, the read-only minute
   after the download, then one MASTER movement on the panel and the SC-2 sanity control, Disconnect at an idle point, the SD save).
+  *(Updated 2026-11-03 after the review's NIT 6, the text above kept: the guide, written since, asks for the MASTER movement on the
+  panel only when the probe was not effective (the masters panel shows "Move the MASTER once on the console", or the MASTER is still
+  "Not reported by the console yet"), so with the probe effective the steps are the read-only minute, the SC-2 sanity control,
+  Disconnect and the SD save.)*
 - The owner gives the go after reading this section and accepts in writing: the residual of item 3 (a state never seen), the blind window
   of 7.2–7.6 s, the recovery path after a cut download (a SmartSoft start), and the MASTER probe of clause 4 (a bump tap of an unpatched
   channel sent by the device once after the download; one panel fader movement instead when every channel of the shown bank is patched).
@@ -1208,6 +1232,14 @@ acceptances once more).
   *(His answers of 2026-11-02, evening, in chat: to the blind window "And?", to the recovery "Hm what?" (explained: keep SmartSoft
   installed as the way out), to the MASTER "the smartsoft do it without me doing anything so the solution should be somewhere there"
   (answered by the probe); the written yes is still open.)*
+  *(Added 2026-11-03 after the review's MAJOR 1 and MINOR 3, on the owner's choices of that day: the residual of item 3 now reads with
+  clause 3's fifth refused state (a memory page other than 1, refused once reported; sent blind, like the other four, when nothing was
+  reported, so the starting position is page 1 too); the written yes to the probe also covers clause 4's MINOR 3 residual: the probe's
+  tap is the one bump sent before FaderInfo, so a physical fader that still holds a memory in channel mode (F112) cannot be detected,
+  nothing in the download shows it, and the console's answer to that bump press is UNKNOWN; E13's starting position (every fader at
+  zero, then a power cycle) excludes it for E13 only. And the UI's answer when the probe stops on the way or the session ends inside
+  it (MINOR 1): the bar says why and where the console was left ("the console shows …; the download reported …"), also with the
+  MASTER known, and the masters panel asks for one movement while the MASTER is unreported.)*
 - Record: the two writes with their placement (ms after the reply, the next poll), the ConsoleVersion bytes, the download (its record
   count, bytes, duration, the order against F182, every record decoded), what the UI showed at the end of the download (mode, bank, page,
   LEDs, levels, independents, file name, memories, patch, stack), that nothing changed (the live objects delivered later against the
@@ -1238,6 +1270,9 @@ What was built, where:
   goes from the session's start until the download's last record or the pair's end. A stop ends a pair not yet sent and takes a
   download already requested whole (`IsIdle` is false meanwhile, bounded by the loop's drain limit). The session leaves its steps
   as notes (`TakeNotes`), which the loop writes between exchanges.
+  *(Annotated 2026-11-03 after the review's NIT 2: "else the pair ends … and the session goes on" holds for a 13-byte ConsoleVersion
+  that does not read "3.0.2.9.0.43" and for none listed in time; a body of another length is refused before the gate by the length
+  check every object meets (`DownloadBodyLengths[37] = {13}`), so the session faults, SC-1's safe stop, as item 9's annotation says.)*
 - **The download, taken whole (clause 2).** Its list is the first after `07` whose first record is SystemSizes (20 of 20; SystemSizes
   was listed in no other list of the ten captures); a download not listed within two free replies after `07` ends the session with a
   fault (never observed: the next free reply in 20 of 20). From `07` until every record of that list is delivered every control is
@@ -1249,6 +1284,10 @@ What was built, where:
   never came from the console (it is SmartSoft's own write, E12), so it is not accepted; list records with c ≠ 0 stay refused (none
   in the 20 downloads; E12 / E12b's come only after SmartSoft's step commands). A session without the switch keeps SC-1's 792 bytes
   and one length per id, unchanged.
+  *(Corrected 2026-11-03 after the review's NIT 1: the downloads' own objects of those lengths are E12 seq 139152 (Sequence, 144
+  bytes, E12's download 2) and E12b seq 87433 (156 bytes, E12b's download 2), both checked in the JSONL; E12 seq 87591 and E12b seq
+  73712, which `HspReadSession.cs` cited alone, are the same lengths fetched after SmartSoft's step commands, outside the downloads.
+  The comment at `DownloadBodyLengths` now cites both; the bounds are unchanged.)*
 - **The console's state before the pair (clause 3).** `UsbSmartFadeDevice.StartupPairGate`: held while the console's last report is
   older than two poll periods or LedStatus / ConsoleStatus is listed and unfetched; refused when what the console already reported
   in the session shows NEXT mode on or unknown (ConsoleStatus body[6]), bank 25-48 (body[4], in either mode), a ConsoleStatus value
@@ -1256,6 +1295,10 @@ What was built, where:
   F114; its blink with the MASTER below full, seen at E2's pair, is not refused); otherwise sent blind. Refused, no System write goes
   and the transfer log, the state and the UI say why. The UI's Connect hint says what the console must not be doing (no menu, no
   SD save or load, no record function armed, no bump held).
+  *(Extended 2026-11-03 after the review's MAJOR 1, by the subagent: `PairStateRefusal` also refuses a memory page other than 1
+  (`ReportedFaderMode.MemoryPage`, ConsoleStatus body[2] + 1, in either mode), "the console shows memory page N (ConsoleStatus
+  body[2] = N − 1, F113): no pair was ever seen on a page other than 1 (F185)"; the Connect hint now begins "Before Connect: page 1,
+  bank 1-24 or memory mode, NEXT and BLACKOUT off; …", and the Connect note in the transfer log names the five states.)*
 - **What the download gives (clause 4, F186).** The assembler takes the state objects (ConsoleStatus, LedStatus, OutputLevels,
   ChannelLevels, Independents, FileName; ConsoleVersion before); `ConsoleShowAssembler` the show objects through new decoders in
   `Objects/ShowObjects.cs` (`StepRecord`, `StepContentObject` 13 / 148 bytes, `SequenceMainObject`, `SequenceObject`, `LabelObject`
@@ -1296,11 +1339,30 @@ What was built, where:
   the key named FaderInfo at E9 seq 75726, E9b 80262, E9c 56950 and E9d 50035, OBSERVED) ends the way out without the tap, by the
   clause's own condition, and the probe goes home from where it is; a switch already in progress when the download ends (a UI key
   taken in that moment) refuses the probe.
+  *Changed 2026-11-03 after the first review (the subagent, at the owner's "continue"; the text above stays as the record of the
+  first pass):* (MINOR 2) the probe is decided (`DecideMasterProbe`, formerly `TryMasterProbe`) in the same lock in which
+  `TrackStartupPair` takes the download as complete, before the download's end is reported to the store or the UI, so from then
+  on a control meets the probe's own refusal ("the MASTER probe is under way") or comes after the probe was found not to run; a
+  control accepted earlier, at the last record's own report (ChannelLevels, raised before that lock), keeps the probe from
+  starting, with no retry and the reason logged and reported: a SOLO or BLACKOUT tap of ours whose LED change is unreported
+  (queued or sent; the `_togglesSent` rule of `BlackoutNotOff`, now the first arms of `ProbeLedRefusal`), a key held, a bump held
+  or any write still queued (`ProbeInFlightRefusal`). (NIT 4) `ProbeLedRefusal` is asked before each switch of the probe too, the
+  second switch on the way out from memory mode and every switch back; a refusal there stops the probe with no switch back, as the
+  other refusals do. (MINOR 1) Every end of the probe reaches the UI: `EndProbe` sets the new `MasterProbePhase.Stopped` with "the
+  MASTER probe stopped (…) and did not switch back: the console shows X; the download reported Y", also when FaderInfo is known
+  (". Move one fader on the panel, or the MASTER, …" added only while it is not); a session that ends inside the probe reports
+  Stopped with "the MASTER probe was interrupted by the session's end and did not switch back: the console shows X (its last
+  report); the download reported Y" while it still reports, and puts the same words into its end, which outlives the state at
+  Connect: the session's error, or the Disconnect's `ConnectionState.Error` when the operator disconnected inside the probe.
 - **The switch and the UI (items 6, 7).** `Device:Usb:StartupPairDate` (`UsbDeviceOptions`, `ValidateStartupPairDate`: set without
   `Device:Mode=Usb` or for another day, the backend refuses to start; checked again at Connect and at the gate); one pair per
   Connect, none after a refusal or an end in the same session. The state carries `stateAtConnect` (docs/api.md), with the events
   `stateAtConnectChanged` and `consoleShowChanged` and `GET /api/console/show`; the bar shows STATE AT CONNECT beside HARDWARE,
   "Requesting / Downloading the console's state…" with the progress, or why it was not requested.
+  *(Extended 2026-11-03 after the review's MINOR 1: `masterProbe` also takes "stopped" (docs/api.md); after the download the bar
+  shows a stopped probe's reason as a warning ("The MASTER probe stopped (…) and did not switch back: the console shows …; the
+  download reported …"), and the masters panel asks for one MASTER movement for "stopped" as for "notPossible" while the MASTER is
+  unreported.)*
 - **Tests.** Golden (`HspStartupPairTests`): the 40 payloads and their headers; the 20 sessions replayed from their first poll
   through their downloads' last record with the pair expected where SmartSoft sent it (records 157 × 12 sessions, 158 × 4, 159 × 2,
   160 and 161 once; list bytes 792 to 812); the order 09 → version → 07 → download over E2, E9c and E9e; the decoders; hand-made
@@ -1324,6 +1386,18 @@ What was built, where:
   probe; FADERS 1-24 from memory mode answered with FaderInfo (E9c seq 56954 / 56960 / 56964) sends no tap and goes home by
   FADERS MEMS; SOLO lit (E9c seq 87881) or BLACKOUT on (E8b seq 26999) reported with the switch stops the probe before the tap.
   The in-bank probe of bank 25-48 (no switch) is unchanged. 534 backend tests (were 525); the frontend unchanged.
+  *After the first review (2026-11-03), the same stand-in:* the clause-3 theory has a fifth case, ConsoleStatus E9c seq 42230
+  (memory page 2) with the LedStatus the console delivered after it (seq 42242) pending at Connect: no System write, the reason in
+  the state and the log (MAJOR 1); REC MEM lit at the tap now ends with Stopped and "the console shows channel mode, bank 25-48;
+  the download reported channel mode, bank 1-24" with the MASTER known, the SOLO / BLACKOUT stop and the 2 s deviation with Stopped
+  and their reasons, the deviation's error carrying the interruption, and a Disconnect inside the probe's FADERS 25-48 carrying it
+  in the Disconnect (MINOR 1); a SOLO tap asked for when the download is reported Done is refused as "the MASTER probe is under
+  way" and the payloads are the probe's alone, and a SOLO tap (SmartSoft's E9b seq 22165 / 22174 with this session's counter) or
+  an IND 1 tap (E9b seq 49358 / 49367) taken at the last record's own report keeps the probe from starting (MINOR 2); SOLO lit
+  (E9c seq 87881) reported with the tap's press stops the probe before the switch back, and reported with FADERS 1-24 from memory
+  mode (ConsoleStatus E9d seq 27840) before FADERS 25-48 (NIT 4); the hub test awaits its `invalid_memory` broadcast (NIT 8).
+  Each new guard was broken once on purpose and its test failed, then restored. 541 backend tests (were 534), 359 frontend tests
+  (were 356: the Connect hint, the stopped probe in the bar and in the masters panel).
 
 **Readings where the text was narrowed or extended, for the reviewer.** (1) The placement is SmartSoft's own count (#40, #79), not
 "at least one exchange": stricter, and it reproduces all 20 placements byte for byte; the pair goes about 1.3 s and 2.5 s after
@@ -1336,7 +1410,8 @@ is an INFERRED display reading. (7) The probe is the one bump of ours sent befor
 need it (a channel's physical fader still holding a memory, F112; SC-5's first review, minor 4) cannot run for it; in memory mode it
 leaves the console in channel mode, bank 1-24 (nothing switches back). *(Superseded by clause 4's amendment, 2026-11-02, late
 evening, text kept: the probe now switches back to the bank or mode the download reported, so the console is left as found; the
-first sentence of this reading stands.)* (8) **Finding for the owner:** in his current show (the Patch
+first sentence of this reading stands.)* *(Annotated 2026-11-03 after the review's MINOR 3: the first sentence's residual is now
+named for the owner in clause 4 and in his written acceptance at the E13 gate.)* (8) **Finding for the owner:** in his current show (the Patch
 of every download from E2 to E9e but E12b's edited one; SHOW29.ASC = SHOW04.ASC by SHA-256, F184) channels 1–24 are all patched and
 only 47 and 49 are not, and the pair is refused in bank 25-48 when the
 console reported that bank first, so with the usual start in channel mode, bank 1-24, the probe finds no channel and the UI asks for
@@ -1359,8 +1434,11 @@ nothing of the UI meanwhile, and a control would otherwise start a switch of its
 "The switch refused or timing out → the session ends as SC-5 says" is read as SC-5 has it: a switch the console does not report
 within 2 s ends the session as a deviation (condition 1 c); a refusal (a write dropped unsent, a record function armed before the
 probe's next write, the console in another bank than expected, i.e. a panel key or NEXT) stops the probe where it is, with no retry
-and no switch back, and the session goes on as after any refused control. (14) A stop or a fault inside the probe leaves the console
-where it was; the transfer log says where. (15) From memory mode the probe goes through bank 1-24 both ways, four switches each
+and no switch back, and the session goes on as after any refused control. *(Extended 2026-11-03 after the review's NIT 4: SOLO not
+off or BLACKOUT on before any switch of the probe is such a refusal too.)* (14) A stop or a fault inside the probe leaves the console
+where it was; the transfer log says where. *(Extended 2026-11-03 after the review's MINOR 1: the UI is told as well, the outcome
+Stopped with "the console shows …; the download reported …", and a session's end inside the probe carries the same words in its
+error or in the Disconnect.)* (15) From memory mode the probe goes through bank 1-24 both ways, four switches each
 observed from a PC, rather than not probing there (rule 2's first option). (16) The route from bank 25-48 when only bank 1-24 has an
 unpatched channel (FADERS 1-24, the tap, FADERS 25-48) and the memory-mode case with an unpatched channel in bank 1-24 (FADERS 1-24,
 the tap, FADERS MEMS) come from the same rule and transitions but no captured Patch exercises them (the captured Patches leave
@@ -1370,8 +1448,17 @@ it is (the clause's own condition "only when FaderInfo has not been reported sin
 sequence; extended). (18) The clause's refusals are asked again before the tap (the record functions, SOLO, BLACKOUT) and SOLO and
 BLACKOUT once more at its slot, since the tap now comes a switch later than the download; a refusal there stops the probe with no
 switch back (no FADERS key was sent from a PC with SOLO lit or BLACKOUT on either: at all 60 presses block 52 read steady off, and
-block 53 steady off at 58 and the MASTER's blink, F85, at 2; the same scratch read). (19) A switch already in progress when
-the download ends refuses the probe (a UI key taken between the last record and the probe; never seen, closed for safety).
+block 53 steady off at 58 and the MASTER's blink, F85, at 2; the same scratch read). *(Corrected 2026-11-03 after the review's NIT
+4, the sentence above kept: as first built, the code asked SOLO and BLACKOUT only before the tap and at its slot, not before the
+second switch on the way out nor before the switches back, so this reading argued more than the code did; since the fix
+`ProbeLedRefusal` is asked before every switch of the probe as well, and a refusal there stops the probe with no switch back.)*
+(19) A switch already in progress when the download ends refuses the probe (a UI key taken between the last record and the probe;
+never seen, closed for safety). *(Extended 2026-11-03 after the review's MINOR 2: the window itself is closed, the probe being
+decided in the lock that takes the download as complete; what could still be accepted before that lock, at the last record's own
+report, keeps the probe from starting: a SOLO or BLACKOUT tap of ours whose LED is unreported, a key or bump held, any queued write.
+Of the reviewer's two options the first is built (the probe decided before anything is reported), not the second ("Done, probe not
+yet tried" treated as busy, which would refuse such a control instead and leave the in-flight refusal untestable); with either,
+nothing of ours goes beside or before the probe.)*
 
 ### Review (SC-4 item 10)
 
@@ -1395,22 +1482,41 @@ full run and passed on every rerun); 356 frontend tests. **The owner paused for 
 of 2026-11-02, late evening: let the reviewer finish, then wait for "continue"); nothing was fixed and nothing goes on before his word:
 the code fixes to the Opus 5.5 subagent that wrote the implementation (CLAUDE.md), the decisions to the owner (MAJOR 1's alternative,
 MINOR 3), the docs to the coordinating assistant, then the re-check. This pass clears nothing for sending; the E13 guide refuses to
-start until a PASS is recorded here.** Findings and their state:
+start until the reviewer's verdict recorded here is a pass (the guide matches the capitalised word of SC-5's tables, which this
+paragraph avoids on purpose).** Findings and their state:
 
 | # | Finding | Status |
 |---|---|---|
-| MAJOR 1 | The pair is sent when the console has already reported a memory page other than 1. F185 lists "a page other than 1" among the states no pair was ever seen in and "What SC-4 does not clear" excludes "the pair from a state the device already knows to be outside F185's", yet `PairStateRefusal` (`UsbSmartFadeDevice.cs:742-773`) checks only NEXT, bank 25-48, an unknown ConsoleStatus, the record functions and BLACKOUT, while the device already decodes the page (`ConsoleStateAssembler.cs:344`, used by the probe at `:2485`); reachable from a list pending at Connect (F177 / H65; E9's pending list carried ConsoleStatus × 9). Clause 3 names only four states, so SC-4 contradicts itself and the code followed the narrower text. | **Open (2026-11-02, late evening; the fix on the owner's "continue").** Proposed: refuse the pair when the reported page is not 1, in either mode; a device test serving E9c seq 42230 (page 2) with a LedStatus at Connect, expecting no System write and the reason in the state and the log; clause 3, the Implementation bullet, CLAUDE.md "Commands" and the E13 Acceptance 1 aligned; "page 1, bank 1-24 or memory mode, NEXT and BLACKOUT off" added to the Connect hint (`connection-view.ts:115`), because the pair goes blind when nothing was reported. The alternative, the owner amending "What SC-4 does not clear" in writing, is his; the coordinator recommends the refusal. |
-| MINOR 1 | The UI does not say when the probe stops away from home once FaderInfo is known: `EndProbe` (`:2732-2743`) sets NotPossible with a reason only while FaderInfo is null, else the phase stays Sent with no reason and the bar shows nothing for "done" (the device's own test `UsbSmartFadeDeviceTests.StartupPair.cs:529-562`, REC MEM lit at the tap, ends with the console in bank 25-48 and the phase Sent); a session ending inside the probe notes it in the log only (`:2038-2042`). The E13 guide's Acceptance 4 says the UI shows "Move the MASTER once" when the probe stops, which is not true on this path. | **Open.** Proposed: a reported outcome ("stopped") for every `EndProbe` and an interrupted probe, with "the console shows X; the download reported Y", shown in the bar; `docs/api.md` `masterProbe` and the E13 acceptance text updated. |
-| MINOR 2 | A window between the download's last record and the probe's start: `StateChanged` (the store, the broadcasts, `ConsoleShowMapper.ToDto`) runs before `TryMasterProbe` (`:2337-2350`) with the phase Done and `_probeRun` null, so `StartupPairBusy` (`:782-790`) refuses nothing meanwhile; a SOLO / BLACKOUT / IND / GO tap needs no FaderInfo (`:1723`, `:873`) and can be queued ahead of the probe; `StartMasterProbe` checks only a switch in progress (reading 19) and `ProbeLedRefusal` (`:2719-2725`) reads the reported LEDs with no `_togglesSent` rule like `BlackoutNotOff` (`:1858`). With an in-bank probe and a SOLO LED report later than the observed 16–65 ms (F133) the tap would go under SOLO, which replaces the output (F6, DOCUMENTED): a short blackout of the rig. Unlikely; the window not measured. | **Open.** Proposed: `TryMasterProbe` before the `StateChanged` calls, or "Done, probe not yet tried" treated as busy; the probe refused while a write is queued or a key is held, or while a SOLO / BLACKOUT tap of ours waits for its LED report. |
-| MINOR 3 | The probe's F112 residual is not named for the owner: the probe is the one bump sent before FaderInfo, so the check for a physical fader still holding a memory in channel mode (F112; E9b seq 95014, record 9 `00 FF 00 00`) cannot run, nothing in the download shows that case (E9b seq 95018 LED block 9 `00 × 6`, like every idle channel-mode block in E3 seq 796 and E9d 18719 / 27848, 24 of 24), and what the console does with a bump press on such a fader is UNKNOWN (never captured). Clause 4's "nothing on the stage changes" and the E13 acceptance omit it; E13's starting position (every fader at zero, then a power cycle) excludes it for E13 only. | **Open, the owner's.** Proposed: the residual named in clause 4 and in his written acceptance, or evidence for a check before the tap. |
-| NIT 1 | Two seqs cited for the Sequence bounds (`HspReadSession.cs:225-226`, the Implementation text) are objects fetched after step commands (E12 seq 87591 and E12b 73712, Sequence (0,0,6) / (0,0,7)); the downloads' own objects are E12 seq 139152 (144 bytes) and E12b seq 87433 (156 bytes). The bounds themselves are right. | Open: cite 139152 and 87433. |
-| NIT 2 | A ConsoleVersion body of another length is refused by the length check (`DownloadBodyLengths[37] = {13}`, `HspReadSession.cs:1247-1250`) before the version gate, so the session faults instead of "the pair ends and the session goes on" (item 9): a safe stop, stricter than the text. | Open: say so in item 9 and the Implementation. |
-| NIT 3 | Two remarks carry no status word (`UsbSmartFadeDevice.cs:2629` "a switch whose physical faders' contents differ lists it"; `StateAtConnect.cs:28` "the console reports the MASTER only with FaderInfo"); neither is load-bearing. | Open: OBSERVED with E9 75726, E9b 80262, E9c 56950, E9d 50035 (each list names 23, 14 and 22, the reviewer's read) and F82 / F186. |
-| NIT 4 | Reading (18) argues "no PC FADERS key was ever sent with SOLO lit or BLACKOUT on" (confirmed: 60 of 60 with SOLO off; BLACKOUT off at 58, the MASTER's blink at 2), yet the second switch on the way out (from memory mode) and the switches back go without asking SOLO / BLACKOUT (`:2640-2644`, `:2679-2683`), as SC-5's own switch does (which passed review). | Open: `ProbeLedRefusal` before each switch of the probe, or reading (18) reworded. |
-| NIT 5 | Clause 4's "ChannelLevels[c] reads 0xFF for the tap" contradicts F168 (for a 47–77 ms tap from our host every fetched object equals its value before the press); the probe's aim, FaderInfo body[194], is unaffected. | Open: reword. |
-| NIT 6 | "Conditions for E13" predates the probe: it lists "then one MASTER movement on the panel", which the E13 guide asks for only when the probe was not effective. | Open: update. |
-| NIT 7 | The censuses the code now rests on (SystemSizes only in the 20 download lists; one body length per id except Sequence and StepContent; the 60 PC bank-key presses with origin, page and LEDs) live only in this document. | Open: F182 (d), F175 / F179 annotated in `known-facts.md` by the curator. |
-| NIT 8 | A pre-existing flaky test on the simulator path, `tests/SmartFade.Api.Tests/ConsoleHubTests.cs:154` (asserts an `invalid_memory` broadcast right after `getMemory` returns: a race; failed once in the reviewer's first full run, passed 5 of 5 alone and in the second run; last touched in 8a08765), not SC-4's. | Open: await the error event. |
+| MAJOR 1 | The pair is sent when the console has already reported a memory page other than 1. F185 lists "a page other than 1" among the states no pair was ever seen in and "What SC-4 does not clear" excludes "the pair from a state the device already knows to be outside F185's", yet `PairStateRefusal` (`UsbSmartFadeDevice.cs:742-773`) checks only NEXT, bank 25-48, an unknown ConsoleStatus, the record functions and BLACKOUT, while the device already decodes the page (`ConsoleStateAssembler.cs:344`, used by the probe at `:2485`); reachable from a list pending at Connect (F177 / H65; E9's pending list carried ConsoleStatus × 9). Clause 3 names only four states, so SC-4 contradicts itself and the code followed the narrower text. | **Open (2026-11-02, late evening; the fix on the owner's "continue").** Proposed: refuse the pair when the reported page is not 1, in either mode; a device test serving E9c seq 42230 (page 2) with a LedStatus at Connect, expecting no System write and the reason in the state and the log; clause 3, the Implementation bullet, CLAUDE.md "Commands" and the E13 Acceptance 1 aligned; "page 1, bank 1-24 or memory mode, NEXT and BLACKOUT off" added to the Connect hint (`connection-view.ts:115`), because the pair goes blind when nothing was reported. The alternative, the owner amending "What SC-4 does not clear" in writing, is his; the coordinator recommends the refusal. **The owner chose the refusal (2026-11-03). Fixed 2026-11-03 by the subagent:** `UsbSmartFadeDevice.cs:768-769` (`PairStateRefusal`, `case { MemoryPage: not 1 }`, in either mode; the doc comment, the class summary, the F185 evidence attribute and the Connect note at `:322` name the fifth state); test `The_pair_is_refused_when_the_console_already_reported_a_state_no_pair_was_seen_in`, new case ConsoleStatus E9c seq 42230 with LedStatus seq 42242 pending at Connect (no payload, the reason in the state and the log); the Connect hint `connection-view.ts:118` and its specs (`state-at-connect.spec.ts`, `connection-bar.component.spec.ts`); clause 3 annotated, the Implementation bullet, the E13 guide's Acceptance 1. CLAUDE.md "Commands" is the coordinator's. |
+| MINOR 1 | The UI does not say when the probe stops away from home once FaderInfo is known: `EndProbe` (`:2732-2743`) sets NotPossible with a reason only while FaderInfo is null, else the phase stays Sent with no reason and the bar shows nothing for "done" (the device's own test `UsbSmartFadeDeviceTests.StartupPair.cs:529-562`, REC MEM lit at the tap, ends with the console in bank 25-48 and the phase Sent); a session ending inside the probe notes it in the log only (`:2038-2042`). The E13 guide's Acceptance 4 says the UI shows "Move the MASTER once" when the probe stops, which is not true on this path. | **Open.** Proposed: a reported outcome ("stopped") for every `EndProbe` and an interrupted probe, with "the console shows X; the download reported Y", shown in the bar; `docs/api.md` `masterProbe` and the E13 acceptance text updated. **Fixed 2026-11-03 by the subagent:** `StateAtConnect.cs:55` (`MasterProbePhase.Stopped`), `DtoMapper.cs:132` ("stopped"); `UsbSmartFadeDevice.cs:2793-2805` (`EndProbe` sets Stopped with "the MASTER probe stopped (…) and did not switch back: the console shows X; the download reported Y", the request for a movement added only while FaderInfo is unknown); `:2053-2064`, `:2105-2108`, `:2111-2124` and `:476-487` (a session ending inside the probe: Stopped reported while the session still reports, the same words in the session's error or in the Disconnect's `ConnectionState.Error`); `connection-view.ts:121-124` (the bar's warning after the download), `masters-panel.component.ts:39` (the movement hint for "stopped" too); `docs/api.md` `masterProbe` and `ConnectionDto.error`; the E13 guide's Acceptance 4 and a bar question after a probe that did not end home. Tests `A_record_function_armed_during_the_MASTER_probe_stops_it_before_the_switch_back_and_nothing_more_goes` (now Stopped, its reason, the MASTER known), `SOLO_or_BLACKOUT_reported_with_the_switch_stops_the_MASTER_probe_before_its_tap`, `A_switch_of_the_MASTER_probe_the_console_does_not_report_within_two_seconds_ends_the_session_as_a_deviation` (Stopped and the error), new `A_Disconnect_inside_the_MASTER_probe_tells_the_UI_where_the_console_was_left`; frontend `state-at-connect.spec.ts` "after the download, says where the console was left …", `connection-bar.component.spec.ts` "says where the console was left …", `masters-panel.component.spec.ts` "asks for one MASTER movement when the probe stopped …". |
+| MINOR 2 | A window between the download's last record and the probe's start: `StateChanged` (the store, the broadcasts, `ConsoleShowMapper.ToDto`) runs before `TryMasterProbe` (`:2337-2350`) with the phase Done and `_probeRun` null, so `StartupPairBusy` (`:782-790`) refuses nothing meanwhile; a SOLO / BLACKOUT / IND / GO tap needs no FaderInfo (`:1723`, `:873`) and can be queued ahead of the probe; `StartMasterProbe` checks only a switch in progress (reading 19) and `ProbeLedRefusal` (`:2719-2725`) reads the reported LEDs with no `_togglesSent` rule like `BlackoutNotOff` (`:1858`). With an in-bank probe and a SOLO LED report later than the observed 16–65 ms (F133) the tap would go under SOLO, which replaces the output (F6, DOCUMENTED): a short blackout of the rig. Unlikely; the window not measured. | **Open.** Proposed: `TryMasterProbe` before the `StateChanged` calls, or "Done, probe not yet tried" treated as busy; the probe refused while a write is queued or a key is held, or while a SOLO / BLACKOUT tap of ours waits for its LED report. **Fixed 2026-11-03 by the subagent (the first option):** `UsbSmartFadeDevice.cs:2370` (`TrackStartupPair` decides the probe, `DecideMasterProbe` `:2429-2453`, formerly `TryMasterProbe`, in the lock that takes the download as complete, before any report); `:2499-2502` with `ProbeInFlightRefusal` `:2780-2784` (a key held, a bump held, a write queued) and `ProbeLedRefusal` `:2764-2767` (a SOLO / BLACKOUT tap of ours whose LED is unreported, the `_togglesSent` rule); no retry, the reason logged ("MASTER probe not sent: …") and reported (NotPossible). Tests `A_control_asked_for_when_the_download_ends_meets_the_MASTER_probes_refusal_and_never_goes_before_it` (a SOLO tap asked for at the Done report is refused, the payloads the probe's alone) and `A_control_taken_at_the_downloads_last_record_keeps_the_MASTER_probe_from_starting` (a SOLO tap, E9b seq 22165 / 22174, or an IND 1 tap, E9b 49358 / 49367, taken at the last record's own report: the probe does not start). Reading (19) annotated. |
+| MINOR 3 | The probe's F112 residual is not named for the owner: the probe is the one bump sent before FaderInfo, so the check for a physical fader still holding a memory in channel mode (F112; E9b seq 95014, record 9 `00 FF 00 00`) cannot run, nothing in the download shows that case (E9b seq 95018 LED block 9 `00 × 6`, like every idle channel-mode block in E3 seq 796 and E9d 18719 / 27848, 24 of 24), and what the console does with a bump press on such a fader is UNKNOWN (never captured). Clause 4's "nothing on the stage changes" and the E13 acceptance omit it; E13's starting position (every fader at zero, then a power cycle) excludes it for E13 only. | **Open, the owner's.** Proposed: the residual named in clause 4 and in his written acceptance, or evidence for a check before the tap. **The owner chose to name the residual (2026-11-03). Done 2026-11-03 (docs only):** clause 4 annotated (the residual, the reviewer's E9b seq 95014 / 95018 read, the console's answer UNKNOWN, E13's starting position excluding it for E13 only); "Conditions for E13" annotated; the E13 guide's Acceptance 4 names it; reading (7) annotated. No code: no evidence for a check before the tap exists. |
+| NIT 1 | Two seqs cited for the Sequence bounds (`HspReadSession.cs:225-226`, the Implementation text) are objects fetched after step commands (E12 seq 87591 and E12b 73712, Sequence (0,0,6) / (0,0,7)); the downloads' own objects are E12 seq 139152 (144 bytes) and E12b seq 87433 (156 bytes). The bounds themselves are right. | Open: cite 139152 and 87433. **Fixed 2026-11-03 by the subagent:** `HspReadSession.cs:225-230` cites E12 seq 139152 (144 bytes) and E12b seq 87433 (156 bytes) in the downloads, both checked in the JSONL, beside 87591 / 73712 after the step commands; the Implementation bullet "The download, taken whole" annotated. Comment and docs only. |
+| NIT 2 | A ConsoleVersion body of another length is refused by the length check (`DownloadBodyLengths[37] = {13}`, `HspReadSession.cs:1247-1250`) before the version gate, so the session faults instead of "the pair ends and the session goes on" (item 9): a safe stop, stricter than the text. | Open: say so in item 9 and the Implementation. **Done 2026-11-03 (docs only):** item 9 and the Implementation bullet "The placement and the version gate" annotated: another length faults the session, SC-1's safe stop. |
+| NIT 3 | Two remarks carry no status word (`UsbSmartFadeDevice.cs:2629` "a switch whose physical faders' contents differ lists it"; `StateAtConnect.cs:28` "the console reports the MASTER only with FaderInfo"); neither is load-bearing. | Open: OBSERVED with E9 75726, E9b 80262, E9c 56950, E9d 50035 (each list names 23, 14 and 22, the reviewer's read) and F82 / F186. **Fixed 2026-11-03 by the subagent:** `UsbSmartFadeDevice.cs:2665-2669` (OBSERVED, the four lists, checked in the JSONL: each names ConsoleStatus, FaderInfo and LedStatus, E9d 50035 PlaybackInfo too); `StateAtConnect.cs:28-31` (MASTER = body[194], F82 VERIFIED in part; the download never carries FaderInfo, F182 (d) VERIFIED, F186 OBSERVED). Comments only. |
+| NIT 4 | Reading (18) argues "no PC FADERS key was ever sent with SOLO lit or BLACKOUT on" (confirmed: 60 of 60 with SOLO off; BLACKOUT off at 58, the MASTER's blink at 2), yet the second switch on the way out (from memory mode) and the switches back go without asking SOLO / BLACKOUT (`:2640-2644`, `:2679-2683`), as SC-5's own switch does (which passed review). | Open: `ProbeLedRefusal` before each switch of the probe, or reading (18) reworded. **Fixed 2026-11-03 by the subagent (the check):** `UsbSmartFadeDevice.cs:2682` (before every switch on the way out) and `:2721` (before every switch back), a refusal stopping the probe with no switch back (Stopped, MINOR 1); test `SOLO_lit_before_a_switch_of_the_MASTER_probe_stops_it_before_that_switch` (SOLO lit, E9c seq 87881, with the tap's press: the switch back refused, 6 payloads; with FADERS 1-24 from memory mode, ConsoleStatus E9d seq 27840: FADERS 25-48 refused, 4 payloads); readings (13) and (18) annotated. |
+| NIT 5 | Clause 4's "ChannelLevels[c] reads 0xFF for the tap" contradicts F168 (for a 47–77 ms tap from our host every fetched object equals its value before the press); the probe's aim, FaderInfo body[194], is unaffected. | Open: reword. **Done 2026-11-03 (docs only):** clause 4 carries an annotated correction after the sentence, which is kept. |
+| NIT 6 | "Conditions for E13" predates the probe: it lists "then one MASTER movement on the panel", which the E13 guide asks for only when the probe was not effective. | Open: update. **Done 2026-11-03 (docs only):** "Conditions for E13" annotated: the movement only when the probe was not effective, as the guide asks. |
+| NIT 7 | The censuses the code now rests on (SystemSizes only in the 20 download lists; one body length per id except Sequence and StepContent; the 60 PC bank-key presses with origin, page and LEDs) live only in this document. | Open: F182 (d), F175 / F179 annotated in `known-facts.md` by the curator. **Done 2026-11-03 (docs only, by the subagent at the coordinator's brief):** `known-facts.md` F182 (the download census for (d)), F175 and F179 (the bank-key census) annotated, citing the reviewer's and the amendment agent's reads; no status changed. |
+| NIT 8 | A pre-existing flaky test on the simulator path, `tests/SmartFade.Api.Tests/ConsoleHubTests.cs:154` (asserts an `invalid_memory` broadcast right after `getMemory` returns: a race; failed once in the reviewer's first full run, passed 5 of 5 alone and in the second run; last touched in 8a08765), not SC-4's. | Open: await the error event. **Fixed 2026-11-03 by the subagent:** `ConsoleHubTests.cs:57`, `:108-111`, `:157-160` (`Hub_connect_set_channel_level_and_record_a_memory_round_trip_through_the_simulator` awaits its own `invalid_memory` broadcast with the test's timeout). |
+
+**Changes after the first pass (2026-11-03, the subagent)**, on the owner's "continue" of 2026-11-03 and his two choices (MAJOR 1
+fixed by the refusal, MINOR 3's residual named), by the Opus 5.5 subagent that wrote the implementation, the coordinating assistant
+writing none of the sending code; in the working tree for the re-check, which is the reviewer's (the line numbers in the "Fixed"
+notes of the table are the working tree's after these changes; the findings' own are d002705's): (MAJOR 1) `PairStateRefusal` refuses
+the pair when the console already reported a memory page other than 1, in either mode; the Connect hint names the state the console
+must show; (MINOR 1) the new outcome `MasterProbePhase.Stopped` ("stopped" on the wire) with "the console shows X; the download
+reported Y" for every stop of the probe, also with the MASTER known, shown in the bar after the download; a session that ends inside
+the probe reports Stopped and carries the same words in its error or in the Disconnect; (MINOR 2) the probe decided in the lock that
+takes the download as complete, before anything is reported, and not started while a key or bump of ours is held, a write of ours is
+queued or a SOLO / BLACKOUT tap of ours awaits its LED; (NIT 4) SOLO and BLACKOUT asked before every switch of the probe;
+(NIT 1, NIT 3) comments with the downloads' own seqs and the status words; (NIT 8) the hub test awaits its broadcast; (MINOR 3,
+NIT 2, NIT 5, NIT 6, NIT 7) the docs: clause 3, clause 4, item 9, "Conditions for E13", the Implementation bullets and readings
+(7), (13), (14), (18), (19) annotated, `known-facts.md` F175, F179 and F182 annotated (no status changed), `docs/api.md`,
+`architecture.md`, the E13 guide's Acceptances 1 and 4 (parse-checked, 0 errors). No byte, key, index or payload was added: every
+write the device can make is the one it could make at d002705 or fewer (the new refusals only take writes away). Each new guard was
+broken once on purpose and its test failed, then restored. Build 0 warnings; 541 backend tests (were 534), 359 frontend tests (were
+356). **This clears nothing for sending; nothing goes before the reviewer's re-check is recorded here and the owner's go for E13.**
 
 Confirmed correct by the reviewer (file and line in its report): the enum members exactly {0x07, 0x09} and the builder over 256 values ×
 256 pseqs giving the two payloads only (`HspOutbound.cs:221-238`, `:390-400`, `:410-457`); the placement, the version gate and the

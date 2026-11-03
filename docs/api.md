@@ -31,7 +31,9 @@ interface ConnectionDto {
   status: ConnectionStatus;
   mode: DeviceMode;                                 // always shown in the UI (brief: mode must be visible)
   deviceDescription: string;                        // e.g. "Simulated SmartFade 1248"
-  error?: string;
+  error?: string;                                   // why the connection failed; also set on "disconnected" when the operator
+                                                    // disconnected inside the real console's MASTER probe (SC-4, since
+                                                    // 2026-11-03: where the console was left)
 }
 
 interface CapabilitiesDto {                         // DOCUMENTED console limits (known-facts F3, F7)
@@ -169,15 +171,22 @@ interface StateAtConnectDto {                       // SmartSoft's start-up pair
   delivered: number;                                // records delivered so far
   reason: string | null;                            // why the pair was not sent or ended (the console's state before it, the
                                                     // version gate, a stop)
-  masterProbe: 'pending' | 'notNeeded' | 'sent' | 'notPossible';
+  masterProbe: 'pending' | 'notNeeded' | 'sent' | 'notPossible' | 'stopped';
                                                     // the download carries no FaderInfo (the MASTER): with live control the
                                                     // device taps the bump of an unpatched channel once after it (SC-4 clause 4;
                                                     // amended 2026-11-02, late evening: a channel of either bank, with the
                                                     // automatic bank switch there and back to the bank or mode the console showed,
                                                     // every control refused meanwhile); sent: queued, under way or done;
-                                                    // notPossible: it could not run or ended without the MASTER, and the UI asks
-                                                    // for one MASTER movement on the panel
-  masterProbeReason: string | null;                 // why the probe could not run (or ended without the MASTER)
+                                                    // notPossible: it could not run or went home without the MASTER, and the UI
+                                                    // asks for one MASTER movement on the panel; stopped (added 2026-11-03, the SC-4
+                                                    // review's MINOR 1): it stopped on the way or the session ended inside it,
+                                                    // nothing more of it sent and no switch back, also when the MASTER is known;
+                                                    // the bar shows the reason, and while the MASTER is unreported the UI asks for
+                                                    // one movement too. A session that ended inside the probe also says it in
+                                                    // `connection.error` (the session's error, or the Disconnect's), which outlives
+                                                    // the state at Connect
+  masterProbeReason: string | null;                 // why the probe could not run (or went home without the MASTER); for
+                                                    // stopped, why and where: "… the console shows X; the download reported Y"
 }
 
 interface ErrorDto {

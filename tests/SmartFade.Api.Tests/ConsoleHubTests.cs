@@ -54,6 +54,7 @@ public sealed class ConsoleHubTests : IDisposable
         var recorded = new TaskCompletionSource<MemoryStateDto>(TaskCreationOptions.RunContinuationsAsynchronously);
         var soloed = new TaskCompletionSource<MastersDto>(TaskCreationOptions.RunContinuationsAsynchronously);
         var errorSeen = new TaskCompletionSource<ErrorDto>(TaskCreationOptions.RunContinuationsAsynchronously);
+        var invalidMemorySeen = new TaskCompletionSource<ErrorDto>(TaskCreationOptions.RunContinuationsAsynchronously);
 
         await using var hub = new HubConnectionBuilder()
             .WithUrl(new Uri(_factory.Server.BaseAddress, "hubs/console"), options =>
@@ -104,6 +105,10 @@ public sealed class ConsoleHubTests : IDisposable
         {
             errors.Enqueue(e);
             errorSeen.TrySetResult(e);
+            if (e.Code == "invalid_memory")
+            {
+                invalidMemorySeen.TrySetResult(e);
+            }
         });
 
         await hub.StartAsync();
@@ -149,9 +154,10 @@ public sealed class ConsoleHubTests : IDisposable
         var error = await errorSeen.Task.WaitAsync(Timeout);
         Assert.Equal("invalid_channel", error.Code);
 
+        // the error is a broadcast that may arrive after getMemory's own reply (the SC-4 review's NIT 8: asserting it at once raced)
         var rejected = await hub.InvokeAsync<MemoryDto?>("getMemory", 13, 1);
         Assert.Null(rejected);
-        Assert.Contains(errors, e => e.Code == "invalid_memory");
+        Assert.Equal("invalid_memory", (await invalidMemorySeen.Task.WaitAsync(Timeout)).Code);
 
         await hub.InvokeAsync("disconnect");
         await hub.StopAsync();

@@ -291,8 +291,33 @@ describe('ConnectionBarComponent', () => {
       state.applyConsoleStateChanged(createSampleState({ connection: { ...hardware(), status: 'disconnected' }, supportedCommands: [], stateAtConnect: { phase: 'idle', delivered: 0, masterProbe: 'pending' } }));
       fixture.detectChanges();
 
-      expect(text('.bar__state')).toBe('Before Connect: no menu open on the console, no SD save or load, no record function armed, no bump held');
+      expect(text('.bar__state')).toBe(
+        'Before Connect: page 1, bank 1-24 or memory mode, NEXT and BLACKOUT off; no menu open on the console, no SD save or load, no record function armed, no bump held',
+      );
       expect(buttons().connect.disabled).toBe(false);
+    });
+
+    it('says where the console was left when the MASTER probe stopped away from home', () => {
+      link.set('connected');
+      state.applyConsoleStateChanged(
+        createSampleState({
+          connection: hardware(),
+          supportedCommands: [],
+          stateAtConnect: {
+            phase: 'done',
+            delivered: 157,
+            records: 157,
+            masterProbe: 'stopped',
+            masterProbeReason: 'the MASTER probe stopped (SOLO is not off (LED block 52)) and did not switch back: the console shows channel mode, bank 25-48; the download reported channel mode, bank 1-24',
+          },
+        }),
+      );
+      fixture.detectChanges();
+
+      expect(text('.bar__state')).toBe(
+        'The MASTER probe stopped (SOLO is not off (LED block 52)) and did not switch back: the console shows channel mode, bank 25-48; the download reported channel mode, bank 1-24',
+      );
+      expect(element().querySelector('.bar__state')?.getAttribute('data-tone')).toBe('warn');
     });
   });
 });

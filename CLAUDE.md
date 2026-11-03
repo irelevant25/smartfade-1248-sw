@@ -440,10 +440,14 @@ three minors (the UI silent when the probe stops away from home with FaderInfo k
 the probe's start in which a SOLO / BLACKOUT tap could be queued ahead of it; the probe's F112 residual, a bump on a physical fader
 still holding a memory, to be named in the owner's acceptance); eight nits; every byte from the captures or SC-5's whitelist, no other
 System value representable (a 2^32 sweep), the 20 downloads replayed byte for byte by the reviewer's own model, SC-1 / SC-2 / SC-5
-sessions unchanged without the switch (`safety-checks.md` SC-4 "Review"). **The owner paused for the night before the report arrived:
-the fixes (by the Opus 5.5 subagent), the decisions on MAJOR 1's alternative and MINOR 3, and the re-check wait for his "continue";
-nothing is cleared and nothing is sent before a PASS is recorded there and he gives the go for E13 on the day; the E13 guide refuses
-to start until then.**
+sessions unchanged without the switch (`safety-checks.md` SC-4 "Review"). **The owner paused for the night before the report arrived.
+On his "continue" of 2026-11-03 every item was fixed by an Opus 5.5 subagent (the pair refused when the console already reported a
+memory page other than 1, with E9c seq 42230 as the test; a reported outcome `stopped` for every end of the probe, with where the
+console was left, in the bar and in the Disconnect's error; the probe decided under the lock before the download is reported and
+refused while a write of ours is queued, a key held or a SOLO / BLACKOUT tap awaits its LED, and SOLO / BLACKOUT asked before every
+switch of the probe; the F112 residual named in clause 4 and the E13 acceptance; the nits; 541 backend and 359 frontend tests; the
+review table's status cells filled). The reviewer's re-check follows; nothing is cleared and nothing is sent before its verdict is
+recorded there as passed and he gives the go for E13 on the day; the E13 guide refuses to start until then.**
 
 ## Commands
 
@@ -524,13 +528,14 @@ that did not complete, the device refuses to connect until the backend restarts 
 **State at Connect (SC-4 class E, implemented 2026-11-02, evening, by an Opus 5.5 agent at the owner's request; not before the
 `protocol-safety-reviewer` pass and E13's go):** add `--Device:Usb:StartupPairDate=yyyy-MM-dd` to either run line above (today, or
 the backend refuses to start; without `Device:Mode=Usb` too): every Connect then sends SmartSoft's start-up pair (System `09 00 00`,
-then `07 00 00`) once, where SmartSoft sends it, unless the console already reported NEXT, BLACKOUT, a record function armed or bank
-25-48, and downloads the console's state and show (STATE AT CONNECT in the UI); every control is refused until the download's last
+then `07 00 00`) once, where SmartSoft sends it, unless the console already reported NEXT, BLACKOUT, a record function armed, bank
+25-48 or a memory page other than 1 (the fifth state added 2026-11-03 after the review), and downloads the console's state and show (STATE AT CONNECT in the UI); every control is refused until the download's last
 record, then, with live control on, the MASTER probe: one bump tap of an unpatched channel of either channel bank, through SC-5's
 automatic switch there and back where that channel's bank is not the shown one, every control refused while it runs (in the owner's
 show bump 23 of bank 25-48, channel 47; `safety-checks.md` SC-4 "Implementation" and clause 4's amendment of 2026-11-02, late
-evening). The reviewer's first pass over SC-4 was NEEDS CHANGES (2026-11-02, late evening; one major, the fixes pending): not
-before a PASS and E13's go.
+evening; the probe's every end reported to the UI with where the console was left, since 2026-11-03). The reviewer's first pass
+over SC-4 was NEEDS CHANGES (2026-11-02, late evening), its items fixed on 2026-11-03, the re-check pending: not before the re-check
+passes and E13's go.
 
 ## Working style
 

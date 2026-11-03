@@ -471,8 +471,8 @@ public partial class UsbSmartFadeDeviceTests
     /// <summary>
     /// The clause's SOLO and BLACKOUT refusals are asked again when the probe has come to the channel's bank: the console answers
     /// FADERS 25-48 with bank 25-48 (E9d seq 18715) and LEDs that show SOLO lit (E9c seq 87881, block 52) or BLACKOUT on (E8b
-    /// seq 26999, block 53 steady). The tap is not sent; the probe stops where it is, with no switch back, and the UI asks for
-    /// one movement with the reason.
+    /// seq 26999, block 53 steady). The tap is not sent; the probe stops where it is, with no switch back, and the UI is told
+    /// where the console was left (Stopped, the first review's MINOR 1) and asked for one movement with the reason.
     /// </summary>
     [Theory]
     [InlineData("E9c", 87881, "SOLO is not off (LED block 52)")]
@@ -493,11 +493,12 @@ public partial class UsbSmartFadeDeviceTests
         device.StateChanged += (_, change) => last = change.StateAtConnect ?? last;
 
         await device.ConnectAsync(CancellationToken.None);
-        await WaitUntil(() => last?.MasterProbe == MasterProbePhase.NotPossible);
+        await WaitUntil(() => last?.MasterProbe == MasterProbePhase.Stopped);
         await device.DisconnectAsync(CancellationToken.None);
 
         Assert.Equal(4, console.Payloads.Count);   // the pair and FADERS 25-48: no tap, no switch back
         Assert.Contains($"the MASTER probe stopped ({reason}", last!.MasterProbeReason, StringComparison.Ordinal);
+        Assert.Contains("and did not switch back: the console shows channel mode, bank 25-48; the download reported channel mode, bank 1-24. Move one fader on the panel, or the MASTER", last.MasterProbeReason, StringComparison.Ordinal);
         Assert.Contains(log.Notes, n => n.StartsWith($"MASTER probe stopped (SC-4 clause 4): {reason}", StringComparison.Ordinal)
             && n.EndsWith("no retry and no switch back: the console shows channel mode, bank 25-48, the download reported channel mode, bank 1-24", StringComparison.Ordinal));
     }
@@ -509,12 +510,15 @@ public partial class UsbSmartFadeDeviceTests
     {
         // SC-5 condition 1 (c) for the probe's switches as for any: the stand-in does not answer FADERS 25-48 (the switch there)
         // or FADERS 1-24 (the switch back); two seconds after the key's press, on the loop's clock, the session ends with that
-        // reason, nothing else is sent after the key's tap, and the log says where the console was last reported.
+        // reason, nothing else is sent after the key's tap, and the log says where the console was last reported. The UI is
+        // told too (the first review's MINOR 1): the outcome Stopped while the session still reports, and the session's error.
         var clock = new VirtualClock();
         var console = new PairConsole(Body(E3, 97), E3Download.Value);
         AnswersTheProbe(console, faders25To48: answersBank25To48, faders1To24: false);
         var log = new RecordingSink();
         var device = Create(() => console, new UsbDeviceOptions { LiveControlDate = Today(clock), StartupPairDate = Today(clock) }, _ => log, clock);
+        StateAtConnect? last = null;
+        device.StateChanged += (_, change) => last = change.StateAtConnect ?? last;
         var ended = WaitForStatus(device, ConnectionStatus.Error);
 
         await device.ConnectAsync(CancellationToken.None);
@@ -522,8 +526,47 @@ public partial class UsbSmartFadeDeviceTests
 
         Assert.Contains(error, state.Error, StringComparison.Ordinal);
         Assert.Contains("(SC-5 condition 1 c); the session ends as a deviation", state.Error, StringComparison.Ordinal);
+        Assert.Contains($"; The MASTER probe was interrupted by the session's end (SC-4 clause 4): the console shows {leftIn} (its last report); the download reported channel mode, bank 1-24.", state.Error, StringComparison.Ordinal);
+        Assert.Equal(MasterProbePhase.Stopped, last!.MasterProbe);
+        Assert.Equal($"the MASTER probe was interrupted by the session's end and did not switch back: the console shows {leftIn} (its last report); the download reported channel mode, bank 1-24", last.MasterProbeReason);
         Assert.Equal(payloads, console.Payloads.Count);
         Assert.Contains(log.Notes, n => n.StartsWith($"MASTER probe interrupted by the session's end (SC-4 clause 4): the console was last reported in {leftIn}, the download reported channel mode, bank 1-24", StringComparison.Ordinal));
+    }
+
+    [Fact]
+    public async Task A_Disconnect_inside_the_MASTER_probe_tells_the_UI_where_the_console_was_left()
+    {
+        // The usual start (E3's download, bank 1-24); the operator disconnects while the probe's FADERS 25-48 (E9d seq 18706) is
+        // being written. The press's release is owed and goes, nothing more of the probe is sent, and the Disconnect carries
+        // where the console was last reported and where the download found it (the first review's MINOR 1).
+        var clock = new VirtualClock();
+        var console = new PairConsole(Body(E3, 97), E3Download.Value);
+        AnswersTheProbe(console);
+        var log = new RecordingSink();
+        var device = Create(() => console, new UsbDeviceOptions { LiveControlDate = Today(clock), StartupPairDate = Today(clock) }, _ => log, clock);
+        StateAtConnect? last = null;
+        device.StateChanged += (_, change) => last = change.StateAtConnect ?? last;
+        var disconnected = WaitForStatus(device, ConnectionStatus.Disconnected);
+
+        var switching = console.PauseAtPress((byte)ClearedKey.Faders25To48);
+        await device.ConnectAsync(CancellationToken.None);
+        await switching.WaitAsync(Timeout);
+        var disconnecting = device.DisconnectAsync(CancellationToken.None);
+        console.Resume();
+        await disconnecting;
+        var state = await disconnected;
+
+        Assert.Equal(
+            new[]
+            {
+                Frame(E3.Value, 90, CaptureDirection.Out), Frame(E3.Value, 173, CaptureDirection.Out),
+                WithCounter(E9d, 18706, 0x02), WithCounter(E9d, 18711, 0x03),
+            },
+            console.Payloads.ToArray());
+        Assert.StartsWith("The MASTER probe was interrupted by the session's end (SC-4 clause 4): the console shows channel mode, bank ", state.Error, StringComparison.Ordinal);
+        Assert.EndsWith(" (its last report); the download reported channel mode, bank 1-24. Check the FADERS keys on the console.", state.Error, StringComparison.Ordinal);
+        Assert.Equal(MasterProbePhase.Stopped, last!.MasterProbe);
+        Assert.Contains(log.Notes, n => n.StartsWith("MASTER probe interrupted by the session's end (SC-4 clause 4)", StringComparison.Ordinal));
     }
 
     [Fact]
@@ -533,7 +576,9 @@ public partial class UsbSmartFadeDeviceTests
         // condition 5). The tap's release is owed and goes (a press is never left without its release); the tap's reports come
         // in, then the switch back is refused (no write while a record function is armed): the probe stops where it is, with no
         // retry and no switch back, and the log says where the console was left. FaderInfo came with the tap, so the MASTER is
-        // known and the UI does not ask for a movement; the next control meets the record function's refusal, not the probe's.
+        // known and the UI does not ask for a movement, but it is told that the probe stopped away from home (the outcome
+        // Stopped with where the console is and where the download found it: the first review's MINOR 1); the next control
+        // meets the record function's refusal, not the probe's.
         var clock = new VirtualClock();
         var console = new PairConsole(Body(E3, 97), E3Download.Value);
         AnswersTheProbe(console);
@@ -558,7 +603,161 @@ public partial class UsbSmartFadeDeviceTests
         Assert.Equal(WithCounter(E9d, 44199, 0x05), console.Payloads[^1]);   // the tap's release is the last write
         Assert.Contains(log.Notes, n => n.StartsWith("MASTER probe stopped (SC-4 clause 4): REC MEM is lit or blinking", StringComparison.Ordinal)
             && n.EndsWith("; nothing more of it is sent, no retry and no switch back: the console shows channel mode, bank 25-48, the download reported channel mode, bank 1-24", StringComparison.Ordinal));
-        Assert.Equal(MasterProbePhase.Sent, last!.MasterProbe);
+        Assert.Equal(MasterProbePhase.Stopped, last!.MasterProbe);
+        Assert.Equal("the MASTER probe stopped (REC MEM is lit or blinking (SC-2 condition 5)) and did not switch back: the console shows channel mode, bank 25-48; the download reported channel mode, bank 1-24", last.MasterProbeReason);
+        Assert.Equal(0xFF, (await device.GetSnapshotAsync(CancellationToken.None)).Masters.Master);
+    }
+
+    /// <summary>
+    /// The clause's LED refusals before each switch of the probe (the first review's NIT 4; reading (18): no PC FADERS key was
+    /// ever seen sent with SOLO lit or BLACKOUT on). SOLO lit is the LedStatus E9c seq 87881 (block 52, after SmartSoft's SOLO
+    /// press at seq 87872), reported with the tap's press (from bank 1-24: the switch back is refused) or with the first switch
+    /// from memory mode (FADERS 1-24 answered with ConsoleStatus E9d seq 27840: the second switch, FADERS 25-48, is refused).
+    /// The probe stops there, with no switch back, and the UI is told where the console was left.
+    /// </summary>
+    [Theory]
+    [InlineData(false, 6, "channel mode, bank 25-48", "channel mode, bank 1-24")]
+    [InlineData(true, 4, "channel mode, bank 1-24", "memory mode")]
+    public async Task SOLO_lit_before_a_switch_of_the_MASTER_probe_stops_it_before_that_switch(bool fromMemoryMode, int payloads, string shown, string home)
+    {
+        var clock = new VirtualClock();
+        var download = fromMemoryMode
+            ? E3Download.Value.With(
+                (new DirtyObjectRecord((int)HspObjectId.ConsoleStatus, 0, 0, 0), Body(E9d, 29039)),
+                (new DirtyObjectRecord((int)HspObjectId.LedStatus, 0, 0, 0), Body(E9d, 29045)))
+            : E3Download.Value;
+        var console = new PairConsole(Body(E3, 97), download);
+        AnswersTheProbe(console);
+        if (fromMemoryMode)
+        {
+            console.OnPress((byte)ClearedKey.Faders1To24, () =>
+            {
+                console.Report((int)HspObjectId.ConsoleStatus, Body(E9d, 27840));
+                console.Report((int)HspObjectId.LedStatus, Body(E9c, 87881));
+            });
+        }
+        else
+        {
+            console.OnPress((byte)ClearedKey.Bump23, () =>
+            {
+                console.Report((int)HspObjectId.FaderInfo, E9bBody(11628));
+                console.Report((int)HspObjectId.ChannelLevels, E9bBody(11632));
+                console.Report((int)HspObjectId.LedStatus, Body(E9c, 87881));
+            });
+        }
+
+        var log = new RecordingSink();
+        var device = Create(() => console, new UsbDeviceOptions { LiveControlDate = Today(clock), StartupPairDate = Today(clock) }, _ => log, clock);
+        StateAtConnect? last = null;
+        device.StateChanged += (_, change) => last = change.StateAtConnect ?? last;
+
+        await device.ConnectAsync(CancellationToken.None);
+        await WaitUntil(() => last?.MasterProbe == MasterProbePhase.Stopped);
+        await device.DisconnectAsync(CancellationToken.None);
+
+        Assert.Equal(payloads, console.Payloads.Count);   // nothing after the refused switch's predecessor
+        Assert.Contains("the MASTER probe stopped (SOLO is not off (LED block 52)", last!.MasterProbeReason, StringComparison.Ordinal);
+        Assert.Contains($"and did not switch back: the console shows {shown}; the download reported {home}", last.MasterProbeReason, StringComparison.Ordinal);
+        Assert.Contains(log.Notes, n => n.StartsWith("MASTER probe stopped (SC-4 clause 4): SOLO is not off (LED block 52)", StringComparison.Ordinal)
+            && n.EndsWith($"no retry and no switch back: the console shows {shown}, the download reported {home}", StringComparison.Ordinal));
+    }
+
+    [Fact]
+    public async Task A_control_asked_for_when_the_download_ends_meets_the_MASTER_probes_refusal_and_never_goes_before_it()
+    {
+        // The first review's MINOR 2: the probe is decided in the same lock that takes the download as complete, so by the time
+        // anyone hears of the download's end (here: the state at Connect reported Done, on the session's thread) the probe is
+        // under way and a SOLO tap is refused with its reason; the payloads are the probe's alone (E9d seq 18706 / 18711,
+        // 44086 / 44199, 27831 / 27836 with this session's counter), as in the usual case.
+        var clock = new VirtualClock();
+        var console = new PairConsole(Body(E3, 97), E3Download.Value);
+        AnswersTheProbe(console);
+        var log = new RecordingSink();
+        var device = Create(() => console, new UsbDeviceOptions { LiveControlDate = Today(clock), StartupPairDate = Today(clock) }, _ => log, clock);
+        string? solo = null;
+        device.StateChanged += (_, change) =>
+        {
+            if (change.StateAtConnect is { Phase: StateAtConnectPhase.Done } && solo is null)
+            {
+                try
+                {
+                    device.SetSoloAsync(true, CancellationToken.None).GetAwaiter().GetResult();
+                    solo = "queued";
+                }
+                catch (InvalidOperationException ex)
+                {
+                    solo = ex.Message;
+                }
+            }
+        };
+
+        await device.ConnectAsync(CancellationToken.None);
+        await WaitUntil(() => log.Notes.Any(n => n.StartsWith("MASTER probe done", StringComparison.Ordinal)));
+        await device.DisconnectAsync(CancellationToken.None);
+
+        Assert.StartsWith("Refused: the MASTER probe is under way (SC-4 clause 4)", solo, StringComparison.Ordinal);
+        Assert.Equal(
+            new[]
+            {
+                Frame(E3.Value, 90, CaptureDirection.Out), Frame(E3.Value, 173, CaptureDirection.Out),
+                WithCounter(E9d, 18706, 0x02), WithCounter(E9d, 18711, 0x03),
+                WithCounter(E9d, 44086, 0x04), WithCounter(E9d, 44199, 0x05),
+                WithCounter(E9d, 27831, 0x06), WithCounter(E9d, 27836, 0x07),
+            },
+            console.Payloads.ToArray());
+    }
+
+    /// <summary>
+    /// The first review's MINOR 2, the other half: a control accepted at the download's last record itself (its own report,
+    /// ChannelLevels, raised before the download is taken as complete) is in flight when the probe would start, so the probe
+    /// does not start, with no retry: a SOLO tap of ours (its LED change unreported: SmartSoft's SOLO press and release, E9b
+    /// seq 22165 / 22174) or an IND 1 tap queued (E9b seq 49358 / 49367), each with this session's counter. The UI asks for one
+    /// movement with the reason; nothing of the probe goes before or after the tap.
+    /// </summary>
+    [Theory]
+    [InlineData(true, 22165, 22174, "SOLO was pressed from the PC and the console has not reported its LED (block 52) since")]
+    [InlineData(false, 49358, 49367, "1 write(s) of ours wait to be sent (a control taken at the download's last record): the probe does not start behind them")]
+    public async Task A_control_taken_at_the_downloads_last_record_keeps_the_MASTER_probe_from_starting(bool solo, int pressSeq, int releaseSeq, string reason)
+    {
+        var clock = new VirtualClock();
+        var console = new PairConsole(Body(E3, 97), E3Download.Value);
+        AnswersTheProbe(console);
+        var log = new RecordingSink();
+        var device = Create(() => console, new UsbDeviceOptions { LiveControlDate = Today(clock), StartupPairDate = Today(clock) }, _ => log, clock);
+        StateAtConnect? last = null;
+        string? control = null;
+        device.StateChanged += (_, change) =>
+        {
+            last = change.StateAtConnect ?? last;
+            if (control is null && device.LastSession?.StartupPair.Phase == HspStartupPairPhase.Done)
+            {
+                try
+                {
+                    (solo ? device.SetSoloAsync(true, CancellationToken.None) : device.SetIndependentAsync(1, true, CancellationToken.None)).GetAwaiter().GetResult();
+                    control = "queued";
+                }
+                catch (InvalidOperationException ex)
+                {
+                    control = ex.Message;
+                }
+            }
+        };
+
+        await device.ConnectAsync(CancellationToken.None);
+        await WaitUntil(() => last?.MasterProbe == MasterProbePhase.NotPossible && console.Payloads.Count == 4);
+        console.EndAfterPolls(40);
+        await WaitUntil(() => device.Status != ConnectionStatus.Connected);
+
+        Assert.Equal("queued", control);
+        Assert.Equal(
+            new[]
+            {
+                Frame(E3.Value, 90, CaptureDirection.Out), Frame(E3.Value, 173, CaptureDirection.Out),
+                WithCounter(E9b, pressSeq, 0x02), WithCounter(E9b, releaseSeq, 0x03),
+            },
+            console.Payloads.ToArray());
+        Assert.Contains(reason, last!.MasterProbeReason, StringComparison.Ordinal);
+        Assert.Contains(log.Notes, n => n.StartsWith($"MASTER probe not sent: {reason}", StringComparison.Ordinal));
     }
 
     [Fact]
@@ -656,13 +855,16 @@ public partial class UsbSmartFadeDeviceTests
     /// <summary>
     /// SC-4 clause 3: what the console reported at Connect (its list pending then, F177 / H65) shows a state no pair was seen in
     /// (F185): NEXT mode (E9c seq 94604, body[6] = 1, F173), bank 25-48 (E9d seq 18715, F98), REC MEM lit (E9b seq 83953), BLACKOUT
-    /// on (E8b seq 26999, block 53 steady blue, F114). No System write goes, and the transfer log and the state say why.
+    /// on (E8b seq 26999, block 53 steady blue, F114), memory page 2 (E9c seq 42230, `01 00 01 00 00 01 00`, body[2] = 1, F113; with
+    /// the LedStatus the console delivered right after it, seq 42242; added 2026-11-03 for the first review's MAJOR 1). No System
+    /// write goes, and the transfer log and the state say why.
     /// </summary>
     [Theory]
     [InlineData("E9c", 94604, 94610, "NEXT mode is on")]
     [InlineData("E9d", 18715, 18719, "the console shows bank 25-48")]
     [InlineData("E9b", 796, 83953, "REC MEM is lit or blinking")]
     [InlineData("E8b", 0, 26999, "BLACKOUT is on")]
+    [InlineData("E9c", 42230, 42242, "the console shows memory page 2 (ConsoleStatus body[2] = 1, F113): no pair was ever seen on a page other than 1 (F185)")]
     public async Task The_pair_is_refused_when_the_console_already_reported_a_state_no_pair_was_seen_in(string capture, int consoleStatusSeq, int ledStatusSeq, string reason)
     {
         var source = capture switch

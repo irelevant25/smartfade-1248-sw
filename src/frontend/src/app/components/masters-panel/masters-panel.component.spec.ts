@@ -351,12 +351,16 @@ describe('MastersPanelComponent', () => {
   });
 
   describe('the MASTER after the console state at Connect (SC-4)', () => {
-    const hardware = (masterProbe: 'pending' | 'notNeeded' | 'sent' | 'notPossible', mastersReported = false) =>
+    const reasons: Partial<Record<string, string>> = {
+      notPossible: 'every channel of channel mode, bank 1-24 is patched',
+      stopped: 'the MASTER probe stopped (SOLO is not off (LED block 52)) and did not switch back: the console shows channel mode, bank 25-48; the download reported channel mode, bank 1-24',
+    };
+    const hardware = (masterProbe: 'pending' | 'notNeeded' | 'sent' | 'notPossible' | 'stopped', mastersReported = false) =>
       createSampleState({
         connection: { ...createSampleState().connection, mode: 'hardware' },
         supportedCommands: [],
         mastersReported,
-        stateAtConnect: { phase: 'done', records: 157, delivered: 157, masterProbe, masterProbeReason: masterProbe === 'notPossible' ? 'every channel of channel mode, bank 1-24 is patched' : null },
+        stateAtConnect: { phase: 'done', records: 157, delivered: 157, masterProbe, masterProbeReason: reasons[masterProbe] ?? null },
       });
     const hint = () => element().querySelector('.masters__note--action');
 
@@ -371,6 +375,17 @@ describe('MastersPanelComponent', () => {
       expect(hint()?.getAttribute('title')).toBe('every channel of channel mode, bank 1-24 is patched');
 
       state.applyConsoleStateChanged(hardware('notPossible', true));
+      fixture.detectChanges();
+      expect(hint()).toBeNull();
+    });
+
+    it('asks for one MASTER movement when the probe stopped before the MASTER was reported, and not once it is', () => {
+      state.applyConsoleStateChanged(hardware('stopped'));
+      fixture.detectChanges();
+      expect(hint()?.textContent?.trim()).toBe('Move the MASTER once on the console');
+      expect(hint()?.getAttribute('title')).toBe(reasons['stopped']);
+
+      state.applyConsoleStateChanged(hardware('stopped', true));
       fixture.detectChanges();
       expect(hint()).toBeNull();
     });
