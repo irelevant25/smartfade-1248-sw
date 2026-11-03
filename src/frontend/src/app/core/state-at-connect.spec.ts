@@ -25,7 +25,7 @@ describe('state at Connect (SC-4)', () => {
     it('before Connect, says what the console must be showing and must not be doing when the pair goes blind', () => {
       const idle: StateAtConnectDto = { phase: 'idle', delivered: 0, masterProbe: 'pending' };
       expect(describeStateAtConnect(idle, 'disconnected')).toEqual({
-        text: 'Before Connect: page 1, bank 1-24 or memory mode, NEXT and BLACKOUT off; no menu open on the console, no SD save or load, no record function armed, no bump held',
+        text: 'Before Connect: page 1, bank 1-24 or memory mode entered from bank 1-24, NEXT and BLACKOUT off; no menu open on the console, no SD save or load, no record function armed, no bump held',
         tone: 'idle',
       });
       expect(describeStateAtConnect(idle, 'connected')).toBeUndefined();

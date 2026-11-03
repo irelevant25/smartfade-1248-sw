@@ -100,7 +100,9 @@ export interface StateAtConnectView {
 /**
  * What the bar says about the real console's state at Connect (SC-4) besides its STATE AT CONNECT badge: before Connect,
  * what the console must be showing and must not be doing when the pair is sent blind, as SmartSoft sends it (clause 3: the
- * states every pair was seen in, F185, and the states the device refuses once reported, the page among them since the first
+ * states every pair was seen in, F185, memory mode only as entered from bank 1-24 (ConsoleStatus body[4] = 0 at all four
+ * memory-mode pairs; entered from bank 25-48 it keeps body[4] = 1, F98: the re-check's N2, 2026-11-03), and the states the
+ * device refuses once reported, the page among them since the first
  * review's MAJOR 1); while the pair and the download run, that the state is being requested or downloaded (every control is
  * refused then, 7.2–7.6 s observed); why the state was not requested; and after the download, a MASTER probe that stopped
  * away from the bank or mode the download reported (the first review's MINOR 1). Nothing else once the download is complete,
@@ -115,7 +117,7 @@ export function describeStateAtConnect(state: StateAtConnectDto | undefined, sta
       return status === 'connected' || status === 'connecting'
         ? undefined
         : {
-            text: 'Before Connect: page 1, bank 1-24 or memory mode, NEXT and BLACKOUT off; no menu open on the console, no SD save or load, no record function armed, no bump held',
+            text: 'Before Connect: page 1, bank 1-24 or memory mode entered from bank 1-24, NEXT and BLACKOUT off; no menu open on the console, no SD save or load, no record function armed, no bump held',
             tone: 'idle',
           };
     case 'done':

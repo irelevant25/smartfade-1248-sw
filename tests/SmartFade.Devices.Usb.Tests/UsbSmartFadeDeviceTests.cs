@@ -28,7 +28,8 @@ public partial class UsbSmartFadeDeviceTests
         Func<string, ITransferSink?>? logFactory = null,
         VirtualClock? clock = null,
         Func<TimeSpan, CancellationToken, Task>? delay = null,
-        IncompleteWriteMarker? marker = null)
+        IncompleteWriteMarker? marker = null,
+        TimeSpan? stopTimeout = null)
     {
         clock ??= new VirtualClock();
         options ??= new UsbDeviceOptions();
@@ -45,7 +46,8 @@ public partial class UsbSmartFadeDeviceTests
                 clock.Advance(wait);
                 return Task.CompletedTask;
             }),
-            marker);
+            marker,
+            stopTimeout);   // a Disconnect's wait for the session's end runs on the real clock (20 s unless a test shortens it)
     }
 
     private static Task<ConnectionState> WaitForStatus(UsbSmartFadeDevice device, ConnectionStatus status)

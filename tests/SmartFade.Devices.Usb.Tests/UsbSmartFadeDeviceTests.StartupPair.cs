@@ -570,6 +570,48 @@ public partial class UsbSmartFadeDeviceTests
     }
 
     [Fact]
+    public async Task A_Disconnect_inside_the_MASTER_probe_that_outlives_its_stop_timeout_still_tells_the_UI_where_the_console_was_left()
+    {
+        // The re-check's N4 (2026-11-03): as above, but the stand-in keeps the probe's FADERS 25-48 press (E9d seq 18706) inside
+        // the pipe until the Disconnect has given up waiting (its stop timeout, 20 s, shortened here): the Disconnect reports
+        // Error, and when the session does end, its late Disconnected state carries where the console was last reported and
+        // where the download found it, as a Disconnect in time does. The same captured bytes as above.
+        var clock = new VirtualClock();
+        var console = new PairConsole(Body(E3, 97), E3Download.Value);
+        AnswersTheProbe(console);
+        var log = new RecordingSink();
+        var device = Create(() => console, new UsbDeviceOptions { LiveControlDate = Today(clock), StartupPairDate = Today(clock) }, _ => log, clock, stopTimeout: TimeSpan.FromMilliseconds(200));
+        StateAtConnect? last = null;
+        device.StateChanged += (_, change) => last = change.StateAtConnect ?? last;
+        var timedOut = WaitForStatus(device, ConnectionStatus.Error);
+        var disconnected = WaitForStatus(device, ConnectionStatus.Disconnected);
+
+        var switching = console.PauseAtPress((byte)ClearedKey.Faders25To48);
+        await device.ConnectAsync(CancellationToken.None);
+        await switching.WaitAsync(Timeout);
+        await device.DisconnectAsync(CancellationToken.None);   // the press is still held inside the pipe: the wait gives up
+        var stuck = await timedOut;
+
+        Assert.Equal("The session did not stop; restart the backend before connecting again.", stuck.Error);
+        Assert.False(disconnected.IsCompleted);
+        console.Resume();
+        var state = await disconnected;
+
+        Assert.Equal(
+            new[]
+            {
+                Frame(E3.Value, 90, CaptureDirection.Out), Frame(E3.Value, 173, CaptureDirection.Out),
+                WithCounter(E9d, 18706, 0x02), WithCounter(E9d, 18711, 0x03),
+            },
+            console.Payloads.ToArray());
+        Assert.StartsWith("The MASTER probe was interrupted by the session's end (SC-4 clause 4): the console shows channel mode, bank ", state.Error, StringComparison.Ordinal);
+        Assert.EndsWith(" (its last report); the download reported channel mode, bank 1-24. Check the FADERS keys on the console.", state.Error, StringComparison.Ordinal);
+        Assert.Equal(ConnectionStatus.Disconnected, device.Status);
+        Assert.Equal(MasterProbePhase.Stopped, last!.MasterProbe);
+        Assert.Contains(log.Notes, n => n.StartsWith("MASTER probe interrupted by the session's end (SC-4 clause 4)", StringComparison.Ordinal));
+    }
+
+    [Fact]
     public async Task A_record_function_armed_during_the_MASTER_probe_stops_it_before_the_switch_back_and_nothing_more_goes()
     {
         // As the usual case, but the console answers bump 23's press with REC MEM lit too (LedStatus E9b seq 83953; SC-2
@@ -856,8 +898,12 @@ public partial class UsbSmartFadeDeviceTests
     /// SC-4 clause 3: what the console reported at Connect (its list pending then, F177 / H65) shows a state no pair was seen in
     /// (F185): NEXT mode (E9c seq 94604, body[6] = 1, F173), bank 25-48 (E9d seq 18715, F98), REC MEM lit (E9b seq 83953), BLACKOUT
     /// on (E8b seq 26999, block 53 steady blue, F114), memory page 2 (E9c seq 42230, `01 00 01 00 00 01 00`, body[2] = 1, F113; with
-    /// the LedStatus the console delivered right after it, seq 42242; added 2026-11-03 for the first review's MAJOR 1). No System
-    /// write goes, and the transfer log and the state say why.
+    /// the LedStatus the console delivered right after it, seq 42242; added 2026-11-03 for the first review's MAJOR 1), memory
+    /// page 12 in channel mode (E9b seq 58735, `00 00 0b 00 00 01 00`, body[0] = 0, body[2] = 0x0B, F113; with the LedStatus the
+    /// console delivered after it in the same list, seq 58751; added 2026-11-03 for the re-check's N5 (b): the page refusal does
+    /// not depend on the mode). E9b's only channel-mode page-12 bodies (58735, 58743) came during the console's own EDIT MEM of
+    /// memory 1 on page 12 (the E9b record), so 58751 shows EDIT MEM blinking (block 67 `FF 37 37 0A 0A 0A`); the ConsoleStatus
+    /// is asked first, so the reason is the page's. No System write goes, and the transfer log and the state say why.
     /// </summary>
     [Theory]
     [InlineData("E9c", 94604, 94610, "NEXT mode is on")]
@@ -865,6 +911,7 @@ public partial class UsbSmartFadeDeviceTests
     [InlineData("E9b", 796, 83953, "REC MEM is lit or blinking")]
     [InlineData("E8b", 0, 26999, "BLACKOUT is on")]
     [InlineData("E9c", 42230, 42242, "the console shows memory page 2 (ConsoleStatus body[2] = 1, F113): no pair was ever seen on a page other than 1 (F185)")]
+    [InlineData("E9b", 58735, 58751, "the console shows memory page 12 (ConsoleStatus body[2] = 11, F113): no pair was ever seen on a page other than 1 (F185)")]
     public async Task The_pair_is_refused_when_the_console_already_reported_a_state_no_pair_was_seen_in(string capture, int consoleStatusSeq, int ledStatusSeq, string reason)
     {
         var source = capture switch

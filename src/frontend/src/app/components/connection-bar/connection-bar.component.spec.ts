@@ -292,7 +292,7 @@ describe('ConnectionBarComponent', () => {
       fixture.detectChanges();
 
       expect(text('.bar__state')).toBe(
-        'Before Connect: page 1, bank 1-24 or memory mode, NEXT and BLACKOUT off; no menu open on the console, no SD save or load, no record function armed, no bump held',
+        'Before Connect: page 1, bank 1-24 or memory mode entered from bank 1-24, NEXT and BLACKOUT off; no menu open on the console, no SD save or load, no record function armed, no bump held',
       );
       expect(buttons().connect.disabled).toBe(false);
     });

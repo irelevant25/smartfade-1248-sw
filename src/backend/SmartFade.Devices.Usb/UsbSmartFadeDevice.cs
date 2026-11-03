@@ -69,7 +69,7 @@ namespace SmartFade.Devices.Usb;
 [Evidence(EvidenceStatus.Observed, "F133, F134 VERIFIED for FADERS 1-24 and FADERS MEMS from SmartSoft (E9 + E9b); F175 for FADERS 25-48 from SmartSoft (OBSERVED, second sessions) with F171 VERIFIED for the faders after it; F179 OBSERVED once for our host (E11b)", "the MASTER probe's switches (SC-4 clause 4 as amended on 2026-11-02, late evening), each a bank transition a PC host was seen making: bank 1-24 to 25-48 (SmartSoft E9b seq 51617, E9c 24528, E9d 18706 / 74718, E9e 19934 / 30238; our host E11b bus seq 25322 and 47929) and back (E9b 51978, E9c 28206, E9d 27831 / 85917, E9e 21374 / 31533; E11b 30193 and 48221), bank 1-24 to memory mode (E9 to E9d, e.g. E9d 29032; E11 attempt 3 bus 23677, E11b 34154) and back (e.g. E9d 44811; E11 attempt 3 32624, E11b 43651); memory mode to bank 25-48 and back never from a PC in any capture, so the probe goes through bank 1-24; every one of those switches came on memory page 1 (body[2] = 0), so a switching probe runs only there")]
 public sealed class UsbSmartFadeDevice : ISmartFadeDevice, IAsyncDisposable
 {
-    private static readonly TimeSpan StopTimeout = TimeSpan.FromSeconds(20);
+    private static readonly TimeSpan DefaultStopTimeout = TimeSpan.FromSeconds(20);
 
     /// <summary>
     /// SC-5 condition 1 (c): after the automatic switch's bank key went out, ConsoleStatus must report the new bank and a
@@ -115,6 +115,7 @@ public sealed class UsbSmartFadeDevice : ISmartFadeDevice, IAsyncDisposable
     private readonly TimeProvider _clock;
     private readonly Func<TimeSpan, CancellationToken, Task>? _delay;
     private readonly IncompleteWriteMarker? _marker;
+    private readonly TimeSpan _stopTimeout;
     private readonly Dictionary<ClearedKey, (KeyLed Before, Func<KeyLed?> Led)> _togglesAwaitingLed = new();
     private readonly HashSet<ClearedKey> _togglesSent = new();
 
@@ -161,6 +162,10 @@ public sealed class UsbSmartFadeDevice : ISmartFadeDevice, IAsyncDisposable
     /// Where an incomplete write is recorded so that it outlives the process (the backend passes one beside the transfer
     /// logs); null keeps the latch in memory only, until the process ends.
     /// </param>
+    /// <param name="stopTimeout">
+    /// How long a Disconnect waits for the session to end before it reports Error and leaves the late end to the session
+    /// (20 s; null keeps that; the tests shorten it to reach that path).
+    /// </param>
     public UsbSmartFadeDevice(
         IOptions<UsbDeviceOptions> options,
         Func<IHspPipe> pipeFactory,
@@ -168,7 +173,8 @@ public sealed class UsbSmartFadeDevice : ISmartFadeDevice, IAsyncDisposable
         ILogger<UsbSmartFadeDevice> logger,
         TimeProvider? clock = null,
         Func<TimeSpan, CancellationToken, Task>? delay = null,
-        IncompleteWriteMarker? incompleteWriteMarker = null)
+        IncompleteWriteMarker? incompleteWriteMarker = null,
+        TimeSpan? stopTimeout = null)
     {
         _options = options.Value;
         _pipeFactory = pipeFactory;
@@ -177,6 +183,7 @@ public sealed class UsbSmartFadeDevice : ISmartFadeDevice, IAsyncDisposable
         _clock = clock ?? TimeProvider.System;
         _delay = delay;
         _marker = incompleteWriteMarker;
+        _stopTimeout = stopTimeout ?? DefaultStopTimeout;
         Capabilities = ConsoleCapabilities.SmartFade1248;
         _assembler = new ConsoleStateAssembler(Capabilities);
         _show = new ConsoleShowAssembler(Capabilities);
@@ -441,12 +448,12 @@ public sealed class UsbSmartFadeDevice : ISmartFadeDevice, IAsyncDisposable
         {
             try
             {
-                await session.WaitAsync(StopTimeout, cancellationToken).ConfigureAwait(false);
+                await session.WaitAsync(_stopTimeout, cancellationToken).ConfigureAwait(false);
                 ended = true;
             }
             catch (TimeoutException)
             {
-                _logger.LogError("The USB session did not stop within {Timeout}; the pipe stays owned by it", StopTimeout);
+                _logger.LogError("The USB session did not stop within {Timeout}; the pipe stays owned by it", _stopTimeout);
             }
             catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
             {
@@ -764,7 +771,7 @@ public sealed class UsbSmartFadeDevice : ISmartFadeDevice, IAsyncDisposable
                 case { NextMode: null }:
                     return "ConsoleStatus body[6] carries a value never observed (NEXT mode unknown, F173): no pair is sent then";
                 case { Bank25To48: true }:
-                    return "the console shows bank 25-48 (ConsoleStatus body[4], F98): no pair was ever seen there (F185)";
+                    return "the console shows bank 25-48, or memory mode entered from it (ConsoleStatus body[4] = 1, F98): no pair was ever seen there (F185)";
                 case { MemoryPage: not 1 } paged:
                     return $"the console shows memory page {paged.MemoryPage} (ConsoleStatus body[2] = {paged.MemoryPage - 1}, F113): no pair was ever seen on a page other than 1 (F185)";
             }
@@ -2126,9 +2133,14 @@ public sealed class UsbSmartFadeDevice : ISmartFadeDevice, IAsyncDisposable
         ReportLateEnd();
     }
 
-    /// <summary>A session that outlived its Disconnect (StopTimeout) reports its real end here.</summary>
+    /// <summary>
+    /// A session that outlived its Disconnect (the stop timeout) reports its real end here. A Disconnect inside the MASTER
+    /// probe tells the UI where the console was left on this path too, as the Disconnect in time does (the re-check's N4,
+    /// 2026-11-03): the session's end wrote the interruption note after the Disconnect had reported Error.
+    /// </summary>
     private void ReportLateEnd()
     {
+        string? interruption;
         lock (_gate)
         {
             if (!_stopTimedOut)
@@ -2139,10 +2151,12 @@ public sealed class UsbSmartFadeDevice : ISmartFadeDevice, IAsyncDisposable
             _stopTimedOut = false;
             _session = null;
             _status = ConnectionStatus.Disconnected;
+            interruption = _probeInterruption;
+            _probeInterruption = null;
         }
 
         _logger.LogInformation("The USB session that outlived its Disconnect has now ended");
-        RaiseConnection(ConnectionStatus.Disconnected);
+        ConnectionChanged?.Invoke(this, new ConnectionState(ConnectionStatus.Disconnected, Mode, Description, interruption));
     }
 
     private void CloseLog(ITransferSink log, string note)
@@ -2677,7 +2691,8 @@ public sealed class UsbSmartFadeDevice : ISmartFadeDevice, IAsyncDisposable
         }
 
         // before each switch the clause's LED refusals as well (the first review's NIT 4, 2026-11-03: reading (18), no PC FADERS
-        // key was ever seen sent with SOLO lit or BLACKOUT on); a refusal stops the probe here, with no switch back
+        // key was ever seen sent with SOLO lit or BLACKOUT on, OBSERVED (the bank-key census of 2026-11-02 / 03, F175 / F179
+        // annotations in known-facts.md)); a refusal stops the probe here, with no switch back
         if (run.Out.TryDequeue(out var outward))
         {
             Refuse(RecordFunctionArmed(_assembler.Keys) ?? ProbeLedRefusal());
@@ -2758,7 +2773,8 @@ public sealed class UsbSmartFadeDevice : ISmartFadeDevice, IAsyncDisposable
     /// LED change the console has not reported yet (queued or sent: the `_togglesSent` rule as <see cref="BlackoutNotOff"/>
     /// uses it; the first review's MINOR 2), since the reported LED is then not the console's state. Asked when the probe
     /// starts, before each of its switches (the first review's NIT 4: no PC FADERS key was seen with SOLO lit or BLACKOUT on,
-    /// reading (18)), before its tap is queued (after a switch, later than the download) and at the tap's slot; null when none.
+    /// OBSERVED (the bank-key census of 2026-11-02 / 03, F175 / F179 annotations in known-facts.md), reading (18)), before its
+    /// tap is queued (after a switch, later than the download) and at the tap's slot; null when none.
     /// </summary>
     private string? ProbeLedRefusal() => _assembler.Keys switch
     {
