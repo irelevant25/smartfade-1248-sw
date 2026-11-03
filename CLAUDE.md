@@ -446,8 +446,16 @@ memory page other than 1, with E9c seq 42230 as the test; a reported outcome `st
 console was left, in the bar and in the Disconnect's error; the probe decided under the lock before the download is reported and
 refused while a write of ours is queued, a key held or a SOLO / BLACKOUT tap awaits its LED, and SOLO / BLACKOUT asked before every
 switch of the probe; the F112 residual named in clause 4 and the E13 acceptance; the nits; 541 backend and 359 frontend tests; the
-review table's status cells filled). The reviewer's re-check follows; nothing is cleared and nothing is sent before its verdict is
-recorded there as passed and he gives the go for E13 on the day; the E13 guide refuses to start until then.**
+review table's status cells filled). **The re-check (second pass, 2026-11-03, over f2879eb) is a PASS:** every first-pass item RESOLVED with the reviewer's own
+evidence and a mutation check of its own (eight guards removed in turn, each caught by a test), no path letting a write of ours go
+between the download's last record and the probe's first write, every test byte from a committed capture, the encoder sweep and the
+20-session replay reproduced; five new nits (the guide's quoted hint, "memory mode entered from bank 1-24" in the hint, two status
+words, the Disconnect-timeout path's error text, a channel-mode page body for MAJOR 1's test), none safety-relevant, sent to the
+subagent. **The review clears nothing for sending.** What remains before E13 is the owner's: the SD backup, USBPcap before the Zadig
+bind, the versions, the written acceptances at the E13 gate (clause 3's residual with the five refused states, the blind window, the
+recovery through SmartSoft, the amended probe with its F112 residual), the rig answer, the console's starting position with a power
+cycle after it, no SD save or load while connected, and the go on the day; then `tools/usb-probe/e13-guided-session.ps1`, its record,
+and the SC-4 review table annotated with the outcome.**
 
 ## Commands
 
@@ -534,8 +542,8 @@ record, then, with live control on, the MASTER probe: one bump tap of an unpatch
 automatic switch there and back where that channel's bank is not the shown one, every control refused while it runs (in the owner's
 show bump 23 of bank 25-48, channel 47; `safety-checks.md` SC-4 "Implementation" and clause 4's amendment of 2026-11-02, late
 evening; the probe's every end reported to the UI with where the console was left, since 2026-11-03). The reviewer's first pass
-over SC-4 was NEEDS CHANGES (2026-11-02, late evening), its items fixed on 2026-11-03, the re-check pending: not before the re-check
-passes and E13's go.
+over SC-4 was NEEDS CHANGES (2026-11-02, late evening), its items fixed on 2026-11-03 and the re-check a PASS the same day
+(`safety-checks.md` SC-4 "Review"): run only as the E13 guide says, on the owner's go.
 
 ## Working style
 

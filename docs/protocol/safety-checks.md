@@ -1545,6 +1545,46 @@ probe window; the UI end to end in a browser and the timings on real hardware. T
 review. The reviewer's scratch scripts (read-only, not committed): `chk-sc4/replay_pair.py` with `common.py` and `model.py`,
 `census.py`, `lens_where.py`, `bankkeys.py`, `afterkey.py`, `taps.py`, `r17.py`, `f112.py`, `ledidle.py`, `sweep.fsx`, `sweep2.fsx`.
 
+**Second pass, the re-check (2026-11-03, `protocol-safety-reviewer`, over f2879eb): PASS. No blocker, major or minor left; every
+first-pass item RESOLVED with the reviewer's own evidence (file and line in its report, the table above); five new nits, none
+safety-relevant; the code can send exactly what it could send at d002705 or less (no key, index or payload added). The pass clears
+nothing for sending: nothing may be sent before "Conditions for E13" are met, the owner's written acceptances at the E13 gate and his
+go on the day.** What the reviewer ran: build 0 warnings; 541 backend and 359 frontend tests; the E13 guide parse-checked; the first
+pass's scripts rerun read-only (the 2^32 encoder sweep: only `(0, 09, 0, 0)` and `(1, 07, 0, 0)` accepted; the 20-session replay 20 of 20
+at #40 / #79 with the same record and length counts; the bank-key census 60 unique presses, four transitions, all on page 1, SOLO off at
+every press); **a mutation check of its own** over a `git archive` copy of f2879eb (the proprietary source materials removed from the copy
+at once): the baseline 24 of 24 SC-4 probe and pair tests, and each of eight guards removed in turn made at least one test fail (the
+page refusal 1, the queued-write refusal 1, the SOLO in-flight arm 1, the probe decided after the Done report 1, the LED refusal
+before the switches 2, `EndProbe` back to NotPossible-only 5, the interruption phase 3, the Disconnect error 1); the copy restored with a
+0-line diff. In detail: MAJOR 1's arm (`UsbSmartFadeDevice.cs:768-769`) is mode-independent and refuses an out-of-range body[2] too, the
+test's bytes are the console's own (E9c seq 42230 ConsoleStatus `01 00 01 00 00 01 00`; LedStatus 42242 with no record key, SOLO or
+BLACKOUT lit, so the page alone refuses), the five states consistent in the class summary, the evidence attribute, the Connect note, clause
+3, the Implementation, the Connect hint, the E13 guide's Acceptance 1 and CLAUDE.md; MINOR 1's `Stopped` (`:2794-2806`) raised at the
+end of the same event, after the pipe closes in the finally block (`:2053-2064`, `:2105-2108`), into `Fail`'s error (`:2111-2124`) or
+the Disconnected state's error (`:476-487`), passed through by the DTO mapper and shown by the bar whatever the status; MINOR 2's
+decision atomic inside `TrackStartupPair`'s lock (`:2371`) before the Done report and the memories, `StartupPairBusy` (`:801`) first on
+the same six command paths, the in-flight refusals (`:2765-2768`, `:2781-2785` at `:2500`) with E9b 22165 / 22174 and 49358 / 49367,
+and **no path lets a write of ours go between the download's last record and the probe's first write** (Done set only at the last
+object, the session thread inside `OnEvent` until the lock; a control accepted meanwhile is a tap, a switch or a toggle awaiting its LED,
+each of which stops the probe from starting; faders, MASTER, BUMPS and bumps need FaderInfo); the lock order `_gate` → `_writeLock`
+kept; NIT 1's seqs inside the downloads (E12 139152 in download 2, 139012–139656; E12b 87433 in 87297–87937) and 87591 / 73712 outside;
+NIT 4's `Refuse(RecordFunctionArmed(...) ?? ProbeLedRefusal())` at every switch out (`:2683`) and back (`:2722`); every byte of the new
+tests from a committed capture through `Body` / `Frame` / `WithCounter` (E3, E8b, E9b, E9c, E9d seqs listed in its report), no byte
+typed by hand; `HspOutbound.cs`, `HspReadLoop.cs`, the Communication layer, the simulator and the Application layer untouched,
+`HspReadSession.cs` changed in a comment only; `Stopped` display-only (`_probe` read by no refusal); SC-1 / SC-2 / SC-5 sessions without
+the switch unchanged. Not verifiable before E13: the console's answer to our host's pair (H115), the probe and a bank 25-48 bump from our
+host, a pair or probe in a state never captured (H114), the F112 residual, the timing on real hardware; reading (16)'s two routes with
+captured bytes; the Disconnect-timeout path (N4, no test); the UI in a browser; the guide (parse-checked only). Its scratch files
+(read-only, not committed): `chk-sc4-2/seqs.py`, `leds.py`, `nit13.py`, `mem25.py`, `pages.py`, `run1.py`, `mutate.py`, the archive copy.
+
+| # | Finding (second pass) | Status |
+|---|---|---|
+| NIT N1 | The E13 guide's Connect step (`e13-guided-session.ps1:316-318`) still quotes the old UI hint ("no menu open … no bump held"); the UI now says "Before Connect: page 1, bank 1-24 or memory mode, NEXT and BLACKOUT off; …" (`connection-view.ts:118`). | Open (2026-11-03): quote the new text; to the subagent. |
+| NIT N2 | "memory mode" in the hint (and E13 Acceptance 1) includes memory mode entered from bank 25-48, which keeps body[4] = 1 (F98; seen only in log-only sessions: E11 attempt 3 backend-3 seq 3094, E11b backend-3 1924, backend-4 8087, backend-5 868); no pair was seen there (all four memory-mode pairs `01 00 00 00 00 01 00`, F185). Once reported the pair is refused ("the console shows bank 25-48") and the probe refuses it; the hint exists for the blind case; no PC bank key in any capture came from that state (all 21 FADERS 1-24 presses from memory mode had body[4] = 0). | Open: the hint "memory mode entered from bank 1-24"; optionally the refusal worded for memory mode; to the subagent. |
+| NIT N3 | Two new comments (`UsbSmartFadeDevice.cs:2679-2680`, `:2760-2761`) state the bank-key census without a status word; OBSERVED (the F175 / F179 annotations; the reviewer's rerun agrees); not load-bearing. | Open: the status word; to the subagent. |
+| NIT N4 | A Disconnect inside the probe that times out (`ReportLateEnd`, `:489-492`, `:2130-2146`, `:371`) gives the UI only "The session did not stop; restart the backend…": the probe's interruption note is lost to the UI (the transfer log keeps it) and the next Connect clears it; E13 Acceptance 4's "the same words are in the error" does not hold on this rare path. | Open: append the interruption to `ReportLateEnd`'s state, with a test; to the subagent. |
+| NIT N5 | (a) Cosmetic: a Stopped reason written while the MASTER was unknown keeps "Move one fader on the panel…" in the bar after FaderInfo arrives (Stopped never becomes NotNeeded, `:2350`); the masters-panel hint goes away correctly. (b) MAJOR 1 says "in either mode" but only a memory-mode body is tested; a captured channel-mode page ≠ 1 body exists, E9b seq 58735 `00 00 0b 00 00 01 00` (page 12); the arm does not depend on the mode, so this only adds evidence. | (a) Optional, left. (b) Open: an InlineData with E9b 58735 and the LedStatus after it; to the subagent. |
+
 ### What SC-4 does not clear
 
 Every other System value (the erase commands 11–16, the page select 10, the show-upload framing 0 / 1 / 6: never, F121); the pair more than
